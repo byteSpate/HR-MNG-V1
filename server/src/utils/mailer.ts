@@ -59,14 +59,44 @@ let transporter: Transporter | null = null
 
 function getTransporter(): Transporter {
   if (!transporter) {
+    // 465 is implicit TLS: the socket is encrypted before the SMTP
+    // conversation begins, and nodemailer has to be told — left at the
+    // default it opens in the clear, the server never replies, and the send
+    // hangs until it times out. Every other port (587, 25) starts in the
+    // clear and upgrades via STARTTLS, which `requireTLS` makes mandatory
+    // rather than best-effort: without it a relay that fails to offer
+    // STARTTLS gets the password in plaintext instead of an error.
+    //
+    // Brevo and Gmail are both 587. 465 is common enough elsewhere that
+    // getting it wrong would look like "email silently does not work".
+    const secure = env.SMTP_PORT === 465
     transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
+      secure,
+      requireTLS: !secure,
       pool: true,
       auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
     })
   }
   return transporter
+}
+
+/**
+ * Whether mail actually leaves this process, said at boot.
+ *
+ * Without this the two modes are indistinguishable from outside: a server
+ * with no SMTP_HOST accepts every send, writes a dispatch row and stamps it
+ * `sentAt`, so the log reads identically to one that is really sending. The
+ * only way to tell used to be to search the console for the fallback line.
+ */
+export function mailMode(): string {
+  if (!env.SMTP_HOST) {
+    return "email: console fallback (no SMTP_HOST) — nothing is actually sent"
+  }
+  const port = env.SMTP_PORT ?? 587
+  const from = env.EMAIL_FROM ?? "no-reply@peoplecore.io"
+  return `email: sending via ${env.SMTP_HOST}:${port} as ${from}`
 }
 
 /**

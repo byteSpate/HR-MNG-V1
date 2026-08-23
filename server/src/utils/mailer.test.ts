@@ -125,3 +125,58 @@ describe("notify", () => {
     })
   })
 })
+
+/**
+ * The TLS mode is derived from the port, and getting it wrong does not throw
+ * — it hangs until the socket times out, which reads as "email silently does
+ * not work". Both branches are asserted because the failure is invisible.
+ */
+describe("transport security", () => {
+  it("upgrades with mandatory STARTTLS on 587", async () => {
+    vi.resetModules()
+    vi.doMock("../config/env", () => ({
+      env: { SMTP_HOST: "smtp-relay.brevo.com", SMTP_PORT: 587, SMTP_USER: "u", SMTP_PASS: "p" },
+    }))
+    const nm = (await import("nodemailer")).default
+    const { sendMail } = await import("./mailer")
+    await sendMail({ to: "a@b.c", kind: "PASSWORD_RESET", subject: "s", text: "t", html: "<p>t</p>" })
+
+    expect(nm.createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({ secure: false, requireTLS: true })
+    )
+  })
+
+  it("uses implicit TLS on 465, where the socket is encrypted before SMTP begins", async () => {
+    vi.resetModules()
+    vi.doMock("../config/env", () => ({
+      env: { SMTP_HOST: "smtp.example.com", SMTP_PORT: 465, SMTP_USER: "u", SMTP_PASS: "p" },
+    }))
+    const nm = (await import("nodemailer")).default
+    const { sendMail } = await import("./mailer")
+    await sendMail({ to: "a@b.c", kind: "PASSWORD_RESET", subject: "s", text: "t", html: "<p>t</p>" })
+
+    expect(nm.createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({ secure: true, requireTLS: false })
+    )
+  })
+})
+
+describe("mailMode", () => {
+  it("says plainly that nothing is sent when SMTP_HOST is absent", async () => {
+    vi.resetModules()
+    vi.doMock("../config/env", () => ({ env: {} }))
+    const { mailMode } = await import("./mailer")
+    expect(mailMode()).toContain("nothing is actually sent")
+  })
+
+  it("names the host and the from address when it is really sending", async () => {
+    vi.resetModules()
+    vi.doMock("../config/env", () => ({
+      env: { SMTP_HOST: "smtp-relay.brevo.com", SMTP_PORT: 587, EMAIL_FROM: "no-reply@bytespate.com" },
+    }))
+    const { mailMode } = await import("./mailer")
+    const line = mailMode()
+    expect(line).toContain("smtp-relay.brevo.com:587")
+    expect(line).toContain("no-reply@bytespate.com")
+  })
+})
