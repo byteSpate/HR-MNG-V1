@@ -8,8 +8,9 @@ import type { AccessTokenPayload } from "../auth/auth.types"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
-import { parseDateOnly } from "../../utils/dates"
+import { formatDateOnly, parseDateOnly } from "../../utils/dates"
 import { emitEvent } from "../event/event.emit"
+import { sendExpenseDecidedEmail } from "../notification/notification.mailer"
 import { expenseEvent } from "./expense.events"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import { dec, toMoneyString } from "../payroll/payroll.money"
@@ -120,8 +121,52 @@ export async function listClaims(query: ClaimQuery) {
  * rate would make the refund depend on how long approval took, which is both
  * wrong and gameable.
  */
+/**
+ * The claimant's login and the two fields the expenses table identifies a row
+ * by. Pulled in on the decision paths so the notification does not need a
+ * second round trip, and so `sendExpenseDecidedEmail` can name a claim the
+ * reader will recognise — `ExpenseClaim` has no claim number.
+ */
+const DECISION_INCLUDE = {
+  employee: { select: { user: { select: { email: true } } } },
+  category: { select: { name: true } },
+} as const
+
+type DecidedClaim = {
+  id: string
+  currency: string
+  amount: Parameters<typeof toMoneyString>[0]
+  expenseDate: Date
+  employee?: { user: { email: string } | null } | null
+  category?: { name: string } | null
+}
+
+/**
+ * Tell the claimant. After the transaction and swallowed inside `notify`: a
+ * decision that already committed must not be undone by a mail server, and a
+ * claimant with no login has nobody to tell.
+ */
+async function notifyExpenseDecision(
+  claim: DecidedClaim,
+  approved: boolean,
+  reason: string | null
+): Promise<void> {
+  const to = claim.employee?.user?.email
+  if (!to) return
+  const category = claim.category?.name ?? "an expense"
+  await sendExpenseDecidedEmail({
+    to,
+    claimId: claim.id,
+    claimRef: `${category} on ${formatDateOnly(claim.expenseDate)}`,
+    amount: toMoneyString(claim.amount),
+    currency: claim.currency,
+    approved,
+    reason,
+  })
+}
+
 export async function approveClaim(id: string, actorUserId: string, body: ApproveClaimBody) {
-  const claim = await prisma.expenseClaim.findUnique({ where: { id } })
+  const claim = await prisma.expenseClaim.findUnique({ where: { id }, include: DECISION_INCLUDE })
   if (!claim) throw new AppError(404, "Expense claim not found")
   if (claim.status !== "PENDING") {
     throw new AppError(409, `This claim is already ${claim.status.toLowerCase()}`)
@@ -131,7 +176,7 @@ export async function approveClaim(id: string, actorUserId: string, body: Approv
   // date — never defaults, for the same reason payroll never does.
   const fxRateToBdt = await resolveRateOrThrow(claim.currency, claim.expenseDate)
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.expenseClaim.update({
       where: { id },
       data: {
@@ -166,16 +211,19 @@ export async function approveClaim(id: string, actorUserId: string, body: Approv
     )
     return updated
   })
+
+  await notifyExpenseDecision(claim, true, body.note ?? null)
+  return updated
 }
 
 export async function rejectClaim(id: string, actorUserId: string, body: RejectClaimBody) {
-  const claim = await prisma.expenseClaim.findUnique({ where: { id } })
+  const claim = await prisma.expenseClaim.findUnique({ where: { id }, include: DECISION_INCLUDE })
   if (!claim) throw new AppError(404, "Expense claim not found")
   if (claim.status !== "PENDING") {
     throw new AppError(409, `This claim is already ${claim.status.toLowerCase()}`)
   }
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.expenseClaim.update({
       where: { id },
       data: {
@@ -208,6 +256,9 @@ export async function rejectClaim(id: string, actorUserId: string, body: RejectC
     )
     return updated
   })
+
+  await notifyExpenseDecision(claim, false, body.note ?? null)
+  return updated
 }
 
 export async function getClaim(actor: AccessTokenPayload, id: string) {

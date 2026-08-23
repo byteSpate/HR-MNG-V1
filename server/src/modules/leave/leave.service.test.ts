@@ -44,6 +44,15 @@ vi.mock("../attendance/attendance.grid", async (importOriginal) => ({
   buildDayGrid: vi.fn(async () => new Map()),
 }))
 
+vi.mock("../notification/notification.mailer", () => ({
+  sendLeaveRequestedEmail: vi.fn(() => Promise.resolve()),
+  sendLeaveDecidedEmail: vi.fn(() => Promise.resolve()),
+}))
+vi.mock("../notification/notification.recipients", () => ({
+  recipientsForLeaveRequest: vi.fn(() => Promise.resolve(["mgr@b.com"])),
+}))
+
+import { sendLeaveDecidedEmail, sendLeaveRequestedEmail } from "../notification/notification.mailer"
 import prisma from "../../config/prisma"
 import { parseDateOnly } from "./leave.dates"
 import {
@@ -569,6 +578,36 @@ describe("applyForLeave validation", () => {
     expect(created.days).toBe(1)
   })
 
+  it("emails whoever can act on the request once it is filed", async () => {
+    // A Monday, so the range is not entirely weekly off and something is
+    // actually charged — the same reason the decision fixtures pin a date.
+    const monday = (() => {
+      const d = new Date()
+      d.setUTCDate(d.getUTCDate() + ((1 - d.getUTCDay() + 7) % 7 || 7))
+      return d.toISOString().slice(0, 10)
+    })()
+    vi.mocked(prisma.leaveRequest.create).mockResolvedValue({
+      id: "req-1",
+      employee: { id: "emp-1", fullName: "A Person", employeeCode: "BS-EMP-00001" },
+      leaveType: { id: "lt-1", code: "CASUAL", name: "Casual", isPaid: true },
+      startDate: parseDateOnly(monday),
+      endDate: parseDateOnly(monday),
+      reason: null,
+      status: "PENDING",
+      createdAt: new Date(),
+    } as any)
+
+    await applyForLeave("user-1", {
+      leaveTypeId: "lt-1",
+      startDate: monday,
+      endDate: monday,
+    })
+
+    expect(sendLeaveRequestedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "mgr@b.com", requestId: "req-1", employeeName: "A Person" })
+    )
+  })
+
   it("refuses a type the employee has not served long enough for", async () => {
     // §117 earned leave: one year of continuous service, measured at the
     // leave start rather than at filing.
@@ -694,6 +733,7 @@ describe("leave decisions", () => {
     fullName: "Ayesha Rahman",
     employmentType: "FULL_TIME",
     joiningDate: parseDateOnly("2020-01-01"),
+    user: { email: "employee@b.com" },
   }
 
   function futureDate(offsetDays: number) {
@@ -750,6 +790,30 @@ describe("leave decisions", () => {
       expect.objectContaining({
         where: { id: "req-1" },
         data: expect.objectContaining({ status: "APPROVED", approvedBy: "hr-1" }),
+      })
+    )
+  })
+
+  it("emails the employee when a leave request is approved", async () => {
+    vi.mocked(prisma.leaveRequest.findUnique).mockResolvedValue(pendingRequest() as any)
+
+    await approveLeaveRequest("req-1", "hr-1")
+
+    expect(sendLeaveDecidedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "employee@b.com", approved: true })
+    )
+  })
+
+  it("emails the employee the reason when a leave request is rejected", async () => {
+    vi.mocked(prisma.leaveRequest.findUnique).mockResolvedValue(pendingRequest() as any)
+
+    await rejectLeaveRequest("req-1", "hr-1", "Two people already off that week")
+
+    expect(sendLeaveDecidedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "employee@b.com",
+        approved: false,
+        reason: "Two people already off that week",
       })
     )
   })

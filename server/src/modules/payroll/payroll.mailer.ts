@@ -21,6 +21,8 @@ export interface PayslipEmailInput {
   currency: string
   netPayable: string
   pdf: Buffer
+  /** For the EmailDispatch entity pair, so the log points at the payslip. */
+  payslipId: string
 }
 
 export async function sendPayslipEmail(input: PayslipEmailInput): Promise<void> {
@@ -45,7 +47,14 @@ export async function sendPayslipEmail(input: PayslipEmailInput): Promise<void> 
     <p>If anything looks wrong, reply to this email and we will check it.</p>
     <p>${env.COMPANY_NAME}</p>`
 
-  await sendMail(input.to, subject, text, html, [
-    { filename: `${input.payslipNo}.pdf`, content: input.pdf },
-  ])
+  await sendMail({
+    to: input.to,
+    kind: "PAYSLIP",
+    subject,
+    text,
+    html,
+    entity: "PAYSLIP",
+    entityId: input.payslipId,
+    attachments: [{ filename: `${input.payslipNo}.pdf`, content: input.pdf }],
+  })
 }

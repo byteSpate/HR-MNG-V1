@@ -19,7 +19,13 @@ vi.mock("../../config/prisma", () => {
   return {
     default: {
       payrollRun: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
-      payslip: { groupBy: vi.fn(), findMany: vi.fn() },
+      // `aggregate` because submitting a run emails every Super Admin the
+      // headcount and the BDT total, read after the transaction commits.
+      payslip: {
+        groupBy: vi.fn(),
+        findMany: vi.fn(),
+        aggregate: vi.fn(async () => ({ _sum: { netPayableBdt: null }, _count: { _all: 0 } })),
+      },
       employee: { findMany: vi.fn(), count: vi.fn() },
       exchangeRate: { findMany: vi.fn() },
       $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
@@ -37,8 +43,17 @@ vi.mock("./payroll.posting", () => ({
   postPayrollPayment: vi.fn(),
 }))
 
+vi.mock("../notification/notification.mailer", () => ({
+  sendPayrollSubmittedEmail: vi.fn(() => Promise.resolve()),
+}))
+vi.mock("../notification/notification.recipients", () => ({
+  activeSuperAdminEmails: vi.fn(() => Promise.resolve([])),
+}))
+
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
+import { sendPayrollSubmittedEmail } from "../notification/notification.mailer"
+import { activeSuperAdminEmails } from "../notification/notification.recipients"
 import { postPayrollAccrual, postPayrollPayment } from "./payroll.posting"
 import { getMonthlySummary } from "../attendance/attendance.summary"
 import type { MonthlyAttendanceSummary } from "../attendance/attendance.types"
@@ -454,6 +469,27 @@ describe("submitRun", () => {
     await expect(submitRun("run-1", "finance-1")).resolves.toMatchObject({ status: "SUBMITTED" })
     expect(tx.payrollRun.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: "SUBMITTED", submittedBy: "finance-1" }) })
+    )
+  })
+
+  it("emails every active Super Admin when a run is submitted", async () => {
+    // Fanned out rather than picked: any of them can approve, and choosing
+    // one makes payday wait on whoever is away.
+    vi.mocked(activeSuperAdminEmails).mockResolvedValue(["sa1@b.com", "sa2@b.com"])
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue({
+      id: "run-1",
+      status: "DRAFT",
+      month: 9,
+      year: 2026,
+      processedAt: new Date(),
+    } as never)
+    tx.payrollRun.update.mockResolvedValue({ id: "run-1", status: "SUBMITTED" })
+
+    await submitRun("run-1", "finance-1")
+
+    expect(sendPayrollSubmittedEmail).toHaveBeenCalledTimes(2)
+    expect(sendPayrollSubmittedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "sa1@b.com", runId: "run-1", month: 9, year: 2026 })
     )
   })
 })

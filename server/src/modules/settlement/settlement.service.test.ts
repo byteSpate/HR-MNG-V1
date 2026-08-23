@@ -34,6 +34,11 @@ vi.mock("./settlement.posting", () => ({
   postSettlementPayment: vi.fn(),
 }))
 
+vi.mock("../notification/notification.mailer", () => ({
+  sendSettlementStatementEmail: vi.fn(() => Promise.resolve()),
+}))
+
+import { sendSettlementStatementEmail } from "../notification/notification.mailer"
 import prisma from "../../config/prisma"
 import { getMonthlySummary } from "../attendance/attendance.summary"
 import type { MonthlyAttendanceSummary } from "../attendance/attendance.types"
@@ -270,6 +275,53 @@ describe("paySettlement", () => {
   it("is terminal — 409s a settlement already paid", async () => {
     vi.mocked(prisma.settlement.findUnique).mockResolvedValue({ id: "stl-1", status: "PAID" } as never)
     await expect(paySettlement("stl-1", "fin-1")).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it("emails the leaver their statement, omitting the heads worth nothing", async () => {
+    // There is no settlement PDF renderer, so the working goes in the body.
+    // A zero head is left out rather than printed as 0 — "Leave encashment:
+    // 0" teaches the reader nothing except that a line exists.
+    vi.mocked(prisma.settlement.findUnique).mockResolvedValue({
+      id: "stl-1",
+      status: "APPROVED",
+      currency: "BDT",
+      finalAmount: dec("58000"),
+      pendingSalary: dec("0"),
+      gratuity: dec("50000"),
+      noticePay: dec("8000"),
+      expenseReimbursement: dec("0"),
+      leaveEncashment: dec("0"),
+      outstandingDeductions: dec("0"),
+      assetRecoveries: dec("0"),
+      employee: { fullName: "A Person", user: { email: "leaver@b.com" } },
+    } as never)
+
+    await paySettlement("stl-1", "fin-1")
+
+    expect(sendSettlementStatementEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "leaver@b.com",
+        settlementId: "stl-1",
+        fullName: "A Person",
+        netPayable: "58000.00",
+        lines: [
+          { label: "Gratuity", amount: "50000.00" },
+          { label: "Notice pay", amount: "8000.00" },
+        ],
+      })
+    )
+  })
+
+  it("does not email a leaver with no account", async () => {
+    vi.mocked(prisma.settlement.findUnique).mockResolvedValue({
+      id: "stl-1",
+      status: "APPROVED",
+      employee: { fullName: "A Person", user: null },
+    } as never)
+
+    await paySettlement("stl-1", "fin-1")
+
+    expect(sendSettlementStatementEmail).not.toHaveBeenCalled()
   })
 })
 

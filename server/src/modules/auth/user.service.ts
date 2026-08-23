@@ -16,6 +16,7 @@ import { AppError } from "../../middleware/errorHandler"
 import type { Role } from "../../generated/prisma/client"
 import { emitEvent } from "../event/event.emit"
 import { generateTemporaryPassword, hashPassword } from "./auth.utils"
+import { sendCredentialsEmail } from "./mailer"
 import { isPromotion, roleChangedEvent } from "./user.events"
 import { revokeAllUserTokens } from "./auth.service"
 
@@ -101,6 +102,18 @@ export async function createUser(input: {
   const user = await prisma.user.create({
     data: { email, passwordHash, role: input.role, mustChangePassword: true },
     select: { id: true, email: true, role: true },
+  })
+
+  // Swallowed, like the staff path: a dead SMTP server must not fail account
+  // creation, and the temporary password is still returned below as the
+  // fallback. The failure is recorded as an EmailDispatch row.
+  await sendCredentialsEmail({
+    to: user.email,
+    identifier: user.email,
+    identifierLabel: "Email address",
+    temporaryPassword,
+  }).catch((err) => {
+    console.error("Failed to send credentials email", err)
   })
 
   return { id: user.id, email: user.email, role: user.role, temporaryPassword }

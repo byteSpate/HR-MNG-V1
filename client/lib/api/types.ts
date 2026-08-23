@@ -1843,3 +1843,32 @@ export interface ExitChecklist {
   pendingRecoveries: AssetRecovery[]
   hasOutstanding: boolean
 }
+
+// ── EMAIL DISPATCH LOG ────────────────────────
+
+/**
+ * One attempted send. Hand-mirrored from the server's `DispatchItem` —
+ * client and server share no validation package, so this is duplicated
+ * deliberately and kept in sync by hand.
+ *
+ * Three states, not two: `sentAt` set means the mail server accepted it,
+ * `error` set means it refused, and both null means the process died before
+ * the send resolved. A boolean could not tell the last from the first.
+ */
+export interface EmailDispatch {
+  id: string
+  to: string
+  kind: string
+  subject: string
+  entity: string | null
+  entityId: string | null
+  /** The mail server accepted it. NOT proof a person received it. */
+  sentAt: string | null
+  error: string | null
+  createdAt: string
+}
+
+export interface EmailDispatchPage {
+  items: EmailDispatch[]
+  nextCursor: string | null
+}

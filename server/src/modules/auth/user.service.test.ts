@@ -24,9 +24,12 @@ vi.mock("./auth.service", () => ({
 
 vi.mock("../event/event.emit", () => ({ emitEvent: vi.fn() }))
 
+vi.mock("./mailer", () => ({ sendCredentialsEmail: vi.fn(() => Promise.resolve()) }))
+
 import prisma from "../../config/prisma"
 import { emitEvent } from "../event/event.emit"
 import { revokeAllUserTokens } from "./auth.service"
+import { sendCredentialsEmail } from "./mailer"
 import { createUser, listUsers, setUserRole, setUserStatus } from "./user.service"
 
 beforeEach(() => {
@@ -152,6 +155,40 @@ describe("createUser", () => {
     const result = await createUser({ email: "new@demo.com", role: "HR_ADMIN" })
 
     expect(result).not.toHaveProperty("passwordHash")
+  })
+
+  it("emails the credentials with the email address as the identifier", async () => {
+    // An administrative account signs in at /api/auth/login with its email,
+    // not at /api/auth/staff-login with an employee code.
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null as never)
+    vi.mocked(prisma.user.create).mockResolvedValue({
+      id: "u1",
+      email: "finance@bytespate.com",
+      role: "FINANCE_OFFICER",
+    } as never)
+
+    const result = await createUser({ email: "finance@bytespate.com", role: "FINANCE_OFFICER" })
+
+    expect(sendCredentialsEmail).toHaveBeenCalledWith({
+      to: "finance@bytespate.com",
+      identifier: "finance@bytespate.com",
+      identifierLabel: "Email address",
+      temporaryPassword: result.temporaryPassword,
+    })
+  })
+
+  it("still returns the temporary password, as the fallback for a dead mail server", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(null as never)
+    vi.mocked(prisma.user.create).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      role: "HR_ADMIN",
+    } as never)
+    vi.mocked(sendCredentialsEmail).mockRejectedValueOnce(new Error("smtp down"))
+
+    const result = await createUser({ email: "a@b.com", role: "HR_ADMIN" })
+
+    expect(result.temporaryPassword).toEqual(expect.any(String))
   })
 })
 

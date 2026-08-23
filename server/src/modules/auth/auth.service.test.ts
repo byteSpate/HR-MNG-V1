@@ -5,11 +5,12 @@ vi.mock("../../config/prisma", () => ({
     user: { findUnique: vi.fn(), update: vi.fn() },
     employee: { findUnique: vi.fn() },
     refreshToken: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
-    passwordResetToken: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    passwordResetToken: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
   },
 }))
 
 import prisma from "../../config/prisma"
+import { sendPasswordChangedEmail } from "../notification/notification.mailer"
 import { hashPassword } from "./auth.utils"
 import { changePassword, loginAdmin, loginStaff, logout, refresh, requestPasswordReset, resetPassword } from "./auth.service"
 
@@ -24,6 +25,7 @@ const mockedPrisma = prisma as unknown as {
   }
   passwordResetToken: {
     create: ReturnType<typeof vi.fn>
+    findFirst: ReturnType<typeof vi.fn>
     findUnique: ReturnType<typeof vi.fn>
     update: ReturnType<typeof vi.fn>
   }
@@ -256,7 +258,11 @@ describe("logout", () => {
 
 vi.mock("./mailer", () => ({
   sendPasswordResetEmail: vi.fn(),
-  sendStaffCredentialsEmail: vi.fn(),
+  sendCredentialsEmail: vi.fn(),
+}))
+
+vi.mock("../notification/notification.mailer", () => ({
+  sendPasswordChangedEmail: vi.fn(() => Promise.resolve()),
 }))
 
 describe("requestPasswordReset", () => {
@@ -275,6 +281,28 @@ describe("requestPasswordReset", () => {
     mockedPrisma.user.findUnique.mockResolvedValue(null)
     await expect(requestPasswordReset("nobody@b.com")).resolves.toBeUndefined()
     expect(mockedPrisma.passwordResetToken.create).not.toHaveBeenCalled()
+  })
+
+  it("does not create a second token within the cooldown", async () => {
+    mockedPrisma.user.findUnique.mockResolvedValue({ id: "u1", email: "a@b.com" })
+    mockedPrisma.passwordResetToken.findFirst.mockResolvedValue({
+      id: "t1",
+      createdAt: new Date(),
+    })
+
+    await requestPasswordReset("a@b.com")
+
+    expect(mockedPrisma.passwordResetToken.create).not.toHaveBeenCalled()
+  })
+
+  it("creates a token when the last one is older than the cooldown", async () => {
+    mockedPrisma.user.findUnique.mockResolvedValue({ id: "u1", email: "a@b.com" })
+    mockedPrisma.passwordResetToken.findFirst.mockResolvedValue(null)
+    mockedPrisma.passwordResetToken.create.mockResolvedValue({})
+
+    await requestPasswordReset("a@b.com")
+
+    expect(mockedPrisma.passwordResetToken.create).toHaveBeenCalled()
   })
 })
 
@@ -330,6 +358,25 @@ describe("resetPassword", () => {
     })
     await expect(resetPassword("expired", "newlongpassword")).rejects.toMatchObject({ statusCode: 400 })
   })
+
+  it("emails the account holder when a reset completes", async () => {
+    // Reset is precisely the flow an attacker uses, so this is the
+    // notification that matters most.
+    mockedPrisma.passwordResetToken.findUnique.mockResolvedValue({
+      id: "prt1",
+      userId: "u1",
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+      usedAt: null,
+      user: { email: "a@b.com" },
+    })
+    mockedPrisma.user.update.mockResolvedValue({})
+    mockedPrisma.passwordResetToken.update.mockResolvedValue({})
+    mockedPrisma.refreshToken.updateMany.mockResolvedValue({ count: 0 })
+
+    await resetPassword("raw-token", "newlongpassword")
+
+    expect(sendPasswordChangedEmail).toHaveBeenCalledWith({ to: "a@b.com", userId: "u1" })
+  })
 })
 
 describe("changePassword", () => {
@@ -365,6 +412,31 @@ describe("changePassword", () => {
     expect(mockedPrisma.refreshToken.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ userId: "u1" }) })
     )
+  })
+
+  it("emails the account holder when they change their own password", async () => {
+    const passwordHash = await hashPassword("old-password")
+    mockedPrisma.user.findUnique.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      passwordHash,
+      role: "EMPLOYEE",
+      isActive: true,
+      mustChangePassword: false,
+    })
+    mockedPrisma.user.update.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      role: "EMPLOYEE",
+      isActive: true,
+      mustChangePassword: false,
+    })
+    mockedPrisma.refreshToken.updateMany.mockResolvedValue({ count: 0 })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    await changePassword("u1", "old-password", "brand-new-password")
+
+    expect(sendPasswordChangedEmail).toHaveBeenCalledWith({ to: "a@b.com", userId: "u1" })
   })
 
   it("throws AppError 401 for an incorrect current password", async () => {

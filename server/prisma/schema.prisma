@@ -591,6 +591,11 @@ model PayrollRun {
   // back?" always has an answer.
   rejectionNote String?
 
+  /// When a payslip email run last started. In-flight means this is set and
+  /// recent — a bare boolean would wedge the run forever if a dyno died
+  /// mid-send, with no way to clear it from the UI.
+  emailStartedAt DateTime?
+
   notes     String?
   payslips  Payslip[]
   createdAt DateTime  @default(now())
@@ -730,6 +735,36 @@ model AuditLog {
 
   @@index([entity, entityId, changedAt])
   @@index([changedAt])
+}
+
+/// Every email this server has attempted to send.
+///
+/// A log, not a queue: nothing retries a failed row automatically. A failure
+/// is visible on /admin/emails and is resent from the page that owns the
+/// thing — the payroll run page for payslips, Reissue credentials for logins.
+model EmailDispatch {
+  id        String    @id @default(uuid())
+  // The recipient at send time. Denormalised on purpose: this log answers
+  // "where did it actually go", and a join to User would answer "where would
+  // it go now" — a different question after an address change.
+  to        String
+  // The authority is `DispatchKind` in src/utils/mailer.ts.
+  kind      String
+  subject   String
+  // What the email was about. Same polymorphic pair as AuditLog, and nullable
+  // for the same reason: a password-reset email is about nothing but a person.
+  entity    String?
+  entityId  String?
+  // Both null means the process died before the send resolved; sentAt means
+  // the mail server accepted it; error means it refused. Three states, because
+  // a boolean cannot tell a crashed dyno from a clean success.
+  sentAt    DateTime?
+  error     String?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+  @@index([entity, entityId])
 }
 
 model ExpenseClaim {

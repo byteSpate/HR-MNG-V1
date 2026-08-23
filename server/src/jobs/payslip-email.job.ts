@@ -15,11 +15,23 @@ import { sendPayslipEmail } from "../modules/payroll/payroll.mailer"
 import { getOrRenderPayslipPdf } from "../modules/payroll/payroll.pdf"
 import { toMoneyString } from "../modules/payroll/payroll.money"
 
-/** Runs currently sending, so a second request cannot start a duplicate. */
-const inFlight = new Set<string>()
+/**
+ * A run is in flight if its claim is set and recent. A bare boolean would
+ * wedge the run forever if the dyno died mid-send; the window lets a stale
+ * claim be reclaimed without a manual database edit.
+ *
+ * The claim lives on the row rather than in memory, because an in-memory Set
+ * does not survive a restart and does not span dynos.
+ */
+export const IN_FLIGHT_WINDOW_MS = 30 * 60 * 1000
 
-export function isEmailRunInFlight(runId: string): boolean {
-  return inFlight.has(runId)
+export async function isEmailRunInFlight(runId: string): Promise<boolean> {
+  const run = await prisma.payrollRun.findUnique({
+    where: { id: runId },
+    select: { emailStartedAt: true },
+  })
+  if (!run?.emailStartedAt) return false
+  return Date.now() - run.emailStartedAt.getTime() < IN_FLIGHT_WINDOW_MS
 }
 
 export interface EmailRunResult {
@@ -28,13 +40,24 @@ export interface EmailRunResult {
   failed: number
 }
 
-export async function emailPayslipsForRun(runId: string): Promise<EmailRunResult> {
-  if (inFlight.has(runId)) return { total: 0, sent: 0, failed: 0 }
-  inFlight.add(runId)
+export interface EmailRunOptions {
+  /**
+   * Re-send payslips that already went out. Off by default, which is what
+   * makes a duplicate run harmless: the second one finds nothing to do.
+   */
+  resend?: boolean
+}
+
+export async function emailPayslipsForRun(
+  runId: string,
+  opts: EmailRunOptions = {}
+): Promise<EmailRunResult> {
+  if (await isEmailRunInFlight(runId)) return { total: 0, sent: 0, failed: 0 }
+  await prisma.payrollRun.update({ where: { id: runId }, data: { emailStartedAt: new Date() } })
 
   try {
     const payslips = await prisma.payslip.findMany({
-      where: { payrollRunId: runId },
+      where: opts.resend ? { payrollRunId: runId } : { payrollRunId: runId, emailedAt: null },
       include: {
         employee: { select: { fullName: true, user: { select: { email: true } } } },
         payrollRun: { select: { month: true, year: true } },
@@ -48,7 +71,7 @@ export async function emailPayslipsForRun(runId: string): Promise<EmailRunResult
       const to = payslip.employee.user?.email
       try {
         if (!to) throw new Error("Employee has no email address")
-        // Re-emailing is allowed and does not re-render a cached PDF.
+        // A deliberate resend does not re-render a cached PDF.
         const pdf = await getOrRenderPayslipPdf(payslip.id)
         await sendPayslipEmail({
           to,
@@ -59,6 +82,7 @@ export async function emailPayslipsForRun(runId: string): Promise<EmailRunResult
           currency: payslip.currency,
           netPayable: toMoneyString(payslip.netPayable),
           pdf,
+          payslipId: payslip.id,
         })
         await prisma.payslip.update({
           where: { id: payslip.id },
@@ -76,7 +100,7 @@ export async function emailPayslipsForRun(runId: string): Promise<EmailRunResult
 
     return { total: payslips.length, sent, failed }
   } finally {
-    inFlight.delete(runId)
+    await prisma.payrollRun.update({ where: { id: runId }, data: { emailStartedAt: null } })
   }
 }
 
@@ -88,10 +112,16 @@ export interface EmailStatus {
 }
 
 export async function getEmailStatus(runId: string): Promise<EmailStatus> {
-  const [total, sent, failed] = await Promise.all([
+  const [total, sent, failed, inProgress] = await Promise.all([
     prisma.payslip.count({ where: { payrollRunId: runId } }),
     prisma.payslip.count({ where: { payrollRunId: runId, emailedAt: { not: null } } }),
-    prisma.payslip.count({ where: { payrollRunId: runId, emailError: { not: null } } }),
+    // Errored AND never sent. Counting `emailError: { not: null }` alone
+    // double-counts a payslip that succeeded and later failed, which made
+    // sent + failed exceed total.
+    prisma.payslip.count({
+      where: { payrollRunId: runId, emailError: { not: null }, emailedAt: null },
+    }),
+    isEmailRunInFlight(runId),
   ])
-  return { total, sent, failed, inProgress: inFlight.has(runId) }
+  return { total, sent, failed, inProgress }
 }
