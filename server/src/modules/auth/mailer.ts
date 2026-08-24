@@ -1,16 +1,29 @@
 // The transport, its dev-mode console fallback and the EmailDispatch log all
 // live in src/utils/mailer, so every module sends the same way and no send
-// can escape the log.
+// can escape the log. The shared Advice-Form markup lives in src/templates.
 import { env } from "../../config/env"
+import { renderEmail, serialFor } from "../../templates/email"
 import { sendMail } from "../../utils/mailer"
 
 export async function sendPasswordResetEmail(to: string, resetLink: string): Promise<void> {
+  const kind = "PASSWORD_RESET" as const
   await sendMail({
     to,
-    kind: "PASSWORD_RESET",
+    kind,
     subject: "Reset your PeopleCore password",
     text: `Reset your password: ${resetLink}`,
-    html: `<p>Reset your password: <a href="${resetLink}">${resetLink}</a></p>`,
+    html: renderEmail({
+      serial: serialFor(kind),
+      subject: "Reset your PeopleCore password",
+      stamp: { label: "Action required", tone: "action" },
+      intro: "We received a request to reset the password for your account.",
+      action: {
+        label: "Reset password",
+        href: resetLink,
+        note: "If you didn't request this, ignore this email — your password stays unchanged.",
+      },
+      footer: `You are receiving this because a password reset was requested for this address in ${env.COMPANY_NAME}'s PeopleCore.`,
+    }),
   })
 }
 
@@ -29,6 +42,7 @@ export interface CredentialsEmailInput {
  * /api/auth/login rather than an employee code at /api/auth/staff-login.
  */
 export async function sendCredentialsEmail(input: CredentialsEmailInput): Promise<void> {
+  const kind = "CREDENTIALS" as const
   const loginUrl = `${env.CLIENT_ORIGIN}/login`
   const text = [
     `Your ${env.COMPANY_NAME} account is ready.`,
@@ -39,16 +53,24 @@ export async function sendCredentialsEmail(input: CredentialsEmailInput): Promis
     `Sign in at ${loginUrl}`,
     `You'll be asked to change this password on first login.`,
   ].join("\n")
-  const html = `<p>Your ${env.COMPANY_NAME} account is ready.</p>
-    <p>${input.identifierLabel}: <strong>${input.identifier}</strong><br />
-       Temporary password: <strong>${input.temporaryPassword}</strong></p>
-    <p><a href="${loginUrl}">Sign in</a>. You'll be asked to change this password on first login.</p>`
 
   await sendMail({
     to: input.to,
-    kind: "CREDENTIALS",
+    kind,
     subject: `Your ${env.COMPANY_NAME} account is ready`,
     text,
-    html,
+    html: renderEmail({
+      serial: serialFor(kind),
+      subject: `Your ${env.COMPANY_NAME} account is ready`,
+      stamp: { label: "Action required", tone: "action" },
+      intro: "Your account has been created. Here is how you sign in:",
+      facts: [
+        { label: input.identifierLabel, value: input.identifier },
+        { label: "Temporary password", value: input.temporaryPassword },
+      ],
+      prose: ["You'll be asked to change this password on first sign-in."],
+      action: { label: "Sign in", href: loginUrl },
+      footer: `You are receiving this because an account was created for you in ${env.COMPANY_NAME}'s PeopleCore.`,
+    }),
   })
 }

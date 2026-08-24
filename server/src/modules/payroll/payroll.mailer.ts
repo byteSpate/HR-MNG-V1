@@ -5,6 +5,7 @@
  */
 
 import { env } from "../../config/env"
+import { renderEmail } from "../../templates/email"
 import { sendMail } from "../../utils/mailer"
 
 const MONTHS = [
@@ -40,12 +41,18 @@ export async function sendPayslipEmail(input: PayslipEmailInput): Promise<void> 
     ``,
     env.COMPANY_NAME,
   ].join("\n")
-  const html = `<p>Dear ${input.fullName},</p>
-    <p>Your payslip for <strong>${period}</strong> is attached.</p>
-    <p>Payslip number: <strong>${input.payslipNo}</strong><br />
-       Net payable: <strong>${input.currency} ${input.netPayable}</strong></p>
-    <p>If anything looks wrong, reply to this email and we will check it.</p>
-    <p>${env.COMPANY_NAME}</p>`
+
+  const html = renderEmail({
+    serial: input.payslipNo,
+    subject: `Payslip for ${period}`,
+    stamp: { label: "Issued", tone: "issued" },
+    intro: `Dear ${input.fullName}, your payslip for ${period} is attached.`,
+    facts: [
+      { label: "Net payable", value: `${input.currency} ${input.netPayable}` },
+    ],
+    notice: `Attached: ${input.payslipNo}.pdf — if anything looks wrong, reply to this email and we will check it.`,
+    footer: `You are receiving this because payroll for ${period} was approved in ${env.COMPANY_NAME}'s PeopleCore.`,
+  })
 
   await sendMail({
     to: input.to,
