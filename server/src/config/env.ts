@@ -47,5 +47,13 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
 })
+  // A From address is not optional once mail really leaves: sending from a
+  // domain you do not own fails SPF and lands in spam, and inventing a
+  // fallback domain only hides the misconfiguration until somebody wonders
+  // why nothing ever arrives. Caught at boot, not at the first send.
+  .refine((v) => !v.SMTP_HOST || !!v.EMAIL_FROM, {
+    message: "EMAIL_FROM is required when SMTP_HOST is set",
+    path: ["EMAIL_FROM"],
+  })
 
 export const env = envSchema.parse(process.env)

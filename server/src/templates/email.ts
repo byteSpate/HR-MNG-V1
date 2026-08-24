@@ -1,5 +1,5 @@
 /**
- * The one visual world every PeopleCore email shares: the Advice Form.
+ * The one visual world every email this system sends shares: the Advice Form.
  *
  * THESIS: an email from the employer is an official record, not a marketing
  * notification — serial number, subject line, facts in ruled rows, and a
@@ -242,7 +242,7 @@ ${preheader}
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
-            <td class="ink" style="padding-bottom:14px;border-bottom:3px double ${INK};font-size:13px;font-weight:700;letter-spacing:0.22em;color:${INK};">PEOPLECORE</td>
+            <td class="ink" style="padding-bottom:14px;border-bottom:3px double ${INK};font-size:13px;font-weight:700;letter-spacing:0.22em;color:${INK};">${esc(env.COMPANY_NAME.toUpperCase())}</td>
             <td class="muted" style="padding-bottom:14px;border-bottom:3px double ${INK};font-size:12px;color:${MUTED};text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">Ref ${esc(parts.serial)}</td>
           </tr>
         </table>
@@ -268,7 +268,7 @@ ${preheader}
         ${notice}
 
         <p class="ink" style="margin:26px 0 0 0;font-size:14px;color:${INK};">${esc(env.COMPANY_NAME)}</p>
-        <p class="muted" style="margin:4px 0 0 0;font-size:12px;color:${MUTED};">via PeopleCore — ${esc(env.COMPANY_NAME)}'s HR &amp; payroll system</p>
+        <p class="muted" style="margin:4px 0 0 0;font-size:12px;color:${MUTED};">HR &amp; payroll</p>
 
       </td></tr>
       <tr><td class="hair footstrip" style="padding:14px 36px;border-top:1px solid ${HAIR};background:#faf9f6;">

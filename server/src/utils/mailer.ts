@@ -95,8 +95,23 @@ export function mailMode(): string {
     return "email: console fallback (no SMTP_HOST) — nothing is actually sent"
   }
   const port = env.SMTP_PORT ?? 587
-  const from = env.EMAIL_FROM ?? "no-reply@peoplecore.io"
+  const from = env.EMAIL_FROM ?? "(EMAIL_FROM not set)"
   return `email: sending via ${env.SMTP_HOST}:${port} as ${from}`
+}
+
+/**
+ * The address mail goes out as.
+ *
+ * env.ts refuses to boot with SMTP_HOST set and EMAIL_FROM missing, so this
+ * throws only if something bypassed that. It does not invent a sender: a
+ * hardcoded fallback domain is one nobody owns, so it fails SPF, lands in
+ * spam, and reads as broken code rather than as missing config.
+ */
+function fromAddress(): string {
+  if (!env.EMAIL_FROM) {
+    throw new Error("EMAIL_FROM is not set, so there is no address to send from")
+  }
+  return env.EMAIL_FROM
 }
 
 /**
@@ -123,7 +138,7 @@ export async function sendMail(d: Dispatch): Promise<void> {
       console.log(`[dev email fallback] To: ${d.to} | Subject: ${d.subject}${note}\n${d.text}`)
     } else {
       await getTransporter().sendMail({
-        from: env.EMAIL_FROM ?? "no-reply@peoplecore.io",
+        from: fromAddress(),
         to: d.to,
         subject: d.subject,
         text: d.text,

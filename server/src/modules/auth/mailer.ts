@@ -10,11 +10,11 @@ export async function sendPasswordResetEmail(to: string, resetLink: string): Pro
   await sendMail({
     to,
     kind,
-    subject: "Reset your PeopleCore password",
+    subject: `Reset your ${env.COMPANY_NAME} password`,
     text: `Reset your password: ${resetLink}`,
     html: renderEmail({
       serial: serialFor(kind),
-      subject: "Reset your PeopleCore password",
+      subject: `Reset your ${env.COMPANY_NAME} password`,
       stamp: { label: "Action required", tone: "action" },
       intro: "We received a request to reset the password for your account.",
       action: {
@@ -22,7 +22,7 @@ export async function sendPasswordResetEmail(to: string, resetLink: string): Pro
         href: resetLink,
         note: "If you didn't request this, ignore this email — your password stays unchanged.",
       },
-      footer: `You are receiving this because a password reset was requested for this address in ${env.COMPANY_NAME}'s PeopleCore.`,
+      footer: `You are receiving this because a password reset was requested for this address at ${env.COMPANY_NAME}.`,
     }),
   })
 }
@@ -70,7 +70,7 @@ export async function sendCredentialsEmail(input: CredentialsEmailInput): Promis
       ],
       prose: ["You'll be asked to change this password on first sign-in."],
       action: { label: "Sign in", href: loginUrl },
-      footer: `You are receiving this because an account was created for you in ${env.COMPANY_NAME}'s PeopleCore.`,
+      footer: `You are receiving this because an account was created for you at ${env.COMPANY_NAME}.`,
     }),
   })
 }

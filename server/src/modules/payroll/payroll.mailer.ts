@@ -51,7 +51,7 @@ export async function sendPayslipEmail(input: PayslipEmailInput): Promise<void> 
       { label: "Net payable", value: `${input.currency} ${input.netPayable}` },
     ],
     notice: `Attached: ${input.payslipNo}.pdf — if anything looks wrong, reply to this email and we will check it.`,
-    footer: `You are receiving this because payroll for ${period} was approved in ${env.COMPANY_NAME}'s PeopleCore.`,
+    footer: `You are receiving this because payroll for ${period} was approved at ${env.COMPANY_NAME}.`,
   })
 
   await sendMail({

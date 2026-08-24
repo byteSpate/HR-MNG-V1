@@ -135,7 +135,7 @@ describe("transport security", () => {
   it("upgrades with mandatory STARTTLS on 587", async () => {
     vi.resetModules()
     vi.doMock("../config/env", () => ({
-      env: { SMTP_HOST: "smtp-relay.brevo.com", SMTP_PORT: 587, SMTP_USER: "u", SMTP_PASS: "p" },
+      env: { SMTP_HOST: "smtp-relay.brevo.com", SMTP_PORT: 587, SMTP_USER: "u", SMTP_PASS: "p", EMAIL_FROM: "no-reply@example.com" },
     }))
     const nm = (await import("nodemailer")).default
     const { sendMail } = await import("./mailer")
@@ -149,7 +149,7 @@ describe("transport security", () => {
   it("uses implicit TLS on 465, where the socket is encrypted before SMTP begins", async () => {
     vi.resetModules()
     vi.doMock("../config/env", () => ({
-      env: { SMTP_HOST: "smtp.example.com", SMTP_PORT: 465, SMTP_USER: "u", SMTP_PASS: "p" },
+      env: { SMTP_HOST: "smtp.example.com", SMTP_PORT: 465, SMTP_USER: "u", SMTP_PASS: "p", EMAIL_FROM: "no-reply@example.com" },
     }))
     const nm = (await import("nodemailer")).default
     const { sendMail } = await import("./mailer")
