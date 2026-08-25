@@ -27,6 +27,13 @@ import {
 } from "./attendance.corrections"
 import { checkIn, checkOut } from "./attendance.punch"
 import { getDailySummary, getMonthlySummary } from "./attendance.summary"
+import { getAttendanceReport, reportFilename, reportToCsv } from "./attendance.report"
+// Statically imported, deliberately. This was a dynamic `await import` to keep
+// puppeteer off the startup path — but `utils/pdf.ts` already imports puppeteer
+// lazily inside `getBrowser()`, so nothing was being saved, and a dynamic
+// import is invisible to `tsx watch`'s restart graph. That combination meant a
+// dev server could keep serving a cached copy of this renderer across edits.
+import { renderAttendanceReportPdf } from "./attendance.report.pdf"
 import {
   approvalsQuerySchema,
   approveSchema,
@@ -40,6 +47,7 @@ import {
   monthQuerySchema,
   regulariseSchema,
   rejectSchema,
+  reportQuerySchema,
   shiftSchema,
   shiftUpdateSchema,
   yearQuerySchema,
@@ -148,6 +156,38 @@ export async function getMonthlySummaryHandler(req: Request, res: Response, next
   try {
     const { month, year } = monthQuerySchema.parse(req.query)
     return res.status(200).json(await getMonthlySummary(req.user!, month, year))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+/**
+ * Daily, weekly, monthly and custom-range reports, in JSON or as a PDF or CSV
+ * download. One handler, because they differ only in the range the caller
+ * asked for — see `attendance.report.ts`.
+ */
+export async function getReportHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { format, ...query } = reportQuerySchema.parse(req.query)
+    const report = await getAttendanceReport(req.user!, query)
+
+    if (format === "pdf") {
+      const pdf = await renderAttendanceReportPdf(report)
+      res.setHeader("Content-Type", "application/pdf")
+      res.setHeader("Content-Disposition", `attachment; filename="${reportFilename(report, "pdf")}"`)
+      return res.status(200).send(pdf)
+    }
+
+    if (format === "csv") {
+      res.setHeader("Content-Type", "text/csv; charset=utf-8")
+      res.setHeader("Content-Disposition", `attachment; filename="${reportFilename(report, "csv")}"`)
+      // A BOM, so Excel opens the file as UTF-8. Without it, every Bengali
+      // name in the Name column arrives as mojibake on a Windows machine —
+      // which is every machine that will open this.
+      return res.status(200).send(`﻿${reportToCsv(report)}`)
+    }
+
+    return res.status(200).json(report)
   } catch (err) {
     return next(err)
   }
