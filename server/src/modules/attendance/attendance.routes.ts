@@ -17,6 +17,7 @@ import {
   getEmployeeAttendanceHandler,
   getMonthlySummaryHandler,
   getMyAttendanceHandler,
+  getReportHandler,
   getTodayHandler,
   listApprovalsHandler,
   listHolidaysHandler,
@@ -63,6 +64,12 @@ router.get("/history/:employeeId", requireAuth, getEmployeeAttendanceHandler)
 // response rather than a 403, so the route shape stays uniform.
 router.get("/summary/daily", requireAuth, getDailySummaryHandler)
 router.get("/summary/monthly", requireAuth, getMonthlySummaryHandler)
+
+// Daily, weekly and custom-range reports, JSON or CSV. Scoped in the service
+// through the same roster as the summaries above, so an employee can export
+// their own attendance and a manager only their team's — which is why this is
+// requireAuth rather than requireRole.
+router.get("/report", requireAuth, getReportHandler)
 
 // The employee amending their own day. A separate path from HR's PATCH
 // /:id on purpose: this one *requests* a change and cannot grant it.

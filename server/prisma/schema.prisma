@@ -776,8 +776,19 @@ model ExpenseClaim {
   category    ExpenseCategory @relation(fields: [categoryId], references: [id])
   legacyCategoryText String?
   description String?
+  /// Superseded by `ExpenseAttachment`. Kept because claims already carry
+  /// links people pasted, and dropping the column would erase the only
+  /// evidence behind an approved claim. Write path is closed; reads still
+  /// show it.
   receiptUrl  String?
   status      ExpenseStatus @default(PENDING)
+
+  /// Where a journey started and ended. Nullable and free text, because only
+  /// travel and conveyance claims have a route at all, and "Gulshan 1 to
+  /// Motijheel" is what an approver needs — not a place entity nobody
+  /// maintains.
+  travelFrom String?
+  travelTo   String?
 
   // When the money was spent — distinct from when it was claimed. You submit
   // a July taxi fare in August, and it must be judged on the July date.
@@ -803,10 +814,35 @@ model ExpenseClaim {
   settlementId String?
   settlement   Settlement? @relation(fields: [settlementId], references: [id])
 
+  attachments ExpenseAttachment[]
+
   createdAt DateTime @default(now())
 
   @@index([status])
   @@index([employeeId, status])
+  /// The date-range report reads by spend date, not by claim date.
+  @@index([expenseDate])
+}
+
+/// A receipt on a claim. Mirrors `CostAttachment` exactly — same single owner,
+/// same `publicId`-not-URL rule, same cascade — because a receipt on a staff
+/// claim and a receipt on a company bill are the same object with a different
+/// parent.
+model ExpenseAttachment {
+  id      String       @id @default(uuid())
+  claimId String
+  claim   ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  // Cloudinary asset ID, not a URL — delivery URLs are signed per request
+  // and expire, so a stored URL would be a dead link.
+  publicId   String   @unique
+  fileName   String
+  bytes      Int
+  format     String
+  uploadedBy String?
+  uploadedAt DateTime @default(now())
+
+  @@index([claimId, uploadedAt])
 }
 
 // REIMBURSED is a transition the *system* makes when a run or a settlement

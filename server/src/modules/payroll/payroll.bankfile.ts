@@ -15,6 +15,7 @@
 import prisma from "../../config/prisma"
 import type { Currency } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
+import { csvCell } from "../../utils/csv"
 import { dec, type Money, REPORTING_CURRENCY, sum, toMoneyString } from "./payroll.money"
 
 export interface BankFileRow {
@@ -59,14 +60,12 @@ export interface BankFileSummary {
 }
 
 /**
- * RFC 4180 quoting: wrap in quotes when the value contains a comma, a quote
- * or a newline, and double any embedded quote. A beneficiary name containing
- * a comma would otherwise shift every later column by one.
+ * Re-exported rather than defined here: the implementation moved to
+ * `utils/csv.ts` when the attendance reports needed the same quoting. This
+ * module's tests address it here, and a bank file is the last place to want a
+ * second opinion on how a comma is escaped.
  */
-export function csvCell(value: string): string {
-  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`
-  return value
-}
+export { csvCell }
 
 const CSV_HEADERS = [
   "EmployeeCode",

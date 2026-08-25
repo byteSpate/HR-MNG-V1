@@ -11,13 +11,43 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export interface EditField {
   key: string
   label: string
-  /** "date" renders a YYYY-MM-DD input; the API expects that exact format. */
-  kind?: "text" | "date"
+  /**
+   * "date" renders a YYYY-MM-DD input; the API expects that exact format.
+   * "select" renders a dropdown and needs `options`.
+   */
+  kind?: "text" | "date" | "select"
+  /** For `kind: "select"`. A closed set of values is a dropdown, not a text box. */
+  options?: { value: string; label: string }[]
+  /** Sits under the field, for anything the change has consequences for. */
+  hint?: string
 }
+
+/**
+ * The one place these labels live. Both profile pages read it, so the wording
+ * on a card and the wording in the dropdown that edits that card cannot drift.
+ */
+export const EMPLOYMENT_TYPE_LABEL: Record<string, string> = {
+  FULL_TIME: "Full-time",
+  PART_TIME: "Part-time",
+  CONTRACT: "Contract",
+  INTERN: "Intern",
+}
+
+const EMPLOYMENT_TYPE_OPTIONS = Object.entries(EMPLOYMENT_TYPE_LABEL).map(([value, label]) => ({
+  value,
+  label,
+}))
 
 /**
  * Per-card field lists.
@@ -42,8 +72,28 @@ export const CARD_FIELDS: Record<string, EditField[]> = {
     { key: "permanentAddress", label: "Permanent address" },
     { key: "emergencyContact", label: "Emergency contact" },
   ],
+  // Employment type and joining date are here because they are *on the card*.
+  // Without them this dialog opened over a card of six rows and offered to
+  // change one of them, which reads as an Edit button that does not edit.
+  //
+  // Two rows are still absent by design and both say so on the card: employee
+  // code is generated and never rewritten, and shift has its own dialog
+  // because assigning one has attendance consequences worth a separate
+  // confirmation.
   Employment: [
     { key: "designation", label: "Designation" },
+    {
+      key: "employmentType",
+      label: "Employment type",
+      kind: "select",
+      options: EMPLOYMENT_TYPE_OPTIONS,
+    },
+    {
+      key: "joiningDate",
+      label: "Joining date",
+      kind: "date",
+      hint: "Attendance before this date is not tracked, and leave accrual counts from it.",
+    },
     { key: "officeLocation", label: "Office location" },
     { key: "deviceUserId", label: "Device enrolment ID" },
   ],
@@ -94,11 +144,17 @@ function EditForm({
   // Offered if and only if the server said this caller may write it.
   const offered = fields.filter((f) => employee.editableFields.includes(f.key))
 
-  const [values, setValues] = useState<Record<string, string>>(() => {
+  /**
+   * What the fields held when the dialog opened, so `handleSubmit` can send
+   * only what moved. `useState` rather than a ref: the form is remounted on
+   * every open, so this is seeded once and never needs updating.
+   */
+  const [original] = useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {}
     for (const field of offered) seed[field.key] = currentValue(employee, field.key)
     return seed
   })
+  const [values, setValues] = useState<Record<string, string>>(() => ({ ...original }))
   const [error, setError] = useState<string | null>(null)
 
   const mutation = useMutation({
@@ -117,12 +173,25 @@ function EditForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    // Only what changed. Two reasons, and the second is a real bug the earlier
+    // version had: the audit before/after should read as one coherent change
+    // rather than a rewrite of every field on the card, *and* several fields
+    // the server accepts are optional-but-not-nullable (`designation`,
+    // `employmentType`, `joiningDate`). Re-sending an untouched blank one as
+    // null is a 400 on a save the user did not ask to make.
     const input: Record<string, string | null> = {}
     for (const field of offered) {
       const next = (values[field.key] ?? "").trim()
+      if (next === original[field.key]) continue
       // An emptied field is an explicit clear, which the API expresses as
       // null. Sending "" would fail the server's min(1) validator.
       input[field.key] = next === "" ? null : next
+    }
+
+    if (Object.keys(input).length === 0) {
+      onOpenChange(false)
+      return
     }
     mutation.mutate(input as UpdateEmployeeInput)
   }
@@ -138,12 +207,39 @@ function EditForm({
             <Label htmlFor={field.key} className="mb-1.5 text-xs font-bold">
               {field.label}
             </Label>
-            <Input
-              id={field.key}
-              type={field.kind === "date" ? "date" : "text"}
-              value={values[field.key] ?? ""}
-              onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-            />
+            {field.kind === "select" ? (
+              <Select
+                value={values[field.key] ?? ""}
+                onValueChange={(next) =>
+                  setValues((v) => ({ ...v, [field.key]: next ?? "" }))
+                }
+              >
+                <SelectTrigger id={field.key} className="w-full">
+                  <SelectValue>
+                    {(v: string | null) =>
+                      field.options?.find((o) => o.value === v)?.label ?? "Not set"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {(field.options ?? []).map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id={field.key}
+                type={field.kind === "date" ? "date" : "text"}
+                value={values[field.key] ?? ""}
+                onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+              />
+            )}
+            {field.hint ? (
+              <p className="mt-1.5 text-[11.5px] leading-snug text-[#5F6B7C]">{field.hint}</p>
+            ) : null}
           </div>
         ))}
         {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}

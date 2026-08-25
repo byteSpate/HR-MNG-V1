@@ -43,7 +43,7 @@ export const FLOW: FlowStep[] = [
     id: "record",
     title: "Record",
     body: "The daily work, and mostly not done in this section at all. A payroll run is approved, an expense claim is reimbursed, a supplier bill is entered, someone leaves and is settled. Anything those modules do not cover is typed as a journal by hand.",
-    pages: ["Payroll", "Expenses", "Settlements", "Operating costs"],
+    pages: ["Payroll", "Employee expenses", "Settlements", "Expenses"],
   },
   {
     id: "post",
@@ -423,7 +423,7 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "Every entry in the ledger, whether a person typed it or the system generated it. This is the searchable record of everything that has ever moved.",
     step: "post",
     connects: {
-      fedBy: ["Payroll", "Expenses", "Operating costs", "Settlements", "Asset capitalisation and depreciation", "Hand-typed entries", "The year-end sweep"],
+      fedBy: ["Payroll", "Employee expenses", "Expenses", "Settlements", "Asset capitalisation and depreciation", "Hand-typed entries", "The year-end sweep"],
       feeds: ["General ledger", "Cash and bank books", "Trial balance", "Every statement"],
     },
     reading: [
@@ -1345,7 +1345,7 @@ export const HELP: Record<string, HelpEntry> = {
   },
 
   costs: {
-    title: "Operating costs",
+    title: "Expenses (company)",
     lede: "Rent, electricity, internet, cleaning — the running bills. Entering one records the cost and the debt; paying it moves the bank.",
     step: "record",
     connects: {
@@ -1413,7 +1413,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
     ],
     watchFor: [
-      "Bills in foreign currency are refused. Operating costs do not freeze an exchange rate, so the bill and the payment would convert at different rates and leave a residue on the payables account that never clears and that no account exists to absorb. Record it in taka.",
+      "Bills in foreign currency are refused. Company expenses do not freeze an exchange rate, so the bill and the payment would convert at different rates and leave a residue on the payables account that never clears and that no account exists to absorb. Record it in taka.",
       "Editing a bill after it has posted is refused for the figures the entry was built from — the amount, the category and the currency. Correcting those is a reversal.",
     ],
   },

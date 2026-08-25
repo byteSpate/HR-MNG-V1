@@ -81,7 +81,7 @@ export function CostCategoriesPanel({ accessToken }: { accessToken: string }) {
   return (
     <PanelFrame
       title="Cost categories"
-      sub="What operating costs are booked against. One with costs or commitments against it cannot be deleted."
+      sub="What company expenses are booked against. One with costs or fixed costs against it cannot be deleted."
       actionLabel="Add category"
       onAction={add}
       error={error}
@@ -94,7 +94,7 @@ export function CostCategoriesPanel({ accessToken }: { accessToken: string }) {
         isError={isError}
         onRetry={() => refetch()}
         emptyTitle="No cost categories yet"
-        emptyBody="Operating costs are booked against one of these, so the costs module has nowhere to file anything until one exists."
+        emptyBody="Company expenses are booked against one of these, so the costs module has nowhere to file anything until one exists."
         emptyAction="Add category"
         onEmptyAction={add}
         rows={categories.map((category) => [

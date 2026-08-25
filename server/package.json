@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "build": "prisma generate && tsc -p tsconfig.build.json && npm run copy:templates",
+    "copy:templates": "node -e \"const f=require('node:fs');const keep=/\\.(html|png|jpg|jpeg|svg)$/i;f.cpSync('src/templates','dist/templates',{recursive:true,filter:(s)=>f.statSync(s).isDirectory()||keep.test(s)})\"",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

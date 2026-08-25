@@ -6,6 +6,8 @@ import {
   RiAlertLine,
   RiArrowLeftSLine,
   RiArrowRightSLine,
+  RiCalendarLine,
+  RiListUnordered,
   RiPencilLine,
 } from "@remixicon/react"
 
@@ -52,6 +54,42 @@ const HR_ROLES = ["HR_ADMIN", "SUPER_ADMIN"]
 
 /** Days an employee may still fix themselves, mirroring MAX_REGULARISE_DAYS. */
 const REGULARISE_WINDOW_DAYS = 14
+
+const VIEW_MODES = [
+  { mode: "list" as const, label: "List", Icon: RiListUnordered },
+  { mode: "calendar" as const, label: "Calendar", Icon: RiCalendarLine },
+]
+
+/**
+ * A month-shaped placeholder, so switching to the calendar while the month
+ * loads does not swap the page's shape twice.
+ */
+function CalendarLoading() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
+      <div className="rounded-md border border-[#E4E9EF] bg-white p-4">
+        <Skeleton className="mx-auto h-6 w-36" />
+        <div className="mt-4 grid grid-cols-7 gap-1.5">
+          {/* Six rows of seven: the largest a month grid ever gets, so the
+              block never grows as the real calendar lands. */}
+          {Array.from({ length: 42 }, (_, i) => (
+            <Skeleton key={i} className="size-8 rounded" />
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3 border-t border-[#EEF1F5] pt-3">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-3 w-16" />
+          ))}
+        </div>
+      </div>
+      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5">
+        <Skeleton className="h-3.5 w-32" />
+        <Skeleton className="mt-3 h-3 w-full" />
+        <Skeleton className="mt-2 h-3 w-2/3" />
+      </div>
+    </div>
+  )
+}
 
 export function AttendancePage() {
   const { accessToken, user, status: sessionStatus } = useSession()
@@ -359,26 +397,39 @@ export function AttendancePage() {
               aria-label="Log view"
               className="flex rounded-md border border-[#E4E9EF] bg-white p-0.5"
             >
-              {(["list", "calendar"] as const).map((mode) => (
+              {VIEW_MODES.map(({ mode, label, Icon }) => (
                 <Button
                   key={mode}
                   type="button"
+                  // `ghost` rather than the default variant: without it the
+                  // button's own background and shadow sit under these
+                  // classes and the unselected half reads as a raised
+                  // control rather than as the other half of a toggle.
+                  variant="ghost"
+                  size="sm"
                   aria-pressed={view === mode}
                   onClick={() => setView(mode)}
                   className={cn(
-                    "rounded px-3 py-1 text-[12px] capitalize transition-colors",
+                    "gap-1.5 rounded px-3 text-[12px] transition-colors",
                     view === mode
-                      ? "bg-[#17191C] font-bold text-white"
+                      ? "bg-[#17191C] font-bold text-white hover:bg-[#17191C] hover:text-white"
                       : "font-semibold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
                   )}
                 >
-                  {mode}
+                  <Icon className="size-3.5" aria-hidden />
+                  {label}
                 </Button>
               ))}
             </div>
           </div>
 
-          {view === "calendar" && !daysQuery.isPending && !daysQuery.isError ? (
+          {/* The view you chose is the view you keep, loading or not. This
+              used to fall through to the table whenever the month was still
+              loading, so picking Calendar showed a table skeleton and then
+              swapped shape underneath you. */}
+          {view === "calendar" && daysQuery.isPending ? (
+            <CalendarLoading />
+          ) : view === "calendar" && !daysQuery.isError ? (
             <AttendanceCalendar
               days={days}
               holidays={holidaysQuery.data ?? []}

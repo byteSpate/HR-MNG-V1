@@ -17,6 +17,7 @@ import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type { UnbalancedDetails } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { downloadBlob } from "@/components/payroll/payroll-shared"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -136,12 +137,10 @@ export function StatementsPage() {
     setDownloading(true)
     try {
       const blob = await downloadStatementsPdf(accessToken!, range)
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `financial-statements-${range.to}.pdf`
-      link.click()
-      URL.revokeObjectURL(url)
+      // Shared with the payslip download rather than hand-rolled again: the
+      // anchor has to be in the document for Firefox to honour the click, and
+      // the object URL cannot be revoked in the same task as the click.
+      downloadBlob(blob, `financial-statements-${range.to}.pdf`)
     } catch {
       toast.error("Could not generate the PDF")
     } finally {

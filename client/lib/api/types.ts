@@ -372,6 +372,84 @@ export interface MonthlyAttendanceSummary {
   rejected: number
 }
 
+/**
+ * Attendance reports. Mirrors `server/src/modules/attendance/attendance.report.ts`
+ * — kept in sync by hand, like everything else in this file.
+ *
+ * One range serves the daily, weekly and custom reports; the granularity picks
+ * which of `rows` and `days` is populated. Exactly one of them ever is.
+ */
+export type ReportGranularity = "summary" | "daily"
+
+export interface AttendanceReportRow {
+  employee: AttendanceEmployeeRef
+  /** Its own field rather than part of the ref: that ref is shared with the
+   *  approval and summary payloads, which do not carry this join. */
+  department: string
+  workingDays: number
+  present: number
+  absent: number
+  onLeave: number
+  onPaidLeave: number
+  onUnpaidLeave: number
+  notCheckedIn: number
+  late: number
+  earlyOut: number
+  holidays: number
+  weeklyOffs: number
+  workedOnOffDays: number
+  workedHours: number
+  expectedHours: number
+  shortfallHours: number
+  missingCheckOut: number
+  pendingApproval: number
+  approved: number
+  regularised: number
+  rejected: number
+}
+
+export interface AttendanceReportDay {
+  employee: AttendanceEmployeeRef
+  department: string
+  date: string
+  status: AttendanceStatus
+  isWorkingDay: boolean
+  checkIn: string | null
+  checkOut: string | null
+  workedHours: number | null
+  expectedHours: number
+  isLate: boolean
+  isEarlyOut: boolean
+  approval: AttendanceApproval | null
+  regularised: boolean
+  autoCheckOut: boolean
+  detail: string | null
+}
+
+export interface AttendanceReport {
+  from: string
+  to: string
+  granularity: ReportGranularity
+  /** Roster size, so an empty range reads differently from an empty company. */
+  headcount: number
+  rows: AttendanceReportRow[]
+  days: AttendanceReportDay[]
+  totals: {
+    workingDays: number
+    present: number
+    absent: number
+    onLeave: number
+    notCheckedIn: number
+    late: number
+    earlyOut: number
+    workedHours: number
+    expectedHours: number
+    shortfallHours: number
+    missingCheckOut: number
+    pendingApproval: number
+  }
+}
+
 export interface HolidayItem {
   id: string
   name: string

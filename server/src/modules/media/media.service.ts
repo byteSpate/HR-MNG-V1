@@ -32,6 +32,15 @@ export function costPublicId(costId: string): string {
   return `${costFolderPrefix(costId)}${randomUUID()}`
 }
 
+export function expenseFolderPrefix(claimId: string): string {
+  return `hr/expenses/${claimId}/`
+}
+
+/** Random, because two receipts for the same claim are two files. */
+export function expensePublicId(claimId: string): string {
+  return `${expenseFolderPrefix(claimId)}${randomUUID()}`
+}
+
 /** Random, because two receipts for the same journal are two files. */
 export function journalPublicId(journalId: string): string {
   return `journals/${journalId}/${randomUUID()}`

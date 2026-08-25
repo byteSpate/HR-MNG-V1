@@ -1,7 +1,8 @@
-import { apiFetch } from "./client"
+import { apiFetch, apiFetchBlob } from "./client"
 import type {
   ApprovalItem,
   AttendanceDay,
+  AttendanceReport,
   AuditEntry,
   BulkDecisionResult,
   DailySummary,
@@ -10,6 +11,7 @@ import type {
   HolidayWriteResult,
   MonthlyAttendanceSummary,
   PunchResult,
+  ReportGranularity,
   TodayAttendance,
 } from "./types"
 
@@ -75,6 +77,59 @@ export function getMonthlySummary(
     `/api/attendance/summary/monthly?month=${month}&year=${year}`,
     { accessToken }
   )
+}
+
+// ── Reports ───────────────────────────────────
+
+/**
+ * One endpoint serves the daily, weekly and custom-range reports — they differ
+ * only in the range asked for. `granularity` picks whether the answer is one
+ * row per employee or one row per employee per day.
+ */
+export interface AttendanceReportQuery {
+  from: string
+  to: string
+  granularity?: ReportGranularity
+  employeeId?: string
+}
+
+/** `pdf` is the printable document; `csv` is the same report for a spreadsheet. */
+export type ReportFormat = "pdf" | "csv"
+
+function reportQuery(query: AttendanceReportQuery, format?: ReportFormat): string {
+  const params = new URLSearchParams({ from: query.from, to: query.to })
+  if (query.granularity) params.set("granularity", query.granularity)
+  if (query.employeeId) params.set("employeeId", query.employeeId)
+  if (format) params.set("format", format)
+  return params.toString()
+}
+
+export function getAttendanceReport(
+  accessToken: string,
+  query: AttendanceReportQuery
+): Promise<AttendanceReport> {
+  return apiFetch<AttendanceReport>(`/api/attendance/report?${reportQuery(query)}`, {
+    accessToken,
+  })
+}
+
+/**
+ * The same report as a downloadable file. Errors still arrive as JSON — see
+ * `apiFetchBlob`.
+ *
+ * The server, not the browser, builds both files: the figures then come off
+ * the one report object the on-screen table was built from, so a printed page
+ * cannot disagree with the screen it was printed from.
+ */
+export async function downloadAttendanceReport(
+  accessToken: string,
+  query: AttendanceReportQuery,
+  format: ReportFormat = "pdf"
+): Promise<Blob> {
+  const { blob } = await apiFetchBlob(`/api/attendance/report?${reportQuery(query, format)}`, {
+    accessToken,
+  })
+  return blob
 }
 
 // ── Approvals ─────────────────────────────────

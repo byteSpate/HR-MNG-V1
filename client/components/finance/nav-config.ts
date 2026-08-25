@@ -9,9 +9,9 @@ export const navGroups: NavGroup[] = [
       // Finance authors the pay bands; HR assigns people to them. Sits above
       // Expenses because no run can process until one exists.
       { label: "Salary structures", href: "/finance/salary-structures", icon: "RiSettingsLine" },
-      { label: "Expenses", href: "/finance/expenses", icon: "RiReceiptLine" },
+      { label: "Employee expenses", href: "/finance/expenses", icon: "RiReceiptLine" },
       { label: "Settlements", href: "/finance/settlements", icon: "RiHandCoinLine" },
-      { label: "Operating costs", href: "/finance/costs", icon: "RiBillLine" },
+      { label: "Expenses", href: "/finance/costs", icon: "RiBillLine" },
       { label: "Posting rules", href: "/finance/posting-rules", icon: "RiSettingsLine" },
       { label: "Assets", href: "/finance/assets", icon: "RiComputerLine" },
       { label: "Depreciation", href: "/finance/depreciation", icon: "RiCalculatorLine" },

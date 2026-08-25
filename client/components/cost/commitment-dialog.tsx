@@ -175,7 +175,7 @@ export function CommitmentDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit commitment" : "New recurring commitment"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit fixed cost" : "New fixed cost"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -334,7 +334,7 @@ export function CommitmentDialog({
             disabled={!canSubmit || pending}
             onClick={() => (isEdit ? updateMutation.mutate() : createMutation.mutate())}
           >
-            {pending ? "Saving…" : isEdit ? "Save changes" : "Create commitment"}
+            {pending ? "Saving…" : isEdit ? "Save changes" : "Create fixed cost"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -346,10 +346,10 @@ export function CommitmentDialog({
       */}
       <ConfirmDialog
         open={confirmEnd}
-        title="End this commitment?"
+        title="End this fixed cost?"
         body={
           <>
-            {existing ? `${existing.label} ` : "This commitment "}
+            {existing ? `${existing.label} ` : "This fixed cost "}
             stops being expected from today, so no further months will prompt you for a missing
             bill. Bills already recorded against it are untouched, and you can reopen it later.
           </>

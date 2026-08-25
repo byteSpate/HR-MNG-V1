@@ -27,6 +27,24 @@ export const yearQuerySchema = z.object({
 })
 export type YearQuery = z.infer<typeof yearQuerySchema>
 
+/**
+ * `from` and `to` are required here, unlike `dateRangeQuerySchema`: a report
+ * defaulting to some server-chosen range would put a date on a printed
+ * document that nobody asked for.
+ */
+export const reportQuerySchema = z.object({
+  from: dateOnly,
+  to: dateOnly,
+  granularity: z.enum(["summary", "daily"]).default("summary"),
+  employeeId: z.string().min(1).optional(),
+  /**
+   * `csv` and `pdf` switch the response from JSON to a file download. PDF is
+   * the printable document; CSV is the same report for a spreadsheet.
+   */
+  format: z.enum(["json", "csv", "pdf"]).default("json"),
+})
+export type ReportQuery = z.infer<typeof reportQuerySchema>
+
 export const approvalsQuerySchema = z.object({
   status: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional(),
   minAgingDays: z.coerce.number().int().min(0).max(365).optional(),

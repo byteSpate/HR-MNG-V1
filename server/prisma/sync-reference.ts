@@ -3,7 +3,10 @@ import "dotenv/config"
 import prisma from "../src/config/prisma"
 import { seedAssetCategories } from "../src/modules/asset/asset.categories.seed"
 import { seedChartOfAccounts } from "../src/modules/accounting/accounting.seed"
-import { seedCostCategories } from "../src/modules/cost/cost.categories.seed"
+import {
+  migrateCostCategoryCodes,
+  seedCostCategories,
+} from "../src/modules/cost/cost.categories.seed"
 import { seedPolicyNotes } from "../src/modules/statements/statements.policy.seed"
 import { seedPostingRules } from "../src/modules/posting/posting.rules.seed"
 
@@ -38,6 +41,12 @@ async function main() {
 
   await seedChartOfAccounts()
   console.log("  chart of accounts")
+
+  // Before the posting rules, not after. The rules are keyed by cost category
+  // code; seeding them first would insert the new keys alongside the old ones
+  // and leave every existing category pointing at a rule nothing renames.
+  const movedCodes = await migrateCostCategoryCodes()
+  console.log(`  cost category codes (${movedCodes} moved to the EXP- scheme)`)
 
   await seedPostingRules()
   console.log("  posting rules")

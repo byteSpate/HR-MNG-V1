@@ -50,6 +50,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { TableCell } from "@/components/dashboard/types"
 import { TimeAmendmentDialog } from "@/components/attendance/time-amendment-dialog"
 import { SectionHeading } from "@/components/attendance/attendance-ui"
+import { AttendanceReports } from "@/components/attendance/report-panel"
 import {
   APPROVAL_LABEL,
   HOLIDAY_TYPE_LABEL,
@@ -131,6 +132,11 @@ export function OrgSections({
         isHr={isHr}
         onChanged={onChanged}
       />
+
+      {/* Every administrative role, Finance included: "what did attendance
+          cost us last quarter" is a finance question, and the report is
+          already scoped to the caller's roster on the server. */}
+      <AttendanceReports accessToken={accessToken} />
 
       {isHr ? (
         <HolidayPanel

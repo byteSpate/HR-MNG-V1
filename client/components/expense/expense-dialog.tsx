@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 
+import { ROUTE_CATEGORY_CODES } from "@/lib/api/types"
 import type { Currency, ExpenseCategory, ExpenseClaimInput } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,7 +31,8 @@ export function ExpenseDialog({
   onOpenChange: (open: boolean) => void
   pending: boolean
   error: string | null
-  onSubmit: (input: ExpenseClaimInput) => void
+  /** The claim, and the file to attach to it once it exists. */
+  onSubmit: (input: ExpenseClaimInput, receipt: File | null) => void
   categories: ExpenseCategory[]
 }) {
   const [amount, setAmount] = useState("")
@@ -45,7 +47,18 @@ export function ExpenseDialog({
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "")
   const [expenseDate, setExpenseDate] = useState(today())
   const [description, setDescription] = useState("")
-  const [receiptUrl, setReceiptUrl] = useState("")
+  const [travelFrom, setTravelFrom] = useState("")
+  const [travelTo, setTravelTo] = useState("")
+  const [receipt, setReceipt] = useState<File | null>(null)
+
+  /**
+   * A journey has a route; a stationery bill does not. Driven by the selected
+   * category's code, which is exactly what the server checks — a client that
+   * offered these on every category would be collecting text it knows will be
+   * dropped on save.
+   */
+  const selected = categories.find((c) => c.id === categoryId) ?? null
+  const hasRoute = !!selected && ROUTE_CATEGORY_CODES.includes(selected.code.toUpperCase())
 
   const canSubmit = Number(amount) > 0 && !!expenseDate && !!categoryId
 
@@ -140,16 +153,51 @@ export function ExpenseDialog({
             />
           </div>
 
+          {hasRoute ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="exp-from" className="mb-1.5 text-xs font-bold">
+                  From
+                </Label>
+                <Input
+                  id="exp-from"
+                  value={travelFrom}
+                  onChange={(e) => setTravelFrom(e.target.value)}
+                  placeholder="Gulshan 1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="exp-to" className="mb-1.5 text-xs font-bold">
+                  To
+                </Label>
+                <Input
+                  id="exp-to"
+                  value={travelTo}
+                  onChange={(e) => setTravelTo(e.target.value)}
+                  placeholder="Motijheel"
+                />
+              </div>
+            </div>
+          ) : null}
+
           <div>
             <Label htmlFor="exp-receipt" className="mb-1.5 text-xs font-bold">
-              Receipt URL
+              Receipt
             </Label>
             <Input
               id="exp-receipt"
-              value={receiptUrl}
-              onChange={(e) => setReceiptUrl(e.target.value)}
-              placeholder="https://…"
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="h-auto py-1.5 text-[12.5px] file:mr-3 file:rounded file:border-0 file:bg-[#F1F4F8] file:px-2.5 file:py-1 file:text-[12px] file:font-semibold"
+              onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
             />
+            <p className="mt-1.5 text-[11.5px] text-[#7A8698]">
+              {/* Said plainly, because the claim is created first and the file
+                  attached to it — a failure at that second step needs to be
+                  recognisable as "the claim is fine, the file is not". */}
+              PDF or image, up to 15MB. The claim is saved first, then the file
+              attached to it.
+            </p>
           </div>
 
           {error ? <div className="text-[12.5px] text-[#B03A3A]">{error}</div> : null}
@@ -162,14 +210,21 @@ export function ExpenseDialog({
           <Button
             disabled={!canSubmit || pending}
             onClick={() =>
-              onSubmit({
-                amount: Number(amount),
-                currency,
-                 categoryId,
-                expenseDate,
-                description: description.trim() || undefined,
-                receiptUrl: receiptUrl.trim() || undefined,
-              })
+              onSubmit(
+                {
+                  amount: Number(amount),
+                  currency,
+                  categoryId,
+                  expenseDate,
+                  description: description.trim() || undefined,
+                  // Sent only when the category has a route. The server drops
+                  // them otherwise, but not sending them keeps the request
+                  // honest about what was actually asked for.
+                  travelFrom: hasRoute ? travelFrom.trim() || undefined : undefined,
+                  travelTo: hasRoute ? travelTo.trim() || undefined : undefined,
+                },
+                receipt
+              )
             }
           >
             Submit claim

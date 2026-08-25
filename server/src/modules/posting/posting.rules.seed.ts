@@ -11,7 +11,18 @@ export const POSTING_RULES: PostingRuleSeed[] = [
   { event: "EXPENSE_ACCRUAL", key: "TRAVEL", account: "5208" }, { event: "EXPENSE_ACCRUAL", key: "ENTERTAINMENT", account: "5205" },
   { event: "EXPENSE_ACCRUAL", key: "STATIONERY", account: "5203" }, { event: "EXPENSE_ACCRUAL", key: "IT", account: "5212" }, { event: "EXPENSE_ACCRUAL", key: "*", account: "5217" },
   { event: "EXPENSE_ACCRUAL", key: "REIMBURSEMENT", account: "2135" },
-  { event: "COST_ACCRUAL", key: "RENT", account: "5206" }, { event: "COST_ACCRUAL", key: "ELECTRICITY", account: "5209" }, { event: "COST_ACCRUAL", key: "WATER", account: "5210" }, { event: "COST_ACCRUAL", key: "INTERNET", account: "5211" }, { event: "COST_ACCRUAL", key: "MAINTENANCE", account: "5213" }, { event: "COST_ACCRUAL", key: "*", account: "5207" }, { event: "COST_ACCRUAL", key: "PAYABLE", account: "2110" },
+  // Keys here are `CostCategory.code` — see `cost.categories.seed.ts`. They
+  // moved from bare words to the EXP-<family>-<nnn> scheme; a database seeded
+  // before that is carried across by `migrateCostCategoryCodes()`, which moves
+  // the category and its rule in one transaction.
+  { event: "COST_ACCRUAL", key: "EXP-RNT-001", account: "5206" }, { event: "COST_ACCRUAL", key: "EXP-UTL-001", account: "5209" }, { event: "COST_ACCRUAL", key: "EXP-UTL-002", account: "5210" }, { event: "COST_ACCRUAL", key: "EXP-INT-001", account: "5211" }, { event: "COST_ACCRUAL", key: "EXP-MNT-001", account: "5213" },
+  { event: "COST_ACCRUAL", key: "EXP-ENT-001", account: "5205" }, { event: "COST_ACCRUAL", key: "EXP-TRN-001", account: "5208" }, { event: "COST_ACCRUAL", key: "EXP-OFF-001", account: "5207" },
+  // Salary as a *company expense* is for pay that never went through a payroll
+  // run — casual wages, a contractor's monthly invoice. Anything paid through
+  // payroll already debits 5201 from PAYROLL_ACCRUAL, so booking it here as
+  // well counts the same cost twice.
+  { event: "COST_ACCRUAL", key: "EXP-SAL-001", account: "5201", note: "Only for pay outside a payroll run — payroll already posts to 5201" },
+  { event: "COST_ACCRUAL", key: "*", account: "5207" }, { event: "COST_ACCRUAL", key: "PAYABLE", account: "2110" },
   { event: "COST_PAYMENT", key: "PAYABLE", account: "2110" }, { event: "COST_PAYMENT", key: "BANK", account: "1242" },
   { event: "SETTLEMENT_ACCRUAL", key: "DIRECT:BASIC", account: "5122" }, { event: "SETTLEMENT_ACCRUAL", key: "ADMINISTRATIVE:BASIC", account: "5201" }, { event: "SETTLEMENT_ACCRUAL", key: "NET_PAY", account: "2132" }, { event: "SETTLEMENT_ACCRUAL", key: "GRATUITY", account: "5220" }, { event: "SETTLEMENT_ACCRUAL", key: "NOTICE_PAY", account: "5221" },   { event: "SETTLEMENT_ACCRUAL", key: "ADVANCE_RECOVERY", account: "1250" }, { event: "SETTLEMENT_ACCRUAL", key: "REIMBURSEMENT", account: "2135" },
   // Asset recovery is income — the company is made whole for something it

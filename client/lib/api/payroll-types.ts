@@ -298,6 +298,57 @@ export interface ExpenseClaimInput {
   expenseDate: string
   description?: string
   receiptUrl?: string
+  /** Only travel and conveyance claims carry a route; the server drops these
+   *  for any other category rather than storing a journey that never happened. */
+  travelFrom?: string
+  travelTo?: string
+}
+
+/**
+ * Category codes whose claims describe a journey. Mirrors
+ * `ROUTE_CATEGORY_CODES` in `expense.service.ts` — the server drops From and
+ * To for anything else, so a client offering them elsewhere would be
+ * collecting text it knows will be thrown away.
+ */
+export const ROUTE_CATEGORY_CODES = ["TRAVEL", "CONVEYANCE"]
+
+export interface ExpenseReceipt {
+  id: string
+  fileName: string
+  bytes: number
+  format: string
+  uploadedAt: string
+}
+
+export interface ExpenseReportRow {
+  id: string
+  employee: { id: string; fullName: string; employeeCode: string }
+  category: { code: string; name: string }
+  expenseDate: string
+  amount: string
+  currency: string
+  status: ExpenseStatus
+  description: string | null
+  travelFrom: string | null
+  travelTo: string | null
+  /** Zero is the thing an approver looks for. */
+  receipts: number
+  paidOn: string | null
+}
+
+export interface ExpenseReport {
+  from: string
+  to: string
+  /** Present only when the report was narrowed to one person. */
+  employee: { id: string; fullName: string; employeeCode: string } | null
+  status: ExpenseStatus | null
+  rows: ExpenseReportRow[]
+  totals: {
+    claims: number
+    /** Per currency, never added together — see `expense.report.ts`. */
+    byCurrency: { currency: string; claims: number; amount: string }[]
+    byStatus: { status: ExpenseStatus; claims: number }[]
+  }
 }
 
 export interface SettlementBreakdown {

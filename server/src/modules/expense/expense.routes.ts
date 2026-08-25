@@ -11,7 +11,13 @@ import {
   listClaimsHandler,
   rejectClaimHandler,
   listExpenseCategoriesHandler, createExpenseCategoryHandler, updateExpenseCategoryHandler, deleteExpenseCategoryHandler,
+  uploadClaimReceiptHandler,
+  listClaimReceiptsHandler,
+  getClaimReceiptUrlHandler,
+  deleteClaimReceiptHandler,
+  getExpenseReportHandler,
 } from "./expense.controller"
+import { expenseUpload } from "../media/media.upload"
 
 const router = Router()
 
@@ -25,9 +31,29 @@ router.get("/categories", requireAuth, requireRole(...STAFF_ROLES, ...READ_ROLES
 router.post("/categories", requireAuth, requireRole(...FINANCE_ROLES), createExpenseCategoryHandler)
 router.patch("/categories/:id", requireAuth, requireRole(...FINANCE_ROLES), updateExpenseCategoryHandler)
 router.delete("/categories/:id", requireAuth, requireRole(...FINANCE_ROLES), deleteExpenseCategoryHandler)
+// Reports. Before `/:id` in the file for readability; Express matches the
+// longer literal path first regardless. `requireAuth` alone because the scope
+// is decided from the caller inside `expense.report.ts` — see the note there.
+router.get("/report", requireAuth, getExpenseReportHandler)
+
 // Before /:id, or Express would match "me" as a claim id.
 router.get("/me", requireAuth, requireRole(...STAFF_ROLES), getMyClaimsHandler)
 router.get("/", requireAuth, requireRole(...READ_ROLES), listClaimsHandler)
+// Receipts. Before `/:id` would be wrong — these are longer paths, so Express
+// matches them first regardless — but they sit here to read in claim order.
+//
+// Every one is `requireAuth` alone rather than `requireRole`: an employee
+// attaches to their own claim and Finance reads anybody's, and that split is
+// decided per claim inside `expense.media.ts`, which is the only place that
+// knows whose claim it is. A route-level role list could only say "staff or
+// finance", which is both roles and therefore no check at all.
+// `expenseUpload` is already a complete handler with .single("file") baked in
+// — calling .single() on it again throws at request time. Same as costUpload.
+router.post("/:id/receipts", requireAuth, expenseUpload, uploadClaimReceiptHandler)
+router.get("/:id/receipts", requireAuth, listClaimReceiptsHandler)
+router.get("/receipts/:id/url", requireAuth, getClaimReceiptUrlHandler)
+router.delete("/receipts/:id", requireAuth, deleteClaimReceiptHandler)
+
 router.get("/:id", requireAuth, getClaimHandler)
 
 // REIMBURSED has no route. It is set by a run being disbursed or a

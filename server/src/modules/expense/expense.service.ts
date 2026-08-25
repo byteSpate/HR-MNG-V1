@@ -35,7 +35,27 @@ const CLAIM_INCLUDE = {
   payslip: { select: { id: true, payslipNo: true, payrollRunId: true } },
 } as const
 
-const PAYROLL_ADMIN_ROLES = ["HR_ADMIN", "FINANCE_OFFICER", "SUPER_ADMIN"]
+/** Who may see and decide anybody's claim. Exported for `expense.media.ts`,
+ *  which has to answer the same question about receipts. */
+export const PAYROLL_ADMIN_ROLES = ["HR_ADMIN", "FINANCE_OFFICER", "SUPER_ADMIN"]
+
+/**
+ * Category codes whose claims describe a journey, and therefore carry a From
+ * and a To.
+ *
+ * Keyed on `code`, not on `name`, and not on a column: expense categories are
+ * created by Finance at runtime with no seed behind them, and `code` is
+ * already the stable key the posting rules resolve against
+ * (`EXPENSE_ACCRUAL/TRAVEL` → 5208). A `name` match would break the first time
+ * somebody renames the category to "Travel & Conveyance".
+ *
+ * Adding a second route-bearing category means adding its code here. The
+ * alternative — an `isTravel` column Finance ticks — is the better long-term
+ * shape and is worth doing if this set ever grows past a couple of entries.
+ */
+export const ROUTE_CATEGORY_CODES = new Set(["TRAVEL", "CONVEYANCE"])
+
+export const hasRoute = (code: string): boolean => ROUTE_CATEGORY_CODES.has(code.toUpperCase())
 
 export async function createClaim(actor: AccessTokenPayload, body: CreateClaimBody) {
   const self = await requireEmployeeForUser(actor.sub)
@@ -65,6 +85,11 @@ export async function createClaim(actor: AccessTokenPayload, body: CreateClaimBo
         expenseDate,
         description: body.description,
         receiptUrl: body.receiptUrl,
+        // Stored only when the category actually has a route. A "from" on a
+        // stationery claim is a field somebody filled in by accident, and it
+        // would print on the report as though the journey happened.
+        travelFrom: hasRoute(category.code) ? body.travelFrom : null,
+        travelTo: hasRoute(category.code) ? body.travelTo : null,
       },
     })
     await writeAudit(tx, {

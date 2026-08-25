@@ -64,7 +64,11 @@ export function AttendanceCalendar({
             off: "text-[#B6BDC6]",
           }}
           // Navigation is driven by the page's month switcher, so the
-          // calendar's own nav would be a second source of truth.
+          // calendar's own nav would be a second source of truth. That is also
+          // why this one keeps the static caption while every input picker
+          // defaults to dropdowns — a disabled dropdown is worse than no
+          // dropdown, and there is nothing here for it to navigate.
+          captionLayout="label"
           disableNavigation
           showOutsideDays={false}
         />
