@@ -509,7 +509,16 @@ function RequestsTable({
   ...state
 }: TableState & {
   requests: AssetRequest[]
-  /** The register, so a row can tell whether anything exists to hand over. */
+  /**
+   * The **whole** register, unfiltered, so a row can say how many units of the
+   * requested category are free. It must not be the Register tab's filtered
+   * result: filtering that tab to "Assigned" would otherwise flip every row
+   * here to "nothing in stock", which is a different claim about the world.
+   *
+   * `undefined` means *not known yet* (still loading, or the caller never had
+   * it) and is deliberately distinct from an empty array, which means *nothing
+   * is free*. Collapsing the two would print a count nobody has counted.
+   */
   assets?: Asset[]
   ownEmployeeCode?: string
   canDecide: boolean
@@ -537,16 +546,31 @@ function RequestsTable({
     // Nobody decides their own request — matching the server, so the button
     // never appears only to 403 when pressed.
     const isOwn = !!ownEmployeeCode && r.employee?.employeeCode === ownEmployeeCode
-    // A supply (quantity set) is issued by count and never registered, so it
-    // is always handable-over; a tracked item needs a free unit to exist.
-    const hasStock = availableOf(assets ?? [], r.categoryId) > 0
+    // A supply (quantity set) is issued by count and never registered; a
+    // tracked item is handed over from the register, so the free-unit count
+    // is what decides whether "Hand over" can do anything.
+    const tracked = r.quantity === null
+    const awaitingItem = r.kind === "NEW_ITEM" && (r.stage === "APPROVED" || r.stage === "ORDERED")
+    // `null` while the register is unknown — see the `assets` prop above.
+    const freeUnits = assets ? availableOf(assets, r.categoryId) : null
+    const canHandOver = freeUnits !== null && freeUnits > 0
     return [
       {
         text: r.employee ? r.employee.fullName : r.employeeId,
         sub: r.employee?.employeeCode,
         weight: 600,
       },
-      { text: r.category?.name ?? "No category" },
+      {
+        text: r.category?.name ?? "No category",
+        // The number the buttons below are reasoning from, said out loud. A
+        // category is a posting bucket, not a product — "1 available" for
+        // Furniture may well be a chair when the request is for a printer
+        // table — so the count is offered as evidence, not as an answer.
+        // Absent while the register is unknown and absent at zero: "0
+        // available" beside an Add asset button answers a question nobody
+        // asked, and while loading it would be a number nobody counted.
+        sub: awaitingItem && tracked && canHandOver ? `${freeUnits} available` : undefined,
+      },
       { text: r.reason },
       // The stage, not the stored status. "Approved" alone was the same word
       // for a laptop nobody has bought, a machine at the repairer and a
@@ -587,23 +611,36 @@ function RequestsTable({
                     </>
                   ) : null}
 
-                  {/* The row knows whether anything exists to hand over, so it
-                      names the step that is actually next. It used to offer
-                      "Hand over" regardless, and the dialog then told you to go
-                      and add an asset — a dead end you only found by clicking.
-                      Repairs and returns are excluded: their next act happens
-                      on the asset, not here. */}
-                  {r.kind === "NEW_ITEM" && (r.stage === "APPROVED" || r.stage === "ORDERED") ? (
-                    hasStock || r.quantity !== null ? (
-                      onFulfil ? (
-                        <Button type="button" size="sm" onClick={() => onFulfil(r)}>
-                          Hand over
-                        </Button>
-                      ) : null
-                    ) : (
+                  {/* An approved item has two honest next steps and they are
+                      not exclusive. This used to be an either/or on stock:
+                      free unit in the category ⇒ "Hand over" only. But
+                      `AssetCategory` is a posting and depreciation bucket
+                      (`classification`, `usefulLifeMonths`, `isConsumable`),
+                      not a product list — a chair and a printer table are both
+                      Furniture. So "we own a free Furniture item" is not "we
+                      own the thing they asked for", and owning one chair must
+                      not be what makes buying a printer table unreachable.
+                      Both are offered; which one is primary is the only thing
+                      stock decides. Repairs and returns are excluded: their
+                      next act happens on the asset, not here. */}
+                  {awaitingItem ? (
+                    tracked ? (
                       <>
+                        {/* Only with a free unit behind it — the dialog would
+                            otherwise open onto an empty picker, a dead end you
+                            could only find by clicking. */}
+                        {onFulfil && canHandOver ? (
+                          <Button type="button" size="sm" onClick={() => onFulfil(r)}>
+                            Hand over
+                          </Button>
+                        ) : null}
                         {onAddAsset ? (
-                          <Button type="button" size="sm" onClick={() => onAddAsset(r)}>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={canHandOver ? "outline" : "default"}
+                            onClick={() => onAddAsset(r)}
+                          >
                             Add asset
                           </Button>
                         ) : null}
@@ -620,6 +657,18 @@ function RequestsTable({
                           </Button>
                         ) : null}
                       </>
+                    ) : (
+                      /* A supply (`quantity` set) is issued by count from a
+                         category that does not track units individually.
+                         Fulfilling one never touches the register, so there is
+                         no stock to check and "Add asset" would register a
+                         thing that is not an asset. Hand over is the whole
+                         story here, and stays unconditional. */
+                      onFulfil ? (
+                        <Button type="button" size="sm" onClick={() => onFulfil(r)}>
+                          Hand over
+                        </Button>
+                      ) : null
                     )
                   ) : null}
 
@@ -748,6 +797,23 @@ export function AssetPage() {
   const registerQuery = useQuery({
     queryKey: ["assets", filters],
     queryFn: () => listAssets(accessToken!, filters),
+    enabled: isAuthed && (manage || role === "FINANCE_OFFICER" || isManagerRole),
+  })
+
+  /**
+   * The register with no filters on it, purely so the requests tab can count
+   * free units per category.
+   *
+   * `registerQuery` is keyed on the Register tab's filters, so reading stock
+   * from it meant filtering that tab to (say) "Assigned" silently changed
+   * which buttons every approved request offered — one tab quietly editing
+   * another. TanStack Query dedupes by key, so whenever the register filters
+   * are empty (the normal case) this is the same key and costs no extra
+   * request; it only fetches a second time while a filter is actually set.
+   */
+  const stockQuery = useQuery({
+    queryKey: ["assets", {}],
+    queryFn: () => listAssets(accessToken!, {}),
     enabled: isAuthed && (manage || role === "FINANCE_OFFICER" || isManagerRole),
   })
 
@@ -1083,7 +1149,11 @@ export function AssetPage() {
             <TabsContent value="requests" className="pt-3">
               <RequestsTable
                 requests={requestsQuery.data ?? []}
-                assets={registerQuery.data ?? []}
+                // Deliberately not `?? []`: undefined means the register is
+                // not known yet, which is not the same claim as "nothing is
+                // free". Also deliberately not `registerQuery` — that one
+                // carries the Register tab's filters.
+                assets={stockQuery.data}
                 isLoading={requestsQuery.isPending}
                 isError={requestsQuery.isError}
                 onRetry={() => requestsQuery.refetch()}

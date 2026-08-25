@@ -5,12 +5,13 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 
 import { fulfilAssetRequest, listAssets } from "@/lib/api/assets"
 import { useSession } from "@/lib/auth/session-context"
-import type { AssetRequest } from "@/lib/api/types"
+import type { Asset, AssetRequest } from "@/lib/api/types"
 import {
   DialogActions,
   Field,
   FormError,
   PanelAlert,
+  TONE,
   toMessage,
 } from "@/components/dashboard/record-kit"
 import {
@@ -23,6 +24,20 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+
+/**
+ * Model and serial, when the register has them.
+ *
+ * A category is a posting bucket, so "Furniture" can hold a chair and a
+ * printer table at once; the person picking here is deciding whether this
+ * particular unit is the thing that was asked for, and tag plus name is
+ * sometimes not enough to tell. Omitted entirely when both are null rather
+ * than shown as a placeholder — an empty detail line reads as a fact.
+ */
+function detailOf(asset: Asset): string | null {
+  const parts = [asset.model, asset.serialNumber].filter((p): p is string => !!p)
+  return parts.length ? parts.join(" · ") : null
+}
 
 /**
  * The step that turns an approved request into custody.
@@ -124,7 +139,7 @@ function FulfilForm({
         ) : (
           <Field
             label="Asset to hand over"
-            hint="Only assets that are available and in the requested category are listed."
+            hint="Only assets that are available and in the requested category are listed. A category holds more than one kind of thing, so check the unit is what was asked for."
           >
             <Select value={assetId} onValueChange={(v) => setAssetId((v as string) ?? "")}>
               <SelectTrigger className="w-full">
@@ -135,11 +150,17 @@ function FulfilForm({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {available.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.assetTag} · {a.name}
-                  </SelectItem>
-                ))}
+                {available.map((a) => {
+                  const detail = detailOf(a)
+                  return (
+                    <SelectItem key={a.id} value={a.id}>
+                      <span>
+                        {a.assetTag} · {a.name}
+                      </span>
+                      {detail ? <span className={TONE.muted}>{detail}</span> : null}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </Field>
