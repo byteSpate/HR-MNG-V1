@@ -205,6 +205,27 @@ async function loadTemplate(): Promise<string> {
 }
 
 /**
+ * Stores the rendered bytes, off the request path.
+ *
+ * Every failure is swallowed and logged: the caller has already returned the
+ * PDF, so a store that is down makes the next download slower, never broken.
+ * Exported for the tests, which need something to await.
+ */
+export async function cachePdf(
+  payslipId: string,
+  key: string,
+  bytes: Uint8Array
+): Promise<void> {
+  try {
+    const stored = await putPdf(key, bytes)
+    if (!stored) return
+    await prisma.payslip.update({ where: { id: payslipId }, data: { pdfUrl: key } })
+  } catch (err) {
+    console.error("[payslip pdf] caching failed", key, err)
+  }
+}
+
+/**
  * Renders on first request, caches to storage, and serves the cached file
  * thereafter. Re-emailing therefore does not re-render.
  */
@@ -232,8 +253,15 @@ export async function getOrRenderPayslipPdf(payslipId: string): Promise<Buffer> 
       printBackground: true,
       margin: { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
     })
-    await putPdf(key, bytes)
-    await prisma.payslip.update({ where: { id: payslipId }, data: { pdfUrl: key } })
+    // Caching happens **after** the response, not before it. The upload costs
+    // seconds against Cloudinary, and it is not work the person waiting for
+    // their payslip should pay for: a cold render already spends a browser
+    // launch plus the render itself, and Heroku's router gives up at 30s.
+    //
+    // `pdfUrl` is set only when the upload actually succeeded. Writing the key
+    // unconditionally records a cache entry that is not there, so every later
+    // read misses while the record claims a file exists.
+    void cachePdf(payslipId, key, bytes)
     return Buffer.from(bytes)
   } finally {
     await page.close().catch(() => undefined)
