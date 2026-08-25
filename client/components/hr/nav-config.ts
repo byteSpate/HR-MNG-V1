@@ -15,9 +15,9 @@ export const navGroups: NavGroup[] = [
     label: "Payroll (read)",
     items: [
       { label: "Payroll", href: "/hr/payroll", icon: "RiWallet3Line" },
-      { label: "Expenses", href: "/hr/expenses", icon: "RiReceiptLine" },
+      { label: "Employee expenses", href: "/hr/expenses", icon: "RiReceiptLine" },
       { label: "Settlements", href: "/hr/settlements", icon: "RiReceiptLine" },
-      { label: "Operating costs", href: "/hr/costs", icon: "RiBillLine" },
+      { label: "Expenses", href: "/hr/costs", icon: "RiBillLine" },
     ],
   },
   {

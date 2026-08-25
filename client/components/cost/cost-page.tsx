@@ -161,7 +161,10 @@ function BillsTable({
   monthLabel: string
 }) {
   const rows: TableCell[][] = bills.map((bill) => [
-    { text: bill.category.name },
+    // The code under the name, the way the settings screen shows it. It is
+    // what the bill posts against, so a reader reconciling to the ledger needs
+    // it on the row rather than a click away.
+    { text: bill.category.name, sub: bill.category.code },
     { text: bill.label, weight: 600 },
     { text: bill.payee },
     { text: formatMoney(bill.amount, bill.currency) },
@@ -284,13 +287,13 @@ function CommitmentsTable({
         ...(canManage ? [""] : []),
       ]}
       rows={rows}
-      emptyTitle={filtersActive ? "No commitments match" : "No recurring commitments"}
+      emptyTitle={filtersActive ? "No fixed costs match" : "No fixed costs"}
       emptyBody={
         filtersActive
           ? "Try a different status or clear the search."
-          : "A commitment is what makes a missing bill visible: without one, an empty month looks the same as a month nobody entered."
+          : "A fixed cost is what makes a missing bill visible: without one, an empty month looks the same as a month nobody entered."
       }
-      emptyAction={filtersActive || !canManage ? "Refresh" : "New commitment"}
+      emptyAction={filtersActive || !canManage ? "Refresh" : "New fixed cost"}
       onEmptyAction={filtersActive || !canManage ? state.onRetry : onCreate}
       {...state}
     />
@@ -608,8 +611,8 @@ export function CostPage() {
     <>
       <PageHeader
         kicker="Workspace"
-        title="Operating costs"
-        sub="Rent, electricity, water, internet and cleaning, one bill per category each month"
+        title="Expenses"
+        sub="What the company itself spends — rent, utilities, salaries, office and entertainment — one bill per category each month"
         aside={<MonthStepper period={period} onShift={(d) => setPeriod((p) => shiftPeriod(p, d))} />}
         cta={canManage ? "Record a bill" : undefined}
         onCta={openCreate}
@@ -775,7 +778,7 @@ export function CostPage() {
           <Tabs value={tab} onValueChange={(next) => next && setTab(next)}>
             <TabsList>
               <TabsTrigger value="bills">Bills</TabsTrigger>
-              <TabsTrigger value="commitments">Commitments</TabsTrigger>
+              <TabsTrigger value="commitments">Fixed costs</TabsTrigger>
               {canManage ? <TabsTrigger value="import">Import</TabsTrigger> : null}
             </TabsList>
 
