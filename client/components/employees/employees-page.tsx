@@ -17,7 +17,7 @@ import { listShifts } from "@/lib/api/shifts"
 import { SalaryStructureDialog } from "@/components/employees/salary-structure-dialog"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
-import { parseDateString, toDateString } from "@/lib/utils"
+import { toDateString } from "@/lib/utils"
 import type {
   CreateStaffAccountInput,
   CreateStaffAccountResult,
@@ -30,10 +30,9 @@ import { MiniStat, PageHeader } from "@/components/dashboard/page-header"
 import { DialogActions, Field, FormError, PanelTable, RowActions } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { TableCell, Tone } from "@/components/dashboard/types"
@@ -629,20 +628,7 @@ export function EmployeesPage() {
                 </Select>
               </Field>
               <Field label="Joining date">
-                <Popover>
-                  <PopoverTrigger
-                    render={<Button type="button" variant="outline" className="w-full justify-start font-normal" />}
-                  >
-                    {joiningDate}
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={parseDateString(joiningDate)}
-                      onSelect={(d) => d && setJoiningDate(toDateString(d))}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker value={joiningDate} onChange={setJoiningDate} />
               </Field>
             </FormSection>
 

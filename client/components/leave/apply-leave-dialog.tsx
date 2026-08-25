@@ -8,7 +8,7 @@ import { listHolidays } from "@/lib/api/attendance"
 import { ApiError } from "@/lib/api/client"
 import type { HalfDayWindow, LeaveBalanceItem, LeaveType } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { DatePicker } from "@/components/ui/date-picker"
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -66,6 +65,11 @@ function addDays(date: Date, days: number): Date {
   const d = new Date(date)
   d.setDate(d.getDate() + days)
   return d
+}
+
+/** `25 Aug 2026` — for naming a date back to the person who just picked it. */
+function longDay(date: Date): string {
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
 }
 
 export function ApplyLeaveDialog({
@@ -135,13 +139,24 @@ export function ApplyLeaveDialog({
   }, [selectedType])
 
   /**
-   * Past dates are selectable only for backdating-enabled types. Days off are
-   * blocked only for types that would not charge them — blocking them for
-   * earned or maternity leave would make a 120-day range impossible to pick.
+   * Past dates are selectable only for backdating-enabled types. The native
+   * date input enforces this bound itself, so it never has to be explained.
    */
-  const isDateDisabled = (date: Date) =>
-    (!countsHolidays && isNonWorkingDay(date, calendar)) ||
-    date.getTime() < earliestSelectable.getTime()
+  const earliestSelectableDate = toDateString(earliestSelectable)
+
+  /**
+   * Why a specific day cannot be taken, or null.
+   *
+   * Days off are blocked only for types that would not charge them — blocking
+   * them for earned or maternity leave would make a 120-day range impossible
+   * to pick. Stated as a sentence rather than a greyed-out square: a day the
+   * user cannot have is worth a reason, and it is the reason people ask HR
+   * about.
+   */
+  const dayOffReason = (date: Date): string | null => {
+    if (countsHolidays || !isNonWorkingDay(date, calendar)) return null
+    return `${longDay(date)} is a weekly off or a holiday, and ${selectedType?.name ?? "this leave type"} is not charged on those days. Pick a working day.`
+  }
 
   // Halves are single-day only, and gated per type: a §46 maternity benefit
   // is not taken in halves. The two conditions are kept apart because they
@@ -324,87 +339,44 @@ export function ApplyLeaveDialog({
           {isSingleDay ? (
             <div>
               <Label className="mb-1.5 text-xs font-bold">Date</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!selectedType}
-                      className="w-full justify-start font-normal"
-                    />
-                  }
-                >
-                  {startDate || "Pick a date"}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate ? parseDateString(startDate) : undefined}
-                    disabled={isDateDisabled}
-                    onSelect={(d) => d && handleSingleDateChange(toDateString(d))}
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                value={startDate}
+                onChange={handleSingleDateChange}
+                disabled={!selectedType}
+                min={earliestSelectableDate}
+                unavailable={dayOffReason}
+              />
             </div>
           ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <Label className="mb-1.5 text-xs font-bold">Start date</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!selectedType}
-                      className="w-full justify-start font-normal"
-                    />
+              <DatePicker
+                value={startDate}
+                disabled={!selectedType}
+                min={earliestSelectableDate}
+                unavailable={dayOffReason}
+                onChange={(next) => {
+                  setStartDate(next)
+                  // A start after the end is not a range. Dragging the end
+                  // along beats rejecting the click the user just made.
+                  if (endDate && parseDateString(endDate) < parseDateString(next)) {
+                    setEndDate(next)
                   }
-                >
-                  {startDate || "Pick a date"}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate ? parseDateString(startDate) : undefined}
-                    disabled={isDateDisabled}
-                    onSelect={(d) => {
-                      if (!d) return
-                      const next = toDateString(d)
-                      setStartDate(next)
-                      if (endDate && parseDateString(endDate).getTime() < d.getTime()) {
-                        setEndDate(next)
-                      }
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
+                }}
+              />
             </div>
             <div>
               <Label className="mb-1.5 text-xs font-bold">End date</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!selectedType}
-                      className="w-full justify-start font-normal"
-                    />
-                  }
-                >
-                  {endDate || "Pick a date"}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate ? parseDateString(endDate) : undefined}
-                    disabled={isDateDisabled}
-                    onSelect={(d) => d && setEndDate(toDateString(d))}
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                value={endDate}
+                onChange={setEndDate}
+                disabled={!selectedType}
+                // The end of a range is never before its start, and never
+                // before the backdating window either.
+                min={startDate || earliestSelectableDate}
+                unavailable={dayOffReason}
+              />
             </div>
           </div>
           )}

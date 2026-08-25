@@ -12,24 +12,49 @@ import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { RiArrowLeftSLine, RiArrowRightSLine, RiArrowDownSLine } from "@remixicon/react"
 
+/**
+ * How far the year dropdown reaches, when a caller does not say.
+ *
+ * react-day-picker's own default for a dropdown caption is "the last 100
+ * years" — no future months at all, which silently breaks every forward-looking
+ * picker in this app (applying for leave, an asset warranty, a commitment end
+ * date). Back covers a date of birth; forward covers a plan.
+ */
+const YEARS_BACK = 100
+const YEARS_FORWARD = 10
+
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  captionLayout = "label",
+  // Dropdowns, not arrows. Reaching January 1990 from today is 400-odd clicks
+  // on the arrow caption, which is why every date field in this app was
+  // painful to use. Callers that genuinely want a static caption can still
+  // pass `captionLayout="label"`.
+  captionLayout = "dropdown",
   buttonVariant = "ghost",
   locale,
   formatters,
   components,
+  startMonth,
+  endMonth,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
 
+  // Recomputed per render is fine — this is two Date allocations, and pinning
+  // it to a mount time would leave a long-lived tab one year short.
+  const now = new Date()
+  const resolvedStartMonth = startMonth ?? new Date(now.getFullYear() - YEARS_BACK, 0)
+  const resolvedEndMonth = endMonth ?? new Date(now.getFullYear() + YEARS_FORWARD, 11)
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      startMonth={resolvedStartMonth}
+      endMonth={resolvedEndMonth}
       className={cn(
         "group/calendar bg-background p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
