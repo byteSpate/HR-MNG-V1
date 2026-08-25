@@ -65,7 +65,11 @@ async function main() {
     prisma.postingRule.count(),
     prisma.assetCategory.count(),
     prisma.costCategory.count(),
-    prisma.policyNote.count(),
+    // `statementNote`, not `policyNote`. There is no PolicyNote model — only
+    // the seeder is named for the concept — so this threw on every run, after
+    // all the seeding had already succeeded. The script did its job and then
+    // exited non-zero, which reads as a failed sync.
+    prisma.statementNote.count(),
   ])
   console.log(
     `\nDone. ${accounts} accounts, ${rules} posting rules, ${assetCats} asset categories, ` +
