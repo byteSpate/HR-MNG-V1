@@ -14,13 +14,7 @@ import { ProfileHeader } from "@/components/profile/profile-header"
 import { SessionsCard } from "@/components/profile/sessions-card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-
-const EMPLOYMENT_TYPE_LABEL: Record<string, string> = {
-  FULL_TIME: "Full-time",
-  PART_TIME: "Part-time",
-  CONTRACT: "Contract",
-  INTERN: "Intern",
-}
+import { EMPLOYMENT_TYPE_LABEL } from "@/components/profile/edit-card-dialog"
 
 export function MyProfilePage() {
   const { accessToken, status: sessionStatus } = useSession()

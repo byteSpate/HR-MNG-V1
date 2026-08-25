@@ -12,7 +12,11 @@ import { useSession } from "@/lib/auth/session-context"
 import type { EmployeeView } from "@/lib/api/types"
 import { SalaryStructureDialog } from "@/components/employees/salary-structure-dialog"
 import { ShiftDialog } from "@/components/employees/shift-dialog"
-import { CARD_FIELDS, EditCardDialog } from "@/components/profile/edit-card-dialog"
+import {
+  CARD_FIELDS,
+  EditCardDialog,
+  EMPLOYMENT_TYPE_LABEL,
+} from "@/components/profile/edit-card-dialog"
 import { EditNameDialog } from "@/components/profile/edit-name-dialog"
 import { ExitDetailsDialog } from "@/components/profile/exit-details-dialog"
 import { DocumentsCard } from "@/components/profile/documents-card"
@@ -24,13 +28,6 @@ import { ProfileHeader } from "@/components/profile/profile-header"
 import { ProfileInsights } from "@/components/profile/profile-insights"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-
-const EMPLOYMENT_TYPE_LABEL: Record<string, string> = {
-  FULL_TIME: "Full-time",
-  PART_TIME: "Part-time",
-  CONTRACT: "Contract",
-  INTERN: "Intern",
-}
 
 /**
  * Renders whichever groups are present in the payload.
@@ -302,6 +299,10 @@ export function EmployeeDetailPage({
             title="Employment"
             action={editAction("Employment")}
             rows={[
+              // Designation is on the card because the Edit dialog offers it.
+              // A field you can change but cannot see is as confusing as a
+              // field you can see but cannot change.
+              { label: "Designation", value: employee.work.designation },
               { label: "Employee code", value: employee.employment.employeeCode },
               {
                 label: "Employment type",
