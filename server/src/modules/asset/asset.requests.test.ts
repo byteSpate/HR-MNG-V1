@@ -22,8 +22,12 @@ vi.mock("../../config/prisma", () => {
 })
 
 vi.mock("./asset.assignments", () => ({ assignAsset: vi.fn() }))
+vi.mock("../notification/notification.mailer", () => ({
+  sendAssetRequestDecidedEmail: vi.fn(() => Promise.resolve()),
+}))
 
 import prisma from "../../config/prisma"
+import { sendAssetRequestDecidedEmail } from "../notification/notification.mailer"
 import { assignAsset } from "./asset.assignments"
 import {
   approveRequest,
@@ -56,9 +60,35 @@ describe("approveRequest — Super Admin alone", () => {
     tx.assetRequest.findUnique.mockResolvedValue({
       id: "req-1", employeeId: "emp-1", kind: "NEW_ITEM", status: "PENDING",
       category: { name: "Monitor" }, asset: null,
+      employee: { user: { email: "requester@b.com" } },
     })
     tx.assetRequest.update.mockResolvedValue({ id: "req-1", status: "APPROVED" })
     prisma.employee.findUnique = vi.fn().mockResolvedValue({ id: "emp-9" })
+  })
+
+  it("emails the requester once the decision has committed", async () => {
+    await approveRequest("req-1", {}, admin)
+
+    expect(sendAssetRequestDecidedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "requester@b.com",
+        requestId: "req-1",
+        itemName: "Monitor",
+        approved: true,
+      })
+    )
+  })
+
+  it("does not email when the requester has no account", async () => {
+    tx.assetRequest.findUnique.mockResolvedValue({
+      id: "req-1", employeeId: "emp-1", kind: "NEW_ITEM", status: "PENDING",
+      category: { name: "Monitor" }, asset: null,
+      employee: { user: null },
+    })
+
+    await approveRequest("req-1", {}, admin)
+
+    expect(sendAssetRequestDecidedEmail).not.toHaveBeenCalled()
   })
 
   it("lets a Super Admin approve", async () => {
@@ -262,6 +292,26 @@ describe("rejectRequest", () => {
       statusCode: 400,
     })
     expect(tx.assetRequest.update).not.toHaveBeenCalled()
+  })
+
+  it("emails the requester the reason", async () => {
+    tx.assetRequest.findUnique.mockResolvedValue({
+      id: "req-1", employeeId: "emp-1", kind: "NEW_ITEM", status: "PENDING",
+      category: { name: "Monitor" }, asset: null,
+      employee: { user: { email: "requester@b.com" } },
+    })
+    tx.assetRequest.update.mockResolvedValue({ id: "req-1", status: "REJECTED" })
+
+    await rejectRequest("req-1", { note: "None left in stock" }, admin)
+
+    expect(sendAssetRequestDecidedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "requester@b.com",
+        itemName: "Monitor",
+        approved: false,
+        reason: "None left in stock",
+      })
+    )
   })
 })
 

@@ -14,6 +14,7 @@ import type { Prisma } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { emitEvent } from "../event/event.emit"
+import { sendSettlementStatementEmail } from "../notification/notification.mailer"
 import { sweepClaimsReimbursed } from "../expense/expense.sweep"
 import { sweepRecoveriesCollected } from "../asset/asset.sweep"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
@@ -397,6 +398,70 @@ export async function rejectSettlement(id: string, actorUserId: string, body: Se
 }
 
 /** Terminal. Marks the swept claims REIMBURSED, as disbursing a run does. */
+/**
+ * The heads that were actually worth something, in the order the statement
+ * reads. A zero head is left out rather than printed as `0` — a leaver reading
+ * "Leave encashment: 0" learns nothing except that a line exists.
+ *
+ * Deductions are shown as they are stored, positive, and labelled as
+ * deductions; `finalAmount` has already subtracted them.
+ */
+const STATEMENT_HEADS = [
+  ["pendingSalary", "Pending salary"],
+  ["gratuity", "Gratuity"],
+  ["noticePay", "Notice pay"],
+  ["expenseReimbursement", "Expense reimbursement"],
+  ["leaveEncashment", "Leave encashment"],
+  ["outstandingDeductions", "Less: outstanding deductions"],
+  ["assetRecoveries", "Less: asset recoveries"],
+] as const
+
+/**
+ * Email the leaver their statement.
+ *
+ * After the transaction and swallowed inside `notify`: a payment that already
+ * committed must not be undone by a mail server.
+ *
+ * Known hole, recorded rather than closed here: the address on file is the
+ * company email, which is often shut off the day someone leaves, and
+ * `Employee` has no personal email field. The one email whose recipient most
+ * needs it is the most likely to bounce — a failed row on /admin/emails is
+ * how anyone finds out.
+ */
+async function notifySettlementPaid(settlementId: string): Promise<void> {
+  const row = await prisma.settlement.findUnique({
+    where: { id: settlementId },
+    select: {
+      currency: true,
+      finalAmount: true,
+      pendingSalary: true,
+      gratuity: true,
+      noticePay: true,
+      expenseReimbursement: true,
+      leaveEncashment: true,
+      outstandingDeductions: true,
+      assetRecoveries: true,
+      employee: { select: { fullName: true, user: { select: { email: true } } } },
+    },
+  })
+  const to = row?.employee?.user?.email
+  if (!row || !to) return
+
+  const lines = STATEMENT_HEADS.filter(([key]) => !row[key].isZero()).map(([key, label]) => ({
+    label,
+    amount: toMoneyString(row[key]),
+  }))
+
+  await sendSettlementStatementEmail({
+    to,
+    settlementId,
+    fullName: row.employee.fullName,
+    currency: row.currency,
+    lines,
+    netPayable: toMoneyString(row.finalAmount),
+  })
+}
+
 export async function paySettlement(id: string, actorUserId: string) {
   const settlement = await prisma.settlement.findUnique({ where: { id } })
   if (!settlement) throw new AppError(404, "Settlement not found")
@@ -407,7 +472,7 @@ export async function paySettlement(id: string, actorUserId: string) {
     )
   }
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.settlement.update({
       where: { id },
       data: { status: "PAID", paidBy: actorUserId, paidAt: new Date() },
@@ -436,4 +501,7 @@ export async function paySettlement(id: string, actorUserId: string) {
     )
     return updated
   })
+
+  await notifySettlementPaid(id)
+  return updated
 }

@@ -23,13 +23,13 @@ vi.mock("../../config/prisma", () => ({
 }))
 
 vi.mock("../auth/mailer", () => ({
-  sendStaffCredentialsEmail: vi.fn(() => Promise.resolve()),
+  sendCredentialsEmail: vi.fn(() => Promise.resolve()),
 }))
 
 import prisma from "../../config/prisma"
 import { createStaffAccount, getEmployee, getMyProfile, listEmployees, setSalaryStructure } from "./employee.service"
 import { createStaffAccountSchema } from "./employee.validators"
-import { sendStaffCredentialsEmail } from "../auth/mailer"
+import { sendCredentialsEmail } from "../auth/mailer"
 
 function viewerToken(role: any, sub = "u-viewer") {
   return { sub, role, email: "v@b.com", mustChangePassword: false }
@@ -99,7 +99,12 @@ describe("createStaffAccount", () => {
 
     expect(result.employeeCode).toBe("BS-EMP-00001")
     expect(result.temporaryPassword).toHaveLength(10)
-    expect(sendStaffCredentialsEmail).toHaveBeenCalledWith("new@b.com", "BS-EMP-00001", result.temporaryPassword)
+    expect(sendCredentialsEmail).toHaveBeenCalledWith({
+      to: "new@b.com",
+      identifier: "BS-EMP-00001",
+      identifierLabel: "Employee ID",
+      temporaryPassword: result.temporaryPassword,
+    })
   })
 
   it("generates a BS-MNG-00001 code for a REPORTING_MANAGER, independent of the EMP counter", async () => {

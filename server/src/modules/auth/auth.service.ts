@@ -4,6 +4,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { Role } from "../../generated/prisma/client"
 import { generateOpaqueToken, hashPassword, hashToken, signAccessToken, toPublicUser, verifyPassword } from "./auth.utils"
 import { sendPasswordResetEmail } from "./mailer"
+import { sendPasswordChangedEmail } from "../notification/notification.mailer"
 import type { PublicUser } from "./auth.types"
 
 export interface SessionResult {
@@ -208,11 +209,28 @@ export async function logout(rawRefreshToken: string): Promise<void> {
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000 // 1 hour
 
+/**
+ * The narrowest useful defence against mail-bombing: this application has no
+ * request-level rate limiting at all, so `POST /forgot-password` can be called
+ * in a loop against any address an attacker can guess. Refusing to *create a
+ * token* stops the send, which is where the cost is, without a store that has
+ * to work across dynos. A real limiter is a separate task.
+ */
+export const TOKEN_COOLDOWN_MS = 60_000
+
 export async function requestPasswordReset(email: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } })
   if (!user) {
     return // don't reveal whether the email exists
   }
+  const recent = await prisma.passwordResetToken.findFirst({
+    where: { userId: user.id, createdAt: { gt: new Date(Date.now() - TOKEN_COOLDOWN_MS) } },
+    select: { id: true },
+  })
+  // Silent, like the unknown-email branch above: telling the caller they are
+  // being throttled tells them the address exists.
+  if (recent) return
+
   const raw = generateOpaqueToken()
   await prisma.passwordResetToken.create({
     data: { userId: user.id, tokenHash: hashToken(raw), expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
@@ -223,7 +241,12 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
 export async function resetPassword(rawToken: string, newPassword: string): Promise<void> {
   const tokenHash = hashToken(rawToken)
-  const stored = await prisma.passwordResetToken.findUnique({ where: { tokenHash } })
+  // The account's address is pulled in with the token: reset completion sends
+  // a PASSWORD_CHANGED notice, and this is the only read on the path.
+  const stored = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash },
+    include: { user: { select: { email: true } } },
+  })
   if (!stored) {
     throw new AppError(400, "Invalid or expired reset token")
   }
@@ -241,6 +264,12 @@ export async function resetPassword(rawToken: string, newPassword: string): Prom
   })
   await prisma.passwordResetToken.update({ where: { id: stored.id }, data: { usedAt: new Date() } })
   await revokeAllUserTokens(stored.userId)
+  // Reset is precisely the flow an attacker uses, so this is the notification
+  // that matters most. Not sent on the forced first-login change, where the
+  // temporary password was emailed to this same address minutes earlier.
+  if (stored.user?.email) {
+    await sendPasswordChangedEmail({ to: stored.user.email, userId: stored.userId })
+  }
 }
 
 export async function changePassword(
@@ -274,5 +303,7 @@ export async function changePassword(
     email: updated.email,
     mustChangePassword: false,
   })
+  // If it was not them, they find out in seconds.
+  await sendPasswordChangedEmail({ to: updated.email, userId: updated.id })
   return { accessToken, refreshToken, user: toPublicUser(updated) }
 }

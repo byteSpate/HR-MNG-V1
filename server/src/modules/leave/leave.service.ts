@@ -7,6 +7,11 @@ import { recomputePunchFlags } from "../attendance/attendance.recompute"
 import { shiftMidpoint } from "../attendance/attendance.time"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
+import {
+  sendLeaveDecidedEmail,
+  sendLeaveRequestedEmail,
+} from "../notification/notification.mailer"
+import { recipientsForLeaveRequest } from "../notification/notification.recipients"
 import { visibilityTierFor } from "../employee/employee.access"
 import { employeeIdForUser } from "../employee/employee.service"
 import {
@@ -583,6 +588,24 @@ export async function applyForLeave(
     return row
   })
 
+  // After the transaction, never inside it: an SMTP round trip must not hold
+  // a database transaction open. Fire-and-forget by construction — the
+  // builder uses `notify`, so a dead mail server cannot fail the request.
+  const recipients = await recipientsForLeaveRequest(employee.id)
+  await Promise.all(
+    recipients.map((to) =>
+      sendLeaveRequestedEmail({
+        to,
+        requestId: created.id,
+        employeeName: created.employee.fullName,
+        leaveType: leaveType.name,
+        startDate: formatDateOnly(created.startDate),
+        endDate: formatDateOnly(created.endDate),
+        days: String(days),
+      })
+    )
+  )
+
   return {
     id: created.id,
     employee: created.employee,
@@ -604,10 +627,38 @@ export async function applyForLeave(
 async function loadRequestOr404(id: string) {
   const found = await prisma.leaveRequest.findUnique({
     where: { id },
-    include: { employee: true, leaveType: true },
+    // The employee's login is pulled in for the decision notification. A
+    // second query for one address would run on every decision path, and the
+    // relation is already being joined.
+    include: { employee: { include: { user: { select: { email: true } } } }, leaveType: true },
   })
   if (!found) throw new AppError(404, "Leave request not found")
   return found
+}
+
+/**
+ * Tell the employee what was decided.
+ *
+ * After the transaction, and swallowed by `notify` inside the builder: a
+ * decision that already committed must not be undone by a mail server. An
+ * employee with no login has nobody to tell, which is not an error.
+ */
+async function notifyLeaveDecision(
+  found: Awaited<ReturnType<typeof loadRequestOr404>>,
+  approved: boolean,
+  reason: string | null
+): Promise<void> {
+  const to = found.employee.user?.email
+  if (!to) return
+  await sendLeaveDecidedEmail({
+    to,
+    requestId: found.id,
+    leaveType: found.leaveType.name,
+    startDate: formatDateOnly(found.startDate),
+    endDate: formatDateOnly(found.endDate),
+    approved,
+    reason,
+  })
 }
 
 /** Re-reads the row after a decision so the response reflects what was stored. */
@@ -721,6 +772,7 @@ export async function approveLeaveRequest(
       }),
     })
   })
+  await notifyLeaveDecision(found, true, null)
   return finishDecision(id)
 }
 
@@ -760,6 +812,7 @@ export async function rejectLeaveRequest(
       }),
     })
   })
+  await notifyLeaveDecision(found, false, note)
   return finishDecision(id)
 }
 

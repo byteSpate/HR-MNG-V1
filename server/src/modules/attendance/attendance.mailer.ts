@@ -1,7 +1,12 @@
-// Shares the auth module's transport, including its dev-mode fallback: with
-// no SMTP_HOST configured these log to the console instead of sending, which
-// is what makes the jobs runnable locally without an SMTP account.
-import { sendMail as send } from "../../utils/mailer"
+// Shares the one transport, including its dev-mode fallback: with no
+// SMTP_HOST configured these log to the console instead of sending, which is
+// what makes the jobs runnable locally without an SMTP account.
+//
+// Both use `notify` rather than `sendMail`: these run from cron, and a mail
+// server refusing a digest must not throw out of a scheduled job. The failure
+// is still visible — it leaves an EmailDispatch row with `error` set.
+import { notify } from "../../utils/mailer"
+import { renderEmail, serialFor } from "../../templates/email"
 import type { ExceptionCode } from "./attendance.types"
 
 const EXCEPTION_LABELS: Record<ExceptionCode, string> = {
@@ -36,20 +41,34 @@ export async function sendApprovalsDigest(input: DigestInput): Promise<void> {
       : ""
 
   const one = input.pending === 1
+  const subject = `${input.pending} attendance record${one ? " needs" : "s need"} your review`
 
-  await send(
-    input.to,
-    `${input.pending} attendance record${one ? " needs" : "s need"} your review`,
-    `You have ${input.pending} attendance record${one ? "" : "s"} awaiting a decision.${stale}\n\n${breakdown}\n\nReview them: ${input.link}`,
-    `<p>You have <strong>${input.pending}</strong> attendance record${one ? "" : "s"} awaiting a decision.${stale}</p>
-     <ul>${Object.entries(input.byException)
-       .map(
-         ([code, count]) =>
-           `<li>${EXCEPTION_LABELS[code as ExceptionCode]}: <strong>${count}</strong></li>`
-       )
-       .join("")}</ul>
-     <p><a href="${input.link}">Review them</a></p>`
-  )
+  const facts = [
+    { label: "Awaiting decision", value: String(input.pending) },
+    ...(input.oldestAgingDays > 0
+      ? [{ label: "Oldest waiting", value: `${input.oldestAgingDays} day${input.oldestAgingDays === 1 ? "" : "s"}` }]
+      : []),
+    ...Object.entries(input.byException).map(([code, count]) => ({
+      label: EXCEPTION_LABELS[code as ExceptionCode],
+      value: String(count),
+    })),
+  ]
+
+  await notify({
+    to: input.to,
+    kind: "ATTENDANCE_DIGEST",
+    subject,
+    text: `You have ${input.pending} attendance record${one ? "" : "s"} awaiting a decision.${stale}\n\n${breakdown}\n\nReview them: ${input.link}`,
+    html: renderEmail({
+      serial: serialFor("ATTENDANCE_DIGEST"),
+      subject,
+      stamp: { label: "Action required", tone: "action" },
+      intro: `You have ${input.pending} attendance record${one ? "" : "s"} awaiting a decision.${stale}`,
+      facts,
+      action: { label: "Review records", href: input.link },
+      footer: "You are receiving this because you have attendance records waiting on your decision. This digest runs once a day.",
+    }),
+  })
 }
 
 export async function sendMissingCheckOutNudge(
@@ -57,11 +76,23 @@ export async function sendMissingCheckOutNudge(
   date: string,
   link: string
 ): Promise<void> {
-  await send(
+  await notify({
     to,
-    "You didn't check out yesterday",
-    `Your attendance record for ${date} has a check-in but no check-out, so the day counts no hours.\n\nFix it while you still remember what time you left: ${link}`,
-    `<p>Your attendance record for <strong>${date}</strong> has a check-in but no check-out, so the day counts no hours.</p>
-     <p><a href="${link}">Fix it</a> while you still remember what time you left.</p>`
-  )
+    kind: "MISSING_CHECKOUT",
+    subject: "You didn't check out yesterday",
+    text: `Your attendance record for ${date} has a check-in but no check-out, so the day counts no hours.\n\nFix it while you still remember what time you left: ${link}`,
+    html: renderEmail({
+      serial: serialFor("MISSING_CHECKOUT"),
+      subject: "You didn't check out yesterday",
+      stamp: { label: "Action required", tone: "action" },
+      intro: "Your attendance record has a check-in but no check-out, so the day counts no hours.",
+      facts: [{ label: "Date", value: date }],
+      action: {
+        label: "Fix it now",
+        href: link,
+        note: "Do it while you still remember what time you left.",
+      },
+      footer: "You are receiving this because your attendance record for yesterday is incomplete.",
+    }),
+  })
 }

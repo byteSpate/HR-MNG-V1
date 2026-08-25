@@ -4,7 +4,7 @@ import { writeAudit } from "../../utils/audit"
 import { assertMonthNotLocked } from "../../utils/month-lock"
 import { projectAvatar } from "../auth/auth.me"
 import { generateTemporaryPassword, hashPassword } from "../auth/auth.utils"
-import { sendStaffCredentialsEmail } from "../auth/mailer"
+import { sendCredentialsEmail } from "../auth/mailer"
 import { emitEvent } from "../event/event.emit"
 import { EMPLOYEE_INCLUDE, projectEmployee, visibilityTierFor } from "./employee.access"
 import { computeBlockers } from "./employee.blockers"
@@ -120,8 +120,16 @@ export async function createStaffAccount(
     throw err
   }
 
-  await sendStaffCredentialsEmail(email, employeeCode, temporaryPassword).catch((err) => {
-    console.error("Failed to send staff credentials email", err)
+  await sendCredentialsEmail({
+    to: email,
+    identifier: employeeCode,
+    identifierLabel: "Employee ID",
+    temporaryPassword,
+  }).catch((err) => {
+    // Deliberately swallowed: a dead SMTP server must not roll back a created
+    // employee. No longer silent — the failure leaves an EmailDispatch row
+    // with `error` set.
+    console.error("Failed to send credentials email", err)
   })
 
   return { employeeCode, temporaryPassword, fullName, email }

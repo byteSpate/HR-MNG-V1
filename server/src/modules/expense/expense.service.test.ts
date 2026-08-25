@@ -25,9 +25,13 @@ vi.mock("../attendance/attendance.service", async (importOriginal) => ({
   requireEmployeeForUser: vi.fn(),
 }))
 vi.mock("./expense.posting", () => ({ postExpenseAccrual: vi.fn() }))
+vi.mock("../notification/notification.mailer", () => ({
+  sendExpenseDecidedEmail: vi.fn(() => Promise.resolve()),
+}))
 
 import prisma from "../../config/prisma"
 import { requireEmployeeForUser } from "../attendance/attendance.service"
+import { sendExpenseDecidedEmail } from "../notification/notification.mailer"
 import { dec } from "../payroll/payroll.money"
 import { approveClaim, createClaim, rejectClaim } from "./expense.service"
 
@@ -180,6 +184,29 @@ describe("approveClaim", () => {
     expect(prisma.exchangeRate.findMany).not.toHaveBeenCalled()
     expect(tx.expenseClaim.update.mock.calls[0][0].data.fxRateToBdt.toFixed(6)).toBe("1.000000")
   })
+
+  it("emails the claimant, naming the claim the way the expenses table does", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique).mockResolvedValue({
+      id: "claim-1",
+      status: "PENDING",
+      currency: "BDT",
+      expenseDate: new Date("2026-08-03T00:00:00.000Z"),
+      employeeId: "emp-1",
+      amount: dec(1200),
+      employee: { user: { email: "claimant@b.com" } },
+      category: { name: "Travel" },
+    } as never)
+
+    await approveClaim("claim-1", "fin-1", {})
+
+    expect(sendExpenseDecidedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "claimant@b.com",
+        approved: true,
+        claimRef: "Travel on 2026-08-03",
+      })
+    )
+  })
 })
 
 describe("rejectClaim", () => {
@@ -211,6 +238,29 @@ describe("rejectClaim", () => {
     expect(tx.expenseClaim.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "REJECTED", reviewNote: "No receipt attached" }),
+      })
+    )
+  })
+
+  it("emails the claimant the reason", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique).mockResolvedValue({
+      id: "claim-1",
+      status: "PENDING",
+      currency: "BDT",
+      expenseDate: new Date("2026-08-03T00:00:00.000Z"),
+      employeeId: "emp-1",
+      amount: dec(1200),
+      employee: { user: { email: "claimant@b.com" } },
+      category: { name: "Travel" },
+    } as never)
+
+    await rejectClaim("claim-1", "fin-1", { note: "No receipt attached" })
+
+    expect(sendExpenseDecidedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "claimant@b.com",
+        approved: false,
+        reason: "No receipt attached",
       })
     )
   })

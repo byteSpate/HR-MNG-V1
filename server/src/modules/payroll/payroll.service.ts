@@ -13,6 +13,8 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { assertMonthNotLocked } from "../../utils/month-lock"
 import { emitEvent } from "../event/event.emit"
+import { sendPayrollSubmittedEmail } from "../notification/notification.mailer"
+import { activeSuperAdminEmails } from "../notification/notification.recipients"
 import { sweepClaimsReimbursed } from "../expense/expense.sweep"
 import { sweepRecoveriesCollected } from "../asset/asset.sweep"
 import { postPayrollAccrual, postPayrollPayment } from "./payroll.posting"
@@ -687,8 +689,8 @@ export async function submitRun(id: string, actorUserId: string) {
     throw new AppError(409, "This run has not been processed yet — process it before submitting")
   }
 
-  return prisma.$transaction(async (tx) => {
-    const updated = await tx.payrollRun.update({
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.payrollRun.update({
       where: { id },
       data: { status: "SUBMITTED", submittedBy: actorUserId, submittedAt: new Date() },
     })
@@ -708,8 +710,36 @@ export async function submitRun(id: string, actorUserId: string) {
         actorUserId,
       })
     )
-    return updated
+    return row
   })
+
+  // After the transaction, and to every active Super Admin rather than one:
+  // any of them can approve, and picking one makes payday wait on whoever is
+  // away. The totals are read in BDT, the one currency every payslip is
+  // normalised to, so a mixed-currency run still adds up.
+  const [recipients, totals] = await Promise.all([
+    activeSuperAdminEmails(),
+    prisma.payslip.aggregate({
+      where: { payrollRunId: id },
+      _sum: { netPayableBdt: true },
+      _count: { _all: true },
+    }),
+  ])
+  await Promise.all(
+    recipients.map((to) =>
+      sendPayrollSubmittedEmail({
+        to,
+        runId: id,
+        month: run.month,
+        year: run.year,
+        employeeCount: totals._count._all,
+        totalNet: toMoneyString(totals._sum.netPayableBdt ?? dec(0)),
+        currency: "BDT",
+      })
+    )
+  )
+
+  return updated
 }
 
 /**

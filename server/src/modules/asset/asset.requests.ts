@@ -18,6 +18,7 @@ import { writeAudit } from "../../utils/audit"
 import { assignAsset } from "./asset.assignments"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
+import { sendAssetRequestDecidedEmail } from "../notification/notification.mailer"
 import { assetRequestEvent } from "./asset.events"
 import type { SubmitRequestInput } from "./asset.validators"
 import { computeRequestStage } from "./asset.stage"
@@ -191,15 +192,61 @@ export async function listRequests(viewer: AccessTokenPayload): Promise<ListedAs
   }))
 }
 
+/**
+ * The requester's login, for the decision notification. Selected alongside
+ * the decision read rather than in a second query, and optional-chained
+ * throughout: an employee with no account has nobody to tell, which is not an
+ * error.
+ */
+const DECISION_INCLUDE = {
+  category: true,
+  asset: { select: { assetTag: true, name: true } },
+  employee: { select: { user: { select: { email: true } } } },
+} as const
+
+/** What the requester asked for, named the way the request page names it. */
+function requestSubject(request: {
+  category?: { name: string } | null
+  asset?: { assetTag: string; name: string } | null
+}): string {
+  return request.category?.name ?? `${request.asset!.assetTag} · ${request.asset!.name}`
+}
+
+/**
+ * Tell the requester. After the transaction, never inside it: an SMTP round
+ * trip must not hold a database transaction open, and a decision that already
+ * committed must not be undone by a mail server.
+ */
+async function notifyAssetDecision(
+  requestId: string,
+  request: {
+    category?: { name: string } | null
+    asset?: { assetTag: string; name: string } | null
+    employee?: { user: { email: string } | null } | null
+  },
+  approved: boolean,
+  reason: string | null
+): Promise<void> {
+  const to = request.employee?.user?.email
+  if (!to) return
+  await sendAssetRequestDecidedEmail({
+    to,
+    requestId,
+    itemName: requestSubject(request),
+    approved,
+    reason,
+  })
+}
+
 export async function approveRequest(
   requestId: string,
   body: { note?: string },
   actor: AccessTokenPayload
 ): Promise<AssetRequest> {
-  return prisma.$transaction(async (tx) => {
+  const decided = await prisma.$transaction(async (tx) => {
     const request = await tx.assetRequest.findUnique({
       where: { id: requestId },
-      include: { category: true, asset: { select: { assetTag: true, name: true } } },
+      include: DECISION_INCLUDE,
     })
     if (!request) throw new AppError(404, "Asset request not found")
 
@@ -256,14 +303,17 @@ export async function approveRequest(
         stage: "approved",
         requestId,
         employeeId: request.employeeId,
-        subject: request.category?.name ?? `${request.asset!.assetTag} · ${request.asset!.name}`,
+        subject: requestSubject(request),
         actorUserId: actor.sub,
         note: body.note ?? null,
       })
     )
 
-    return updated
+    return { updated, request }
   })
+
+  await notifyAssetDecision(requestId, decided.request, true, body.note ?? null)
+  return decided.updated
 }
 
 /** Reject requires a non-empty `note`, matching leave and attendance. */
@@ -276,10 +326,10 @@ export async function rejectRequest(
     throw new AppError(400, "A reason is required to reject a request")
   }
 
-  return prisma.$transaction(async (tx) => {
+  const decided = await prisma.$transaction(async (tx) => {
     const request = await tx.assetRequest.findUnique({
       where: { id: requestId },
-      include: { category: true, asset: { select: { assetTag: true, name: true } } },
+      include: DECISION_INCLUDE,
     })
     if (!request) throw new AppError(404, "Asset request not found")
 
@@ -314,14 +364,17 @@ export async function rejectRequest(
         stage: "rejected",
         requestId,
         employeeId: request.employeeId,
-        subject: request.category?.name ?? `${request.asset!.assetTag} · ${request.asset!.name}`,
+        subject: requestSubject(request),
         actorUserId: actor.sub,
         note: body.note,
       })
     )
 
-    return updated
+    return { updated, request }
   })
+
+  await notifyAssetDecision(requestId, decided.request, false, body.note)
+  return decided.updated
 }
 
 /** The requester's own while PENDING; HR / Super Admin may close a live request they cannot source. No event: there is no "cancelled" stage in the feed. */

@@ -47,6 +47,7 @@ export const navGroups: NavGroup[] = [
       { label: "Users", href: "/admin/users", icon: "RiTeamLine" },
       { label: "Reports", href: "/admin/reports", icon: "RiBarChartLine" },
       { label: "Announcements", href: "/admin/announcements", icon: "RiMegaphoneLine" },
+      { label: "Emails", href: "/admin/emails", icon: "RiMailLine" },
       { label: "Settings", href: "/admin/settings", icon: "RiSettingsLine" },
       { label: "My Profile", href: "/admin/profile", icon: "RiUser3Line" },
     ],
