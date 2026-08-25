@@ -11,6 +11,14 @@ export const createClaimBody = z.object({
   expenseDate: dateOnly,
   description: z.string().max(1000).optional(),
   receiptUrl: z.string().max(2000).optional(),
+  /**
+   * Where a journey started and ended. Optional at this layer because only
+   * travel and conveyance claims have a route — a stationery bill does not —
+   * and the category that decides "travel" is a row in a table Finance edits,
+   * not a constant this schema could branch on.
+   */
+  travelFrom: z.string().trim().max(200).optional(),
+  travelTo: z.string().trim().max(200).optional(),
 })
 export type CreateClaimBody = z.infer<typeof createClaimBody>
 
@@ -24,6 +32,22 @@ export const approveClaimBody = z.object({
   note: z.string().max(1000).optional(),
 })
 export type ApproveClaimBody = z.infer<typeof approveClaimBody>
+
+/**
+ * `from` and `to` are required, unlike `claimQuery`: a report defaulting to
+ * some server-chosen range would put a date on a printed document that nobody
+ * asked for.
+ */
+export const reportQuery = z.object({
+  from: dateOnly,
+  to: dateOnly,
+  /** Ignored for staff, who always get their own — see `expense.report.ts`. */
+  employeeId: z.string().min(1).optional(),
+  status: z.enum(["PENDING", "APPROVED", "REJECTED", "REIMBURSED"]).optional(),
+  /** `csv` and `pdf` switch the response from JSON to a file download. */
+  format: z.enum(["json", "csv", "pdf"]).default("json"),
+})
+export type ReportQuery = z.infer<typeof reportQuery>
 
 export const claimQuery = z.object({
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "REIMBURSED"]).optional(),

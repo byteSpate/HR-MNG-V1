@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { ApiError } from "@/lib/api/client"
 import {
   approveExpenseClaim,
   createExpenseClaim,
+  uploadClaimReceipt,
   getMyExpenseClaims,
   listExpenseClaims,
   listExpenseCategories,
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DecisionDialog } from "@/components/leave/decision-dialog"
 import { ExpenseDialog } from "@/components/expense/expense-dialog"
+import { ExpenseReports } from "@/components/expense/expense-report-panel"
 import {
   EXPENSE_STATUS_LABEL,
   EXPENSE_STATUS_TONE,
@@ -73,10 +75,35 @@ export function ExpensePage() {
     setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
   }
 
+  /**
+   * Create, then attach.
+   *
+   * Two steps, because a receipt is stored under its claim's own folder and
+   * the server checks ownership against the claim — so there is nothing to
+   * attach to until the claim has an id.
+   *
+   * A failed upload does **not** fail the claim. The claim is already saved
+   * and valid; losing it because Cloudinary was slow would be the worse
+   * outcome, and the message says exactly which half went wrong so the person
+   * knows to re-attach rather than re-submit.
+   */
   const createMutation = useMutation({
-    mutationFn: (input: ExpenseClaimInput) => createExpenseClaim(accessToken!, input),
-    onSuccess: () => {
-      setError(null)
+    mutationFn: async ({ input, receipt }: { input: ExpenseClaimInput; receipt: File | null }) => {
+      const claim = await createExpenseClaim(accessToken!, input)
+      if (!receipt) return { claim, receiptError: null as string | null }
+      try {
+        await uploadClaimReceipt(accessToken!, claim.id, receipt)
+        return { claim, receiptError: null as string | null }
+      } catch (err) {
+        const why = err instanceof ApiError ? err.message : "the upload failed"
+        return {
+          claim,
+          receiptError: `Your claim was saved, but the receipt was not attached — ${why}. Open the claim to try again.`,
+        }
+      }
+    },
+    onSuccess: ({ receiptError }) => {
+      setError(receiptError)
       setOpen(false)
       invalidate()
     },
@@ -104,6 +131,24 @@ export function ExpensePage() {
     },
     onError: handleError,
   })
+
+  /**
+   * The people the report filter can offer, derived from the claims already
+   * loaded rather than from a second employee fetch. It is exactly the right
+   * set — somebody with no claims has nothing to report on — and it costs no
+   * extra request.
+   *
+   * Above the `isAuthed` early return, with every other hook: a hook after a
+   * conditional return is called in a different order on the render where the
+   * session resolves, which is a React error rather than a style point.
+   */
+  const reviewPeople = useMemo(() => {
+    const seen = new Map<string, NonNullable<ExpenseClaim["employee"]>>()
+    for (const claim of allQuery.data ?? []) {
+      if (claim.employee) seen.set(claim.employee.id, claim.employee)
+    }
+    return [...seen.values()].sort((a, b) => a.fullName.localeCompare(b.fullName))
+  }, [allQuery.data])
 
   if (!isAuthed) return <Skeleton className="h-64 w-full" />
 
@@ -150,10 +195,17 @@ export function ExpensePage() {
 
   return (
     <>
+      {/* Named for who is reading it. An employee's own claims are just
+          "Expenses"; an administrator has a second expenses module for the
+          company's own costs, so theirs has to say whose these are. */}
       <PageHeader
         kicker="Workspace"
-        title="Expenses"
-        sub="Claims, approvals and reimbursements"
+        title={isAdmin ? "Employee expenses" : "Expenses"}
+        sub={
+          isAdmin
+            ? "Claims submitted by staff — approvals and reimbursements"
+            : "Claims, approvals and reimbursements"
+        }
       />
 
       {error ? (
@@ -208,6 +260,24 @@ export function ExpensePage() {
             )}
           </div>
         ) : null}
+
+        {/* Everyone gets the report; what differs is who it can be about. The
+            person filter is only offered to an administrator, because staff
+            have nobody else to pick — and the server enforces that anyway. */}
+        <div className="space-y-4">
+          <div>
+            <div className="text-[15px] font-bold">Reports</div>
+            <p className="mt-1 text-[12.5px] text-[#5F6B7C]">
+              {isAdmin
+                ? "Claims for any date range, by person or across everybody, as a PDF or a spreadsheet."
+                : "Your claims for any date range, as a PDF or a spreadsheet."}
+            </p>
+          </div>
+          <ExpenseReports
+            accessToken={accessToken!}
+            people={isAdmin ? reviewPeople : undefined}
+          />
+        </div>
       </div>
 
       {open ? (
@@ -217,7 +287,7 @@ export function ExpensePage() {
           onOpenChange={setOpen}
           pending={createMutation.isPending}
           error={error}
-          onSubmit={(input) => createMutation.mutate(input)}
+          onSubmit={(input, receipt) => createMutation.mutate({ input, receipt })}
           categories={categoriesQuery.data ?? []}
         />
       ) : null}
