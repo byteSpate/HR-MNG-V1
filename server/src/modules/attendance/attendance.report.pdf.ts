@@ -94,10 +94,34 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 /**
- * Hours print to one decimal. Two is false precision on a document nobody can
- * recompute, and 7.8 already reads as most of a day.
+ * Hours as `8h 42m`, the way the screen already shows them.
+ *
+ * This used to print `8.7`, which is the same number and tells a reader
+ * nothing: nobody converts `0.3` to eighteen minutes in their head. Worse, the
+ * client's `formatHours` has always produced `8h 42m`, so one report read two
+ * different ways depending on whether you looked at it or printed it.
+ *
+ * **The CSV deliberately does not use this.** `reportToCsv` writes the bare
+ * decimal, because a spreadsheet is where somebody sums a column and `8h 42m`
+ * is text that cannot be summed, averaged or charted. The three outputs are
+ * supposed to disagree here, and a test in `attendance.report.test.ts` holds
+ * the CSV to a number.
+ *
+ * Minutes are derived from a single rounded total rather than from the
+ * fractional part. Rounding the fraction on its own turns 7.999 into
+ * "7h 60m" — currently unreachable because the service rounds to two
+ * decimals first, but the correct form costs nothing and does not depend on
+ * that staying true.
+ *
+ * `null` is "—" for no data. A real measured zero prints `0h 00m`: somebody
+ * who worked nothing is a different fact from somebody with no record, and
+ * collapsing the two is how an absence starts looking like a gap in the data.
  */
-const hours = (value: number | null) => (value === null ? "—" : value.toFixed(1))
+const hours = (value: number | null): string => {
+  if (value === null) return "—"
+  const totalMinutes = Math.round(value * 60)
+  return `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`
+}
 
 /**
  * The flags that would otherwise be five Yes/No columns nobody scans. On a
@@ -184,20 +208,24 @@ function table(columns: Column[], body: Cell[][]): string {
  * have not happened yet, which is a live-dashboard fact — on a document dated
  * and filed it just reads as a second kind of absence.
  */
+// Widths rebalanced when hours became `253h 12m` instead of `253.2`. The
+// values grew by about three characters and the headings lost "hrs", so the
+// three hour columns take the width back from Employee and Department, which
+// wrap gracefully where a time cannot.
 const RANGE_COLUMNS: Column[] = [
   { heading: "Code", numeric: false, width: "9%", nowrap: true },
-  { heading: "Employee", numeric: false, width: "18%" },
-  { heading: "Department", numeric: false, width: "11%" },
-  { heading: "Working days", width: "7%" },
+  { heading: "Employee", numeric: false, width: "16%" },
+  { heading: "Department", numeric: false, width: "10%" },
+  { heading: "Working days", width: "6%" },
   { heading: "Present", width: "6%" },
-  { heading: "Absent", width: "6%" },
+  { heading: "Absent", width: "5%" },
   { heading: "On leave", width: "6%" },
   { heading: "Holidays", width: "6%" },
   { heading: "Late", width: "5%" },
   { heading: "Early out", width: "6%" },
-  { heading: "Worked hrs", width: "6%" },
-  { heading: "Expected hrs", width: "7%" },
-  { heading: "Shortfall hrs", width: "7%" },
+  { heading: "Worked", width: "8%", nowrap: true },
+  { heading: "Expected", width: "8%", nowrap: true },
+  { heading: "Shortfall", width: "9%", nowrap: true },
 ]
 
 const rangeRow = (r: AttendanceReportRow): Cell[] => [
@@ -224,8 +252,8 @@ const SINGLE_DAY_COLUMNS: Column[] = [
   { heading: "Status", numeric: false, width: "11%" },
   { heading: "In", width: "8%", nowrap: true },
   { heading: "Out", width: "8%", nowrap: true },
-  { heading: "Worked hrs", width: "8%" },
-  { heading: "Notes", numeric: false, width: "13%" },
+  { heading: "Worked", width: "10%", nowrap: true },
+  { heading: "Notes", numeric: false, width: "11%" },
 ]
 
 const singleDayRow = (d: AttendanceReportDay): Cell[] => [
@@ -249,9 +277,9 @@ const DAY_BY_DAY_COLUMNS: Column[] = [
   { heading: "Status", numeric: false, width: "10%" },
   { heading: "In", width: "6%", nowrap: true },
   { heading: "Out", width: "6%", nowrap: true },
-  { heading: "Worked", width: "6%" },
-  { heading: "Expected", width: "6%" },
-  { heading: "Notes", numeric: false, width: "15%" },
+  { heading: "Worked", width: "8%", nowrap: true },
+  { heading: "Expected", width: "8%", nowrap: true },
+  { heading: "Notes", numeric: false, width: "11%" },
 ]
 
 const dayByDayRow = (d: AttendanceReportDay): Cell[] => [
@@ -326,8 +354,8 @@ function totalsBand(report: AttendanceReport, shape: ReportShape): string {
     ["On leave", String(totals.onLeave)],
     ["Late", String(totals.late)],
     ["Early out", String(totals.earlyOut)],
-    ["Worked hrs", hours(totals.workedHours)],
-    ["Shortfall hrs", hours(totals.shortfallHours)]
+    ["Worked", hours(totals.workedHours)],
+    ["Shortfall", hours(totals.shortfallHours)]
   )
   return figures
     .map(

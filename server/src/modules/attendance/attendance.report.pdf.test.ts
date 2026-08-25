@@ -356,17 +356,49 @@ describe("renderAttendanceReportHtml", () => {
   it("prints the server's totals, never a recomputed one", () => {
     const out = html(report())
 
-    // 15.75 prints as 15.8: one decimal, because two is false precision on a
-    // document nobody can recompute.
-    expect(out).toContain(">15.8<")
+    // 15.75 hours is 15h 45m. `8.7` was the same number saying nothing —
+    // nobody converts 0.3 into eighteen minutes in their head.
+    expect(out).toContain(">15h 45m<")
     expect(out).toContain(">20<")
+  })
+
+  describe("hours", () => {
+    const worked = (value: number) =>
+      html(report({ rows: [row({ workedHours: value })] })).match(
+        /<td class="nw">(\d+h \d\dm)<\/td>/
+      )?.[1]
+
+    it("reads as hours and minutes, matching what the screen shows", () => {
+      expect(worked(8.7)).toBe("8h 42m")
+      expect(worked(0.3)).toBe("0h 18m")
+      expect(worked(117)).toBe("117h 00m")
+    })
+
+    // A real measured zero is not missing data. Somebody who worked nothing
+    // and somebody with no record are different facts, and collapsing them is
+    // how an absence starts looking like a gap in the data.
+    it("prints a measured zero, and a dash only for no data", () => {
+      expect(worked(0)).toBe("0h 00m")
+      const noData = html(
+        report({ granularity: "daily", rows: [], days: [day({ workedHours: null })] })
+      )
+      expect(noData).toContain(">—<")
+    })
+
+    // Rounding the fractional part on its own turns 7.999 into "7h 60m".
+    it("never prints sixty minutes", () => {
+      expect(worked(7.999)).toBe("8h 00m")
+      expect(worked(1.9999)).toBe("2h 00m")
+    })
   })
 
   it("keeps the range columns readable rather than printing all 23 CSV ones", () => {
     const out = html(report())
 
     expect(hasColumn(out, "Working days")).toBe(true)
-    expect(hasColumn(out, "Shortfall hrs")).toBe(true)
+    // "hrs" left the heading when the value started saying it itself.
+    expect(hasColumn(out, "Shortfall")).toBe(true)
+    expect(hasColumn(out, "Shortfall hrs")).toBe(false)
     expect(out).not.toContain("WorkedOnOffDays")
     expect(out).not.toContain("Worked on off days")
     expect(hasColumn(out, "Weekly offs")).toBe(false)

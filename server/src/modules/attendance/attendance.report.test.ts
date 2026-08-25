@@ -343,6 +343,29 @@ describe("CSV", () => {
     )
   })
 
+  /**
+   * The PDF prints `8h 42m` and the CSV must not.
+   *
+   * A spreadsheet is where somebody sums, averages or charts a column, and
+   * `8h 42m` is text that does none of those. The three outputs are supposed
+   * to disagree here — which is exactly why this is pinned: the natural
+   * instinct when tidying up the hour formatting is to make them all match.
+   */
+  it("keeps hours as a bare number, because a spreadsheet has to add them up", async () => {
+    mockSources([AYESHA], { attendances: [attendanceRow("emp-1", "2026-08-03")] })
+
+    const report = await getAttendanceReport(hr, { from: "2026-08-01", to: "2026-08-06" })
+    const csv = reportToCsv(report)
+    const headers = csv.split("\r\n")[0].split(",")
+    const values = csv.split("\r\n")[1].split(",")
+
+    for (const column of ["WorkedHours", "ExpectedHours", "ShortfallHours"]) {
+      const cell = values[headers.indexOf(column)]
+      expect(cell, `${column} must be summable, not "${cell}"`).toMatch(/^\d+(\.\d+)?$/)
+      expect(Number.isNaN(Number(cell))).toBe(false)
+    }
+  })
+
   it("names the file after the range, since a downloads folder loses context", async () => {
     mockSources([AYESHA])
 

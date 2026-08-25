@@ -95,12 +95,19 @@ export function formatClock(iso: string | null): string {
   })
 }
 
-/** 9.08 → "9h 05m". Empty when there are no hours, for the reason above. */
+/**
+ * 9.08 → "9h 05m". Empty when there are no hours, for the reason above.
+ *
+ * Mirrored by `hours()` in `attendance.report.pdf.ts`, so the attendance
+ * report reads the same on screen and printed.
+ *
+ * Minutes come from one rounded total rather than from the fractional part:
+ * rounding the fraction on its own turns 7.999 into "7h 60m".
+ */
 export function formatHours(hours: number | null): string {
   if (hours === null) return ""
-  const whole = Math.floor(hours)
-  const minutes = Math.round((hours - whole) * 60)
-  return `${whole}h ${String(minutes).padStart(2, "0")}m`
+  const totalMinutes = Math.round(hours * 60)
+  return `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`
 }
 
 /** Elapsed milliseconds as a live "1h 04m 12s" counter. */
