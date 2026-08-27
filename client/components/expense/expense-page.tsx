@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query"
 import {
+  RiCheckLine,
   RiCheckboxCircleLine,
+  RiCloseLine,
   RiComputerLine,
   RiCupLine,
   RiDeleteBinLine,
@@ -193,10 +195,19 @@ export function ExpensePage() {
     }
   }, [])
 
+  /**
+   * One query for both audiences, not two.
+   *
+   * The roles are disjoint — an administrator is never staff — and the
+   * endpoint decides the scope itself from the token: it pins a staff member
+   * to their own claims whatever is asked for, and hands an administrator
+   * everybody's. So the request is identical and only the answer differs. The
+   * scope rides in the key so the two can never share a cache entry.
+   */
   const monthQuery = useQuery({
-    queryKey: ["expenses", "report", monthRange.from, monthRange.to, "self"],
+    queryKey: ["expenses", "report", monthRange.from, monthRange.to, isAdmin ? "all" : "self"],
     queryFn: () => getExpenseReport(accessToken!, { from: monthRange.from, to: monthRange.to }),
-    enabled: isAuthed && isStaff,
+    enabled: isAuthed && (isStaff || isAdmin),
   })
 
   function invalidate() {
@@ -360,18 +371,22 @@ export function ExpensePage() {
       isReviewer && claim.status === "PENDING"
         ? {
             node: (
-              <div className="flex gap-2">
+              // Same `gap-3` and glyph treatment as Edit and Delete on the
+              // employee's own claims: one row of controls, one vocabulary.
+              <div className="flex gap-3">
                 <Button
-                  variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
+                  variant="link" className="h-auto gap-1 p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
                   disabled={approveMutation.isPending}
                   onClick={() => approveMutation.mutate(claim.id)}
                 >
+                  <RiCheckLine className="size-3.5" aria-hidden />
                   Approve
                 </Button>
                 <Button
-                  variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  variant="link" className="h-auto gap-1 p-0 text-[12.5px] font-semibold text-[#B03A3A] underline"
                   onClick={() => setRejecting(claim.id)}
                 >
+                  <RiCloseLine className="size-3.5" aria-hidden />
                   Reject
                 </Button>
               </div>
@@ -403,7 +418,13 @@ export function ExpensePage() {
       ) : null}
 
       <div className="space-y-6">
-        {isStaff ? <MonthStats query={monthQuery} label={monthRange.label} /> : null}
+        {isStaff || isAdmin ? (
+          <MonthStats
+            query={monthQuery}
+            label={monthRange.label}
+            audience={isAdmin ? "company" : "self"}
+          />
+        ) : null}
 
         {isStaff ? (
           <div className="space-y-4">
@@ -545,9 +566,17 @@ export function ExpensePage() {
 function MonthStats({
   query,
   label,
+  audience,
 }: {
   query: UseQueryResult<ExpenseReport>
   label: string
+  /**
+   * Whose money these are. The figures have the same shape either way — the
+   * server scopes them — but the sentences under them do not: "waiting on
+   * Finance" is the wrong thing to tell Finance, and a company-wide total
+   * wants to say how many people are behind it.
+   */
+  audience: "self" | "company"
 }) {
   // Three states, kept apart. A failed request that rendered as zeros would be
   // the worst possible lie on a page about money.
@@ -593,23 +622,45 @@ function MonthStats({
   const approved = statusOf("APPROVED")
   const reimbursed = statusOf("REIMBURSED")
 
+  const company = audience === "company"
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
+
+  /**
+   * How many people are behind the company figure. A count of distinct row
+   * owners — counting rows is not the arithmetic that is forbidden here, only
+   * adding the money is, and that stays on the server.
+   */
+  const people = company ? new Set(query.data.rows.map((r) => r.employee.id)).size : 0
+
   const tiles = [
     {
-      label: "Claimed this month",
+      label: company ? "Claimed by staff" : "Claimed this month",
       value: money(totals.byCurrency),
-      sub: `${totals.claims} claim${totals.claims === 1 ? "" : "s"} in ${label}`,
+      sub: company
+        ? `${plural(totals.claims, "claim")} from ${people === 1 ? "1 person" : `${people} people`} in ${label}`
+        : `${plural(totals.claims, "claim")} in ${label}`,
       icon: RiWalletLine,
     },
     {
       label: "Awaiting approval",
       value: money(pending?.byCurrency ?? []),
-      sub: pending ? `${pending.claims} waiting on Finance` : "Nothing waiting",
+      sub: pending
+        ? company
+          ? `${plural(pending.claims, "claim")} to review`
+          : `${pending.claims} waiting on Finance`
+        : company
+          ? "Nothing to review"
+          : "Nothing waiting",
       icon: RiTimeLine,
     },
     {
       label: "Approved, not yet paid",
       value: money(approved?.byCurrency ?? []),
-      sub: approved ? `${approved.claims} on the next run` : "Nothing outstanding",
+      sub: approved
+        ? company
+          ? `${plural(approved.claims, "claim")} on the next payroll run`
+          : `${approved.claims} on the next run`
+        : "Nothing outstanding",
       icon: RiCheckboxCircleLine,
     },
     {
