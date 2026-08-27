@@ -6,9 +6,11 @@ import {
   RiCheckboxCircleLine,
   RiComputerLine,
   RiCupLine,
+  RiDeleteBinLine,
   RiFirstAidKitLine,
   RiGraduationCapLine,
   RiMoneyDollarCircleLine,
+  RiPencilLine,
   RiPencilRuler2Line,
   RiReceiptLine,
   RiTaxiLine,
@@ -324,20 +326,25 @@ export function ExpensePage() {
       // would 409 is a control that cannot do anything.
       claim.status === "PENDING"
         ? {
+            // `gap-3` rather than 2: the glyphs put the two labels closer
+            // together than the text alone did, and Delete is destructive
+            // enough to want the extra distance from Edit.
             node: (
-              <div className="flex justify-end gap-2 whitespace-nowrap">
+              <div className="flex justify-end gap-3 whitespace-nowrap">
                 <Button
                   variant="link"
-                  className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  className="h-auto gap-1 p-0 text-[12.5px] font-semibold underline"
                   onClick={() => setEditing(claim)}
                 >
+                  <RiPencilLine className="size-3.5" aria-hidden />
                   Edit
                 </Button>
                 <Button
                   variant="link"
-                  className="h-auto p-0 text-[12.5px] font-semibold text-[#B03A3A] underline"
+                  className="h-auto gap-1 p-0 text-[12.5px] font-semibold text-[#B03A3A] underline"
                   onClick={() => setDeleting(claim)}
                 >
+                  <RiDeleteBinLine className="size-3.5" aria-hidden />
                   Delete
                 </Button>
               </div>
