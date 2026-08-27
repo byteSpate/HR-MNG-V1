@@ -4,9 +4,18 @@ import * as authService from "./auth.service"
 import { clearOwnAvatar, setDisplayName, uploadOwnAvatar } from "./auth.me"
 import { listSessions, revokeSession } from "./auth.sessions"
 import {
+  approveEmailChange,
+  cancelEmailChange,
+  confirmEmailChange,
+  getPendingEmailChange,
+  requestEmailChange,
+} from "./auth.emailchange"
+import {
   adminLoginSchema,
   changePasswordSchema,
   displayNameSchema,
+  emailChangeRequestBody,
+  emailChangeTokenBody,
   forgotPasswordSchema,
   resetPasswordSchema,
   staffLoginSchema,
@@ -218,6 +227,61 @@ export async function changePasswordHandler(req: Request, res: Response, next: N
     )
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions())
     return res.status(200).json({ accessToken, user })
+  } catch (err) {
+    return next(err)
+  }
+}
+
+// ── Changing the sign-in address ──────────────
+
+export async function requestEmailChangeHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { newEmail } = emailChangeRequestBody.parse(req.body)
+    return res.status(202).json(await requestEmailChange(req.user!.sub, newEmail))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getPendingEmailChangeHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    return res.status(200).json(await getPendingEmailChange(req.user!.sub))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+/**
+ * The three token endpoints below are **unauthenticated on purpose**.
+ *
+ * The token is the proof. Requiring a session as well would break the case
+ * these links exist for: an approval read on a phone that is not signed in,
+ * or a confirmation clicked from the new inbox by somebody whose session was
+ * just revoked. `requireAuth` here would turn a working link into a dead end.
+ */
+export async function approveEmailChangeHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { token } = emailChangeTokenBody.parse(req.body)
+    return res.status(200).json(await approveEmailChange(token))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function cancelEmailChangeHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { token } = emailChangeTokenBody.parse(req.body)
+    await cancelEmailChange(token)
+    return res.status(204).send()
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function confirmEmailChangeHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { token } = emailChangeTokenBody.parse(req.body)
+    return res.status(200).json(await confirmEmailChange(token))
   } catch (err) {
     return next(err)
   }

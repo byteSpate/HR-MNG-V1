@@ -20,6 +20,7 @@ import {
   updateEmployeeHandler,
   uploadAvatarHandler,
   uploadDocumentHandler,
+  changeEmployeeEmailHandler,
 } from "./employee.controller"
 
 const router = Router()
@@ -47,6 +48,17 @@ router.post(
   requireAuth,
   requireRole(Role.SUPER_ADMIN, Role.HR_ADMIN),
   createStaffAccountHandler
+)
+
+// HR only, and deliberately not on the general PATCH /:id field matrix: the
+// address is the sign-in identity and the password-reset target, so changing
+// it is a different kind of act from correcting a phone number. Finance and
+// reporting managers cannot do this at all.
+router.patch(
+  "/:id/email",
+  requireAuth,
+  requireRole(Role.SUPER_ADMIN, Role.HR_ADMIN),
+  changeEmployeeEmailHandler
 )
 
 // Finance authors salary structures (see payroll.routes); HR puts people on

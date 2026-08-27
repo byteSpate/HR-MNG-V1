@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from "express"
 
 import prisma from "../../config/prisma"
+import { changeEmployeeEmail } from "./employee.email"
+import { emailChangeRequestBody } from "../auth/auth.validators"
 import { AppError } from "../../middleware/errorHandler"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { exitDetailsBody } from "../settlement/settlement.validators"
@@ -270,6 +272,23 @@ export async function clearAvatarHandler(
   try {
     await assertSelfOrHr(req.user!, req.params.id)
     return res.status(200).json(await clearAvatar(req.params.id, req.user!.sub))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+/**
+ * HR changing an employee's sign-in address. Applies immediately — see the
+ * reasoning in `employee.email.ts`.
+ */
+export async function changeEmployeeEmailHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { newEmail } = emailChangeRequestBody.parse(req.body)
+    return res.status(200).json(await changeEmployeeEmail(req.params.id, newEmail, req.user!))
   } catch (err) {
     return next(err)
   }

@@ -31,6 +31,7 @@ model User {
   employee            Employee?
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  emailChangeRequests EmailChangeRequest[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -85,6 +86,53 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+/// A self-service email change, in flight.
+///
+/// Two tokens, because the two questions have different answers and one link
+/// cannot ask both:
+///
+/// - the **approve** token goes to the address on file. It answers "did the
+///   person who owns this account ask for this?" — the only thing standing
+///   between a borrowed session and a permanent account takeover, since
+///   whoever holds the address holds password reset too.
+/// - the **confirm** token goes to the new address, and is minted only once
+///   the first is answered. It answers "is this inbox real and reachable?" A
+///   typo that got approved would otherwise point the account at an address
+///   nobody can read, locking the owner out for good.
+///
+/// Each catches exactly what the other misses, which is why both exist.
+/// Tokens are stored hashed and never in the clear, like `PasswordResetToken`.
+model EmailChangeRequest {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Lower-cased on the way in, so `Sales@` and `sales@` cannot become two
+  /// accounts. Checked for collisions when requested *and* again at the end:
+  /// somebody else may have taken it in between.
+  newEmail String
+
+  /// Sent to the address currently on file.
+  approveTokenHash String    @unique
+  approvedAt       DateTime?
+
+  /// Minted at approval, not at request — an unapproved request must have
+  /// nothing that can complete it.
+  confirmTokenHash String?   @unique
+  completedAt      DateTime?
+
+  /// The owner said "this wasn't me". Uses the same approve token: whoever
+  /// can approve can also refuse, and both prove the same thing.
+  cancelledAt DateTime?
+
+  /// Both stages must happen inside this window. Superseded requests are
+  /// cancelled rather than left to expire, so a user has at most one live.
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // Additive beyond spec §5 — see "Deviations" section, item 5.

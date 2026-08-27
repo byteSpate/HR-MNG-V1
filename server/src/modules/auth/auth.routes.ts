@@ -16,6 +16,11 @@ import {
   setDisplayNameHandler,
   staffLoginHandler,
   uploadOwnAvatarHandler,
+  requestEmailChangeHandler,
+  getPendingEmailChangeHandler,
+  approveEmailChangeHandler,
+  cancelEmailChangeHandler,
+  confirmEmailChangeHandler,
 } from "./auth.controller"
 
 const router = Router()
@@ -40,5 +45,14 @@ router.delete("/me/avatar", requireAuth, clearOwnAvatarHandler)
 router.post("/forgot-password", forgotPasswordHandler)
 router.post("/reset-password", resetPasswordHandler)
 router.post("/change-password", requireAuth, changePasswordHandler)
+
+// Changing the sign-in address. The first two need a session because they are
+// the account acting on itself; the last three carry a token instead, and are
+// deliberately open — see the note in the controller.
+router.post("/email-change", requireAuth, requestEmailChangeHandler)
+router.get("/email-change", requireAuth, getPendingEmailChangeHandler)
+router.post("/email-change/approve", approveEmailChangeHandler)
+router.post("/email-change/cancel", cancelEmailChangeHandler)
+router.post("/email-change/confirm", confirmEmailChangeHandler)
 
 export default router
