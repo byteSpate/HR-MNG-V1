@@ -19,12 +19,16 @@ export function ProfileCard({
   rows,
   lockedHint,
   action,
+  footer,
 }: {
   title: string
   rows: ProfileRow[]
   /** e.g. "Employment details are maintained by HR". */
   lockedHint?: string
   action?: ReactNode
+  /** A control that belongs to the card but not to any one row — the
+   *  sign-in email change is the first. Sits under the divider. */
+  footer?: ReactNode
 }) {
   return (
     <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
@@ -47,6 +51,9 @@ export function ProfileCard({
           </div>
         ))}
       </dl>
+      {footer ? (
+        <div className="mt-4 border-t border-[#EFF2F6] pt-3">{footer}</div>
+      ) : null}
       {lockedHint ? (
         <p className="mt-4 border-t border-[#EFF2F6] pt-3 text-[12px] text-[#A5AFBE]">
           {lockedHint}

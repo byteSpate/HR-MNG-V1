@@ -18,6 +18,7 @@ import {
   EMPLOYMENT_TYPE_LABEL,
 } from "@/components/profile/edit-card-dialog"
 import { EditNameDialog } from "@/components/profile/edit-name-dialog"
+import { HrChangeEmailDialog } from "@/components/profile/hr-change-email-dialog"
 import { ExitDetailsDialog } from "@/components/profile/exit-details-dialog"
 import { DocumentsCard } from "@/components/profile/documents-card"
 import { LeaveBalanceCard } from "@/components/profile/leave-balance-card"
@@ -52,6 +53,7 @@ export function EmployeeDetailPage({
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<string | null>(null)
   const [editingName, setEditingName] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
   const [assigningStructure, setAssigningStructure] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
@@ -174,6 +176,11 @@ export function EmployeeDetailPage({
   // keeps this in step if that matrix ever changes.
   const canAssignShift = employee.editableFields.includes("shiftId")
 
+  // HR-only, matching the server route. Not derived from `editableFields`:
+  // the address is not on the employee write matrix at all, because it lives
+  // on `User` and changing it is a different kind of act.
+  const canChangeEmail = user?.role === "HR_ADMIN" || user?.role === "SUPER_ADMIN"
+
   // A card shows an Edit control if and only if it contains at least one
   // field this caller may write. No role check — editableFields comes from
   // the server's writableFieldsFor.
@@ -286,11 +293,31 @@ export function EmployeeDetailPage({
             title="Contact"
             action={editAction("Contact")}
             rows={[
+              {
+                // Shown here because this is where people look for it, but it
+                // is not edited by the Contact dialog: the address is the
+                // sign-in identity, so changing it has its own HR-only route
+                // and its own consequences. See `hr-change-email-dialog.tsx`.
+                label: "Sign-in email",
+                value: employee.work.email,
+              },
               { label: "Phone", value: employee.work.phone },
               { label: "Present address", value: employee.contact.presentAddress },
               { label: "Permanent address", value: employee.contact.permanentAddress },
               { label: "Emergency contact", value: employee.contact.emergencyContact },
             ]}
+            footer={
+              canChangeEmail ? (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  onClick={() => setEmailOpen(true)}
+                >
+                  Change sign-in email
+                </Button>
+              ) : undefined
+            }
           />
         ) : null}
 
@@ -385,6 +412,19 @@ export function EmployeeDetailPage({
         onOpenChange={setEditingName}
         onSaved={refresh}
       />
+
+      {/* Mounted only while open, so a second change starts from a blank form
+          rather than the confirmation the last one ended on. */}
+      {emailOpen ? (
+        <HrChangeEmailDialog
+          open={emailOpen}
+          onOpenChange={setEmailOpen}
+          employeeId={employee.id}
+          employeeName={employee.work.fullName}
+          currentEmail={employee.work.email}
+          onChanged={refresh}
+        />
+      ) : null}
 
       <ExitDetailsDialog
         employee={employee}

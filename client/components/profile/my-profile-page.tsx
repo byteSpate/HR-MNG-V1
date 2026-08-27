@@ -12,6 +12,10 @@ import { EditMyDetailsDialog } from "@/components/profile/edit-my-details-dialog
 import { ProfileCard, formatDateValue } from "@/components/profile/profile-card"
 import { ProfileHeader } from "@/components/profile/profile-header"
 import { SessionsCard } from "@/components/profile/sessions-card"
+import {
+  PendingEmailChangeNotice,
+  SignInEmailCard,
+} from "@/components/profile/change-email-dialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EMPLOYMENT_TYPE_LABEL } from "@/components/profile/edit-card-dialog"
@@ -53,6 +57,10 @@ export function MyProfilePage() {
 
   return (
     <>
+      {/* Above both branches: a change in flight is otherwise invisible, since
+          the address on screen is still the old one until it completes. */}
+      <PendingEmailChangeNotice />
+
       {/* The account branch carries its own header — the email is the heading
           there, and a generic "My Profile" above it was a second title saying
           less than the first. The staff branch still needs this one, since
@@ -73,6 +81,7 @@ export function MyProfilePage() {
       ) : (
         <StaffProfile
           employee={employee}
+          signInEmail={account.email}
           onRefresh={refresh}
           editOpen={editOpen}
           setEditOpen={setEditOpen}
@@ -84,11 +93,14 @@ export function MyProfilePage() {
 
 function StaffProfile({
   employee,
+  signInEmail,
   onRefresh,
   editOpen,
   setEditOpen,
 }: {
   employee: EmployeeView
+  /** From the account block, not the employee record — it lives on `User`. */
+  signInEmail: string
   onRefresh: () => void
   editOpen: boolean
   setEditOpen: (open: boolean) => void
@@ -223,6 +235,12 @@ function StaffProfile({
             ]}
           />
         ) : null}
+      </div>
+
+      {/* How you sign in, beside where you are signed in — the two questions
+          belong together, and neither belongs among the contact details. */}
+      <div className="mt-4">
+        <SignInEmailCard email={signInEmail} />
       </div>
 
       {/* Every role, not only the administrative ones: "is somebody else in my
