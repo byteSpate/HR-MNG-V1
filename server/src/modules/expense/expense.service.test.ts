@@ -42,6 +42,7 @@ const actor = (role = "EMPLOYEE") =>
   ({ sub: "user-1", role, email: "a@demo.com", mustChangePassword: false }) as never
 
 const validClaim = {
+  name: "Water jar",
   amount: 1200,
   categoryId: "11111111-1111-1111-1111-111111111111",
   currency: "BDT" as const,

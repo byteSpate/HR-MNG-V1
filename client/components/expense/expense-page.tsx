@@ -12,10 +12,13 @@ import {
   listExpenseClaims,
   listExpenseCategories,
   rejectExpenseClaim,
+  updateExpenseClaim,
+  deleteExpenseClaim,
 } from "@/lib/api/expenses"
 import { useSession } from "@/lib/auth/session-context"
 import type { ExpenseClaim, ExpenseClaimInput } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
+import { ConfirmDialog } from "@/components/dashboard/record-kit"
 import { DataTable } from "@/components/dashboard/data-table"
 import { PageHeader } from "@/components/dashboard/page-header"
 import type { TableCell } from "@/components/dashboard/types"
@@ -32,10 +35,32 @@ import {
   STAFF_ROLES,
 } from "@/components/payroll/payroll-shared"
 
+/** `2026-07-06T00:00:00.000Z` → `6 Jul 2026`. */
+function spendDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+}
+
 function claimRow(claim: ExpenseClaim, extra: TableCell[]): TableCell[] {
   return [
-    { text: claim.category.name, sub: claim.description ?? undefined, weight: 600 },
-    { text: claim.expenseDate },
+    {
+      // Name leads, category underneath. It used to be category over
+      // description, which put "Other" where the identity of the claim
+      // belongs and pressed the description into service as a name.
+      // `name` is null only on claims filed before the field existed, and
+      // those fall back to the category so no row is ever unlabelled.
+      text: claim.name ?? claim.category.name,
+      sub: claim.category.name,
+      weight: 600,
+    },
+    // Was the raw `expenseDate`, which rendered as
+    // "2026-07-06T00:00:00.000Z" — the API sends a full ISO timestamp and
+    // this cell printed it verbatim.
+    { text: spendDate(claim.expenseDate) },
     { text: formatMoney(claim.amount, claim.currency) },
     { tag: EXPENSE_STATUS_LABEL[claim.status], tone: EXPENSE_STATUS_TONE[claim.status] },
     ...extra,
@@ -47,6 +72,8 @@ export function ExpensePage() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [rejecting, setRejecting] = useState<string | null>(null)
+  const [editing, setEditing] = useState<ExpenseClaim | null>(null)
+  const [deleting, setDeleting] = useState<ExpenseClaim | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const isAuthed = status === "authenticated" && !!accessToken
@@ -121,6 +148,32 @@ export function ExpensePage() {
     onError: handleError,
   })
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ExpenseClaimInput }) =>
+      updateExpenseClaim(accessToken!, id, {
+        ...input,
+        // An omitted key means "leave it" server-side, so clearing a note has
+        // to be an explicit null rather than an absent field.
+        description: input.description ?? null,
+      }),
+    onSuccess: () => {
+      setError(null)
+      setEditing(null)
+      invalidate()
+    },
+    onError: handleError,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteExpenseClaim(accessToken!, id),
+    onSuccess: () => {
+      setError(null)
+      setDeleting(null)
+      invalidate()
+    },
+    onError: handleError,
+  })
+
   const rejectMutation = useMutation({
     mutationFn: ({ id, note }: { id: string; note: string }) =>
       rejectExpenseClaim(accessToken!, id, note),
@@ -163,6 +216,31 @@ export function ExpensePage() {
         text: claim.payslip?.payslipNo ?? (claim.settlementId ? "On settlement" : "—"),
         sub: claim.reviewNote ?? undefined,
       },
+      // Only while PENDING, matching the server. Once Finance has decided,
+      // the figures are the basis of that decision — showing controls that
+      // would 409 is a control that cannot do anything.
+      claim.status === "PENDING"
+        ? {
+            node: (
+              <div className="flex justify-end gap-2 whitespace-nowrap">
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  onClick={() => setEditing(claim)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-[12.5px] font-semibold text-[#B03A3A] underline"
+                  onClick={() => setDeleting(claim)}
+                >
+                  Delete
+                </Button>
+              </div>
+            ),
+          }
+        : { text: "" },
     ])
   )
 
@@ -231,8 +309,8 @@ export function ExpensePage() {
             ) : (
               <DataTable
                 title="My claims"
-                cols="1.2fr 0.9fr 0.9fr 0.8fr 1fr"
-                headers={["Category", "Spent on", "Amount", "Status", "Paid by"]}
+                cols="1.4fr 0.8fr 0.9fr 0.8fr 0.9fr 0.9fr"
+                headers={["Expense", "Spent on", "Amount", "Status", "Paid by", ""]}
                 rows={mineRows}
                 action={`${mine.length} claim${mine.length === 1 ? "" : "s"}`}
               />
@@ -253,7 +331,7 @@ export function ExpensePage() {
               <DataTable
                 title="Review queue"
                 cols="1.2fr 0.9fr 0.9fr 0.8fr 1.1fr 1fr"
-                headers={["Category", "Spent on", "Amount", "Status", "Employee", ""]}
+                headers={["Expense", "Spent on", "Amount", "Status", "Employee", ""]}
                 rows={reviewRows}
                 action={`${all.length} claim${all.length === 1 ? "" : "s"}`}
               />
@@ -261,23 +339,25 @@ export function ExpensePage() {
           </div>
         ) : null}
 
-        {/* Everyone gets the report; what differs is who it can be about. The
-            person filter is only offered to an administrator, because staff
-            have nobody else to pick — and the server enforces that anyway. */}
-        <div className="space-y-4">
-          <div>
-            <div className="text-[15px] font-bold">Reports</div>
-            <p className="mt-1 text-[12.5px] text-[#5F6B7C]">
-              {isAdmin
-                ? "Claims for any date range, by person or across everybody, as a PDF or a spreadsheet."
-                : "Your claims for any date range, as a PDF or a spreadsheet."}
-            </p>
+        {/*
+          Administrators only. It was shown to everyone, on the reasoning that
+          the server scopes staff to their own claims anyway — true, but not
+          the point: reporting is an administrative act, and a staff member
+          looking at their own five rows does not need a date-range report
+          under them to do it. Their claims are already on this page.
+        */}
+        {isAdmin ? (
+          <div className="space-y-4">
+            <div>
+              <div className="text-[15px] font-bold">Reports</div>
+              <p className="mt-1 text-[12.5px] text-[#5F6B7C]">
+                Claims for any date range, by person or across everybody, as a PDF or a
+                spreadsheet.
+              </p>
+            </div>
+            <ExpenseReports accessToken={accessToken!} people={reviewPeople} />
           </div>
-          <ExpenseReports
-            accessToken={accessToken!}
-            people={isAdmin ? reviewPeople : undefined}
-          />
-        </div>
+        ) : null}
       </div>
 
       {open ? (
@@ -289,6 +369,37 @@ export function ExpensePage() {
           error={error}
           onSubmit={(input, receipt) => createMutation.mutate({ input, receipt })}
           categories={categoriesQuery.data ?? []}
+        />
+      ) : null}
+
+      {/* Keyed by claim, so opening a second one after a first re-seeds the
+          form rather than showing the previous claim's values. */}
+      {editing ? (
+        <ExpenseDialog
+          key={`expense-edit-${editing.id}`}
+          open={!!editing}
+          onOpenChange={(next) => !next && setEditing(null)}
+          pending={updateMutation.isPending}
+          error={error}
+          existing={editing}
+          // The receipt is ignored on edit — the dialog hides the field, and
+          // attaching runs through its own endpoint against the saved claim.
+          onSubmit={(input) => updateMutation.mutate({ id: editing.id, input })}
+          categories={categoriesQuery.data ?? []}
+        />
+      ) : null}
+
+      {deleting ? (
+        <ConfirmDialog
+          open={!!deleting}
+          title="Withdraw this claim?"
+          // Names the claim and says what goes with it. "Are you sure?" over a
+          // list of near-identical rows is how the wrong one gets deleted.
+          body={`"${deleting.name ?? deleting.category.name}" for ${formatMoney(deleting.amount, deleting.currency)} will be removed, along with any receipt attached to it. This cannot be undone.`}
+          confirmLabel="Withdraw claim"
+          pending={deleteMutation.isPending}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() => deleteMutation.mutate(deleting.id)}
         />
       ) : null}
 

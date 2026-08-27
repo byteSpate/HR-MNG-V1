@@ -18,7 +18,7 @@ type TestRole = "EMPLOYEE" | "REPORTING_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | 
 const auth = (role: TestRole) =>
   `Bearer ${signAccessToken({ sub: "user-1", role: role as never, email: "a@demo.com", mustChangePassword: false })}`
 
-const validBody = { amount: 1200, categoryId: "11111111-1111-4111-8111-111111111111", currency: "BDT", expenseDate: "2026-08-03" }
+const validBody = { name: "Water jar", amount: 1200, categoryId: "11111111-1111-4111-8111-111111111111", currency: "BDT", expenseDate: "2026-08-03" }
 
 beforeEach(() => {
   vi.mocked(service.createClaim).mockResolvedValue({ id: "claim-1" } as never)

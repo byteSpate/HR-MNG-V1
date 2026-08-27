@@ -823,6 +823,16 @@ model ExpenseClaim {
   categoryId  String
   category    ExpenseCategory @relation(fields: [categoryId], references: [id])
   legacyCategoryText String?
+  /// What this claim is, in a few words — "Water jar", "Taxi to Motijheel".
+  ///
+  /// A category alone cannot tell two claims apart: three things filed under
+  /// "Other" in one month are three identical rows, and the description was
+  /// being pressed into service as a name because there was nothing else.
+  ///
+  /// Nullable only because claims already exist. The create validator requires
+  /// it, and the migration backfills the column from `description`, which is
+  /// exactly what people had been putting there.
+  name        String?
   description String?
   /// Superseded by `ExpenseAttachment`. Kept because claims already carry
   /// links people pasted, and dropping the column would erase the only

@@ -38,6 +38,12 @@ export type ExpenseReportStatus = "PENDING" | "APPROVED" | "REJECTED" | "REIMBUR
 export interface ExpenseReportRow {
   id: string
   employee: { id: string; fullName: string; employeeCode: string }
+  /**
+   * What the claim is — "Water jar", "Taxi to Motijheel". Null on claims filed
+   * before the field existed and with no description to backfill from; the
+   * category is the fallback, since a row has to be identifiable by something.
+   */
+  name: string | null
   category: { code: string; name: string }
   expenseDate: string
   amount: string
@@ -151,6 +157,7 @@ export async function getExpenseReport(
     return {
       id: claim.id,
       employee: claim.employee,
+      name: claim.name,
       category: claim.category,
       expenseDate: claim.expenseDate.toISOString().slice(0, 10),
       amount: money(claim.amount),
@@ -189,7 +196,10 @@ export async function getExpenseReport(
 const HEADERS = [
   "Date",
   "EmployeeCode",
-  "Name",
+  // "Name" split in two once claims gained one of their own. It used to mean
+  // the employee, which reads as the expense's name the moment there is one.
+  "Employee",
+  "Expense",
   "CategoryCode",
   "Category",
   "Description",
@@ -209,6 +219,7 @@ export function reportToCsv(report: ExpenseReport): string {
       r.expenseDate,
       r.employee.employeeCode,
       r.employee.fullName,
+      r.name ?? "",
       r.category.code,
       r.category.name,
       r.description ?? "",

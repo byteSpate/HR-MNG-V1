@@ -3,16 +3,19 @@ import type { NextFunction, Request, Response } from "express"
 import {
   approveClaim,
   createClaim,
+  deleteClaim,
   getClaim,
   getMyClaims,
   listClaims,
   rejectClaim,
+  updateClaim,
 } from "./expense.service"
 import {
   approveClaimBody,
   claimQuery,
   createClaimBody,
   rejectClaimBody,
+  updateClaimBody,
 } from "./expense.validators"
 import { createExpenseCategory, deleteExpenseCategory, listExpenseCategories, updateExpenseCategory } from "./expense.category.service"
 import { deleteReceipt, getReceiptUrl, listReceipts, uploadReceipt } from "./expense.media"
@@ -165,6 +168,29 @@ export async function rejectClaimHandler(req: RequestWithId, res: Response, next
   try {
     const body = rejectClaimBody.parse(req.body)
     return res.status(200).json(await rejectClaim(req.params.id, req.user!.sub, body))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+/**
+ * Amending and withdrawing your own claim. Both are owner-and-PENDING-only,
+ * decided inside the service where the claim's owner and status are known —
+ * a route-level role check could only say "staff", which every claimant is.
+ */
+export async function updateClaimHandler(req: RequestWithId, res: Response, next: NextFunction) {
+  try {
+    const body = updateClaimBody.parse(req.body)
+    return res.status(200).json(await updateClaim(req.user!, req.params.id, body))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function deleteClaimHandler(req: RequestWithId, res: Response, next: NextFunction) {
+  try {
+    await deleteClaim(req.user!, req.params.id)
+    return res.status(204).send()
   } catch (err) {
     return next(err)
   }

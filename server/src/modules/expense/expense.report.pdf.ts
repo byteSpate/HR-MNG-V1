@@ -103,8 +103,11 @@ function columnsFor(perPerson: boolean): Column[] {
   return [
     { heading: "Date", numeric: false, width: "8%", nowrap: true },
     ...who,
-    { heading: "Category", numeric: false, width: perPerson ? "14%" : "11%" },
-    { heading: "Description", numeric: false, width: perPerson ? "30%" : "20%" },
+    // Expense first, category under it. A reader scanning a printed page is
+    // looking for "the water jar", not for "Other" — the category groups rows,
+    // it does not identify them.
+    { heading: "Expense", numeric: false, width: perPerson ? "26%" : "18%" },
+    { heading: "Description", numeric: false, width: perPerson ? "18%" : "13%" },
     { heading: "Route", numeric: false, width: perPerson ? "18%" : "12%" },
     { heading: "Amount", width: "10%", nowrap: true },
     { heading: "Status", numeric: false, width: "9%" },
@@ -123,7 +126,13 @@ function rowFor(row: ExpenseReportRow, perPerson: boolean): Cell[] {
   return [
     t(row.expenseDate),
     ...who,
-    t(row.category.name),
+    // Name on top, category under it. A claim filed before the field existed
+    // falls back to its category, so the cell is never blank — an unnamed row
+    // is still a row somebody has to identify.
+    {
+      text: `<div class="nm">${escapeHtml(row.name ?? row.category.name)}</div><div class="ds">${escapeHtml(row.category.name)}</div>`,
+      html: true,
+    },
     t(row.description ?? ""),
     t(route(row)),
     t(`${row.amount} ${row.currency}`),
@@ -202,6 +211,8 @@ const STYLES = `
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
   tbody tr:nth-child(even) td { background: #FBFCFD; }
+  .nm { font-weight: 600; color: #17191C; }
+  .ds { font-size: 6.8pt; color: #6B7688; margin-top: 1px; }
   .empty { color: #55627A; font-style: italic; padding: 16px 0; }
   .note { font-size: 6.8pt; color: #8A94A2; margin-top: 14px; }
 `

@@ -30,6 +30,7 @@ const KARIM = { id: "emp-2", fullName: "Karim, Md.", employeeCode: "BS-EMP-002" 
 function claim(over: Partial<Record<string, unknown>> = {}) {
   return {
     id: "claim-1",
+    name: "Water jar",
     employee: AYESHA,
     category: { code: "TRAVEL", name: "Travel and conveyance" },
     expenseDate: new Date("2026-07-14T00:00:00.000Z"),
@@ -166,6 +167,29 @@ describe("totals", () => {
 })
 
 describe("CSV", () => {
+  /**
+   * The headers and the row builder are two separate lists that have to stay
+   * in step. Adding "Expense" moved every column after it by one, and a
+   * mismatch does not throw — it silently files each value under its
+   * neighbour's heading, which is worse than an error.
+   */
+  it("puts exactly as many values in a row as there are headings", async () => {
+    rows(claim())
+    const csv = reportToCsv(await getExpenseReport(FINANCE, { from: "2026-07-01", to: "2026-07-31" }))
+    const [header, row] = csv.split("\r\n")
+
+    expect(row.split(",")).toHaveLength(header.split(",").length)
+    expect(header.split(",")).toContain("Expense")
+  })
+
+  it("carries the expense name, which is what identifies a claim", async () => {
+    rows(claim({ name: "Water jar" }))
+    const csv = reportToCsv(await getExpenseReport(FINANCE, { from: "2026-07-01", to: "2026-07-31" }))
+    const headers = csv.split("\r\n")[0].split(",")
+
+    expect(csv.split("\r\n")[1].split(",")[headers.indexOf("Expense")]).toBe("Water jar")
+  })
+
   it("carries the route columns, which only travel claims fill in", async () => {
     rows(claim())
     const csv = reportToCsv(await getExpenseReport(FINANCE, { from: "2026-07-01", to: "2026-07-31" }))

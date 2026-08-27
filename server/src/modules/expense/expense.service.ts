@@ -15,11 +15,13 @@ import { expenseEvent } from "./expense.events"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import { dec, toMoneyString } from "../payroll/payroll.money"
 import { postExpenseAccrual } from "./expense.posting"
+import { destroyAsset } from "../media/media.service"
 import type {
   ApproveClaimBody,
   ClaimQuery,
   CreateClaimBody,
   RejectClaimBody,
+  UpdateClaimBody,
 } from "./expense.validators"
 
 /**
@@ -79,8 +81,9 @@ export async function createClaim(actor: AccessTokenPayload, body: CreateClaimBo
     const claim = await tx.expenseClaim.create({
       data: {
         employeeId: self.id,
+        name: body.name,
         amount: dec(body.amount),
-         categoryId: category.id,
+        categoryId: category.id,
         currency: body.currency,
         expenseDate,
         description: body.description,
@@ -296,4 +299,157 @@ export async function getClaim(actor: AccessTokenPayload, id: string) {
     }
   }
   return claim
+}
+
+/**
+ * Amending a claim you filed, and withdrawing one.
+ *
+ * Both are **owner-only and PENDING-only**, and the two conditions do
+ * different jobs. Owner-only is the obvious one. PENDING-only is the one worth
+ * spelling out: once Finance has decided a claim, its figures are the basis of
+ * that decision, and REIMBURSED ones are joined to a payslip that has already
+ * paid the amount. Editing either would silently rewrite history somebody
+ * relied on, so both refuse with a message naming the status.
+ *
+ * Finance is deliberately *not* given an edit here. Their tool for a wrong
+ * claim is reject-with-a-note, which leaves a record of the disagreement;
+ * quietly correcting somebody's figures and then approving them does not.
+ */
+async function ownPendingClaim(actor: AccessTokenPayload, claimId: string) {
+  const self = await requireEmployeeForUser(actor.sub)
+  const claim = await prisma.expenseClaim.findUnique({ where: { id: claimId } })
+  if (!claim) throw new AppError(404, "Expense claim not found")
+  if (claim.employeeId !== self.id) {
+    throw new AppError(403, "You may only change your own expense claims")
+  }
+  if (claim.status !== "PENDING") {
+    throw new AppError(
+      409,
+      `This claim has already been ${claim.status.toLowerCase()}, so it can no longer be changed.`
+    )
+  }
+  return claim
+}
+
+export async function updateClaim(
+  actor: AccessTokenPayload,
+  claimId: string,
+  body: UpdateClaimBody
+) {
+  const claim = await ownPendingClaim(actor, claimId)
+
+  // Re-run the same date rules as creation. Without this, an edit is a way
+  // round the age limit and the future-date check that creation enforces.
+  let expenseDate = claim.expenseDate
+  if (body.expenseDate !== undefined) {
+    expenseDate = parseDateOnly(body.expenseDate)
+    const today = officeToday()
+    if (expenseDate.getTime() > today.getTime()) {
+      throw new AppError(400, "An expense cannot be dated in the future")
+    }
+    const ageDays = Math.floor((today.getTime() - expenseDate.getTime()) / 86_400_000)
+    if (ageDays > MAX_CLAIM_AGE_DAYS) {
+      throw new AppError(
+        400,
+        `This expense is ${ageDays} days old. Claims must be submitted within ${MAX_CLAIM_AGE_DAYS} days of the spend date.`
+      )
+    }
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Resolved even when the category is unchanged: the route rule below has
+    // to know whether the *effective* category carries one.
+    const categoryId = body.categoryId ?? claim.categoryId
+    const category = await tx.expenseCategory.findUnique({ where: { id: categoryId } })
+    if (!category) throw new AppError(400, "Choose a valid expense category")
+
+    // Moving a claim off a travel category takes its route with it, or the
+    // report prints a journey against a stationery bill.
+    const keepsRoute = hasRoute(category.code)
+    const travelFrom = keepsRoute ? (body.travelFrom ?? claim.travelFrom) : null
+    const travelTo = keepsRoute ? (body.travelTo ?? claim.travelTo) : null
+
+    const updated = await tx.expenseClaim.update({
+      where: { id: claim.id },
+      data: {
+        ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.amount !== undefined ? { amount: dec(body.amount) } : {}),
+        ...(body.currency !== undefined ? { currency: body.currency } : {}),
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        categoryId,
+        expenseDate,
+        travelFrom,
+        travelTo,
+      },
+      include: CLAIM_INCLUDE,
+    })
+
+    await writeAudit(tx, {
+      entity: "EXPENSE_CLAIM",
+      entityId: claim.id,
+      action: "UPDATE",
+      changedBy: actor.sub,
+      before: {
+        name: claim.name,
+        amount: toMoneyString(claim.amount),
+        currency: claim.currency,
+        categoryId: claim.categoryId,
+        expenseDate: formatDateOnly(claim.expenseDate),
+      },
+      after: {
+        name: updated.name,
+        amount: toMoneyString(updated.amount),
+        currency: updated.currency,
+        categoryId: updated.categoryId,
+        expenseDate: formatDateOnly(updated.expenseDate),
+      },
+    })
+
+    return updated
+  })
+}
+
+/**
+ * Withdrawing a claim.
+ *
+ * A hard delete, not a status. A PENDING claim nobody has acted on has no
+ * history worth keeping — the audit row below is the record that it existed —
+ * and a WITHDRAWN status would be a fifth state every report, filter and
+ * total would have to learn to ignore.
+ *
+ * The Cloudinary blobs go first. `ExpenseAttachment` cascades on delete, so
+ * dropping the claim would take the rows and leave the files behind with
+ * nothing pointing at them — an invisible leak that grows.
+ */
+export async function deleteClaim(actor: AccessTokenPayload, claimId: string): Promise<void> {
+  const claim = await ownPendingClaim(actor, claimId)
+
+  const attachments = await prisma.expenseAttachment.findMany({
+    where: { claimId },
+    select: { publicId: true },
+  })
+  // Outside the transaction, and before it: a transaction held across a
+  // Cloudinary round-trip pins a connection-pool slot, and a blob destroyed
+  // for a claim that then fails to delete is recoverable while the reverse
+  // is not.
+  for (const attachment of attachments) {
+    await destroyAsset(attachment.publicId)
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await writeAudit(tx, {
+      entity: "EXPENSE_CLAIM",
+      entityId: claim.id,
+      action: "DELETE",
+      changedBy: actor.sub,
+      before: {
+        name: claim.name,
+        amount: toMoneyString(claim.amount),
+        currency: claim.currency,
+        expenseDate: formatDateOnly(claim.expenseDate),
+        receipts: attachments.length,
+      },
+    })
+    await tx.expenseClaim.delete({ where: { id: claim.id } })
+  })
 }

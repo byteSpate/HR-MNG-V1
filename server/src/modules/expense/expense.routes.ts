@@ -16,6 +16,8 @@ import {
   getClaimReceiptUrlHandler,
   deleteClaimReceiptHandler,
   getExpenseReportHandler,
+  updateClaimHandler,
+  deleteClaimHandler,
 } from "./expense.controller"
 import { expenseUpload } from "../media/media.upload"
 
@@ -59,6 +61,16 @@ router.get("/:id", requireAuth, getClaimHandler)
 // REIMBURSED has no route. It is set by a run being disbursed or a
 // settlement being paid — a status the system reaches, not one a human
 // types. That is the difference between a workflow and a status field.
+// Amending and withdrawing your own claim. `requireAuth` alone: the rule is
+// owner-and-PENDING, which only the service can check — a role list here could
+// say no more than "staff", and every claimant is staff.
+//
+// Finance has no edit. Their answer to a wrong claim is reject-with-a-note,
+// which leaves a record of the disagreement; silently correcting somebody's
+// figures and then approving them does not.
+router.patch("/:id", requireAuth, requireRole(...STAFF_ROLES), updateClaimHandler)
+router.delete("/:id", requireAuth, requireRole(...STAFF_ROLES), deleteClaimHandler)
+
 router.patch("/:id/approve", requireAuth, requireRole(...FINANCE_ROLES), approveClaimHandler)
 router.patch("/:id/reject", requireAuth, requireRole(...FINANCE_ROLES), rejectClaimHandler)
 
