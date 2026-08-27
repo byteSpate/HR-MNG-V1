@@ -292,34 +292,58 @@ export function EmployeeDetailPage({
           <ProfileCard
             title="Contact"
             action={editAction("Contact")}
+            // No sign-in email row here. It was one, briefly, with its own
+            // separate link underneath — which recreated the exact defect the
+            // Employment card had: a row on a card whose Edit button does not
+            // touch it. It has its own card below instead, with one control.
             rows={[
-              {
-                // Shown here because this is where people look for it, but it
-                // is not edited by the Contact dialog: the address is the
-                // sign-in identity, so changing it has its own HR-only route
-                // and its own consequences. See `hr-change-email-dialog.tsx`.
-                label: "Sign-in email",
-                value: employee.work.email,
-              },
               { label: "Phone", value: employee.work.phone },
               { label: "Present address", value: employee.contact.presentAddress },
               { label: "Permanent address", value: employee.contact.permanentAddress },
               { label: "Emergency contact", value: employee.contact.emergencyContact },
             ]}
-            footer={
-              canChangeEmail ? (
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto p-0 text-[12.5px] font-semibold underline"
-                  onClick={() => setEmailOpen(true)}
-                >
-                  Change sign-in email
-                </Button>
-              ) : undefined
-            }
           />
         ) : null}
+
+        {/*
+          Its own card, not a row in Contact.
+
+          The address is not a contact detail — it is the sign-in identity and
+          the password-reset target, and changing it goes through a different
+          endpoint with different rules: HR only, applied immediately, signs
+          every session out, notifies both addresses, and is audited. Putting
+          it in the Contact dialog beside a phone number would hide all of that
+          behind a "Save changes" button.
+        */}
+        <ProfileCard
+          title="Sign-in"
+          action={
+            canChangeEmail ? (
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0 text-[12.5px] font-semibold underline"
+                onClick={() => setEmailOpen(true)}
+              >
+                Change
+              </Button>
+            ) : undefined
+          }
+          rows={[
+            {
+              label: "Email",
+              value: employee.work.email,
+              hint: "What they sign in with, and where a password reset is sent.",
+            },
+          ]}
+          lockedHint={
+            canChangeEmail
+              ? // Said before they press it, not after — the consequences are
+                // not what anybody expects from editing an email address.
+                "Changing this signs them out everywhere and emails both the old and the new address."
+              : "Only HR can change a sign-in address."
+          }
+        />
 
         {employee.employment ? (
           <ProfileCard
