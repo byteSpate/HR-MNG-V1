@@ -5,6 +5,16 @@ export interface ProfileRow {
   value: string | null
   /** Shown under the value in small muted text, e.g. "visible to colleagues". */
   hint?: string
+  /**
+   * A control for this row alone, beside the value.
+   *
+   * For the rows a card's own Edit button deliberately does not cover — a
+   * shift assignment changes how attendance is judged, so it keeps its own
+   * confirmation. Putting the control on the row is what stops that reading
+   * as "this cannot be changed": the alternative was a button elsewhere on the
+   * page that nobody found.
+   */
+  action?: ReactNode
 }
 
 /**
@@ -39,7 +49,10 @@ export function ProfileCard({
             <dd className="min-w-0">
               {/* An em dash, not an empty cell. A blank space reads as a
                   rendering bug; a dash reads as "not recorded". */}
-              <div className="text-[13.5px] break-words">{row.value ?? "—"}</div>
+              <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+                <span className="text-[13.5px] break-words">{row.value ?? "—"}</span>
+                {row.action}
+              </div>
               {row.hint ? (
                 <div className="mt-0.5 text-[11.5px] text-[#A5AFBE]">{row.hint}</div>
               ) : null}

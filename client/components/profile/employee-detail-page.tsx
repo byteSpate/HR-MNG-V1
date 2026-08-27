@@ -209,7 +209,7 @@ export function EmployeeDetailPage({
         onAvatarChanged={refresh}
         onEditName={canEditName ? () => setEditingName(true) : undefined}
         action={
-          canEdit || canToggleAccount || canAssignShift ? (
+          canEdit || canToggleAccount ? (
             <>
               {canEdit ? (
                 <>
@@ -223,11 +223,10 @@ export function EmployeeDetailPage({
                   ) : null}
                 </>
               ) : null}
-              {canAssignShift ? (
-                <Button type="button" variant="outline" onClick={() => setAssigningShift(true)}>
-                  {employee.employment?.shift ? "Change shift" : "Assign shift"}
-                </Button>
-              ) : null}
+              {/* The shift control used to be here. It moved onto the Shift
+                  row itself, where the thing it changes actually is — up here
+                  it was four buttons away from the value and people looked for
+                  it in the Employment dialog instead. */}
               {/* Distinct from "Record exit": that ends the employment, this
                   ends the access. Either can happen without the other. */}
               {canToggleAccount ? (
@@ -361,11 +360,50 @@ export function EmployeeDetailPage({
               },
               { label: "Joining date", value: formatDateValue(employee.employment.joiningDate) },
               { label: "Office location", value: employee.employment.officeLocation },
-              { label: "Shift", value: employee.employment.shift?.name ?? null },
+              {
+                label: "Shift",
+                // Unset means the General shift, not "no shift" — an
+                // unassigned employee is still judged against General's window,
+                // which is wrong for night staff and worth saying out loud.
+                value: employee.employment.shift?.name ?? "General (default)",
+                hint: "Sets the working hours attendance is judged against.",
+                // Its own control rather than the Employment dialog: changing
+                // a shift moves someone's late threshold, expected hours and
+                // weekly off, so it keeps a separate confirmation. It lives on
+                // the row because the button used to be at the top of the page
+                // and nobody found it.
+                action: canAssignShift ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    onClick={() => setAssigningShift(true)}
+                  >
+                    {employee.employment.shift ? "Change" : "Assign"}
+                  </Button>
+                ) : undefined,
+              },
               {
                 label: "Reporting manager",
                 value: employee.work.reportingManager?.fullName ?? null,
+                // Said plainly rather than left as a row with no control:
+                // there is no UI for this anywhere, and a blank field with no
+                // way to fill it reads as broken rather than as unbuilt.
+                hint: "Set when the account is created. Changing it later is not built yet.",
               },
+              // On the card because the Edit dialog offers it — the same
+              // reason Designation is here. `deviceUserId` is FULL tier only,
+              // so it is absent rather than null for a viewer who cannot see
+              // it, and the row drops out with it.
+              ...(employee.employment.deviceUserId !== undefined
+                ? [
+                    {
+                      label: "Device enrolment ID",
+                      value: employee.employment.deviceUserId,
+                      hint: "Their ID on a punch machine. Nothing reads it yet — no machine is connected.",
+                    },
+                  ]
+                : []),
             ]}
           />
         ) : null}
