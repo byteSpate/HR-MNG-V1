@@ -1,13 +1,28 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query"
+import {
+  RiCheckboxCircleLine,
+  RiComputerLine,
+  RiCupLine,
+  RiFirstAidKitLine,
+  RiGraduationCapLine,
+  RiMoneyDollarCircleLine,
+  RiPencilRuler2Line,
+  RiReceiptLine,
+  RiTaxiLine,
+  RiTimeLine,
+  RiWalletLine,
+  type RemixiconComponentType,
+} from "@remixicon/react"
 
 import { ApiError } from "@/lib/api/client"
 import {
   approveExpenseClaim,
   createExpenseClaim,
   uploadClaimReceipt,
+  getExpenseReport,
   getMyExpenseClaims,
   listExpenseClaims,
   listExpenseCategories,
@@ -16,11 +31,18 @@ import {
   deleteExpenseClaim,
 } from "@/lib/api/expenses"
 import { useSession } from "@/lib/auth/session-context"
-import type { ExpenseClaim, ExpenseClaimInput } from "@/lib/api/types"
+import type {
+  Currency,
+  ExpenseClaim,
+  ExpenseClaimInput,
+  ExpenseReport,
+  ExpenseStatus,
+} from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
+import { toDateString } from "@/lib/utils"
 import { ConfirmDialog } from "@/components/dashboard/record-kit"
 import { DataTable } from "@/components/dashboard/data-table"
-import { PageHeader } from "@/components/dashboard/page-header"
+import { MiniStat, PageHeader } from "@/components/dashboard/page-header"
 import type { TableCell } from "@/components/dashboard/types"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -45,18 +67,71 @@ function spendDate(iso: string): string {
   })
 }
 
+/**
+ * A glyph per category, keyed on `code` rather than `name`.
+ *
+ * Categories are created by Finance at runtime, so this is deliberately
+ * partial and falls back to a receipt: an unmapped category gets a sensible
+ * generic glyph, never a question-mark box, and Finance adding "Gas bill"
+ * tomorrow does not render a hole.
+ */
+const CATEGORY_ICON: Record<string, RemixiconComponentType> = {
+  TRAVEL: RiTaxiLine,
+  CONVEYANCE: RiTaxiLine,
+  ENTERTAINMENT: RiCupLine,
+  STATIONERY: RiPencilRuler2Line,
+  IT: RiComputerLine,
+  MEDICAL: RiFirstAidKitLine,
+  TRAINING: RiGraduationCapLine,
+}
+const categoryIcon = (code: string) => CATEGORY_ICON[code.toUpperCase()] ?? RiReceiptLine
+
+/**
+ * The claim, as one cell: what it was, then the category and the note under it.
+ *
+ * A `node` rather than `text`/`sub`, because the kit's `sub` is a single
+ * nowrap truncated line and a description clipped to "Bought a replacement
+ * water jar for the…" is a description nobody can read. This wraps to two
+ * lines and stops.
+ */
+function claimCell(claim: ExpenseClaim) {
+  const Icon = categoryIcon(claim.category.code)
+  const route =
+    claim.travelFrom || claim.travelTo
+      ? `${claim.travelFrom ?? "?"} → ${claim.travelTo ?? "?"}`
+      : null
+  // The route is the description for a journey; showing both repeats it.
+  const detail = route ?? claim.description
+
+  return {
+    node: (
+      <div className="flex min-w-0 items-start gap-2">
+        <Icon className="mt-0.5 size-4 shrink-0 text-[#8A94A2]" aria-hidden />
+        <div className="min-w-0">
+          <div className="truncate text-[13px] font-semibold text-[#1C2733]">
+            {claim.name ?? claim.category.name}
+          </div>
+          <div className="mt-0.5 text-[11.5px] leading-snug text-[#6B7789]">
+            <span>{claim.category.name}</span>
+            {detail ? (
+              <>
+                <span aria-hidden> · </span>
+                <span className="line-clamp-2">{detail}</span>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    ),
+  }
+}
+
 function claimRow(claim: ExpenseClaim, extra: TableCell[]): TableCell[] {
   return [
-    {
-      // Name leads, category underneath. It used to be category over
-      // description, which put "Other" where the identity of the claim
-      // belongs and pressed the description into service as a name.
-      // `name` is null only on claims filed before the field existed, and
-      // those fall back to the category so no row is ever unlabelled.
-      text: claim.name ?? claim.category.name,
-      sub: claim.category.name,
-      weight: 600,
-    },
+    // Name, then category and the note under it, behind a category glyph.
+    // `name` is null only on claims filed before the field existed, and those
+    // fall back to the category so no row is ever unlabelled.
+    claimCell(claim),
     // Was the raw `expenseDate`, which rendered as
     // "2026-07-06T00:00:00.000Z" — the API sends a full ISO timestamp and
     // this cell printed it verbatim.
@@ -93,6 +168,34 @@ export function ExpensePage() {
     enabled: isAuthed && isAdmin,
   })
   const categoriesQuery = useQuery({ queryKey: ["expense-categories"], queryFn: () => listExpenseCategories(accessToken!), enabled: isAuthed })
+
+  /**
+   * This month's figures, for the tiles at the top.
+   *
+   * Fetched from the report endpoint rather than summed from `mine`, and that
+   * is not a preference: money is Decimal on the server and travels as
+   * strings, so the client formats and never does arithmetic on it. Adding
+   * `Number(claim.amount)` across a page of rows is exactly the float rounding
+   * PRODUCT.md forbids — and it would silently add BDT to USD, which no amount
+   * of care in the browser can make true.
+   *
+   * The endpoint scopes an employee to their own claims regardless of what is
+   * asked for, so this needs no `employeeId` and cannot leak anybody else's.
+   */
+  const monthRange = useMemo(() => {
+    const now = new Date()
+    return {
+      from: toDateString(new Date(now.getFullYear(), now.getMonth(), 1)),
+      to: toDateString(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      label: now.toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
+    }
+  }, [])
+
+  const monthQuery = useQuery({
+    queryKey: ["expenses", "report", monthRange.from, monthRange.to, "self"],
+    queryFn: () => getExpenseReport(accessToken!, { from: monthRange.from, to: monthRange.to }),
+    enabled: isAuthed && isStaff,
+  })
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["expenses"] })
@@ -293,6 +396,8 @@ export function ExpensePage() {
       ) : null}
 
       <div className="space-y-6">
+        {isStaff ? <MonthStats query={monthQuery} label={monthRange.label} /> : null}
+
         {isStaff ? (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -416,5 +521,103 @@ export function ExpensePage() {
         />
       ) : null}
     </>
+  )
+}
+
+/**
+ * This month, in four figures.
+ *
+ * Every number here comes off the server's `totals`. None is recomputed in the
+ * browser, and none is added across currencies — a person who claimed in both
+ * sees both, because a single blended figure would be wrong in a way nobody
+ * could see.
+ *
+ * The four answer the questions an employee actually arrives with, in order:
+ * what did I spend, what is stuck, what is owed to me, and what has been paid.
+ */
+function MonthStats({
+  query,
+  label,
+}: {
+  query: UseQueryResult<ExpenseReport>
+  label: string
+}) {
+  // Three states, kept apart. A failed request that rendered as zeros would be
+  // the worst possible lie on a page about money.
+  if (query.isPending) {
+    return (
+      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-[86px] w-full rounded-md" />
+        ))}
+      </div>
+    )
+  }
+
+  if (query.isError || !query.data) {
+    return (
+      <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4 text-[12.5px] text-[#B03A3A]">
+        This month&apos;s totals could not be loaded.{" "}
+        <Button
+          variant="link"
+          className="h-auto p-0 text-[12.5px] font-semibold underline"
+          onClick={() => query.refetch()}
+        >
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
+  const { totals } = query.data
+  const statusOf = (status: ExpenseStatus) => totals.byStatus.find((s) => s.status === status)
+
+  /**
+   * One line per currency, or an em dash when there is nothing.
+   *
+   * A dash rather than "৳0.00": zero claimed and no claims are the same fact
+   * here, and inventing a currency to render a nought in would mean picking
+   * one, which the data does not support.
+   */
+  const money = (list: { currency: Currency; amount: string }[]) =>
+    list.length === 0 ? "—" : list.map((c) => formatMoney(c.amount, c.currency)).join("  ·  ")
+
+  const pending = statusOf("PENDING")
+  const approved = statusOf("APPROVED")
+  const reimbursed = statusOf("REIMBURSED")
+
+  const tiles = [
+    {
+      label: "Claimed this month",
+      value: money(totals.byCurrency),
+      sub: `${totals.claims} claim${totals.claims === 1 ? "" : "s"} in ${label}`,
+      icon: RiWalletLine,
+    },
+    {
+      label: "Awaiting approval",
+      value: money(pending?.byCurrency ?? []),
+      sub: pending ? `${pending.claims} waiting on Finance` : "Nothing waiting",
+      icon: RiTimeLine,
+    },
+    {
+      label: "Approved, not yet paid",
+      value: money(approved?.byCurrency ?? []),
+      sub: approved ? `${approved.claims} on the next run` : "Nothing outstanding",
+      icon: RiCheckboxCircleLine,
+    },
+    {
+      label: "Reimbursed",
+      value: money(reimbursed?.byCurrency ?? []),
+      sub: reimbursed ? `${reimbursed.claims} paid back` : "Nothing paid yet",
+      icon: RiMoneyDollarCircleLine,
+    },
+  ]
+
+  return (
+    <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+      {tiles.map((tile) => (
+        <MiniStat key={tile.label} {...tile} />
+      ))}
+    </div>
   )
 }

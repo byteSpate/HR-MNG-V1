@@ -354,8 +354,13 @@ export interface ExpenseReport {
   totals: {
     claims: number
     /** Per currency, never added together — see `expense.report.ts`. */
-    byCurrency: { currency: string; claims: number; amount: string }[]
-    byStatus: { status: ExpenseStatus; claims: number }[]
+    byCurrency: { currency: Currency; claims: number; amount: string }[]
+    /** Counts per status, and the money behind each — also split by currency. */
+    byStatus: {
+      status: ExpenseStatus
+      claims: number
+      byCurrency: { currency: Currency; amount: string }[]
+    }[]
   }
 }
 

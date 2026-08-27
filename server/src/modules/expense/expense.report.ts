@@ -75,7 +75,18 @@ export interface ExpenseReport {
      * applied at read time.
      */
     byCurrency: { currency: string; claims: number; amount: string }[]
-    byStatus: { status: ExpenseReportStatus; claims: number }[]
+    /**
+     * Counts per status, and the money behind each — still split by currency,
+     * for the same reason `byCurrency` is: "approved" is a number of claims
+     * *and* an amount somebody is owed, and the amount is the one an employee
+     * actually wants ("what am I owed?"). Adding BDT to USD to answer it would
+     * make the figure worse than not showing it.
+     */
+    byStatus: {
+      status: ExpenseReportStatus
+      claims: number
+      byCurrency: { currency: string; amount: string }[]
+    }[]
   }
 }
 
@@ -142,7 +153,9 @@ export async function getExpenseReport(
   })
 
   const byCurrency = new Map<string, { claims: number; amount: number }>()
-  const byStatus = new Map<ExpenseReportStatus, number>()
+  /** Status → currency → running total. Two levels, because a status can hold
+   *  claims in both currencies and they must never be added together. */
+  const byStatus = new Map<ExpenseReportStatus, { claims: number; money: Map<string, number> }>()
 
   const mapped: ExpenseReportRow[] = rows.map((claim) => {
     const currency = String(claim.currency)
@@ -152,7 +165,10 @@ export async function getExpenseReport(
     byCurrency.set(currency, bucket)
 
     const status = claim.status as ExpenseReportStatus
-    byStatus.set(status, (byStatus.get(status) ?? 0) + 1)
+    const statusBucket = byStatus.get(status) ?? { claims: 0, money: new Map<string, number>() }
+    statusBucket.claims++
+    statusBucket.money.set(currency, (statusBucket.money.get(currency) ?? 0) + Number(claim.amount))
+    byStatus.set(status, statusBucket)
 
     return {
       id: claim.id,
@@ -187,7 +203,13 @@ export async function getExpenseReport(
         .map(([currency, b]) => ({ currency, claims: b.claims, amount: b.amount.toFixed(2) }))
         .sort((a, b) => a.currency.localeCompare(b.currency)),
       byStatus: [...byStatus.entries()]
-        .map(([status, claims]) => ({ status, claims }))
+        .map(([status, b]) => ({
+          status,
+          claims: b.claims,
+          byCurrency: [...b.money.entries()]
+            .map(([currency, amount]) => ({ currency, amount: amount.toFixed(2) }))
+            .sort((a, c) => a.currency.localeCompare(c.currency)),
+        }))
         .sort((a, b) => a.status.localeCompare(b.status)),
     },
   }

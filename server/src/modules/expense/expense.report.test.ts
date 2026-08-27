@@ -159,9 +159,34 @@ describe("totals", () => {
 
     const report = await getExpenseReport(FINANCE, { from: "2026-07-01", to: "2026-07-31" })
 
+    // Money rides along with the count. "2 pending" answers how many; the
+    // employee's actual question is how much, and that is an amount.
     expect(report.totals.byStatus).toEqual([
-      { status: "APPROVED", claims: 1 },
-      { status: "PENDING", claims: 2 },
+      { status: "APPROVED", claims: 1, byCurrency: [{ currency: "BDT", amount: "1200.00" }] },
+      { status: "PENDING", claims: 2, byCurrency: [{ currency: "BDT", amount: "2400.00" }] },
+    ])
+  })
+
+  // The same rule `byCurrency` exists for. A status holding one BDT and one
+  // USD claim is two figures, never one.
+  it("splits a status by currency rather than adding across them", async () => {
+    rows(
+      claim({ status: "PENDING" }),
+      claim({
+        id: "c2",
+        status: "PENDING",
+        currency: "USD",
+        amount: { toFixed: (n: number) => (80).toFixed(n), valueOf: () => 80 },
+      })
+    )
+
+    const report = await getExpenseReport(FINANCE, { from: "2026-07-01", to: "2026-07-31" })
+    const pending = report.totals.byStatus.find((s) => s.status === "PENDING")!
+
+    expect(pending.claims).toBe(2)
+    expect(pending.byCurrency).toEqual([
+      { currency: "BDT", amount: "1200.00" },
+      { currency: "USD", amount: "80.00" },
     ])
   })
 })
