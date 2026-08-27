@@ -36,9 +36,16 @@ const EXIT_REASON_LABEL: Record<ExitReason, string> = {
 const EXIT_REASONS = Object.keys(EXIT_REASON_LABEL) as ExitReason[]
 
 /**
- * Mounted only while open, matching `EditCardDialog` / `EditMyDetailsDialog`
- * — a fresh open always starts from a blank form, which is correct here since
- * exit details are being recorded for the first time.
+ * Mounted only while open, matching `EditCardDialog` / `EditMyDetailsDialog`,
+ * so `useState`'s initializer seeds the form once per open and no effect is
+ * needed to re-seed it.
+ *
+ * It **seeds from the existing exit** when there is one. This form used to
+ * start blank unconditionally, reasoning that an exit is recorded once. That
+ * was wrong twice over: the server accepts an amendment right up until a
+ * settlement is approved, and HR opening this a second time is almost always
+ * here to correct a date. A blank form would have quietly cleared the note and
+ * reset the reason to Resignation.
  */
 function ExitForm({
   employee,
@@ -50,9 +57,12 @@ function ExitForm({
   onSaved: () => void
 }) {
   const { accessToken } = useSession()
-  const [lastWorkingDay, setLastWorkingDay] = useState("")
-  const [exitReason, setExitReason] = useState<ExitReason>("RESIGNATION")
-  const [exitNote, setExitNote] = useState("")
+  const existing = employee.exit ?? null
+  const [lastWorkingDay, setLastWorkingDay] = useState(existing?.lastWorkingDay ?? "")
+  const [exitReason, setExitReason] = useState<ExitReason>(
+    (existing?.exitReason as ExitReason | null) ?? "RESIGNATION"
+  )
+  const [exitNote, setExitNote] = useState(existing?.exitNote ?? "")
   const [error, setError] = useState<string | null>(null)
 
   const mutation = useMutation({

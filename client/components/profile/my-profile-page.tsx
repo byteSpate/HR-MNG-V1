@@ -190,7 +190,14 @@ function StaffProfile({
               },
               { label: "Joining date", value: formatDateValue(employee.employment.joiningDate) },
               { label: "Office location", value: employee.employment.officeLocation },
-              { label: "Shift", value: employee.employment.shift?.name ?? null },
+              {
+                label: "Shift",
+                // A dash read as "no shift", which is not what unset means:
+                // an unassigned employee is judged against the General shift's
+                // window. Matches the HR page.
+                value: employee.employment.shift?.name ?? "General (default)",
+                hint: "The working hours your attendance is judged against.",
+              },
               {
                 label: "Reporting manager",
                 value: employee.work.reportingManager?.fullName ?? null,
@@ -233,6 +240,10 @@ function StaffProfile({
               { label: "Reason", value: employee.exit.exitReason },
               { label: "Note", value: employee.exit.exitNote },
             ]}
+            // The only card here that said nothing about why it cannot be
+            // edited. Every other one does, and silence reads as an oversight
+            // rather than as a rule.
+            lockedHint="Recorded by HR. Speak to them if anything here is wrong."
           />
         ) : null}
       </div>

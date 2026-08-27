@@ -211,22 +211,23 @@ export function EmployeeDetailPage({
         action={
           canEdit || canToggleAccount ? (
             <>
-              {canEdit ? (
-                <>
-                  <Button type="button" variant="outline" onClick={() => setAssigningStructure(true)}>
-                    Assign salary structure
-                  </Button>
-                  {employee.exit === null ? (
-                    <Button type="button" variant="outline" onClick={() => setExitOpen(true)}>
-                      Record exit
-                    </Button>
-                  ) : null}
-                </>
+              {/*
+                Only actions with no row of their own live up here.
+
+                "Record exit" stays because when there is no exit there is no
+                Exit card to hang it on; once there is one, the card carries
+                its own Edit and this disappears.
+
+                Shift and salary structure used to be here too. Both moved onto
+                the rows they change — up here they were several buttons away
+                from the value, and people looked for them in the card's Edit
+                dialog instead, which is where they reasonably expected them.
+              */}
+              {canEdit && employee.exit === null ? (
+                <Button type="button" variant="outline" onClick={() => setExitOpen(true)}>
+                  Record exit
+                </Button>
               ) : null}
-              {/* The shift control used to be here. It moved onto the Shift
-                  row itself, where the thing it changes actually is — up here
-                  it was four buttons away from the value and people looked for
-                  it in the Employment dialog instead. */}
               {/* Distinct from "Record exit": that ends the employment, this
                   ends the access. Either can happen without the other. */}
               {canToggleAccount ? (
@@ -413,7 +414,25 @@ export function EmployeeDetailPage({
             title="Payroll"
             action={editAction("Payroll")}
             rows={[
-              { label: "Salary structure", value: employee.payroll.salaryStructure?.name ?? null },
+              {
+                label: "Salary structure",
+                value: employee.payroll.salaryStructure?.name ?? null,
+                hint: "What payroll pays from. Nobody can be paid without one.",
+                // Same reasoning as Shift: the Payroll dialog covers the bank
+                // fields, and assigning a structure is a money decision with
+                // its own dialog. The control belongs on the row rather than
+                // in the page header, where Shift's used to be.
+                action: canEdit ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    onClick={() => setAssigningStructure(true)}
+                  >
+                    {employee.payroll.salaryStructure ? "Change" : "Assign"}
+                  </Button>
+                ) : undefined,
+              },
               { label: "Bank", value: employee.payroll.bankName },
               { label: "Account number", value: employee.payroll.bankAccountNumber },
               { label: "Routing number", value: employee.payroll.bankRoutingNumber },
@@ -424,11 +443,29 @@ export function EmployeeDetailPage({
         {employee.exit ? (
           <ProfileCard
             title="Exit"
+            // A recorded exit had no control at all: the "Record exit" button
+            // in the header only shows while there is none, so a wrong last
+            // working day could not be corrected from the UI — even though the
+            // server accepts an amendment right up until a settlement is
+            // approved, and refuses with a message of its own after that.
+            action={
+              canEdit ? (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  onClick={() => setExitOpen(true)}
+                >
+                  Edit
+                </Button>
+              ) : undefined
+            }
             rows={[
               { label: "Last working day", value: formatDateValue(employee.exit.lastWorkingDay) },
               { label: "Reason", value: employee.exit.exitReason },
               { label: "Note", value: employee.exit.exitNote },
             ]}
+            lockedHint="Can be corrected until a settlement is approved."
           />
         ) : null}
 
