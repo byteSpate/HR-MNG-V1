@@ -40,6 +40,22 @@ export const approveClaimBody = z.object({
 export type ApproveClaimBody = z.infer<typeof approveClaimBody>
 
 /**
+ * A sweep of approvals.
+ *
+ * No `note`, deliberately — one sentence glued to twelve different claims is
+ * the same defect that ruled out bulk reject. The note stays on single
+ * approve, where it can be about the claim it is attached to.
+ *
+ * Capped at 200: the batch is a loop of transactions, each posting to the
+ * ledger, and an uncapped list is a request that holds a connection open for
+ * as long as somebody cares to make it.
+ */
+export const approveClaimsBody = z.object({
+  claimIds: z.array(z.string().uuid()).min(1, "Select at least one claim").max(200),
+})
+export type ApproveClaimsBody = z.infer<typeof approveClaimsBody>
+
+/**
  * `from` and `to` are required, unlike `claimQuery`: a report defaulting to
  * some server-chosen range would put a date on a printed document that nobody
  * asked for.

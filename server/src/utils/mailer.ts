@@ -34,7 +34,12 @@ export type DispatchKind =
   | "PAYSLIP"
   | "LEAVE_REQUESTED"
   | "LEAVE_DECIDED"
-  | "EXPENSE_DECIDED"
+  // Two, because the two decisions are not symmetric: approvals are grouped
+  // per employee and sent once per sweep, rejections are one email per claim
+  // carrying that claim's own reason. `EXPENSE_DECIDED` covered both and is
+  // gone — see `docs/adr/0004`.
+  | "EXPENSE_APPROVED"
+  | "EXPENSE_REJECTED"
   | "PAYROLL_SUBMITTED"
   | "ASSET_REQUEST_DECIDED"
   | "SETTLEMENT_STATEMENT"

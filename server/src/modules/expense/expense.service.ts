@@ -10,7 +10,10 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { formatDateOnly, parseDateOnly } from "../../utils/dates"
 import { emitEvent } from "../event/event.emit"
-import { sendExpenseDecidedEmail } from "../notification/notification.mailer"
+import {
+  sendExpenseRejectedEmail,
+  sendExpensesApprovedEmail,
+} from "../notification/notification.mailer"
 import { expenseEvent } from "./expense.events"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import { dec, toMoneyString } from "../payroll/payroll.money"
@@ -152,7 +155,7 @@ export async function listClaims(query: ClaimQuery) {
 /**
  * The claimant's login and the two fields the expenses table identifies a row
  * by. Pulled in on the decision paths so the notification does not need a
- * second round trip, and so `sendExpenseDecidedEmail` can name a claim the
+ * second round trip, and so the decision emails can name a claim the
  * reader will recognise — `ExpenseClaim` has no claim number.
  */
 const DECISION_INCLUDE = {
@@ -169,31 +172,78 @@ type DecidedClaim = {
   category?: { name: string } | null
 }
 
+/** How a claim is named to the person who filed it: the table has no claim
+ *  number, so it is the category and the spend date, as the row reads. */
+const claimRefOf = (claim: DecidedClaim) =>
+  `${claim.category?.name ?? "an expense"} on ${formatDateOnly(claim.expenseDate)}`
+
 /**
- * Tell the claimant. After the transaction and swallowed inside `notify`: a
- * decision that already committed must not be undone by a mail server, and a
- * claimant with no login has nobody to tell.
+ * Tell the claimant their claim was declined. After the transaction and
+ * swallowed inside `notify`: a decision that already committed must not be
+ * undone by a mail server, and a claimant with no login has nobody to tell.
+ *
+ * Approvals do not come through here — they are grouped per employee and sent
+ * once per sweep by `notifyApprovals`.
  */
-async function notifyExpenseDecision(
-  claim: DecidedClaim,
-  approved: boolean,
-  reason: string | null
-): Promise<void> {
+async function notifyExpenseRejected(claim: DecidedClaim, reason: string): Promise<void> {
   const to = claim.employee?.user?.email
   if (!to) return
-  const category = claim.category?.name ?? "an expense"
-  await sendExpenseDecidedEmail({
+  await sendExpenseRejectedEmail({
     to,
     claimId: claim.id,
-    claimRef: `${category} on ${formatDateOnly(claim.expenseDate)}`,
+    claimRef: claimRefOf(claim),
     amount: toMoneyString(claim.amount),
     currency: claim.currency,
-    approved,
     reason,
   })
 }
 
-export async function approveClaim(id: string, actorUserId: string, body: ApproveClaimBody) {
+/**
+ * One email per employee, listing everything approved for them in this sweep.
+ *
+ * The grouping lives here rather than in the caller so that a single approval
+ * and a batch of twelve take the same path — a batch of one is just a batch.
+ * Totals are summed per currency and never across them.
+ */
+async function notifyApprovals(claims: DecidedClaim[]): Promise<void> {
+  const byRecipient = new Map<string, DecidedClaim[]>()
+  for (const claim of claims) {
+    const to = claim.employee?.user?.email
+    if (!to) continue
+    byRecipient.set(to, [...(byRecipient.get(to) ?? []), claim])
+  }
+
+  for (const [to, list] of byRecipient) {
+    const totals = new Map<string, ReturnType<typeof dec>>()
+    for (const claim of list) {
+      const running = totals.get(claim.currency)
+      totals.set(claim.currency, running ? running.plus(dec(claim.amount)) : dec(claim.amount))
+    }
+
+    await sendExpensesApprovedEmail({
+      to,
+      claims: list.map((claim) => ({
+        claimId: claim.id,
+        claimRef: claimRefOf(claim),
+        amount: toMoneyString(claim.amount),
+        currency: claim.currency,
+      })),
+      totals: [...totals.entries()]
+        .map(([currency, amount]) => ({ currency, amount: toMoneyString(amount) }))
+        .sort((a, b) => a.currency.localeCompare(b.currency)),
+    })
+  }
+}
+
+/**
+ * Everything an approval does to one claim, minus the email.
+ *
+ * Split out so the single and batch paths cannot drift: the batch loops this,
+ * one transaction each. One transaction for the whole batch would mean a
+ * single claim with no covering exchange rate rolling back every correct
+ * approval beside it — see `docs/adr/0004`.
+ */
+async function approveOne(id: string, actorUserId: string, note?: string) {
   const claim = await prisma.expenseClaim.findUnique({ where: { id }, include: DECISION_INCLUDE })
   if (!claim) throw new AppError(404, "Expense claim not found")
   if (claim.status !== "PENDING") {
@@ -204,6 +254,66 @@ export async function approveClaim(id: string, actorUserId: string, body: Approv
   // date — never defaults, for the same reason payroll never does.
   const fxRateToBdt = await resolveRateOrThrow(claim.currency, claim.expenseDate)
 
+  const updated = await runApproval(id, actorUserId, claim, fxRateToBdt, note)
+  return { claim, updated }
+}
+
+export async function approveClaim(id: string, actorUserId: string, body: ApproveClaimBody) {
+  const { claim, updated } = await approveOne(id, actorUserId, body.note)
+  await notifyApprovals([claim])
+  return updated
+}
+
+/**
+ * Approve many claims in one sweep, then send one email per employee.
+ *
+ * **Best-effort, not all-or-nothing.** Each claim is its own transaction and
+ * its own failure: approval resolves an exchange rate against that claim's
+ * spend date, so one USD claim with no covering rate must not block eleven
+ * correct approvals beside it. The refusals come back named, so the caller
+ * can say which ones were left and why.
+ *
+ * Only claims that actually committed are emailed about. A claim that threw
+ * is not in the list the employee receives.
+ */
+export async function approveClaims(
+  ids: string[],
+  actorUserId: string
+): Promise<{
+  approved: string[]
+  failed: Array<{ id: string; reason: string }>
+}> {
+  const approved: DecidedClaim[] = []
+  const failed: Array<{ id: string; reason: string }> = []
+
+  // Sequential, not `Promise.all`: each approval posts to the ledger, and
+  // concurrent journal writes against the same period would contend for the
+  // same rows for no gain on a batch this size.
+  for (const id of ids) {
+    try {
+      const { claim } = await approveOne(id, actorUserId)
+      approved.push(claim)
+    } catch (err) {
+      failed.push({
+        id,
+        reason: err instanceof AppError ? err.message : "Could not be approved",
+      })
+    }
+  }
+
+  await notifyApprovals(approved)
+  return { approved: approved.map((c) => c.id), failed }
+}
+
+/** The write itself, shared by every approval path. */
+async function runApproval(
+  id: string,
+  actorUserId: string,
+  claim: { employeeId: string; categoryId: string; currency: string; amount: Parameters<typeof toMoneyString>[0] },
+  fxRateToBdt: Awaited<ReturnType<typeof resolveRateOrThrow>>,
+  note: string | undefined
+) {
+  const body = { note }
   const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.expenseClaim.update({
       where: { id },
@@ -240,7 +350,9 @@ export async function approveClaim(id: string, actorUserId: string, body: Approv
     return updated
   })
 
-  await notifyExpenseDecision(claim, true, body.note ?? null)
+  // No email here. Approvals are grouped per employee and sent once per
+  // sweep by the caller, so that twelve approvals are one email and not
+  // twelve.
   return updated
 }
 
@@ -285,7 +397,7 @@ export async function rejectClaim(id: string, actorUserId: string, body: RejectC
     return updated
   })
 
-  await notifyExpenseDecision(claim, false, body.note ?? null)
+  await notifyExpenseRejected(claim, body.note)
   return updated
 }
 

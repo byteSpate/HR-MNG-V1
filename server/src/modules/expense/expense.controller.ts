@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express"
 
 import {
   approveClaim,
+  approveClaims,
   createClaim,
   deleteClaim,
   getClaim,
@@ -12,6 +13,7 @@ import {
 } from "./expense.service"
 import {
   approveClaimBody,
+  approveClaimsBody,
   claimQuery,
   createClaimBody,
   rejectClaimBody,
@@ -159,6 +161,23 @@ export async function approveClaimHandler(req: RequestWithId, res: Response, nex
   try {
     const body = approveClaimBody.parse(req.body ?? {})
     return res.status(200).json(await approveClaim(req.params.id, req.user!.sub, body))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+/**
+ * Approve many.
+ *
+ * Always 200, even when some claims were refused: a batch that approved
+ * eleven of twelve did not fail, and a 4xx would make the client discard a
+ * result describing eleven successful approvals. What was refused comes back
+ * in `failed`, named, for the caller to show.
+ */
+export async function approveClaimsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = approveClaimsBody.parse(req.body)
+    return res.status(200).json(await approveClaims(body.claimIds, req.user!.sub))
   } catch (err) {
     return next(err)
   }

@@ -5,6 +5,7 @@ import { requireAuth } from "../../middleware/requireAuth"
 import { requireRole } from "../../middleware/requireRole"
 import {
   approveClaimHandler,
+  approveClaimsHandler,
   createClaimHandler,
   getClaimHandler,
   getMyClaimsHandler,
@@ -73,5 +74,13 @@ router.delete("/:id", requireAuth, requireRole(...STAFF_ROLES), deleteClaimHandl
 
 router.patch("/:id/approve", requireAuth, requireRole(...FINANCE_ROLES), approveClaimHandler)
 router.patch("/:id/reject", requireAuth, requireRole(...FINANCE_ROLES), rejectClaimHandler)
+
+// POST rather than PATCH, and not under `/:id`: a sweep has no single claim
+// to name. `PATCH /batch-approve` would be matched by the `PATCH /:id` above
+// with the id "batch-approve" unless it were registered first — an ordering
+// dependency a later edit would silently break.
+//
+// There is deliberately no batch reject. See `docs/adr/0004`.
+router.post("/batch-approve", requireAuth, requireRole(...FINANCE_ROLES), approveClaimsHandler)
 
 export default router

@@ -7,6 +7,7 @@ vi.mock("./expense.service", () => ({
   listClaims: vi.fn(),
   getClaim: vi.fn(),
   approveClaim: vi.fn(),
+  approveClaims: vi.fn(),
   rejectClaim: vi.fn(),
 }))
 
@@ -25,6 +26,7 @@ beforeEach(() => {
   vi.mocked(service.getMyClaims).mockResolvedValue([])
   vi.mocked(service.listClaims).mockResolvedValue([])
   vi.mocked(service.approveClaim).mockResolvedValue({ id: "claim-1" } as never)
+  vi.mocked(service.approveClaims).mockResolvedValue({ approved: ["claim-1"], failed: [] } as never)
   vi.mocked(service.rejectClaim).mockResolvedValue({ id: "claim-1" } as never)
 })
 
@@ -106,6 +108,71 @@ describe("review routes", () => {
       .patch("/api/expenses/claim-1/reimburse")
       .set("Authorization", auth("FINANCE_OFFICER"))
       .send({})
+    expect(res.status).toBe(404)
+  })
+})
+
+describe("POST /api/expenses/batch-approve", () => {
+  const ID = "11111111-1111-4111-8111-111111111111"
+
+  it("401s unauthenticated", async () => {
+    const res = await request(app).post("/api/expenses/batch-approve").send({ claimIds: [ID] })
+    expect(res.status).toBe(401)
+  })
+
+  it.each<TestRole>(["EMPLOYEE", "REPORTING_MANAGER", "HR_ADMIN"])(
+    "403s %s — approving is Finance's, in bulk as much as one at a time",
+    async (role) => {
+      const res = await request(app)
+        .post("/api/expenses/batch-approve")
+        .set("Authorization", auth(role))
+        .send({ claimIds: [ID] })
+      expect(res.status).toBe(403)
+    }
+  )
+
+  it("200s for FINANCE_OFFICER", async () => {
+    const res = await request(app)
+      .post("/api/expenses/batch-approve")
+      .set("Authorization", auth("FINANCE_OFFICER"))
+      .send({ claimIds: [ID] })
+    expect(res.status).toBe(200)
+    expect(service.approveClaims).toHaveBeenCalledWith([ID], "user-1")
+  })
+
+  /**
+   * A batch that approved some and refused others did not fail. A 4xx would
+   * make the client throw away a result describing real approvals.
+   */
+  it("200s even when every claim in the sweep was refused", async () => {
+    vi.mocked(service.approveClaims).mockResolvedValue({
+      approved: [],
+      failed: [{ id: ID, reason: "This claim is already approved" }],
+    } as never)
+
+    const res = await request(app)
+      .post("/api/expenses/batch-approve")
+      .set("Authorization", auth("FINANCE_OFFICER"))
+      .send({ claimIds: [ID] })
+
+    expect(res.status).toBe(200)
+    expect(res.body.failed).toHaveLength(1)
+  })
+
+  it("400s an empty selection", async () => {
+    const res = await request(app)
+      .post("/api/expenses/batch-approve")
+      .set("Authorization", auth("FINANCE_OFFICER"))
+      .send({ claimIds: [] })
+    expect(res.status).toBe(400)
+  })
+
+  // There is deliberately no batch reject — see docs/adr/0004.
+  it("has no batch-reject route", async () => {
+    const res = await request(app)
+      .post("/api/expenses/batch-reject")
+      .set("Authorization", auth("FINANCE_OFFICER"))
+      .send({ claimIds: [ID], note: "No receipts" })
     expect(res.status).toBe(404)
   })
 })

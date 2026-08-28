@@ -51,6 +51,37 @@ export function approveExpenseClaim(
   })
 }
 
+/** What a sweep did. Some claims can be refused while others commit. */
+export interface BatchApproveResult {
+  approved: string[]
+  /** Named, so the screen can say which were left and why. */
+  failed: Array<{ id: string; reason: string }>
+}
+
+/**
+ * Approve many claims at once.
+ *
+ * One request, not a loop of single approvals — the grouping into one email
+ * per employee happens on the server, and a client-side loop would send one
+ * email per claim, which is the whole defect this exists to fix.
+ *
+ * Resolves rather than throws when some claims were refused: a sweep that
+ * approved eleven of twelve did not fail. Read `failed` to see what was left.
+ *
+ * There is deliberately no batch reject — a reject reason is written for one
+ * specific claim. See `docs/adr/0004`.
+ */
+export function batchApproveExpenseClaims(
+  accessToken: string,
+  claimIds: string[]
+): Promise<BatchApproveResult> {
+  return apiFetch<BatchApproveResult>("/api/expenses/batch-approve", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify({ claimIds }),
+  })
+}
+
 export function rejectExpenseClaim(
   accessToken: string,
   id: string,

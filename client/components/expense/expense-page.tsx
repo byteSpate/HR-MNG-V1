@@ -24,6 +24,7 @@ import {
 import { ApiError } from "@/lib/api/client"
 import {
   approveExpenseClaim,
+  batchApproveExpenseClaims,
   createExpenseClaim,
   uploadClaimReceipt,
   getExpenseReport,
@@ -34,6 +35,7 @@ import {
   updateExpenseClaim,
   deleteExpenseClaim,
 } from "@/lib/api/expenses"
+import type { BatchApproveResult } from "@/lib/api/expenses"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   Currency,
@@ -44,11 +46,13 @@ import type {
 } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { toDateString } from "@/lib/utils"
-import { ConfirmDialog } from "@/components/dashboard/record-kit"
+import { ConfirmDialog, PanelAlert, PanelNotice } from "@/components/dashboard/record-kit"
 import { DataTable } from "@/components/dashboard/data-table"
+import { ALL, FilterSelect } from "@/components/dashboard/filter-bar"
 import { MiniStat, PageHeader } from "@/components/dashboard/page-header"
 import type { TableCell } from "@/components/dashboard/types"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DecisionDialog } from "@/components/leave/decision-dialog"
 import { ExpenseDialog } from "@/components/expense/expense-dialog"
@@ -154,6 +158,22 @@ export function ExpensePage() {
   const [editing, setEditing] = useState<ExpenseClaim | null>(null)
   const [deleting, setDeleting] = useState<ExpenseClaim | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * The review sweep.
+   *
+   * `selected` holds claim ids rather than claims: a claim object goes stale
+   * the moment the list refetches, and a sweep must act on what the server
+   * has now, not on a copy taken when the box was ticked.
+   *
+   * `whose` narrows the queue to one person — the per-employee flow — without
+   * splitting it into fixed sections, which would forbid sweeping small
+   * claims across everybody. See `docs/adr/0004`.
+   */
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [whose, setWhose] = useState<string>(ALL)
+  const [confirmingSweep, setConfirmingSweep] = useState(false)
+  const [sweepResult, setSweepResult] = useState<BatchApproveResult | null>(null)
 
   const isAuthed = status === "authenticated" && !!accessToken
   const isStaff = !!user && STAFF_ROLES.includes(user.role)
@@ -264,6 +284,33 @@ export function ExpensePage() {
     onError: handleError,
   })
 
+  /**
+   * The sweep. One request for the whole selection, never a loop of single
+   * approvals — the server groups the notification into one email per
+   * employee, and a loop here would send one per claim, which is the defect
+   * this exists to remove.
+   *
+   * It resolves even when some claims were refused, because a sweep that
+   * approved eleven of twelve did not fail. The result is kept so the page
+   * can report both halves.
+   */
+  const sweepMutation = useMutation({
+    mutationFn: (ids: string[]) => batchApproveExpenseClaims(accessToken!, ids),
+    onSuccess: (result) => {
+      setError(null)
+      setSweepResult(result)
+      setConfirmingSweep(false)
+      // Only the ones that actually committed leave the selection. A refused
+      // claim stays ticked, because it is still waiting for a decision.
+      setSelected(new Set(result.failed.map((f) => f.id)))
+      invalidate()
+    },
+    onError: (err) => {
+      setConfirmingSweep(false)
+      handleError(err)
+    },
+  })
+
   const updateMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: ExpenseClaimInput }) =>
       updateExpenseClaim(accessToken!, id, {
@@ -365,8 +412,55 @@ export function ExpensePage() {
     ])
   )
 
-  const reviewRows: TableCell[][] = all.map((claim) =>
-    claimRow(claim, [
+  // Narrowed to one person, or everybody. The filter is the per-employee
+  // review flow; it is not a different screen.
+  const queue = whose === ALL ? all : all.filter((c) => c.employee?.id === whose)
+
+  /** What a sweep would act on: pending, in view, and ticked. */
+  const sweepable = queue.filter((c) => c.status === "PENDING")
+  const ticked = sweepable.filter((c) => selected.has(c.id))
+  const allTicked = sweepable.length > 0 && ticked.length === sweepable.length
+
+  /**
+   * What the confirm dialog says about the selection.
+   *
+   * Counts and currency names only — never a summed amount. Adding these up
+   * would mean parsing money strings to floats in the browser, and the server
+   * is the only place money is ever arithmetic.
+   */
+  const sweepSummary = {
+    people: new Set(ticked.map((c) => c.employee?.id ?? c.employeeId)).size,
+    currencies: [...new Set(ticked.map((c) => c.currency))].sort(),
+  }
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const reviewRows: TableCell[][] = queue.map((claim) => [
+    // The tick box, only for a reviewer and only where a decision is still
+    // possible. HR can read this queue but cannot decide, so they get no
+    // column at all rather than a row of boxes that do nothing.
+    ...(isReviewer
+      ? [
+          {
+            node:
+              claim.status === "PENDING" ? (
+                <Checkbox
+                  checked={selected.has(claim.id)}
+                  onCheckedChange={() => toggle(claim.id)}
+                  aria-label={`Select ${claim.name ?? claim.category.name}`}
+                />
+              ) : null,
+          } as TableCell,
+        ]
+      : []),
+    ...claimRow(claim, [
       { text: claim.employee?.fullName ?? "—", sub: claim.employee?.employeeCode },
       isReviewer && claim.status === "PENDING"
         ? {
@@ -393,8 +487,8 @@ export function ExpensePage() {
             ),
           }
         : { text: claim.payslip?.payslipNo ?? "—" },
-    ])
-  )
+    ]),
+  ])
 
   return (
     <>
@@ -454,19 +548,102 @@ export function ExpensePage() {
         {isAdmin ? (
           <div className="space-y-4">
             <div className="text-[15px] font-bold">All claims</div>
+
+            {/* Hidden while the first page loads. A filter beside a skeleton
+                reads as an answer about a list nobody has yet. */}
+            {!allQuery.isPending && all.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <FilterSelect
+                  label="Filter by employee"
+                  value={whose}
+                  onChange={(next) => {
+                    setWhose(next)
+                    // The selection is cleared with the filter. Sweeping
+                    // claims you can no longer see is how the wrong twelve
+                    // get approved.
+                    setSelected(new Set())
+                    setSweepResult(null)
+                  }}
+                  allLabel="Everybody"
+                  options={reviewPeople.map((p) => ({ value: p.id, label: p.fullName }))}
+                />
+
+                {isReviewer && sweepable.length > 0 ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="text-[12.5px]"
+                      onClick={() =>
+                        setSelected(
+                          allTicked ? new Set() : new Set(sweepable.map((c) => c.id))
+                        )
+                      }
+                    >
+                      {allTicked ? "Clear selection" : `Select all ${sweepable.length} pending`}
+                    </Button>
+                    <Button
+                      className="text-[12.5px]"
+                      disabled={ticked.length === 0 || sweepMutation.isPending}
+                      onClick={() => setConfirmingSweep(true)}
+                    >
+                      <RiCheckLine className="size-3.5" aria-hidden />
+                      {ticked.length === 0
+                        ? "Approve selected"
+                        : `Approve ${ticked.length} selected`}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* What the sweep did. Two separate things, never merged: a
+                success that quietly omitted three refusals would leave three
+                claims pending with nobody told. */}
+            {sweepResult && sweepResult.approved.length > 0 ? (
+              <PanelNotice>
+                {sweepResult.approved.length === 1
+                  ? "1 claim approved. The claimant has been emailed."
+                  : `${sweepResult.approved.length} claims approved. Each claimant has been emailed once.`}
+              </PanelNotice>
+            ) : null}
+            {sweepResult && sweepResult.failed.length > 0 ? (
+              <PanelAlert>
+                {sweepResult.failed.length === 1
+                  ? "1 claim could not be approved and is still selected: "
+                  : `${sweepResult.failed.length} claims could not be approved and are still selected: `}
+                {/* The server's sentences, verbatim — they name the currency
+                    and the date the client does not have. */}
+                {[...new Set(sweepResult.failed.map((f) => f.reason))].join("; ")}
+              </PanelAlert>
+            ) : null}
+
             {allQuery.isPending ? (
               <Skeleton className="h-40 w-full" />
             ) : all.length === 0 ? (
               <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
                 No expense claims have been submitted.
               </div>
+            ) : queue.length === 0 ? (
+              // Distinct from the empty system above: this person has filed
+              // nothing, which is a different fact from nobody having.
+              <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+                No claims from this person.
+              </div>
             ) : (
               <DataTable
                 title="Review queue"
-                cols="1.2fr 0.9fr 0.9fr 0.8fr 1.1fr 1fr"
-                headers={["Expense", "Spent on", "Amount", "Status", "Employee", ""]}
+                cols={
+                  isReviewer
+                    ? "36px 1.2fr 0.9fr 0.9fr 0.8fr 1.1fr 1fr"
+                    : "1.2fr 0.9fr 0.9fr 0.8fr 1.1fr 1fr"
+                }
+                headers={
+                  isReviewer
+                    ? ["", "Expense", "Spent on", "Amount", "Status", "Employee", ""]
+                    : ["Expense", "Spent on", "Amount", "Status", "Employee", ""]
+                }
                 rows={reviewRows}
-                action={`${all.length} claim${all.length === 1 ? "" : "s"}`}
+                action={`${queue.length} claim${queue.length === 1 ? "" : "s"}`}
               />
             )}
           </div>
@@ -533,6 +710,35 @@ export function ExpensePage() {
           pending={deleteMutation.isPending}
           onCancel={() => setDeleting(null)}
           onConfirm={() => deleteMutation.mutate(deleting.id)}
+        />
+      ) : null}
+
+      {/* One click now moves N claims and posts N ledger entries, and
+          reversing a journal is real work. The dialog names the count, the
+          people and the money, because "Are you sure?" over a selection
+          nobody can re-read is not a confirmation. */}
+      {confirmingSweep ? (
+        <ConfirmDialog
+          open={confirmingSweep}
+          title={`Approve ${ticked.length} claim${ticked.length === 1 ? "" : "s"}?`}
+          body={
+            <>
+              {sweepSummary.people === 1
+                ? `${ticked.length} claim${ticked.length === 1 ? "" : "s"} from 1 person`
+                : `${ticked.length} claims from ${sweepSummary.people} people`}
+              {`, in ${sweepSummary.currencies.join(" and ")}.`}
+              {/* No total. Summing these would mean parsing money strings to
+                  floats in the browser, which is the one thing the client
+                  must never do — and a mixed sweep has two totals that must
+                  not be added anyway. Naming the currencies is the honest
+                  version of the same warning. */}
+              {" Each claimant is emailed once, listing what was approved."}
+            </>
+          }
+          confirmLabel={`Approve ${ticked.length}`}
+          pending={sweepMutation.isPending}
+          onCancel={() => setConfirmingSweep(false)}
+          onConfirm={() => sweepMutation.mutate(ticked.map((c) => c.id))}
         />
       ) : null}
 

@@ -8,7 +8,8 @@ vi.mock("../../config/env", () => ({
 import { notify } from "../../utils/mailer"
 import {
   sendAssetRequestDecidedEmail,
-  sendExpenseDecidedEmail,
+  sendExpenseRejectedEmail,
+  sendExpensesApprovedEmail,
   sendLeaveDecidedEmail,
   sendLeaveRequestedEmail,
   sendPasswordChangedEmail,
@@ -79,23 +80,92 @@ describe("sendLeaveRequestedEmail", () => {
   })
 })
 
-describe("sendExpenseDecidedEmail", () => {
-  it("names the claim and the amount", async () => {
-    await sendExpenseDecidedEmail({
+const claimLine = (over: Record<string, unknown> = {}) => ({
+  claimId: "c1",
+  claimRef: "Travel on 03 Jul 2026",
+  amount: "1,200.00",
+  currency: "BDT",
+  ...over,
+})
+
+describe("sendExpensesApprovedEmail", () => {
+  it("names the claim and the amount for a batch of one", async () => {
+    await sendExpensesApprovedEmail({
+      to: "a@b.com",
+      claims: [claimLine()],
+      totals: [{ currency: "BDT", amount: "1,200.00" }],
+    })
+
+    const arg = vi.mocked(notify).mock.calls[0]![0]
+    expect(arg.kind).toBe("EXPENSE_APPROVED")
+    expect(arg.subject).toBe("Expense claim for Travel on 03 Jul 2026 was approved")
+    expect(arg.text).toContain("BDT 1,200.00")
+    expect(arg.entity).toBe("EXPENSE_CLAIM")
+    expect(arg.entityId).toBe("c1")
+  })
+
+  it("counts the claims in the subject once there is more than one", async () => {
+    await sendExpensesApprovedEmail({
+      to: "a@b.com",
+      claims: [claimLine(), claimLine({ claimId: "c2", claimRef: "Meals on 04 Jul 2026" })],
+      totals: [{ currency: "BDT", amount: "2,400.00" }],
+    })
+
+    const arg = vi.mocked(notify).mock.calls[0]![0]
+    expect(arg.subject).toBe("2 expense claims were approved")
+    expect(arg.text).toContain("Meals on 04 Jul 2026")
+  })
+
+  /**
+   * The one that cannot be got wrong. A sweep can approve a BDT claim and a
+   * USD claim together; one blended total would be a number nobody can spot
+   * and nobody can use.
+   */
+  it("keeps a mixed-currency sweep as two totals and never adds them", async () => {
+    await sendExpensesApprovedEmail({
+      to: "a@b.com",
+      claims: [claimLine(), claimLine({ claimId: "c2", currency: "USD", amount: "80.00" })],
+      totals: [
+        { currency: "BDT", amount: "1,200.00" },
+        { currency: "USD", amount: "80.00" },
+      ],
+    })
+
+    const arg = vi.mocked(notify).mock.calls[0]![0]
+    expect(arg.text).toContain("Total BDT: 1,200.00")
+    expect(arg.text).toContain("Total USD: 80.00")
+    expect(arg.html).toContain("Total BDT")
+    expect(arg.html).toContain("Total USD")
+  })
+
+  // "Total BDT 1,200.00" under a lone "BDT 1,200.00" is the same number twice.
+  it("leaves the total off a single claim", async () => {
+    await sendExpensesApprovedEmail({
+      to: "a@b.com",
+      claims: [claimLine()],
+      totals: [{ currency: "BDT", amount: "1,200.00" }],
+    })
+
+    expect(vi.mocked(notify).mock.calls[0]![0].html).not.toContain("Total BDT")
+  })
+})
+
+describe("sendExpenseRejectedEmail", () => {
+  it("carries the reason, which is the point of a rejection", async () => {
+    await sendExpenseRejectedEmail({
       to: "a@b.com",
       claimId: "c1",
       claimRef: "Travel on 03 Jul 2026",
       amount: "1,200.00",
       currency: "BDT",
-      approved: true,
-      reason: null,
+      reason: "No receipt attached",
     })
 
     const arg = vi.mocked(notify).mock.calls[0]![0]
-    expect(arg.kind).toBe("EXPENSE_DECIDED")
-    expect(arg.subject).toBe("Expense claim for Travel on 03 Jul 2026 was approved")
-    expect(arg.text).toContain("BDT 1,200.00")
-    expect(arg.entity).toBe("EXPENSE_CLAIM")
+    expect(arg.kind).toBe("EXPENSE_REJECTED")
+    expect(arg.subject).toBe("Expense claim for Travel on 03 Jul 2026 was declined")
+    expect(arg.text).toContain("No receipt attached")
+    expect(arg.html).toContain("No receipt attached")
     expect(arg.entityId).toBe("c1")
   })
 })
