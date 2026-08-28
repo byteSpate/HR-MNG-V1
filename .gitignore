@@ -38,3 +38,9 @@ coverage/
 # Docs (code-only main branch)
 *.md
 docs/
+
+# Agent scaffolding — accumulated tool permissions with machine-local absolute
+# paths, and design scratch. Same class as .superpowers/ above.
+.claude/
+.codex/
+.impeccable/
