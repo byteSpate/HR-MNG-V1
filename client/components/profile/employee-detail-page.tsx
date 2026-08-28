@@ -18,6 +18,7 @@ import {
   EMPLOYMENT_TYPE_LABEL,
 } from "@/components/profile/edit-card-dialog"
 import { EditNameDialog } from "@/components/profile/edit-name-dialog"
+import { HrChangeEmailDialog } from "@/components/profile/hr-change-email-dialog"
 import { ExitDetailsDialog } from "@/components/profile/exit-details-dialog"
 import { DocumentsCard } from "@/components/profile/documents-card"
 import { LeaveBalanceCard } from "@/components/profile/leave-balance-card"
@@ -52,6 +53,7 @@ export function EmployeeDetailPage({
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<string | null>(null)
   const [editingName, setEditingName] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
   const [assigningStructure, setAssigningStructure] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
@@ -174,6 +176,11 @@ export function EmployeeDetailPage({
   // keeps this in step if that matrix ever changes.
   const canAssignShift = employee.editableFields.includes("shiftId")
 
+  // HR-only, matching the server route. Not derived from `editableFields`:
+  // the address is not on the employee write matrix at all, because it lives
+  // on `User` and changing it is a different kind of act.
+  const canChangeEmail = user?.role === "HR_ADMIN" || user?.role === "SUPER_ADMIN"
+
   // A card shows an Edit control if and only if it contains at least one
   // field this caller may write. No role check — editableFields comes from
   // the server's writableFieldsFor.
@@ -202,23 +209,23 @@ export function EmployeeDetailPage({
         onAvatarChanged={refresh}
         onEditName={canEditName ? () => setEditingName(true) : undefined}
         action={
-          canEdit || canToggleAccount || canAssignShift ? (
+          canEdit || canToggleAccount ? (
             <>
-              {canEdit ? (
-                <>
-                  <Button type="button" variant="outline" onClick={() => setAssigningStructure(true)}>
-                    Assign salary structure
-                  </Button>
-                  {employee.exit === null ? (
-                    <Button type="button" variant="outline" onClick={() => setExitOpen(true)}>
-                      Record exit
-                    </Button>
-                  ) : null}
-                </>
-              ) : null}
-              {canAssignShift ? (
-                <Button type="button" variant="outline" onClick={() => setAssigningShift(true)}>
-                  {employee.employment?.shift ? "Change shift" : "Assign shift"}
+              {/*
+                Only actions with no row of their own live up here.
+
+                "Record exit" stays because when there is no exit there is no
+                Exit card to hang it on; once there is one, the card carries
+                its own Edit and this disappears.
+
+                Shift and salary structure used to be here too. Both moved onto
+                the rows they change — up here they were several buttons away
+                from the value, and people looked for them in the card's Edit
+                dialog instead, which is where they reasonably expected them.
+              */}
+              {canEdit && employee.exit === null ? (
+                <Button type="button" variant="outline" onClick={() => setExitOpen(true)}>
+                  Record exit
                 </Button>
               ) : null}
               {/* Distinct from "Record exit": that ends the employment, this
@@ -285,6 +292,10 @@ export function EmployeeDetailPage({
           <ProfileCard
             title="Contact"
             action={editAction("Contact")}
+            // No sign-in email row here. It was one, briefly, with its own
+            // separate link underneath — which recreated the exact defect the
+            // Employment card had: a row on a card whose Edit button does not
+            // touch it. It has its own card below instead, with one control.
             rows={[
               { label: "Phone", value: employee.work.phone },
               { label: "Present address", value: employee.contact.presentAddress },
@@ -293,6 +304,46 @@ export function EmployeeDetailPage({
             ]}
           />
         ) : null}
+
+        {/*
+          Its own card, not a row in Contact.
+
+          The address is not a contact detail — it is the sign-in identity and
+          the password-reset target, and changing it goes through a different
+          endpoint with different rules: HR only, applied immediately, signs
+          every session out, notifies both addresses, and is audited. Putting
+          it in the Contact dialog beside a phone number would hide all of that
+          behind a "Save changes" button.
+        */}
+        <ProfileCard
+          title="Sign-in"
+          action={
+            canChangeEmail ? (
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0 text-[12.5px] font-semibold underline"
+                onClick={() => setEmailOpen(true)}
+              >
+                Change
+              </Button>
+            ) : undefined
+          }
+          rows={[
+            {
+              label: "Email",
+              value: employee.work.email,
+              hint: "What they sign in with, and where a password reset is sent.",
+            },
+          ]}
+          lockedHint={
+            canChangeEmail
+              ? // Said before they press it, not after — the consequences are
+                // not what anybody expects from editing an email address.
+                "Changing this signs them out everywhere and emails both the old and the new address."
+              : "Only HR can change a sign-in address."
+          }
+        />
 
         {employee.employment ? (
           <ProfileCard
@@ -310,11 +361,50 @@ export function EmployeeDetailPage({
               },
               { label: "Joining date", value: formatDateValue(employee.employment.joiningDate) },
               { label: "Office location", value: employee.employment.officeLocation },
-              { label: "Shift", value: employee.employment.shift?.name ?? null },
+              {
+                label: "Shift",
+                // Unset means the General shift, not "no shift" — an
+                // unassigned employee is still judged against General's window,
+                // which is wrong for night staff and worth saying out loud.
+                value: employee.employment.shift?.name ?? "General (default)",
+                hint: "Sets the working hours attendance is judged against.",
+                // Its own control rather than the Employment dialog: changing
+                // a shift moves someone's late threshold, expected hours and
+                // weekly off, so it keeps a separate confirmation. It lives on
+                // the row because the button used to be at the top of the page
+                // and nobody found it.
+                action: canAssignShift ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    onClick={() => setAssigningShift(true)}
+                  >
+                    {employee.employment.shift ? "Change" : "Assign"}
+                  </Button>
+                ) : undefined,
+              },
               {
                 label: "Reporting manager",
                 value: employee.work.reportingManager?.fullName ?? null,
+                // Said plainly rather than left as a row with no control:
+                // there is no UI for this anywhere, and a blank field with no
+                // way to fill it reads as broken rather than as unbuilt.
+                hint: "Set when the account is created. Changing it later is not built yet.",
               },
+              // On the card because the Edit dialog offers it — the same
+              // reason Designation is here. `deviceUserId` is FULL tier only,
+              // so it is absent rather than null for a viewer who cannot see
+              // it, and the row drops out with it.
+              ...(employee.employment.deviceUserId !== undefined
+                ? [
+                    {
+                      label: "Device enrolment ID",
+                      value: employee.employment.deviceUserId,
+                      hint: "Their ID on a punch machine. Nothing reads it yet — no machine is connected.",
+                    },
+                  ]
+                : []),
             ]}
           />
         ) : null}
@@ -324,7 +414,25 @@ export function EmployeeDetailPage({
             title="Payroll"
             action={editAction("Payroll")}
             rows={[
-              { label: "Salary structure", value: employee.payroll.salaryStructure?.name ?? null },
+              {
+                label: "Salary structure",
+                value: employee.payroll.salaryStructure?.name ?? null,
+                hint: "What payroll pays from. Nobody can be paid without one.",
+                // Same reasoning as Shift: the Payroll dialog covers the bank
+                // fields, and assigning a structure is a money decision with
+                // its own dialog. The control belongs on the row rather than
+                // in the page header, where Shift's used to be.
+                action: canEdit ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    onClick={() => setAssigningStructure(true)}
+                  >
+                    {employee.payroll.salaryStructure ? "Change" : "Assign"}
+                  </Button>
+                ) : undefined,
+              },
               { label: "Bank", value: employee.payroll.bankName },
               { label: "Account number", value: employee.payroll.bankAccountNumber },
               { label: "Routing number", value: employee.payroll.bankRoutingNumber },
@@ -335,11 +443,29 @@ export function EmployeeDetailPage({
         {employee.exit ? (
           <ProfileCard
             title="Exit"
+            // A recorded exit had no control at all: the "Record exit" button
+            // in the header only shows while there is none, so a wrong last
+            // working day could not be corrected from the UI — even though the
+            // server accepts an amendment right up until a settlement is
+            // approved, and refuses with a message of its own after that.
+            action={
+              canEdit ? (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  onClick={() => setExitOpen(true)}
+                >
+                  Edit
+                </Button>
+              ) : undefined
+            }
             rows={[
               { label: "Last working day", value: formatDateValue(employee.exit.lastWorkingDay) },
               { label: "Reason", value: employee.exit.exitReason },
               { label: "Note", value: employee.exit.exitNote },
             ]}
+            lockedHint="Can be corrected until a settlement is approved."
           />
         ) : null}
 
@@ -385,6 +511,19 @@ export function EmployeeDetailPage({
         onOpenChange={setEditingName}
         onSaved={refresh}
       />
+
+      {/* Mounted only while open, so a second change starts from a blank form
+          rather than the confirmation the last one ended on. */}
+      {emailOpen ? (
+        <HrChangeEmailDialog
+          open={emailOpen}
+          onOpenChange={setEmailOpen}
+          employeeId={employee.id}
+          employeeName={employee.work.fullName}
+          currentEmail={employee.work.email}
+          onChanged={refresh}
+        />
+      ) : null}
 
       <ExitDetailsDialog
         employee={employee}

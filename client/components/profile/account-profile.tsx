@@ -9,6 +9,7 @@ import {
   RiInformationLine,
   RiKey2Line,
   RiLogoutBoxRLine,
+  RiMailLine,
   RiPencilLine,
   RiShieldKeyholeLine,
   RiSubtractLine,
@@ -30,6 +31,7 @@ import {
 } from "@/components/dashboard/record-kit"
 import { AvatarUpload } from "@/components/profile/avatar-upload"
 import { SessionsCard } from "@/components/profile/sessions-card"
+import { ChangeEmailDialog } from "@/components/profile/change-email-dialog"
 import { Tag } from "@/components/dashboard/tag"
 import type { TableCell, Tone } from "@/components/dashboard/types"
 import { Button } from "@/components/ui/button"
@@ -142,6 +144,7 @@ export function AccountProfile({
   const { accessToken, clearSession } = useSession()
   const [confirmSignOut, setConfirmSignOut] = useState(false)
   const [nameOpen, setNameOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
 
   // Their own name once set, and the email until then — never a blank heading.
   const displayed = account.displayName ?? account.email
@@ -169,6 +172,9 @@ export function AccountProfile({
 
   return (
     <>
+      {/* The pending banner is NOT here. `my-profile-page` renders it above
+          both branches, and this component is one of them — putting it in both
+          shows it twice to an administrator. */}
       <header className="mb-4 flex flex-wrap items-start gap-4 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
         <AvatarUpload
           upload={(file) => uploadOwnAvatar(accessToken!, file)}
@@ -216,6 +222,10 @@ export function AccountProfile({
                 value: account.mustChangePassword ? "Must be changed" : "Set",
                 tone: account.mustChangePassword ? "yellow" : undefined,
               },
+              // Under Security rather than beside the name: the address is the
+              // sign-in identity and the password-reset target, so it belongs
+              // with the password, not with the contact details.
+              { label: "Sign-in email", value: account.email },
               { label: "Account opened", value: monthYear(account.createdAt) },
             ]}
           />
@@ -228,6 +238,10 @@ export function AccountProfile({
             >
               <RiKey2Line className="size-4" aria-hidden />
               Change password
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setEmailOpen(true)}>
+              <RiMailLine className="size-4" aria-hidden />
+              Change email
             </Button>
             <Button
               type="button"
@@ -308,6 +322,16 @@ export function AccountProfile({
         onOpenChange={setNameOpen}
         onSaved={onChanged}
       />
+
+      {/* Mounted only while open, so a second attempt starts from a blank form
+          rather than the "check your inbox" state the last one ended on. */}
+      {emailOpen ? (
+        <ChangeEmailDialog
+          open={emailOpen}
+          onOpenChange={setEmailOpen}
+          currentEmail={account.email}
+        />
+      ) : null}
     </>
   )
 }

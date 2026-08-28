@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 
 import { ROUTE_CATEGORY_CODES } from "@/lib/api/types"
-import type { Currency, ExpenseCategory, ExpenseClaimInput } from "@/lib/api/types"
+import type { Currency, ExpenseCategory, ExpenseClaim, ExpenseClaimInput } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,6 +26,7 @@ export function ExpenseDialog({
   error,
   onSubmit,
   categories,
+  existing,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -34,9 +35,18 @@ export function ExpenseDialog({
   /** The claim, and the file to attach to it once it exists. */
   onSubmit: (input: ExpenseClaimInput, receipt: File | null) => void
   categories: ExpenseCategory[]
+  /**
+   * The claim being amended, or absent to file a new one.
+   *
+   * One dialog for both, because the fields and the rules are identical —
+   * two would be two places for the travel-route logic to drift apart. Only
+   * the wording and the receipt field differ, and both key off this.
+   */
+  existing?: ExpenseClaim | null
 }) {
-  const [amount, setAmount] = useState("")
-  const [currency, setCurrency] = useState<Currency>("BDT")
+  const isEdit = !!existing
+  const [amount, setAmount] = useState(existing ? String(Number(existing.amount)) : "")
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? "BDT")
   // Without `items`, Base UI's Select shows the category's uuid on the
   // closed trigger instead of its name.
   const categoryItems = useMemo(
@@ -44,11 +54,12 @@ export function ExpenseDialog({
     [categories]
   )
 
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "")
-  const [expenseDate, setExpenseDate] = useState(today())
-  const [description, setDescription] = useState("")
-  const [travelFrom, setTravelFrom] = useState("")
-  const [travelTo, setTravelTo] = useState("")
+  const [name, setName] = useState(existing?.name ?? "")
+  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? categories[0]?.id ?? "")
+  const [expenseDate, setExpenseDate] = useState(existing?.expenseDate.slice(0, 10) ?? today())
+  const [description, setDescription] = useState(existing?.description ?? "")
+  const [travelFrom, setTravelFrom] = useState(existing?.travelFrom ?? "")
+  const [travelTo, setTravelTo] = useState(existing?.travelTo ?? "")
   const [receipt, setReceipt] = useState<File | null>(null)
 
   /**
@@ -60,16 +71,32 @@ export function ExpenseDialog({
   const selected = categories.find((c) => c.id === categoryId) ?? null
   const hasRoute = !!selected && ROUTE_CATEGORY_CODES.includes(selected.code.toUpperCase())
 
-  const canSubmit = Number(amount) > 0 && !!expenseDate && !!categoryId
+  const canSubmit = !!name.trim() && Number(amount) > 0 && !!expenseDate && !!categoryId
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Claim an expense</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit this claim" : "Claim an expense"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* First field, and the one that identifies the claim. Category is
+              below it because a category groups rows; it does not tell two of
+              them apart, and three "Other" claims in a month are three
+              identical lines without this. */}
+          <div>
+            <Label htmlFor="exp-name" className="mb-1.5 text-xs font-bold">
+              Expense name
+            </Label>
+            <Input
+              id="exp-name"
+              value={name}
+              placeholder="Water jar"
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="exp-amount" className="mb-1.5 text-xs font-bold">
@@ -180,7 +207,11 @@ export function ExpenseDialog({
             </div>
           ) : null}
 
-          <div>
+          {/* Not offered while editing. Attaching runs through its own
+              endpoint against a claim that already exists, so bolting it onto
+              this form would mean two different save paths behind one button.
+              Receipts are managed from the claim itself. */}
+          <div className={isEdit ? "hidden" : undefined}>
             <Label htmlFor="exp-receipt" className="mb-1.5 text-xs font-bold">
               Receipt
             </Label>
@@ -212,6 +243,7 @@ export function ExpenseDialog({
             onClick={() =>
               onSubmit(
                 {
+                  name: name.trim(),
                   amount: Number(amount),
                   currency,
                   categoryId,
@@ -227,7 +259,7 @@ export function ExpenseDialog({
               )
             }
           >
-            Submit claim
+            {isEdit ? "Save changes" : "Submit claim"}
           </Button>
         </DialogFooter>
       </DialogContent>

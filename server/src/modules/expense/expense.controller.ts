@@ -2,17 +2,22 @@ import type { NextFunction, Request, Response } from "express"
 
 import {
   approveClaim,
+  approveClaims,
   createClaim,
+  deleteClaim,
   getClaim,
   getMyClaims,
   listClaims,
   rejectClaim,
+  updateClaim,
 } from "./expense.service"
 import {
   approveClaimBody,
+  approveClaimsBody,
   claimQuery,
   createClaimBody,
   rejectClaimBody,
+  updateClaimBody,
 } from "./expense.validators"
 import { createExpenseCategory, deleteExpenseCategory, listExpenseCategories, updateExpenseCategory } from "./expense.category.service"
 import { deleteReceipt, getReceiptUrl, listReceipts, uploadReceipt } from "./expense.media"
@@ -161,10 +166,50 @@ export async function approveClaimHandler(req: RequestWithId, res: Response, nex
   }
 }
 
+/**
+ * Approve many.
+ *
+ * Always 200, even when some claims were refused: a batch that approved
+ * eleven of twelve did not fail, and a 4xx would make the client discard a
+ * result describing eleven successful approvals. What was refused comes back
+ * in `failed`, named, for the caller to show.
+ */
+export async function approveClaimsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = approveClaimsBody.parse(req.body)
+    return res.status(200).json(await approveClaims(body.claimIds, req.user!.sub))
+  } catch (err) {
+    return next(err)
+  }
+}
+
 export async function rejectClaimHandler(req: RequestWithId, res: Response, next: NextFunction) {
   try {
     const body = rejectClaimBody.parse(req.body)
     return res.status(200).json(await rejectClaim(req.params.id, req.user!.sub, body))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+/**
+ * Amending and withdrawing your own claim. Both are owner-and-PENDING-only,
+ * decided inside the service where the claim's owner and status are known —
+ * a route-level role check could only say "staff", which every claimant is.
+ */
+export async function updateClaimHandler(req: RequestWithId, res: Response, next: NextFunction) {
+  try {
+    const body = updateClaimBody.parse(req.body)
+    return res.status(200).json(await updateClaim(req.user!, req.params.id, body))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function deleteClaimHandler(req: RequestWithId, res: Response, next: NextFunction) {
+  try {
+    await deleteClaim(req.user!, req.params.id)
+    return res.status(204).send()
   } catch (err) {
     return next(err)
   }

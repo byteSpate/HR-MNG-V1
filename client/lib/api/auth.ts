@@ -118,3 +118,56 @@ export function uploadOwnAvatar(accessToken: string, file: File): Promise<{ avat
 export function clearOwnAvatar(accessToken: string): Promise<{ avatarUrl: null }> {
   return apiFetch<{ avatarUrl: null }>("/api/auth/me/avatar", { method: "DELETE", accessToken })
 }
+
+// ── Changing the sign-in address ──────────────
+
+export interface PendingEmailChange {
+  newEmail: string
+  /** Whether it has been approved from the current address yet. */
+  approved: boolean
+  expiresAt: string
+}
+
+/** Starts a change. Emails the address currently on file — not the new one. */
+export function requestEmailChange(
+  accessToken: string,
+  newEmail: string
+): Promise<PendingEmailChange> {
+  return apiFetch<PendingEmailChange>("/api/auth/email-change", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify({ newEmail }),
+  })
+}
+
+export function getPendingEmailChange(accessToken: string): Promise<PendingEmailChange | null> {
+  return apiFetch<PendingEmailChange | null>("/api/auth/email-change", { accessToken })
+}
+
+/**
+ * The three below take no access token on purpose.
+ *
+ * The link is the proof, and requiring a session as well would break the cases
+ * these exist for — an approval read on a phone that is not signed in, or a
+ * confirmation clicked from the new inbox after every session was revoked.
+ */
+export function approveEmailChange(token: string): Promise<{ newEmail: string }> {
+  return apiFetch<{ newEmail: string }>("/api/auth/email-change/approve", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  })
+}
+
+export function cancelEmailChange(token: string): Promise<void> {
+  return apiFetch<void>("/api/auth/email-change/cancel", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  })
+}
+
+export function confirmEmailChange(token: string): Promise<{ email: string }> {
+  return apiFetch<{ email: string }>("/api/auth/email-change/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  })
+}

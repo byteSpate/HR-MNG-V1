@@ -176,3 +176,18 @@ export function deleteAvatar(
     accessToken,
   })
 }
+
+/**
+ * HR changing an employee's sign-in address. Applies immediately — there is
+ * no old inbox to approve from, which is the whole reason this exists.
+ */
+export function changeEmployeeEmail(
+  accessToken: string,
+  employeeId: string,
+  newEmail: string
+): Promise<{ email: string; previousEmail: string; inviteResent: boolean }> {
+  return apiFetch<{ email: string; previousEmail: string; inviteResent: boolean }>(
+    `/api/employees/${employeeId}/email`,
+    { method: "PATCH", accessToken, body: JSON.stringify({ newEmail }) }
+  )
+}

@@ -270,6 +270,11 @@ export interface EmailStatus {
 export interface ExpenseClaim {
   id: string
   employeeId: string
+  /** What it is — "Water jar". Null on claims filed before the field existed. */
+  name: string | null
+  /** Both null unless the category carries a route. */
+  travelFrom: string | null
+  travelTo: string | null
   amount: string
   categoryId: string
   category: { code: string; name: string }
@@ -292,6 +297,8 @@ export interface ExpenseClaim {
 export interface ExpenseCategory { id: string; code: string; name: string }
 
 export interface ExpenseClaimInput {
+  /** Required. A category alone cannot tell two claims apart. */
+  name: string
   amount: number
   categoryId: string
   currency: Currency
@@ -323,6 +330,7 @@ export interface ExpenseReceipt {
 export interface ExpenseReportRow {
   id: string
   employee: { id: string; fullName: string; employeeCode: string }
+  name: string | null
   category: { code: string; name: string }
   expenseDate: string
   amount: string
@@ -346,8 +354,13 @@ export interface ExpenseReport {
   totals: {
     claims: number
     /** Per currency, never added together — see `expense.report.ts`. */
-    byCurrency: { currency: string; claims: number; amount: string }[]
-    byStatus: { status: ExpenseStatus; claims: number }[]
+    byCurrency: { currency: Currency; claims: number; amount: string }[]
+    /** Counts per status, and the money behind each — also split by currency. */
+    byStatus: {
+      status: ExpenseStatus
+      claims: number
+      byCurrency: { currency: Currency; amount: string }[]
+    }[]
   }
 }
 

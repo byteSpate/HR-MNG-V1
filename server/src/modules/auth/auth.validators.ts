@@ -69,3 +69,19 @@ export const displayNameSchema = z.object({
   displayName: z.string().trim().max(120).nullable(),
 })
 export type DisplayNameInput = z.infer<typeof displayNameSchema>
+
+/**
+ * The new sign-in address. Validated as an email here so a typo is refused
+ * before anything is created — the service lower-cases it, and only the
+ * service knows whether it collides with an existing account.
+ */
+export const emailChangeRequestBody = z.object({
+  newEmail: z.string().trim().email("Enter a valid email address").max(255),
+})
+export type EmailChangeRequestBody = z.infer<typeof emailChangeRequestBody>
+
+/** Shared by approve, cancel and confirm — all three carry only a token. */
+export const emailChangeTokenBody = z.object({
+  token: z.string().min(1, "A token is required"),
+})
+export type EmailChangeTokenBody = z.infer<typeof emailChangeTokenBody>

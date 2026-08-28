@@ -1,5 +1,6 @@
 import { apiFetch, apiFetchBlob } from "./client"
 import type {
+  Currency,
   ExpenseCategory,
   ExpenseClaim,
   ExpenseClaimInput,
@@ -47,6 +48,37 @@ export function approveExpenseClaim(
     method: "PATCH",
     accessToken,
     body: JSON.stringify({ note }),
+  })
+}
+
+/** What a sweep did. Some claims can be refused while others commit. */
+export interface BatchApproveResult {
+  approved: string[]
+  /** Named, so the screen can say which were left and why. */
+  failed: Array<{ id: string; reason: string }>
+}
+
+/**
+ * Approve many claims at once.
+ *
+ * One request, not a loop of single approvals — the grouping into one email
+ * per employee happens on the server, and a client-side loop would send one
+ * email per claim, which is the whole defect this exists to fix.
+ *
+ * Resolves rather than throws when some claims were refused: a sweep that
+ * approved eleven of twelve did not fail. Read `failed` to see what was left.
+ *
+ * There is deliberately no batch reject — a reject reason is written for one
+ * specific claim. See `docs/adr/0004`.
+ */
+export function batchApproveExpenseClaims(
+  accessToken: string,
+  claimIds: string[]
+): Promise<BatchApproveResult> {
+  return apiFetch<BatchApproveResult>("/api/expenses/batch-approve", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify({ claimIds }),
   })
 }
 
@@ -147,4 +179,45 @@ export async function downloadExpenseReport(
     accessToken,
   })
   return blob
+}
+
+/**
+ * What a PATCH may carry.
+ *
+ * Spelled out rather than `Partial<ExpenseClaimInput> & { … }`: intersecting
+ * two optional `description` properties narrows to their overlap, so `null` —
+ * the only way to *clear* a note, since an omitted key means "leave it" —
+ * becomes unassignable. The nullable fields are exactly the ones that can be
+ * emptied.
+ */
+export interface ExpenseClaimUpdate {
+  name?: string
+  amount?: number
+  categoryId?: string
+  currency?: Currency
+  expenseDate?: string
+  description?: string | null
+  travelFrom?: string | null
+  travelTo?: string | null
+}
+
+/**
+ * Amending a claim you filed. Owner-and-PENDING-only, enforced server-side —
+ * the UI hides the control on decided claims, but the rule lives there.
+ */
+export function updateExpenseClaim(
+  accessToken: string,
+  id: string,
+  input: ExpenseClaimUpdate
+): Promise<ExpenseClaim> {
+  return apiFetch<ExpenseClaim>(`/api/expenses/${id}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(input),
+  })
+}
+
+/** Withdrawing one. A hard delete; its receipts go with it. */
+export function deleteExpenseClaim(accessToken: string, id: string): Promise<void> {
+  return apiFetch<void>(`/api/expenses/${id}`, { method: "DELETE", accessToken })
 }

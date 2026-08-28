@@ -3,6 +3,12 @@ import { z } from "zod"
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a YYYY-MM-DD date")
 
 export const createClaimBody = z.object({
+  /**
+   * Required here even though the column is nullable. The column allows null
+   * only because claims predate it; nothing new should be filed without a
+   * name, since a category alone cannot tell two claims apart.
+   */
+  name: z.string().trim().min(1, "Give the expense a name").max(200),
   amount: z.coerce.number().positive("amount must be greater than 0"),
   categoryId: z.string().uuid(),
   currency: z.enum(["BDT", "USD"]).default("BDT"),
@@ -34,6 +40,22 @@ export const approveClaimBody = z.object({
 export type ApproveClaimBody = z.infer<typeof approveClaimBody>
 
 /**
+ * A sweep of approvals.
+ *
+ * No `note`, deliberately — one sentence glued to twelve different claims is
+ * the same defect that ruled out bulk reject. The note stays on single
+ * approve, where it can be about the claim it is attached to.
+ *
+ * Capped at 200: the batch is a loop of transactions, each posting to the
+ * ledger, and an uncapped list is a request that holds a connection open for
+ * as long as somebody cares to make it.
+ */
+export const approveClaimsBody = z.object({
+  claimIds: z.array(z.string().uuid()).min(1, "Select at least one claim").max(200),
+})
+export type ApproveClaimsBody = z.infer<typeof approveClaimsBody>
+
+/**
  * `from` and `to` are required, unlike `claimQuery`: a report defaulting to
  * some server-chosen range would put a date on a printed document that nobody
  * asked for.
@@ -54,3 +76,32 @@ export const claimQuery = z.object({
   employeeId: z.string().optional(),
 })
 export type ClaimQuery = z.infer<typeof claimQuery>
+
+/**
+ * Editing a claim you have already filed.
+ *
+ * Every field optional — a PATCH — but `categoryId` and `currency` are here
+ * for a reason: correcting the category is the commonest edit, and a claim
+ * filed in the wrong currency is wrong by a factor of a hundred.
+ *
+ * `expenseDate` is editable too, since the whole point of the field is that
+ * you claim in August for something bought in July and may have typed the
+ * wrong July date.
+ */
+export const updateClaimBody = z
+  .object({
+    name: z.string().trim().min(1, "Give the expense a name").max(200).optional(),
+    amount: z.coerce.number().positive("amount must be greater than 0").optional(),
+    categoryId: z.string().uuid().optional(),
+    currency: z.enum(["BDT", "USD"]).optional(),
+    expenseDate: dateOnly.optional(),
+    // Nullable, unlike the others: clearing a note is a real edit, and an
+    // omitted key has to keep meaning "leave it alone".
+    description: z.string().max(1000).nullable().optional(),
+    travelFrom: z.string().trim().max(200).nullable().optional(),
+    travelTo: z.string().trim().max(200).nullable().optional(),
+  })
+  .refine((body) => Object.keys(body).length > 0, {
+    message: "Nothing to change",
+  })
+export type UpdateClaimBody = z.infer<typeof updateClaimBody>

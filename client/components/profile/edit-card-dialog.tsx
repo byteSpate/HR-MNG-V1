@@ -95,7 +95,16 @@ export const CARD_FIELDS: Record<string, EditField[]> = {
       hint: "Attendance before this date is not tracked, and leave accrual counts from it.",
     },
     { key: "officeLocation", label: "Office location" },
-    { key: "deviceUserId", label: "Device enrolment ID" },
+    {
+      key: "deviceUserId",
+      label: "Device enrolment ID",
+      // Says what is not built, rather than looking like a working setting.
+      // The field stores a string and nothing reads it: there is no punch-
+      // machine integration in this system, so filling it in has no effect on
+      // attendance today. Checked across the whole server — no importer, no
+      // job, no attendance code touches it.
+      hint: "Their ID on a fingerprint or face punch machine. Stored for future use — no punch machine is connected yet, so filling this in does not affect attendance.",
+    },
   ],
   Payroll: [
     { key: "bankName", label: "Bank" },

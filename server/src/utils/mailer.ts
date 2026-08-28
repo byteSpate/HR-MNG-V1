@@ -21,14 +21,25 @@ export type DispatchKind =
   | "PASSWORD_RESET"
   | "PASSWORD_CHANGED"
   | "CREDENTIALS"
-  | "EMAIL_CHANGE_CODE"
+  // Three, because changing an address takes three messages: the old inbox is
+  // asked to approve, the new inbox is asked to confirm, and both are told
+  // once it is done. `EMAIL_CHANGE_CODE` was the placeholder name for the
+  // second; it carries a link rather than a code, and nothing had ever emitted
+  // it, so it was renamed rather than left misdescribing the email.
   | "EMAIL_CHANGE_WARNING"
+  | "EMAIL_CHANGE_CONFIRM"
+  | "EMAIL_CHANGED"
   | "ATTENDANCE_DIGEST"
   | "MISSING_CHECKOUT"
   | "PAYSLIP"
   | "LEAVE_REQUESTED"
   | "LEAVE_DECIDED"
-  | "EXPENSE_DECIDED"
+  // Two, because the two decisions are not symmetric: approvals are grouped
+  // per employee and sent once per sweep, rejections are one email per claim
+  // carrying that claim's own reason. `EXPENSE_DECIDED` covered both and is
+  // gone — see `docs/adr/0004`.
+  | "EXPENSE_APPROVED"
+  | "EXPENSE_REJECTED"
   | "PAYROLL_SUBMITTED"
   | "ASSET_REQUEST_DECIDED"
   | "SETTLEMENT_STATEMENT"

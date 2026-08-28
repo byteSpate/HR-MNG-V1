@@ -26,14 +26,18 @@ vi.mock("../attendance/attendance.service", async (importOriginal) => ({
 }))
 vi.mock("./expense.posting", () => ({ postExpenseAccrual: vi.fn() }))
 vi.mock("../notification/notification.mailer", () => ({
-  sendExpenseDecidedEmail: vi.fn(() => Promise.resolve()),
+  sendExpensesApprovedEmail: vi.fn(() => Promise.resolve()),
+  sendExpenseRejectedEmail: vi.fn(() => Promise.resolve()),
 }))
 
 import prisma from "../../config/prisma"
 import { requireEmployeeForUser } from "../attendance/attendance.service"
-import { sendExpenseDecidedEmail } from "../notification/notification.mailer"
+import {
+  sendExpenseRejectedEmail,
+  sendExpensesApprovedEmail,
+} from "../notification/notification.mailer"
 import { dec } from "../payroll/payroll.money"
-import { approveClaim, createClaim, rejectClaim } from "./expense.service"
+import { approveClaim, approveClaims, createClaim, rejectClaim } from "./expense.service"
 
 const tx = (prisma as unknown as { __tx: any }).__tx
 
@@ -42,6 +46,7 @@ const actor = (role = "EMPLOYEE") =>
   ({ sub: "user-1", role, email: "a@demo.com", mustChangePassword: false }) as never
 
 const validClaim = {
+  name: "Water jar",
   amount: 1200,
   categoryId: "11111111-1111-1111-1111-111111111111",
   currency: "BDT" as const,
@@ -199,13 +204,156 @@ describe("approveClaim", () => {
 
     await approveClaim("claim-1", "fin-1", {})
 
-    expect(sendExpenseDecidedEmail).toHaveBeenCalledWith(
+    // A single approval is a batch of one — same function, list of one.
+    expect(sendExpensesApprovedEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "claimant@b.com",
-        approved: true,
-        claimRef: "Travel on 2026-08-03",
+        claims: [expect.objectContaining({ claimRef: "Travel on 2026-08-03" })],
       })
     )
+  })
+})
+
+describe("approveClaims", () => {
+  const pending = (over: Record<string, unknown> = {}) => ({
+    id: "claim-1",
+    status: "PENDING",
+    currency: "BDT",
+    expenseDate: new Date("2026-08-03T00:00:00.000Z"),
+    employeeId: "emp-1",
+    amount: dec(1200),
+    employee: { user: { email: "ayesha@b.com" } },
+    category: { name: "Travel" },
+    ...over,
+  })
+
+  /**
+   * The whole point of the feature. Twelve approvals used to be twelve
+   * emails; the complaint that started this was an employee receiving one per
+   * claim while an administrator worked through their backlog.
+   */
+  it("sends one email for a sweep, not one per claim", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique)
+      .mockResolvedValueOnce(pending() as never)
+      .mockResolvedValueOnce(pending({ id: "claim-2" }) as never)
+      .mockResolvedValueOnce(pending({ id: "claim-3" }) as never)
+
+    const result = await approveClaims(["claim-1", "claim-2", "claim-3"], "fin-1")
+
+    expect(result.approved).toEqual(["claim-1", "claim-2", "claim-3"])
+    expect(sendExpensesApprovedEmail).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(sendExpensesApprovedEmail).mock.calls[0][0].claims).toHaveLength(3)
+  })
+
+  // Two people in one sweep are two emails, and neither may see the other's
+  // claims — the grouping key is the recipient, not the batch.
+  it("sends one email each when a sweep covers two people", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique)
+      .mockResolvedValueOnce(pending() as never)
+      .mockResolvedValueOnce(
+        pending({ id: "claim-2", employee: { user: { email: "karim@b.com" } } }) as never
+      )
+
+    await approveClaims(["claim-1", "claim-2"], "fin-1")
+
+    expect(sendExpensesApprovedEmail).toHaveBeenCalledTimes(2)
+    const recipients = vi.mocked(sendExpensesApprovedEmail).mock.calls.map((c) => c[0].to)
+    expect(recipients.sort()).toEqual(["ayesha@b.com", "karim@b.com"])
+    for (const call of vi.mocked(sendExpensesApprovedEmail).mock.calls) {
+      expect(call[0].claims).toHaveLength(1)
+    }
+  })
+
+  /**
+   * Best-effort, not all-or-nothing. Approval resolves a rate against each
+   * claim's own spend date, so one USD claim with no covering rate must not
+   * block the correct approvals beside it.
+   */
+  it("approves the rest when one claim has no covering exchange rate", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique)
+      .mockResolvedValueOnce(pending() as never)
+      .mockResolvedValueOnce(
+        pending({
+          id: "claim-2",
+          currency: "USD",
+          expenseDate: new Date("2026-06-03T00:00:00.000Z"),
+        }) as never
+      )
+      .mockResolvedValueOnce(pending({ id: "claim-3" }) as never)
+    vi.mocked(prisma.exchangeRate.findMany).mockResolvedValue([])
+
+    const result = await approveClaims(["claim-1", "claim-2", "claim-3"], "fin-1")
+
+    expect(result.approved).toEqual(["claim-1", "claim-3"])
+    expect(result.failed).toHaveLength(1)
+    expect(result.failed[0].id).toBe("claim-2")
+  })
+
+  // A claim that threw is not a claim that was approved, and an email saying
+  // otherwise would be the worst possible lie on a page about money.
+  it("never emails about a claim that failed", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique)
+      .mockResolvedValueOnce(pending() as never)
+      .mockResolvedValueOnce(pending({ id: "claim-2", status: "APPROVED" }) as never)
+
+    await approveClaims(["claim-1", "claim-2"], "fin-1")
+
+    const sent = vi.mocked(sendExpensesApprovedEmail).mock.calls[0][0].claims
+    expect(sent).toHaveLength(1)
+    expect(sent[0].claimId).toBe("claim-1")
+  })
+
+  it("names why a claim was refused, rather than dropping it silently", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique).mockResolvedValueOnce(
+      pending({ status: "REJECTED" }) as never
+    )
+
+    const result = await approveClaims(["claim-1"], "fin-1")
+
+    expect(result.approved).toEqual([])
+    expect(result.failed[0].reason).toContain("already rejected")
+  })
+
+  it("sends nothing at all when every claim in the sweep failed", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique).mockResolvedValue(null as never)
+
+    const result = await approveClaims(["claim-1", "claim-2"], "fin-1")
+
+    expect(result.approved).toEqual([])
+    expect(sendExpensesApprovedEmail).not.toHaveBeenCalled()
+  })
+
+  // The rule the report and the stats tiles already follow.
+  it("totals a mixed-currency sweep per currency, never across them", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique)
+      .mockResolvedValueOnce(pending() as never)
+      .mockResolvedValueOnce(pending({ id: "claim-2", amount: dec(800) }) as never)
+      .mockResolvedValueOnce(
+        pending({ id: "claim-3", currency: "USD", amount: dec(80) }) as never
+      )
+    vi.mocked(prisma.exchangeRate.findMany).mockResolvedValue([
+      { base: "USD", quote: "BDT", rate: dec(122), effectiveFrom: new Date("2026-01-01") },
+    ] as never)
+
+    await approveClaims(["claim-1", "claim-2", "claim-3"], "fin-1")
+
+    expect(vi.mocked(sendExpensesApprovedEmail).mock.calls[0][0].totals).toEqual([
+      { currency: "BDT", amount: "2000.00" },
+      { currency: "USD", amount: "80.00" },
+    ])
+  })
+
+  // A claimant with no login has nobody to tell; that must not throw and take
+  // the rest of the sweep down with it.
+  it("still approves a claim whose owner has no login", async () => {
+    vi.mocked(prisma.expenseClaim.findUnique).mockResolvedValueOnce(
+      pending({ employee: { user: null } }) as never
+    )
+
+    const result = await approveClaims(["claim-1"], "fin-1")
+
+    expect(result.approved).toEqual(["claim-1"])
+    expect(sendExpensesApprovedEmail).not.toHaveBeenCalled()
   })
 })
 
@@ -256,10 +404,9 @@ describe("rejectClaim", () => {
 
     await rejectClaim("claim-1", "fin-1", { note: "No receipt attached" })
 
-    expect(sendExpenseDecidedEmail).toHaveBeenCalledWith(
+    expect(sendExpenseRejectedEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "claimant@b.com",
-        approved: false,
         reason: "No receipt attached",
       })
     )

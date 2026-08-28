@@ -12,6 +12,10 @@ import { EditMyDetailsDialog } from "@/components/profile/edit-my-details-dialog
 import { ProfileCard, formatDateValue } from "@/components/profile/profile-card"
 import { ProfileHeader } from "@/components/profile/profile-header"
 import { SessionsCard } from "@/components/profile/sessions-card"
+import {
+  PendingEmailChangeNotice,
+  SignInEmailCard,
+} from "@/components/profile/change-email-dialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EMPLOYMENT_TYPE_LABEL } from "@/components/profile/edit-card-dialog"
@@ -53,6 +57,10 @@ export function MyProfilePage() {
 
   return (
     <>
+      {/* Above both branches: a change in flight is otherwise invisible, since
+          the address on screen is still the old one until it completes. */}
+      <PendingEmailChangeNotice />
+
       {/* The account branch carries its own header — the email is the heading
           there, and a generic "My Profile" above it was a second title saying
           less than the first. The staff branch still needs this one, since
@@ -73,6 +81,7 @@ export function MyProfilePage() {
       ) : (
         <StaffProfile
           employee={employee}
+          signInEmail={account.email}
           onRefresh={refresh}
           editOpen={editOpen}
           setEditOpen={setEditOpen}
@@ -84,11 +93,14 @@ export function MyProfilePage() {
 
 function StaffProfile({
   employee,
+  signInEmail,
   onRefresh,
   editOpen,
   setEditOpen,
 }: {
   employee: EmployeeView
+  /** From the account block, not the employee record — it lives on `User`. */
+  signInEmail: string
   onRefresh: () => void
   editOpen: boolean
   setEditOpen: (open: boolean) => void
@@ -178,7 +190,14 @@ function StaffProfile({
               },
               { label: "Joining date", value: formatDateValue(employee.employment.joiningDate) },
               { label: "Office location", value: employee.employment.officeLocation },
-              { label: "Shift", value: employee.employment.shift?.name ?? null },
+              {
+                label: "Shift",
+                // A dash read as "no shift", which is not what unset means:
+                // an unassigned employee is judged against the General shift's
+                // window. Matches the HR page.
+                value: employee.employment.shift?.name ?? "General (default)",
+                hint: "The working hours your attendance is judged against.",
+              },
               {
                 label: "Reporting manager",
                 value: employee.work.reportingManager?.fullName ?? null,
@@ -221,8 +240,18 @@ function StaffProfile({
               { label: "Reason", value: employee.exit.exitReason },
               { label: "Note", value: employee.exit.exitNote },
             ]}
+            // The only card here that said nothing about why it cannot be
+            // edited. Every other one does, and silence reads as an oversight
+            // rather than as a rule.
+            lockedHint="Recorded by HR. Speak to them if anything here is wrong."
           />
         ) : null}
+      </div>
+
+      {/* How you sign in, beside where you are signed in — the two questions
+          belong together, and neither belongs among the contact details. */}
+      <div className="mt-4">
+        <SignInEmailCard email={signInEmail} />
       </div>
 
       {/* Every role, not only the administrative ones: "is somebody else in my

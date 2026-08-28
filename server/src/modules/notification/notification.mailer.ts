@@ -108,8 +108,8 @@ export async function sendLeaveDecidedEmail(i: LeaveDecidedInput): Promise<void>
   })
 }
 
-export interface ExpenseDecidedInput {
-  to: string
+/** One approved claim, as it appears in the list. */
+export interface ApprovedClaimLine {
   claimId: string
   /**
    * How the claim is identified to the person who filed it. `ExpenseClaim`
@@ -120,33 +120,120 @@ export interface ExpenseDecidedInput {
   claimRef: string
   amount: string
   currency: string
-  approved: boolean
-  reason: string | null
 }
 
-export async function sendExpenseDecidedEmail(i: ExpenseDecidedInput): Promise<void> {
-  const kind = "EXPENSE_DECIDED" as const
-  const verb = i.approved ? "approved" : "declined"
-  const subject = `Expense claim for ${i.claimRef} was ${verb}`
-  const body = [
-    `Your expense claim for ${i.claimRef}, ${i.currency} ${i.amount}, was ${verb}.`,
-    ...(i.reason ? [``, `Reason: ${i.reason}`] : []),
-  ]
+export interface ExpensesApprovedInput {
+  to: string
+  /** Never empty. One entry is an ordinary single approval. */
+  claims: ApprovedClaimLine[]
+  /**
+   * One total per currency, already summed by the caller.
+   *
+   * Never one blended figure: a sweep can approve BDT and USD claims
+   * together, and adding those is the error `fxRateToBdt` exists to prevent.
+   */
+  totals: Array<{ currency: string; amount: string }>
+}
+
+/**
+ * Approvals, always as a list.
+ *
+ * One function for one claim and for twelve, because a single approval is a
+ * batch of one — two shapes would be two code paths that drift apart. An
+ * administrator clearing a backlog of twelve claims from one person sends
+ * that person one email, not twelve.
+ *
+ * The money table is deliberately unused. `MoneyTable` carries exactly one
+ * `netValue`, and a mixed-currency sweep has two totals that must not be
+ * added, so the totals go in `facts` rows where there can be as many as the
+ * data requires.
+ */
+export async function sendExpensesApprovedEmail(i: ExpensesApprovedInput): Promise<void> {
+  const kind = "EXPENSE_APPROVED" as const
+  const many = i.claims.length > 1
+  const subject = many
+    ? `${i.claims.length} expense claims were approved`
+    : `Expense claim for ${i.claims[0].claimRef} was approved`
+
+  const lines = i.claims.map((c) => `- ${c.claimRef}: ${c.currency} ${c.amount}`)
+  const totalLines = i.totals.map((t) => `Total ${t.currency}: ${t.amount}`)
+
   await notify({
     to: i.to,
     kind,
     subject,
-    text: sign(body),
+    text: sign([
+      many
+        ? `${i.claims.length} of your expense claims were approved.`
+        : `Your expense claim was approved.`,
+      ``,
+      ...lines,
+      ``,
+      ...totalLines,
+    ]),
+    html: renderEmail({
+      // The first claim's id. A batch has no id of its own, and inventing one
+      // would put a reference in the email that nothing can be looked up by.
+      serial: serialFor(kind, i.claims[0].claimId),
+      subject,
+      stamp: { label: "Approved", tone: "approved" },
+      intro: many
+        ? `${i.claims.length} of your expense claims were approved.`
+        : `Your expense claim was approved.`,
+      facts: [
+        ...i.claims.map((c) => ({ label: c.claimRef, value: `${c.currency} ${c.amount}` })),
+        // Suppressed for a single claim: "Total BDT 1,200" under a lone
+        // "BDT 1,200" is the same number said twice.
+        ...(many
+          ? i.totals.map((t) => ({ label: `Total ${t.currency}`, value: t.amount }))
+          : []),
+      ],
+      footer: noActionFooter,
+    }),
+    entity: "EXPENSE_CLAIM",
+    entityId: i.claims[0].claimId,
+  })
+}
+
+export interface ExpenseRejectedInput {
+  to: string
+  claimId: string
+  /** As above — category and spend date, the way the table names a row. */
+  claimRef: string
+  amount: string
+  currency: string
+  reason: string
+}
+
+/**
+ * Rejections, always one claim at a time.
+ *
+ * Deliberately not batched the way approvals are. The reason is written for
+ * one specific claim, and rolling several into a list makes each one harder
+ * to act on — see `docs/adr/0004`.
+ */
+export async function sendExpenseRejectedEmail(i: ExpenseRejectedInput): Promise<void> {
+  const kind = "EXPENSE_REJECTED" as const
+  const subject = `Expense claim for ${i.claimRef} was declined`
+  await notify({
+    to: i.to,
+    kind,
+    subject,
+    text: sign([
+      `Your expense claim for ${i.claimRef}, ${i.currency} ${i.amount}, was declined.`,
+      ``,
+      `Reason: ${i.reason}`,
+    ]),
     html: renderEmail({
       serial: serialFor(kind, i.claimId),
       subject,
-      stamp: { label: i.approved ? "Approved" : "Declined", tone: i.approved ? "approved" : "declined" },
-      intro: `Your expense claim was ${verb}.`,
+      stamp: { label: "Declined", tone: "declined" },
+      intro: `Your expense claim was declined.`,
       facts: [
         { label: "Claim", value: i.claimRef },
         { label: "Amount", value: `${i.currency} ${i.amount}` },
       ],
-      prose: i.reason ? [`Reason: ${i.reason}`] : [],
+      prose: [`Reason: ${i.reason}`],
       footer: noActionFooter,
     }),
     entity: "EXPENSE_CLAIM",
