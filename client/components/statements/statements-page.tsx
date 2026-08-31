@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { toast } from "sonner"
 import { RiDownloadLine, RiErrorWarningLine } from "@remixicon/react"
 
 import { listFinancialYears } from "@/lib/api/accounting"
@@ -17,6 +16,7 @@ import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type { UnbalancedDetails } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { PanelAlert, toMessage } from "@/components/dashboard/record-kit"
 import { downloadBlob } from "@/components/payroll/payroll-shared"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -132,8 +132,10 @@ export function StatementsPage() {
   const comparativeLabel = pnl.data?.comparative.label ?? position.data?.comparative.label ?? ""
 
   const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   async function download() {
+    setDownloadError(null)
     setDownloading(true)
     try {
       const blob = await downloadStatementsPdf(accessToken!, range)
@@ -141,8 +143,8 @@ export function StatementsPage() {
       // anchor has to be in the document for Firefox to honour the click, and
       // the object URL cannot be revoked in the same task as the click.
       downloadBlob(blob, `financial-statements-${range.to}.pdf`)
-    } catch {
-      toast.error("Could not generate the PDF")
+    } catch (error) {
+      setDownloadError(toMessage(error))
     } finally {
       setDownloading(false)
     }
@@ -184,6 +186,10 @@ export function StatementsPage() {
         onRangeChange={setCustomRange}
         comparativeLabel={comparativeLabel || null}
       />
+
+      {downloadError ? (
+        <PanelAlert onDismiss={() => setDownloadError(null)}>{downloadError}</PanelAlert>
+      ) : null}
 
       {block ? (
         <BlockedPanel details={block} range={range} />

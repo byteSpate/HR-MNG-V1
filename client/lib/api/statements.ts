@@ -1,4 +1,4 @@
-import { apiFetch } from "./client"
+import { apiFetch, apiFetchBlob } from "./client"
 import type { AnnexureResult, CashFlowResult, EquityResult, NotesResult, PnlResult, PolicyNote, PositionResult } from "./types"
 
 export interface StatementRange {
@@ -47,4 +47,10 @@ export function listPolicyNotes(accessToken: string): Promise<PolicyNote[]> { re
 export function createPolicyNote(accessToken: string, input: PolicyNoteInput): Promise<PolicyNote> { return apiFetch<PolicyNote>("/api/statements/policy-notes", { method: "POST", accessToken, body: JSON.stringify(input) }) }
 export function updatePolicyNote(accessToken: string, id: string, input: Partial<PolicyNoteInput>): Promise<PolicyNote> { return apiFetch<PolicyNote>(`/api/statements/policy-notes/${id}`, { method: "PATCH", accessToken, body: JSON.stringify(input) }) }
 export function deletePolicyNote(accessToken: string, id: string): Promise<void> { return apiFetch<void>(`/api/statements/policy-notes/${id}`, { method: "DELETE", accessToken }) }
-export async function downloadStatementsPdf(accessToken: string, range: StatementRange): Promise<Blob> { const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/api/statements/pdf${qs(range)}`, { credentials: "include", headers: { Authorization: `Bearer ${accessToken}` } }); if (!res.ok) throw new Error("Could not download PDF"); return res.blob() }
+export async function downloadStatementsPdf(
+  accessToken: string,
+  range: StatementRange
+): Promise<Blob> {
+  const { blob } = await apiFetchBlob(`/api/statements/pdf${qs(range)}`, { accessToken })
+  return blob
+}
