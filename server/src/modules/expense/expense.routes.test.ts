@@ -11,9 +11,14 @@ vi.mock("./expense.service", () => ({
   rejectClaim: vi.fn(),
 }))
 
+vi.mock("./expense.outstanding", () => ({
+  getOutstandingExpenseReimbursements: vi.fn(),
+}))
+
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as service from "./expense.service"
+import * as outstanding from "./expense.outstanding"
 
 type TestRole = "EMPLOYEE" | "REPORTING_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | "FINANCE_OFFICER"
 const auth = (role: TestRole) =>
@@ -28,6 +33,10 @@ beforeEach(() => {
   vi.mocked(service.approveClaim).mockResolvedValue({ id: "claim-1" } as never)
   vi.mocked(service.approveClaims).mockResolvedValue({ approved: ["claim-1"], failed: [] } as never)
   vi.mocked(service.rejectClaim).mockResolvedValue({ id: "claim-1" } as never)
+  vi.mocked(outstanding.getOutstandingExpenseReimbursements).mockResolvedValue({
+    rows: [],
+    totals: { claims: 0, byCurrency: [] },
+  })
 })
 
 afterEach(() => {
@@ -71,6 +80,29 @@ describe("GET /api/expenses/categories", () => {
     const res = await request(app).get("/api/expenses/categories").set("Authorization", auth("EMPLOYEE"))
     expect(res.status).not.toBe(403)
   })
+})
+
+describe("GET /api/expenses/outstanding-reimbursements", () => {
+  it.each<TestRole>(["FINANCE_OFFICER", "SUPER_ADMIN"])("200s for %s", async (role) => {
+    const res = await request(app)
+      .get("/api/expenses/outstanding-reimbursements")
+      .set("Authorization", auth(role))
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ rows: [], totals: { claims: 0, byCurrency: [] } })
+    expect(outstanding.getOutstandingExpenseReimbursements).toHaveBeenCalledOnce()
+  })
+
+  it.each<TestRole>(["EMPLOYEE", "REPORTING_MANAGER", "HR_ADMIN"])(
+    "403s %s because outstanding reimbursements are a Finance control",
+    async (role) => {
+      const res = await request(app)
+        .get("/api/expenses/outstanding-reimbursements")
+        .set("Authorization", auth(role))
+
+      expect(res.status).toBe(403)
+    }
+  )
 })
 
 describe("review routes", () => {

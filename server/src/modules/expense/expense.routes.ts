@@ -19,6 +19,7 @@ import {
   getExpenseReportHandler,
   updateClaimHandler,
   deleteClaimHandler,
+  getOutstandingExpenseReimbursementsHandler,
 } from "./expense.controller"
 import { expenseUpload } from "../media/media.upload"
 
@@ -38,6 +39,12 @@ router.delete("/categories/:id", requireAuth, requireRole(...FINANCE_ROLES), del
 // longer literal path first regardless. `requireAuth` alone because the scope
 // is decided from the caller inside `expense.report.ts` — see the note there.
 router.get("/report", requireAuth, getExpenseReportHandler)
+router.get(
+  "/outstanding-reimbursements",
+  requireAuth,
+  requireRole(...FINANCE_ROLES),
+  getOutstandingExpenseReimbursementsHandler
+)
 
 // Before /:id, or Express would match "me" as a claim id.
 router.get("/me", requireAuth, requireRole(...STAFF_ROLES), getMyClaimsHandler)
