@@ -25,8 +25,21 @@ import { getExpenseReport, reportFilename, reportToCsv } from "./expense.report"
 import { renderExpenseReportPdf } from "./expense.report.pdf"
 import { reportQuery } from "./expense.validators"
 import { AppError } from "../../middleware/errorHandler"
+import { getOutstandingExpenseReimbursements } from "./expense.outstanding"
 
 type RequestWithId = Request<{ id: string }>
+
+export async function getOutstandingExpenseReimbursementsHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await getOutstandingExpenseReimbursements())
+  } catch (err) {
+    return next(err)
+  }
+}
 
 /** multer puts the parsed file here, matching cost.controller.ts's requireFile. */
 function requireFile(req: Request): Express.Multer.File {

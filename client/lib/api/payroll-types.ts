@@ -364,6 +364,26 @@ export interface ExpenseReport {
   }
 }
 
+export interface OutstandingExpenseReimbursementRow {
+  id: string
+  employee: { id: string; fullName: string; employeeCode: string }
+  name: string | null
+  category: { code: string; name: string }
+  approvedAt: string | null
+  ageDays: number | null
+  amount: string
+  currency: Currency
+}
+
+export interface OutstandingExpenseReimbursements {
+  rows: OutstandingExpenseReimbursementRow[]
+  totals: {
+    claims: number
+    /** Per currency; different currencies are never added together. */
+    byCurrency: { currency: Currency; claims: number; amount: string }[]
+  }
+}
+
 export interface SettlementBreakdown {
   currency: Currency
   fxRateToBdt: string

@@ -7,6 +7,7 @@ import type {
   ExpenseReceipt,
   ExpenseReport,
   ExpenseStatus,
+  OutstandingExpenseReimbursements,
 } from "./types"
 
 export function listExpenseCategories(accessToken: string): Promise<ExpenseCategory[]> {
@@ -164,6 +165,15 @@ export function getExpenseReport(
   query: ExpenseReportQuery
 ): Promise<ExpenseReport> {
   return apiFetch<ExpenseReport>(`/api/expenses/report?${reportParams(query)}`, { accessToken })
+}
+
+export function getOutstandingExpenseReimbursements(
+  accessToken: string
+): Promise<OutstandingExpenseReimbursements> {
+  return apiFetch<OutstandingExpenseReimbursements>(
+    "/api/expenses/outstanding-reimbursements",
+    { accessToken }
+  )
 }
 
 /**

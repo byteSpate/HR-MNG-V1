@@ -57,6 +57,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { DecisionDialog } from "@/components/leave/decision-dialog"
 import { ExpenseDialog } from "@/components/expense/expense-dialog"
 import { ExpenseReports } from "@/components/expense/expense-report-panel"
+import { OutstandingReimbursementsPanel } from "@/components/expense/outstanding-reimbursements-panel"
 import {
   EXPENSE_STATUS_LABEL,
   EXPENSE_STATUS_TONE,
@@ -543,6 +544,10 @@ export function ExpensePage() {
               />
             )}
           </div>
+        ) : null}
+
+        {isReviewer ? (
+          <OutstandingReimbursementsPanel accessToken={accessToken!} />
         ) : null}
 
         {isAdmin ? (
