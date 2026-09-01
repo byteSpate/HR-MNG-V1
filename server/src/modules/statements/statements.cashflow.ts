@@ -12,16 +12,17 @@ import type { CashFlowResult, CashFlowRow } from "./statements.types"
 
 const two = (d: Prisma.Decimal) => d.toFixed(2)
 const dayBefore = (date: Date) => new Date(date.getTime() - 24 * 60 * 60 * 1000)
-interface Side { movement: BalanceMap; pnl: BalanceMap; opening: BalanceMap; profit: Prisma.Decimal }
+interface Side { movement: BalanceMap; pnl: BalanceMap; opening: BalanceMap; firstDayOpening: BalanceMap; profit: Prisma.Decimal }
 
 async function loadSide(range: DateRange, chart: ChartIndex): Promise<Side> {
-  const [movement, pnl, opening] = await Promise.all([
-    balancesFor({ from: range.from, to: range.to, excludeClosing: false }),
-    balancesFor({ from: range.from, to: range.to, excludeClosing: true }),
+  const [movement, pnl, opening, firstDayOpening] = await Promise.all([
+    balancesFor({ from: range.from, to: range.to, excludeClosing: false, excludeOpening: true }),
+    balancesFor({ from: range.from, to: range.to, excludeClosing: true, excludeOpening: true }),
     balancesFor({ to: dayBefore(range.from), excludeClosing: false }),
+    balancesFor({ from: range.from, to: range.from, excludeClosing: false, onlyOpening: true }),
   ])
   assertEveryAccountClassified(chart, movement)
-  return { movement, pnl, opening, profit: pnlNetProfit(chart, pnl) }
+  return { movement, pnl, opening, firstDayOpening, profit: pnlNetProfit(chart, pnl) }
 }
 
 const of = (chart: ChartIndex, kind: string): ChartAccount[] => chart.all.filter((a) => !a.isGroup && a.cashFlowKind === kind).sort((a, b) => a.code.localeCompare(b.code))
@@ -59,7 +60,7 @@ export async function cashFlowStatement(range: DateRange): Promise<CashFlowResul
   const netFinancing = (s: Side) => financingAccounts.reduce((t, a) => t.plus(financingContribution(s, a)), ZERO)
   const financing = [...financingAccounts.map((a) => row(`FIN_${a.id}`, `Proceeds from ${a.name}`, (s) => financingContribution(s, a))).filter((r) => r.current !== "0.00" || r.comparative !== "0.00"), row("NET_FINANCING", "Net cash from financing activities", netFinancing, true)]
   const netChange = (s: Side) => netOperating(s).plus(netInvesting(s)).plus(netFinancing(s))
-  const openingCash = (s: Side) => cashIn(chart, s.opening)
+  const openingCash = (s: Side) => cashIn(chart, s.opening).plus(cashIn(chart, s.firstDayOpening))
   const closingCash = (s: Side) => openingCash(s).plus(netChange(s))
   // Both columns. The comparative's closing cash is derived as opening plus
   // net change and never read back, so leaving it unchecked prints a figure

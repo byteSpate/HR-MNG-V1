@@ -63,6 +63,25 @@ describe("balancesFor", () => {
     expect(where.journal.type).toBeUndefined()
   })
 
+  it("can exclude OPENING journals from period movements", async () => {
+    await balancesFor({ to: utcDate(2026, 7, 31), excludeClosing: true, excludeOpening: true })
+
+    const where = (prisma.journalLine.groupBy as any).mock.calls[0][0].where
+    expect(where.journal.type).toEqual({ notIn: ["CLOSING", "OPENING"] })
+  })
+
+  it("can load only OPENING journals", async () => {
+    await balancesFor({
+      from: utcDate(2026, 7, 1),
+      to: utcDate(2026, 7, 1),
+      excludeClosing: false,
+      onlyOpening: true,
+    })
+
+    const where = (prisma.journalLine.groupBy as any).mock.calls[0][0].where
+    expect(where.journal.type).toBe("OPENING")
+  })
+
   it("runs from inception when `from` is omitted", async () => {
     await balancesFor({ to: utcDate(2026, 7, 31), excludeClosing: false })
 
