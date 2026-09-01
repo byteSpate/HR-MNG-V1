@@ -34,6 +34,7 @@ coverage/
 
 # Subagent-driven-development scratch workspace (ledgers, briefs, reports)
 .superpowers/
+.worktrees/
 
 # Docs (code-only main branch)
 *.md
