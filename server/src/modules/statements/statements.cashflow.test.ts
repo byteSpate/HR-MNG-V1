@@ -43,6 +43,7 @@ beforeEach(() => {
   ;(pnlNetProfit as any).mockReturnValue(D("-256935.00"))
   ;(loadChart as any).mockResolvedValue(chart)
   ;(balancesFor as any).mockImplementation(async (opts: any) => {
+    if (opts.onlyOpening) return new Map()
     if (opts.from === undefined) return new Map([["cash", bal("0.00")]])
     if (opts.excludeClosing) return new Map([["dep", bal("29650.00", "29650.00")]])
     return new Map([
@@ -66,6 +67,7 @@ describe("cashFlowStatement", () => {
   })
   it("refuses an unreconciled classification", async () => {
     ;(balancesFor as any).mockImplementation(async (opts: any) => {
+      if (opts.onlyOpening) return new Map()
       if (opts.from === undefined) return new Map([["cash", bal("0.00")]])
       if (opts.excludeClosing) return new Map([["dep", bal("29650.00", "29650.00")]])
       return new Map([["cash", bal("693715.00")], ["pay", bal("117000.00")], ["ppe", bal("156000.00", "156000.00")], ["share", bal("1000000.00")]])
@@ -79,6 +81,7 @@ describe("cashFlowStatement", () => {
     // read back, so an unchecked prior year prints a figure nothing has
     // agreed against.
     ;(balancesFor as any).mockImplementation(async (opts: any) => {
+      if (opts.onlyOpening) return new Map()
       if (opts.from === undefined) return new Map([["cash", bal("0.00")]])
       if (opts.excludeClosing) return new Map([["dep", bal("29650.00", "29650.00")]])
       const prior = opts.from.getUTCFullYear() === 2023
@@ -97,6 +100,32 @@ describe("cashFlowStatement", () => {
     })
   })
 
+  it("treats a first-day OPENING journal as beginning cash, not comparative-period activity", async () => {
+    const openingBalances = new Map([
+      ["cash", bal("614845.00", "614845.00")],
+      ["recv", bal("15000.00", "15000.00")],
+      ["pay", bal("65635.00", "0.00", "65635.00")],
+      ["ppe", bal("208505.00", "208505.00")],
+      ["share", bal("1000000.00", "0.00", "1000000.00")],
+    ])
+    ;(pnlNetProfit as any).mockReturnValue(D("0.00"))
+    ;(balancesFor as any).mockImplementation(async (opts: any) => {
+      if (opts.from === undefined) return new Map()
+      const isComparative = opts.from.getUTCFullYear() === 2023
+      if (!isComparative) return new Map()
+      if (opts.onlyOpening) return openingBalances
+      if (opts.excludeOpening) return new Map()
+      return openingBalances
+    })
+
+    const result = await cashFlowStatement(range)
+    const summary = Object.fromEntries(result.summary.map((row) => [row.key, row]))
+
+    expect(summary.NET_CHANGE.comparative).toBe("0.00")
+    expect(summary.OPENING_CASH.comparative).toBe("614845.00")
+    expect(summary.CLOSING_CASH.comparative).toBe("614845.00")
+  })
+
   it("suppresses nil working-capital rows", async () => {
     const result = await cashFlowStatement(range)
     expect(result.operating.some((r) => r.current === "0.00" && r.key.startsWith("WC_"))).toBe(false)
@@ -113,6 +142,7 @@ describe("cashFlowStatement", () => {
     // disposal blocks the statement until asset phase 2 exists, which is
     // asserted here so that stays a decision rather than a surprise.
     ;(balancesFor as any).mockImplementation(async (opts: any) => {
+      if (opts.onlyOpening) return new Map()
       if (opts.from === undefined) return new Map([["cash", bal("0.00")]])
       if (opts.excludeClosing) return new Map([["dep", bal("29650.00", "29650.00")]])
       return new Map([

@@ -118,22 +118,39 @@ export async function loadChart(): Promise<ChartIndex> {
  * and debits every revenue account on the last day of the year, so an
  * unfiltered sum over that year nets each P&L account to zero and the
  * report reads as a page of dashes the moment it becomes final.
+ *
+ * Cash-flow reporting may also exclude `OPENING` journals from movements,
+ * or load only the opening journal posted on the first day of its period.
  */
 export async function balancesFor(opts: {
   from?: Date
   to: Date
   excludeClosing: boolean
+  excludeOpening?: boolean
+  onlyOpening?: boolean
 }): Promise<BalanceMap> {
+  const excludedTypes = [
+    ...(opts.excludeClosing ? ["CLOSING" as const] : []),
+    ...(opts.excludeOpening ? ["OPENING" as const] : []),
+  ]
+  const journalType: Prisma.EnumJournalTypeFilter<"Journal"> | "OPENING" | undefined = opts.onlyOpening
+    ? "OPENING" as const
+    : excludedTypes.length === 1
+      ? { not: excludedTypes[0] }
+      : excludedTypes.length > 1
+        ? { notIn: excludedTypes }
+        : undefined
+  const where: Prisma.JournalLineWhereInput = {
+    journal: {
+      status: IN_LEDGER,
+      ...(journalType ? { type: journalType } : {}),
+      date: { ...(opts.from ? { gte: opts.from } : {}), lte: opts.to },
+    },
+  }
   const [rows, accounts] = await Promise.all([
     prisma.journalLine.groupBy({
       by: ["accountId"],
-      where: {
-        journal: {
-          status: IN_LEDGER,
-          ...(opts.excludeClosing ? { type: { not: "CLOSING" as const } } : {}),
-          date: { ...(opts.from ? { gte: opts.from } : {}), lte: opts.to },
-        },
-      },
+      where,
       _sum: { debit: true, credit: true },
     }),
     prisma.account.findMany({ select: { id: true, type: true } }),
