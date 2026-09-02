@@ -207,3 +207,58 @@ describe("getToday", () => {
     expect(shift).toMatchObject({ name: "General", expectedHours: 9, breakMinutes: 60 })
   })
 })
+
+describe("getToday on a half-day leave", () => {
+  // `effectiveShift` narrows the shift to the half actually worked. Every
+  // other consumer of `resolveShift` wraps it; `getToday` did not, so the
+  // punch card printed the full span while the log row beneath it, the
+  // report, approval and payroll all used the narrowed half.
+  //
+  // `startSession` on the stored request is the half the leave *covers*, so
+  // FIRST_HALF leave means work starts at the midpoint.
+  const halfDayLeave = (startSession: string, endSession: string) => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue(EMPLOYEE as never)
+    vi.mocked(prisma.attendance.findMany).mockResolvedValue([])
+    vi.mocked(prisma.holiday.findMany).mockResolvedValue([])
+    vi.mocked(prisma.shift.findMany).mockResolvedValue([GENERAL])
+    vi.mocked(prisma.leaveRequest.findMany).mockResolvedValue([
+      {
+        employeeId: "emp-1",
+        startDate: parseDateOnly("2026-08-15"),
+        endDate: parseDateOnly("2026-08-15"),
+        startSession,
+        endSession,
+        leaveType: { name: "Casual Leave", isPaid: true },
+      },
+    ] as never)
+  }
+
+  it("starts the shift at the midpoint when the morning is the leave", async () => {
+    halfDayLeave("FIRST_HALF", "FIRST_HALF")
+
+    const { shift } = await getToday("user-1")
+
+    expect(shift.startTime).toBe("13:30")
+    expect(shift.endTime).toBe("18:00")
+    expect(shift.expectedHours).toBe(4.5)
+  })
+
+  it("ends the shift at the midpoint when the afternoon is the leave", async () => {
+    // The asymmetry is easy to invert, so it is asserted from both ends.
+    halfDayLeave("SECOND_HALF", "SECOND_HALF")
+
+    const { shift } = await getToday("user-1")
+
+    expect(shift.startTime).toBe("09:00")
+    expect(shift.endTime).toBe("13:30")
+    expect(shift.expectedHours).toBe(4.5)
+  })
+
+  it("leaves a whole-day shift alone", async () => {
+    halfDayLeave("FIRST_HALF", "SECOND_HALF")
+
+    const { shift } = await getToday("user-1")
+
+    expect(shift).toMatchObject({ startTime: "09:00", endTime: "18:00", expectedHours: 9 })
+  })
+})

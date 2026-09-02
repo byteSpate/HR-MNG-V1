@@ -110,6 +110,25 @@ export function formatHours(hours: number | null): string {
   return `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, "0")}m`
 }
 
+/**
+ * Time owed against the shift for one day, matching the server's own rule:
+ * shortfall is measured only where hours were measured, so an absence is not
+ * a shortfall and neither is a missing check-out.
+ *
+ * An em dash rather than `0h 00m` in every case that is not a real debt. A
+ * non-working day has `expectedHours: 0`, so a Friday would otherwise read
+ * "short by nothing", and a column of zeroes on the days somebody worked
+ * their full shift is noise that hides the days that matter.
+ */
+export function formatShortfall(day: {
+  expectedHours: number
+  workedHours: number | null
+}): string {
+  if (day.expectedHours <= 0 || day.workedHours === null) return "—"
+  const shortfall = Math.max(0, day.expectedHours - day.workedHours)
+  return shortfall > 0 ? formatHours(shortfall) : "—"
+}
+
 /** Elapsed milliseconds as a live "1h 04m 12s" counter. */
 export function formatElapsed(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000))

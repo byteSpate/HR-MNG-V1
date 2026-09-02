@@ -489,6 +489,7 @@ describe("half-day leave in the monthly summary", () => {
     detail: null,
     leaveIsPaid: null,
     leaveFraction: 0.5,
+    leaveStartSession: "FIRST_HALF",
     unservedStatus: null,
     regularised: false,
     autoCheckOut: false,
@@ -556,5 +557,71 @@ describe("half-day leave in the monthly summary", () => {
     const s = summariseDays(REF_H, [day({ leaveFraction: 0, expectedHours: 9 })], 8, 2026)
     expect(s.present).toBe(1)
     expect(s.onLeave).toBe(0)
+  })
+})
+
+describe("hours per attended working day", () => {
+  // "Avg hours / day" divided `workedHours` by `present`, and those are not
+  // the same set of days: `workedHours` includes holidays and weekly offs,
+  // while `present` counts only working days. A missing check-out was the
+  // worst of it — a whole day in the denominator, zero in the numerator.
+  //
+  // These two fields are the matched pair the card needs. They are additions:
+  // `workedHours` and `present` keep their meanings, because payroll divides
+  // by them.
+
+  it("counts a fully recorded working day on both sides", async () => {
+    const s = august({ attendances: [attendanceRow("2026-08-03")] })
+
+    expect(s.workedHoursOnWorkingDays).toBe(9)
+    expect(s.workingDaysFullyRecorded).toBe(1)
+  })
+
+  it("excludes a missing check-out from both sides", async () => {
+    const s = august({
+      attendances: [
+        attendanceRow("2026-08-03"),
+        attendanceRow("2026-08-04", { checkOut: null, workedHours: null }),
+      ],
+    })
+
+    // The day still counts as present — payroll's identity depends on it —
+    // so the old numerator/denominator pair read 9 over 2, or 4h 30m for a
+    // day that was in fact worked in full.
+    expect(s.present).toBe(2)
+    expect(s.workedHours).toBe(9)
+
+    expect(s.workedHoursOnWorkingDays).toBe(9)
+    expect(s.workingDaysFullyRecorded).toBe(1)
+  })
+
+  it("excludes hours worked on a holiday from both sides", async () => {
+    const s = august({
+      attendances: [attendanceRow("2026-08-03"), attendanceRow("2026-08-05")],
+      holidays: [holiday("2026-08-05", "Independence Day")],
+    })
+
+    // Unchanged: the holiday's hours are still reported, just not as a
+    // working day the roster expected.
+    expect(s.workedHours).toBe(18)
+    expect(s.workedOnOffDays).toBe(1)
+
+    expect(s.workedHoursOnWorkingDays).toBe(9)
+    expect(s.workingDaysFullyRecorded).toBe(1)
+  })
+
+  it("leaves the four-term identity payroll divides by intact", async () => {
+    // Asserted here so a later edit to the new fields cannot quietly move
+    // one of the four terms and change what people are paid.
+    const s = august({
+      attendances: [
+        attendanceRow("2026-08-03"),
+        attendanceRow("2026-08-04", { checkOut: null, workedHours: null }),
+        attendanceRow("2026-08-05"),
+      ],
+      holidays: [holiday("2026-08-05", "Independence Day")],
+    })
+
+    expect(s.present + s.absent + s.onLeave + s.notCheckedIn).toBe(s.workingDays)
   })
 })

@@ -43,6 +43,7 @@ import {
   formatDayLabel,
   formatHours,
   formatMonthLabel,
+  formatShortfall,
   toTimeInput,
 } from "@/components/attendance/attendance-shared"
 
@@ -222,6 +223,7 @@ export function AttendancePage() {
       { text: formatClock(day.checkIn) },
       { text: formatClock(day.checkOut) },
       { text: formatHours(day.workedHours) },
+      { text: formatShortfall(day) },
       {
         tag: STATUS_LABEL[day.status],
         tone: STATUS_TONE[day.status],
@@ -358,17 +360,26 @@ export function AttendancePage() {
                   value={String(ownSummary?.late ?? 0)}
                   sub={`Grace ${todayQuery.data?.shift.graceMinutes ?? 15} minutes`}
                 />
+                {/* Both sides come from the same set of days. Dividing
+                    `workedHours` by `present` did not: the numerator counted
+                    holidays worked, the denominator did not, and a missing
+                    check-out put a whole day underneath a zero. */}
                 <MiniStat
                   label="Avg hours / day"
                   value={
-                    ownSummary && ownSummary.present > 0
-                      ? formatHours(ownSummary.workedHours / ownSummary.present)
+                    ownSummary && ownSummary.workingDaysFullyRecorded > 0
+                      ? formatHours(
+                          ownSummary.workedHoursOnWorkingDays /
+                            ownSummary.workingDaysFullyRecorded
+                        )
                       : "None yet"
                   }
                   sub={
-                    todayQuery.data
-                      ? `Expected ${formatHours(todayQuery.data.shift.expectedHours)}`
-                      : "Against your shift"
+                    ownSummary && ownSummary.workingDaysFullyRecorded > 0
+                      ? `Over ${ownSummary.workingDaysFullyRecorded} fully recorded ${
+                          ownSummary.workingDaysFullyRecorded === 1 ? "day" : "days"
+                        }`
+                      : "Needs a day with both punches"
                   }
                 />
                 {/* Only rendered when there is something to act on. A silent
@@ -438,8 +449,17 @@ export function AttendancePage() {
             />
           ) : (
             <PanelTable
-              cols="1.1fr 0.8fr 0.8fr 0.7fr 1fr 1.1fr 0.9fr"
-              headers={["Date", "Check in", "Check out", "Hours", "Status", "Approval", ""]}
+              cols="1.1fr 0.8fr 0.8fr 0.7fr 0.7fr 1fr 1.1fr 0.9fr"
+              headers={[
+                "Date",
+                "Check in",
+                "Check out",
+                "Hours",
+                "Short by",
+                "Status",
+                "Approval",
+                "",
+              ]}
               rows={rows}
               isLoading={daysQuery.isPending}
               isError={daysQuery.isError}

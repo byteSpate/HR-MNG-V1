@@ -3,7 +3,7 @@ import type { Employee } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
 import { formatDateOnly, parseDateOnly } from "../../utils/dates"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { buildDayGrid, resolveShift, shiftInfo } from "./attendance.grid"
+import { buildDayGrid, effectiveShift, resolveShift, shiftInfo } from "./attendance.grid"
 import { officeToday } from "./attendance.time"
 import type { AttendanceDay, GridEmployee, TodayAttendance } from "./attendance.types"
 
@@ -126,7 +126,16 @@ export async function getToday(userId: string): Promise<TodayAttendance> {
   ])
 
   const day = days[0]
-  const shift = resolveShift(toGridEmployee(employee), date, shifts)
+  // Narrowed to the half actually worked, exactly as the grid, the punch,
+  // approval and recompute all do. Without the wrapper the card printed the
+  // full span and full expected hours while the log row directly beneath it,
+  // the report and payroll all used the half — the same day reading two ways
+  // on one screen.
+  const shift = effectiveShift(
+    resolveShift(toGridEmployee(employee), date, shifts),
+    day.leaveFraction,
+    day.leaveStartSession ?? "FIRST_HALF"
+  )
 
   return {
     // Anchors the client's ticking clock. Without it every punch card is
