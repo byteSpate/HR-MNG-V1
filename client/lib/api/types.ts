@@ -276,6 +276,12 @@ export interface TodayAttendance {
   canCheckIn: boolean
   canCheckOut: boolean
   detail: string | null
+  /**
+   * How much of today is leave: 0, 0.5 or 1. A half day and a whole day are
+   * both ON_LEAVE with the same detail string, so this is the only thing that
+   * separates them.
+   */
+  leaveFraction: number
 }
 
 export interface PunchResult {
@@ -377,6 +383,12 @@ export interface MonthlyAttendanceSummary {
   /** Working days attended and fully measured: both punches present. */
   workingDaysFullyRecorded: number
   expectedHours: number
+  /**
+   * `expectedHours` counted only up to today, so a month still running can be
+   * compared against hours actually worked. Equal to `expectedHours` once the
+   * month is over, so no caller needs to branch on which month it is showing.
+   */
+  expectedHoursToDate: number
   shortfallHours: number
   missingCheckOut: number
   pendingApproval: number

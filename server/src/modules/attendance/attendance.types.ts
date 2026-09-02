@@ -164,6 +164,16 @@ export interface TodayAttendance {
   canCheckOut: boolean
   /** Set when today is a holiday, a weekly off, or covered by approved leave. */
   detail: string | null
+  /**
+   * How much of today is leave: 0, 0.5 or 1.
+   *
+   * A half day and a whole day are both `ON_LEAVE` carrying the same leave
+   * name, so `status` and `detail` cannot separate them — and the card has to,
+   * because one says "you are expected for the other half" and the other says
+   * "your leave stands whether or not you check in". Paired with `shift`,
+   * which is already narrowed to the half actually worked.
+   */
+  leaveFraction: number
 }
 
 /**
@@ -353,6 +363,20 @@ export interface MonthlyAttendanceSummary {
    */
   workingDaysFullyRecorded: number
   expectedHours: number
+  /**
+   * `expectedHours` counted only up to and including today, so a month still
+   * running compares like with like.
+   *
+   * `expectedHours` covers every working day in the calendar month, days that
+   * have not happened included, while `shortfallHours` can only ever reach
+   * days somebody attended. Showing those two together pairs a whole-month
+   * target with time owed on a handful of days.
+   *
+   * Separate rather than a change to `expectedHours`, which payroll, the
+   * report and the PDF all consume. For a finished month the two are equal,
+   * so a caller renders the same thing either way with no branch.
+   */
+  expectedHoursToDate: number
   shortfallHours: number
   missingCheckOut: number
   /** Payroll gate: a month with any of these must not be run. */

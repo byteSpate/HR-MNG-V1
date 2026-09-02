@@ -262,3 +262,42 @@ describe("getToday on a half-day leave", () => {
     expect(shift).toMatchObject({ startTime: "09:00", endTime: "18:00", expectedHours: 9 })
   })
 })
+
+describe("getToday leave fraction", () => {
+  // The punch card has to tell a half-day leave from a whole one: one says
+  // "you are expected 13:30-18:00", the other says "your leave stands".
+  // Both are ON_LEAVE with the same detail string, so status alone cannot
+  // separate them.
+  const leave = (startSession: string, endSession: string) => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue(EMPLOYEE as never)
+    vi.mocked(prisma.attendance.findMany).mockResolvedValue([])
+    vi.mocked(prisma.holiday.findMany).mockResolvedValue([])
+    vi.mocked(prisma.shift.findMany).mockResolvedValue([GENERAL])
+    vi.mocked(prisma.leaveRequest.findMany).mockResolvedValue([
+      {
+        employeeId: "emp-1",
+        startDate: parseDateOnly("2026-08-15"),
+        endDate: parseDateOnly("2026-08-15"),
+        startSession,
+        endSession,
+        leaveType: { name: "Casual Leave", isPaid: true },
+      },
+    ] as never)
+  }
+
+  it("reports a half day as 0.5", async () => {
+    leave("FIRST_HALF", "FIRST_HALF")
+    expect((await getToday("user-1")).leaveFraction).toBe(0.5)
+  })
+
+  it("reports a whole day as 1", async () => {
+    leave("FIRST_HALF", "SECOND_HALF")
+    expect((await getToday("user-1")).leaveFraction).toBe(1)
+  })
+
+  it("reports no leave as 0", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue(EMPLOYEE as never)
+    emptyGrid()
+    expect((await getToday("user-1")).leaveFraction).toBe(0)
+  })
+})

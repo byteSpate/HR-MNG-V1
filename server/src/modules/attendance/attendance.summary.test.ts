@@ -625,3 +625,44 @@ describe("hours per attended working day", () => {
     expect(s.present + s.absent + s.onLeave + s.notCheckedIn).toBe(s.workingDays)
   })
 })
+
+describe("expected hours to date", () => {
+  // `expectedHours` covers every working day in the calendar month, including
+  // days that have not happened yet, while `shortfallHours` can only reach
+  // days somebody actually attended. Rendering them side by side reads as
+  // "12h of 176h · shortfall 0h 30m", which pairs a whole-month target with
+  // time owed on two days.
+  //
+  // A separate to-date figure, never a change to `expectedHours` itself —
+  // payroll, the report and the PDF all consume that one.
+
+  it("stops at today while the month is still running", async () => {
+    // NOW is Saturday 15 August 2026. Fridays are the weekly off, so the 7th
+    // and the 14th are out: 13 working days so far, 27 in the month.
+    const s = august()
+
+    expect(s.expectedHoursToDate).toBe(117)
+    expect(s.expectedHours).toBe(243)
+  })
+
+  it("equals the month total once the month is over", async () => {
+    // A past month needs no branch in the client: the two figures converge on
+    // their own, so the same component renders either.
+    vi.setSystemTime(new Date("2026-09-05T06:00:00.000Z"))
+
+    const s = august()
+
+    expect(s.expectedHoursToDate).toBe(243)
+    expect(s.expectedHours).toBe(243)
+  })
+
+  it("counts the same days the working-day tally does", async () => {
+    // Guards the pairing: if one of these ever stops agreeing with the other,
+    // the to-date figure has started measuring something else.
+    vi.setSystemTime(new Date("2026-09-05T06:00:00.000Z"))
+
+    const s = august()
+
+    expect(s.expectedHoursToDate).toBe(s.workingDays * 9)
+  })
+})
