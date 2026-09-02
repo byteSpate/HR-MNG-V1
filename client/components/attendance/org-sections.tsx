@@ -321,7 +321,21 @@ function MonthlyTable({
     { text: String(s.absent) },
     { text: String(s.onLeave) },
     { text: String(s.late) },
-    { text: formatHours(s.workedHours), sub: `of ${formatHours(s.expectedHours)}` },
+    // Compared against hours expected *so far*, because the shortfall in the
+    // next cell can only reach days somebody actually attended. Pairing it
+    // with the whole-month target read as "12h of 176h · shortfall 0h 30m",
+    // which invites the reading that 164 hours are missing.
+    //
+    // The month total stays, one line down, because it is the figure payroll
+    // works to. On a finished month the two are equal and the sub-line simply
+    // repeats — no branch on which month this is.
+    {
+      text: formatHours(s.workedHours),
+      sub:
+        s.expectedHoursToDate < s.expectedHours
+          ? `of ${formatHours(s.expectedHoursToDate)} so far · ${formatHours(s.expectedHours)} this month`
+          : `of ${formatHours(s.expectedHours)}`,
+    },
     // A zero shortfall is a good outcome, not a missing value, so it says so
     // rather than leaving the cell to be read as "not calculated".
     s.shortfallHours > 0

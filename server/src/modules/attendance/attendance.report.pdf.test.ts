@@ -46,6 +46,7 @@ function row(over: Partial<AttendanceReportRow> = {}): AttendanceReportRow {
     workedHoursOnWorkingDays: 160.25,
     workingDaysFullyRecorded: 20,
     expectedHours: 176,
+    expectedHoursToDate: 176,
     shortfallHours: 15.75,
     missingCheckOut: 0,
     pendingApproval: 0,

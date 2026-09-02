@@ -155,5 +155,6 @@ export async function getToday(userId: string): Promise<TodayAttendance> {
     canCheckIn: day.attendanceId === null,
     canCheckOut: day.checkIn !== null && day.checkOut === null,
     detail: day.detail,
+    leaveFraction: day.leaveFraction,
   }
 }

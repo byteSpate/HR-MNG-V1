@@ -330,6 +330,7 @@ export function summariseDays(
     workedHoursOnWorkingDays: 0,
     workingDaysFullyRecorded: 0,
     expectedHours: 0,
+    expectedHoursToDate: 0,
     shortfallHours: 0,
     missingCheckOut: 0,
     pendingApproval: 0,
@@ -338,12 +339,19 @@ export function summariseDays(
     rejected: 0,
   }
 
+  // Read once rather than per day. The grid already resolves the office's
+  // own date, and this is the same boundary it uses for the ABSENT /
+  // NOT_CHECKED_IN split — so the two can never disagree about which days
+  // have happened.
+  const today = formatDateOnly(officeToday())
+
   for (const day of days) {
     if (day.status === "NOT_TRACKED") continue
 
     if (day.isWorkingDay) {
       summary.workingDays++
       summary.expectedHours += day.expectedHours
+      if (day.date <= today) summary.expectedHoursToDate += day.expectedHours
 
       // Leave first, whatever the status says. A half-day is PRESENT *and*
       // partly leave, so the two shares are counted independently and the
@@ -432,6 +440,7 @@ export function summariseDays(
 
   summary.workedHours = round2(summary.workedHours)
   summary.expectedHours = round2(summary.expectedHours)
+  summary.expectedHoursToDate = round2(summary.expectedHoursToDate)
   summary.shortfallHours = round2(summary.shortfallHours)
   // The day counters are fractional now, so float artefacts are reachable:
   // three half-days sum to 1.5000000000000002 without this, and that number
