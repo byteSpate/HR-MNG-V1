@@ -13,15 +13,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 /**
- * The five self-editable text fields, in the order they are shown.
+ * The six self-editable text fields, in the order they are shown.
  *
- * `profilePicture` is the sixth self-editable field and is deliberately absent:
- * it takes a file rather than a value and posts to a different endpoint, so it
- * lives on the avatar in the header.
+ * `permanentAddress` joined this list on 2026-09-02 — it used to change only
+ * through HR with document proof, until the user decided it should change
+ * directly, the same as `presentAddress`.
+ *
+ * `profilePicture` is a seventh self-editable field and is deliberately
+ * absent: it takes a file rather than a value and posts to a different
+ * endpoint, so it lives on the avatar in the header.
  */
 const FIELDS = [
   { key: "phone", label: "Phone", hint: "Visible to colleagues in the staff directory" },
   { key: "presentAddress", label: "Present address" },
+  { key: "permanentAddress", label: "Permanent address" },
   { key: "emergencyContact", label: "Emergency contact" },
   { key: "maritalStatus", label: "Marital status" },
   { key: "bloodGroup", label: "Blood group" },
@@ -33,6 +38,7 @@ function initialValues(employee: EmployeeView): Record<FieldKey, string> {
   return {
     phone: employee.work.phone ?? "",
     presentAddress: employee.contact?.presentAddress ?? "",
+    permanentAddress: employee.contact?.permanentAddress ?? "",
     emergencyContact: employee.contact?.emergencyContact ?? "",
     maritalStatus: employee.personal?.maritalStatus ?? "",
     bloodGroup: employee.personal?.bloodGroup ?? "",

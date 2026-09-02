@@ -53,12 +53,14 @@ export function visibilityTierFor(
 /**
  * The facts the employee is the authority on.
  *
- * `permanentAddress` is deliberately absent: it is the legal address of
- * record, it appears on the employment contract, and it is where legal notices
- * are served, so it changes with document proof through HR. `presentAddress`
- * is where you currently live and changes when you move flats.
+ * `permanentAddress` moved here from HR-only on 2026-09-02. It was originally
+ * excluded because it is the legal address of record and appears on the
+ * employment contract, which argued for changing it only with document proof
+ * through HR — but the user decided it changes directly instead, the same as
+ * `presentAddress`. Nothing downstream treats it as contract data: it is
+ * neither read by payroll nor posted to accounting.
  *
- * Bank fields are absent too. Self-service bank editing is the classic
+ * Bank fields are absent. Self-service bank editing is the classic
  * payroll-diversion vector — a compromised login redirects that person's
  * salary and the change looks legitimate because it came from the right
  * account.
@@ -66,6 +68,7 @@ export function visibilityTierFor(
 export const SELF_EDITABLE_FIELDS = [
   "phone",
   "presentAddress",
+  "permanentAddress",
   "emergencyContact",
   "maritalStatus",
   "bloodGroup",
@@ -76,7 +79,6 @@ export const HR_ONLY_EDITABLE_FIELDS = [
   "dateOfBirth",
   "gender",
   "nationalId",
-  "permanentAddress",
   "designation",
   "departmentId",
   "reportingManagerId",

@@ -164,7 +164,6 @@ function StaffProfile({
         {employee.contact ? (
           <ProfileCard
             title="Contact"
-            lockedHint="Your permanent address is the legal address of record and is changed by HR."
             rows={[
               {
                 label: "Phone",
