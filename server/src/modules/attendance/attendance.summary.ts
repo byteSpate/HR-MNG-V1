@@ -327,6 +327,8 @@ export function summariseDays(
     weeklyOffs: 0,
     workedOnOffDays: 0,
     workedHours: 0,
+    workedHoursOnWorkingDays: 0,
+    workingDaysFullyRecorded: 0,
     expectedHours: 0,
     shortfallHours: 0,
     missingCheckOut: 0,
@@ -417,6 +419,11 @@ export function summariseDays(
           summary.workedHours += day.workedHours
           if (day.isWorkingDay) {
             summary.shortfallHours += Math.max(0, day.expectedHours - day.workedHours)
+            // The matched pair the hours-per-day card divides. Both sides are
+            // inside this branch, so a missing check-out — which lands in the
+            // `if` above — is excluded from each of them together.
+            summary.workedHoursOnWorkingDays += day.workedHours
+            if (day.checkIn && day.checkOut) summary.workingDaysFullyRecorded++
           }
         }
       }

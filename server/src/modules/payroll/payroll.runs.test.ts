@@ -126,6 +126,8 @@ function summaryFor(over: Partial<MonthlyAttendanceSummary> = {}): MonthlyAttend
     weeklyOffs: 4,
     workedOnOffDays: 0,
     workedHours: 216,
+    workedHoursOnWorkingDays: 216,
+    workingDaysFullyRecorded: 27,
     expectedHours: 216,
     shortfallHours: 0,
     missingCheckOut: 0,

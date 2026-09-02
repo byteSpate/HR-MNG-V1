@@ -3,6 +3,7 @@ import type {
   AttendanceSource,
   EmploymentStatus,
   HolidayType,
+  LeaveSession,
 } from "../../generated/prisma/client"
 
 /**
@@ -87,6 +88,16 @@ export interface AttendanceDay {
    * and payroll has to see both.
    */
   leaveFraction: number
+  /**
+   * Which half `leaveFraction: 0.5` covers — the half that is *off*, already
+   * normalised by the grid. Null when no leave touches the day.
+   *
+   * The companion to `leaveFraction`: the fraction says a day is half leave,
+   * this says which half, and `effectiveShift` needs both to narrow the
+   * window. Carried here so a consumer holding an `AttendanceDay` can reach
+   * the same answer the grid did without re-reading the leave.
+   */
+  leaveStartSession: LeaveSession | null
   /**
    * What the unworked portion of a partial-leave day counts as, when nobody
    * punched. Null when there is no partial leave, or when an attendance row
@@ -320,6 +331,27 @@ export interface MonthlyAttendanceSummary {
   /** Check-ins on a holiday or weekly off. Outside the working-day identity. */
   workedOnOffDays: number
   workedHours: number
+  /**
+   * `workedHours` restricted to scheduled working days, so hours worked on a
+   * holiday or weekly off are excluded.
+   *
+   * Exists because `workedHours` and `present` are drawn from different sets
+   * of days and dividing one by the other is not a rate. Paired with
+   * `workingDaysFullyRecorded` below — use the two together or neither.
+   */
+  workedHoursOnWorkingDays: number
+  /**
+   * Working days that were attended and completely measured: PRESENT, with a
+   * record, and with both a check-in and a check-out.
+   *
+   * A missing check-out is excluded on purpose. Its hours are deliberately
+   * never guessed, so counting the day would put a whole day into a
+   * denominator whose numerator got nothing.
+   *
+   * A whole number, unlike `present`, which is a share and can be 0.5 — so a
+   * half-day leave counts here as one attended day.
+   */
+  workingDaysFullyRecorded: number
   expectedHours: number
   shortfallHours: number
   missingCheckOut: number

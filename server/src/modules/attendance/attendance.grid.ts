@@ -379,6 +379,9 @@ export function resolveGrid(
         // report a paid-leave flag payroll would then act on.
         leaveIsPaid: status === "ON_LEAVE" ? (leave?.isPaid ?? null) : null,
         leaveFraction: leave?.fraction ?? 0,
+        // Already normalised by `indexLeaves` to the half that is *off*, so
+        // a consumer can hand it straight to `effectiveShift`.
+        leaveStartSession: leave?.startSession ?? null,
         // Only meaningful for a partial leave nobody punched for. The
         // past/future rule is the same one the ABSENT / NOT_CHECKED_IN split
         // above uses, so the two can never disagree.

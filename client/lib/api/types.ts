@@ -245,6 +245,11 @@ export interface AttendanceDay {
    */
   leaveFraction: number
   /**
+   * Which half a `leaveFraction` of 0.5 covers — the half that is off. Null
+   * when no leave touches the day.
+   */
+  leaveStartSession: "FIRST_HALF" | "SECOND_HALF" | null
+  /**
    * What the unworked portion of a partial-leave day counts as, when nobody
    * punched. Null when there is no partial leave or an attendance row exists.
    */
@@ -363,6 +368,14 @@ export interface MonthlyAttendanceSummary {
   weeklyOffs: number
   workedOnOffDays: number
   workedHours: number
+  /**
+   * `workedHours` restricted to scheduled working days. Divide this by
+   * `workingDaysFullyRecorded`, never `workedHours` by `present` — those two
+   * are drawn from different sets of days, so the quotient is not a rate.
+   */
+  workedHoursOnWorkingDays: number
+  /** Working days attended and fully measured: both punches present. */
+  workingDaysFullyRecorded: number
   expectedHours: number
   shortfallHours: number
   missingCheckOut: number
