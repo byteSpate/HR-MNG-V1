@@ -59,13 +59,17 @@ describe("visibilityTierFor", () => {
 })
 
 describe("writableFieldsFor", () => {
-  it("gives SELF exactly the five self-editable text fields", () => {
+  it("gives SELF exactly the six self-editable text fields", () => {
     // profilePicture is NOT here: it goes through PATCH /:id/avatar, because
     // it takes a Cloudinary publicId that must be verified first.
+    //
+    // permanentAddress moved here from HR-only on 2026-09-02: the user
+    // decided it changes directly, with no document proof required.
     expect([...writableFieldsFor("SELF")].sort()).toEqual([
       "bloodGroup",
       "emergencyContact",
       "maritalStatus",
+      "permanentAddress",
       "phone",
       "presentAddress",
     ])
@@ -294,6 +298,7 @@ describe("projectEmployee", () => {
       "bloodGroup",
       "emergencyContact",
       "maritalStatus",
+      "permanentAddress",
       "phone",
       "presentAddress",
     ])
