@@ -27,6 +27,7 @@ import {
   RiNodeTree,
   RiPieChartLine,
   RiPlayCircleLine,
+  RiPulseLine,
   RiReceiptLine,
   RiScales3Line,
   RiSettingsLine,
@@ -68,6 +69,7 @@ export const icons = {
   RiPlayCircleLine,
   RiCalculatorLine,
   RiPieChartLine,
+  RiPulseLine,
 } satisfies Record<string, RemixiconComponentType>
 
 export type IconName = keyof typeof icons

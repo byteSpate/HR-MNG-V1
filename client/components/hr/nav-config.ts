@@ -24,6 +24,7 @@ export const navGroups: NavGroup[] = [
     label: "Communication",
     items: [
       { label: "Reports", href: "/hr/reports", icon: "RiBarChartLine" },
+      { label: "Activity", href: "/hr/activity", icon: "RiPulseLine" },
       { label: "Announcements", href: "/hr/announcements", icon: "RiMegaphoneLine" },
       { label: "Settings", href: "/hr/settings", icon: "RiSettingsLine" },
       { label: "My Profile", href: "/hr/profile", icon: "RiUser3Line" },

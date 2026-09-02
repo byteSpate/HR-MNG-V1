@@ -15,6 +15,7 @@ export const navGroups: NavGroup[] = [
     label: "Reporting",
     items: [
       { label: "Reports", href: "/manager/reports", icon: "RiBarChartLine" },
+      { label: "Activity", href: "/manager/activity", icon: "RiPulseLine" },
       { label: "Announcements", href: "/manager/announcements", icon: "RiMegaphoneLine" },
     ],
   },
