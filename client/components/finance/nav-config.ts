@@ -47,6 +47,7 @@ export const navGroups: NavGroup[] = [
       { label: "Attendance", href: "/finance/attendance", icon: "RiTimeLine" },
       { label: "Leave", href: "/finance/leave", icon: "RiCalendarEventLine" },
       { label: "Reports", href: "/finance/reports", icon: "RiBarChartLine" },
+      { label: "Activity", href: "/finance/activity", icon: "RiPulseLine" },
     ],
   },
   {

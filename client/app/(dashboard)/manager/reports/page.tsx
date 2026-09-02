@@ -1,5 +1,5 @@
-import { ActivityPage } from "@/components/dashboard/activity-page"
+import { ReportsPage } from "@/components/dashboard/reports-page"
 
 export default function Page() {
-  return <ActivityPage />
+  return <ReportsPage />
 }
