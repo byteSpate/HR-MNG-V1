@@ -698,6 +698,12 @@ export interface PersonalIdentity {
   nationalId: string | null
   bloodGroup: string | null
   maritalStatus: string | null
+  /** Present only when a request is PENDING. */
+  nationalIdChangeRequest?: {
+    id: string
+    newValue: string
+    requestedAt: string
+  } | null
 }
 
 export interface ContactDetails {

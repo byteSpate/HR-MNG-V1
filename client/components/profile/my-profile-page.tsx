@@ -1,14 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getMyProfile } from "@/lib/api/employees"
+import { cancelNationalIdChangeRequest, getMyProfile } from "@/lib/api/employees"
 import { useSession } from "@/lib/auth/session-context"
 import type { EmployeeView } from "@/lib/api/types"
 import { AccountProfile } from "@/components/profile/account-profile"
 import { DocumentsCard } from "@/components/profile/documents-card"
 import { EditMyDetailsDialog } from "@/components/profile/edit-my-details-dialog"
+import { NationalIdRequestDialog } from "@/components/profile/national-id-request-dialog"
 import { ProfileCard, formatDateValue } from "@/components/profile/profile-card"
 import { ProfileHeader } from "@/components/profile/profile-header"
 import { SessionsCard } from "@/components/profile/sessions-card"
@@ -106,6 +107,12 @@ function StaffProfile({
   setEditOpen: (open: boolean) => void
 }) {
   const canEdit = employee.editableFields.length > 0
+  const { accessToken } = useSession()
+  const [nationalIdRequestOpen, setNationalIdRequestOpen] = useState(false)
+  const cancelMutation = useMutation({
+    mutationFn: (requestId: string) => cancelNationalIdChangeRequest(accessToken!, requestId),
+    onSuccess: onRefresh,
+  })
 
   return (
     <>
@@ -154,7 +161,38 @@ function StaffProfile({
             rows={[
               { label: "Date of birth", value: formatDateValue(employee.personal.dateOfBirth) },
               { label: "Gender", value: employee.personal.gender },
-              { label: "National ID", value: employee.personal.nationalId },
+              {
+                label: "National ID",
+                value: employee.personal.nationalId,
+                action: employee.personal.nationalIdChangeRequest ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11.5px] text-[#A5AFBE]">
+                      Change to {employee.personal.nationalIdChangeRequest.newValue} pending HR
+                      approval
+                    </span>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-[12px] font-semibold underline"
+                      disabled={cancelMutation.isPending}
+                      onClick={() =>
+                        cancelMutation.mutate(employee.personal!.nationalIdChangeRequest!.id)
+                      }
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    onClick={() => setNationalIdRequestOpen(true)}
+                  >
+                    Request change
+                  </Button>
+                ),
+              },
               { label: "Blood group", value: employee.personal.bloodGroup },
               { label: "Marital status", value: employee.personal.maritalStatus },
             ]}
@@ -265,6 +303,13 @@ function StaffProfile({
         open={editOpen}
         onOpenChange={setEditOpen}
         onSaved={onRefresh}
+      />
+
+      <NationalIdRequestDialog
+        currentValue={employee.personal?.nationalId ?? null}
+        open={nationalIdRequestOpen}
+        onOpenChange={setNationalIdRequestOpen}
+        onRequested={onRefresh}
       />
     </>
   )
