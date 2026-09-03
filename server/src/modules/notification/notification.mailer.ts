@@ -320,6 +320,41 @@ export async function sendAssetRequestDecidedEmail(i: AssetRequestDecidedInput):
   })
 }
 
+export interface NationalIdChangeDecidedInput {
+  to: string
+  requestId: string
+  approved: boolean
+  reason: string | null
+}
+
+export async function sendNationalIdChangeDecidedEmail(
+  i: NationalIdChangeDecidedInput
+): Promise<void> {
+  const kind = "NATIONAL_ID_CHANGE_DECIDED" as const
+  const verb = i.approved ? "approved" : "declined"
+  const subject = `Your national ID change was ${verb}`
+  const body = [
+    `Your requested change to your national ID was ${verb}.`,
+    ...(i.reason ? [``, `Reason: ${i.reason}`] : []),
+  ]
+  await notify({
+    to: i.to,
+    kind,
+    subject,
+    text: sign(body),
+    html: renderEmail({
+      serial: serialFor(kind, i.requestId),
+      subject,
+      stamp: { label: i.approved ? "Approved" : "Declined", tone: i.approved ? "approved" : "declined" },
+      intro: `Your requested change to your national ID was ${verb}.`,
+      prose: i.reason ? [`Reason: ${i.reason}`] : [],
+      footer: noActionFooter,
+    }),
+    entity: "EMPLOYEE_PROFILE",
+    entityId: i.requestId,
+  })
+}
+
 export interface SettlementStatementInput {
   to: string
   settlementId: string

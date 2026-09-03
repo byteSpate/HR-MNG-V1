@@ -44,6 +44,7 @@ export type EventType =
   | "employee.joined"
   | "employee.exited"
   | "employee.bank_changed"
+  | "employee.national_id_change_requested"
   | "user.role_changed"
   | "asset.assigned"
   | "asset.acknowledged"

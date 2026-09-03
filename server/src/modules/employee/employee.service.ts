@@ -174,7 +174,23 @@ export async function getEmployee(
     employee,
     documents.map((d) => d.type)
   )
-  return projectEmployee(employee, tier, documents, blockers)
+  const pendingRequest = await prisma.employeeChangeRequest.findFirst({
+    where: { employeeId: id, field: "NATIONAL_ID", status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+  })
+  return projectEmployee(
+    employee,
+    tier,
+    documents,
+    blockers,
+    pendingRequest
+      ? {
+          id: pendingRequest.id,
+          newValue: pendingRequest.newValue,
+          requestedAt: pendingRequest.createdAt.toISOString(),
+        }
+      : null
+  )
 }
 
 /**
@@ -241,7 +257,26 @@ export async function getMyProfile(viewer: AccessTokenPayload): Promise<MyProfil
     employee,
     documents.map((d) => d.type)
   )
-  return { account, employee: projectEmployee(employee, "SELF", documents, blockers) }
+  const pendingRequest = await prisma.employeeChangeRequest.findFirst({
+    where: { employeeId: employee.id, field: "NATIONAL_ID", status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+  })
+  return {
+    account,
+    employee: projectEmployee(
+      employee,
+      "SELF",
+      documents,
+      blockers,
+      pendingRequest
+        ? {
+            id: pendingRequest.id,
+            newValue: pendingRequest.newValue,
+            requestedAt: pendingRequest.createdAt.toISOString(),
+          }
+        : null
+    ),
+  }
 }
 
 /**

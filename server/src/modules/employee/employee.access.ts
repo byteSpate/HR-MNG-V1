@@ -14,7 +14,7 @@ import { signedAvatarUrl } from "../media/media.service"
 import { isMediaConfigured } from "../media/media.provider"
 import { unpackAvatar } from "./employee.media"
 import type { DocumentItem } from "./employee.media"
-import type { Blocker, EmployeeView } from "./employee.types"
+import type { Blocker, EmployeeView, PendingNationalIdChangeRequest } from "./employee.types"
 
 export type Tier = "SELF" | "FULL" | "FINANCE" | "MANAGER" | "COLLEAGUE"
 
@@ -143,7 +143,8 @@ export function projectEmployee(
   employee: EmployeeWithRelations,
   tier: Tier,
   documents?: DocumentItem[],
-  blockers?: Blocker[]
+  blockers?: Blocker[],
+  pendingNationalIdRequest?: PendingNationalIdChangeRequest | null
 ): EmployeeView {
   const view: EmployeeView = {
     id: employee.id,
@@ -172,6 +173,7 @@ export function projectEmployee(
       nationalId: employee.nationalId,
       bloodGroup: employee.bloodGroup,
       maritalStatus: employee.maritalStatus,
+      nationalIdChangeRequest: pendingNationalIdRequest ?? null,
     }
     view.contact = {
       presentAddress: employee.presentAddress,

@@ -34,12 +34,24 @@ export interface WorkIdentity {
   avatarUrl: string | null
 }
 
+/**
+ * A national-ID change the employee has asked for and HR has not yet
+ * decided. Null when there is no live request — most of the time.
+ */
+export interface PendingNationalIdChangeRequest {
+  id: string
+  newValue: string
+  requestedAt: string
+}
+
 export interface PersonalIdentity {
   dateOfBirth: string | null
   gender: string | null
   nationalId: string | null
   bloodGroup: string | null
   maritalStatus: string | null
+  /** Present only when SELF or FULL asked and a request is PENDING. */
+  nationalIdChangeRequest?: PendingNationalIdChangeRequest | null
 }
 
 export interface ContactDetails {

@@ -14,6 +14,7 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn((fn: any) => fn(txMock)),
     employee: { findMany: vi.fn(), findUnique: vi.fn() },
+    employeeChangeRequest: { findFirst: vi.fn() },
     salaryStructure: { findUnique: vi.fn() },
     document: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
@@ -176,6 +177,34 @@ describe("getEmployee", () => {
     expect(finance.blockers).toBeUndefined()
     expect(finance.documents).toBeUndefined()
   })
+
+  it("carries a pending national ID change request for FULL", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue(dbRow)
+    vi.mocked(prisma.document.findMany).mockResolvedValue([])
+    vi.mocked(prisma.employeeChangeRequest.findFirst).mockResolvedValue({
+      id: "req-1",
+      newValue: "1234567890",
+      createdAt: new Date("2026-09-03T10:00:00.000Z"),
+    } as never)
+
+    const view = await getEmployee(viewerToken("HR_ADMIN"), "emp-1")
+
+    expect(view.personal?.nationalIdChangeRequest).toEqual({
+      id: "req-1",
+      newValue: "1234567890",
+      requestedAt: "2026-09-03T10:00:00.000Z",
+    })
+  })
+
+  it("carries no pending request when there is none", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue(dbRow)
+    vi.mocked(prisma.document.findMany).mockResolvedValue([])
+    vi.mocked(prisma.employeeChangeRequest.findFirst).mockResolvedValue(null)
+
+    const view = await getEmployee(viewerToken("HR_ADMIN"), "emp-1")
+
+    expect(view.personal?.nationalIdChangeRequest).toBeNull()
+  })
 })
 
 describe("getMyProfile", () => {
@@ -194,6 +223,24 @@ describe("getMyProfile", () => {
     const result = await getMyProfile(viewerToken("EMPLOYEE", "u-1"))
     expect(result.employee?.personal).toBeDefined()
     expect(result.employee?.employment?.deviceUserId).toBeUndefined()
+  })
+
+  it("carries a pending national ID change request for SELF", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue(dbRow)
+    vi.mocked(prisma.document.findMany).mockResolvedValue([])
+    vi.mocked(prisma.employeeChangeRequest.findFirst).mockResolvedValue({
+      id: "req-1",
+      newValue: "1234567890",
+      createdAt: new Date("2026-09-03T10:00:00.000Z"),
+    } as never)
+
+    const result = await getMyProfile(viewerToken("EMPLOYEE", "u-1"))
+
+    expect(result.employee?.personal?.nationalIdChangeRequest).toEqual({
+      id: "req-1",
+      newValue: "1234567890",
+      requestedAt: "2026-09-03T10:00:00.000Z",
+    })
   })
 
   describe("the account block", () => {
