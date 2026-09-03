@@ -59,15 +59,19 @@ describe("visibilityTierFor", () => {
 })
 
 describe("writableFieldsFor", () => {
-  it("gives SELF exactly the six self-editable text fields", () => {
+  it("gives SELF exactly the eight self-editable text fields", () => {
     // profilePicture is NOT here: it goes through PATCH /:id/avatar, because
-    // it takes a Cloudinary publicId that must be verified first.
+    // it takes a Cloudinary publicId that must be verified first. nationalId
+    // is NOT here either — that field goes through a request-and-approve
+    // flow (EmployeeChangeRequest), never a direct write, even for SELF.
     //
-    // permanentAddress moved here from HR-only on 2026-09-02: the user
-    // decided it changes directly, with no document proof required.
+    // permanentAddress moved here on 2026-09-02; dateOfBirth and gender
+    // moved here on 2026-09-03. All three were originally HR-only.
     expect([...writableFieldsFor("SELF")].sort()).toEqual([
       "bloodGroup",
+      "dateOfBirth",
       "emergencyContact",
+      "gender",
       "maritalStatus",
       "permanentAddress",
       "phone",
@@ -296,7 +300,9 @@ describe("projectEmployee", () => {
   it("carries editableFields so the client renders controls without knowing a rule", () => {
     expect(projectEmployee(row, "SELF").editableFields.sort()).toEqual([
       "bloodGroup",
+      "dateOfBirth",
       "emergencyContact",
+      "gender",
       "maritalStatus",
       "permanentAddress",
       "phone",

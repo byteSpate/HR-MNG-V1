@@ -25,10 +25,17 @@ import {
 } from "./employee.service"
 import { updateEmployee } from "./employee.update"
 import { getEmployeeInsights } from "./employee.insights"
+import {
+  cancelNationalIdChangeRequest,
+  decideNationalIdChangeRequest,
+  requestNationalIdChange,
+} from "./employee.changerequest"
 import { visibilityTierFor } from "./employee.access"
 import {
   createStaffAccountSchema,
+  decideNationalIdChangeSchema,
   documentTypeSchema,
+  requestNationalIdChangeSchema,
   setAccountActiveSchema,
   setSalaryStructureSchema,
   updateEmployeeSchema,
@@ -289,6 +296,60 @@ export async function changeEmployeeEmailHandler(
   try {
     const { newEmail } = emailChangeRequestBody.parse(req.body)
     return res.status(200).json(await changeEmployeeEmail(req.params.id, newEmail, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function requestNationalIdChangeHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { newValue } = requestNationalIdChangeSchema.parse(req.body)
+    const requestRow = await requestNationalIdChange(req.user!, newValue)
+    return res.status(201).json(requestRow)
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function cancelNationalIdChangeHandler(
+  req: RequestWithId,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const requestRow = await cancelNationalIdChangeRequest(req.user!, req.params.id)
+    return res.status(200).json(requestRow)
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function approveNationalIdChangeHandler(
+  req: RequestWithId,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const requestRow = await decideNationalIdChangeRequest(req.user!, req.params.id, "APPROVE")
+    return res.status(200).json(requestRow)
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function rejectNationalIdChangeHandler(
+  req: RequestWithId,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { note } = decideNationalIdChangeSchema.parse(req.body)
+    const requestRow = await decideNationalIdChangeRequest(req.user!, req.params.id, "REJECT", note)
+    return res.status(200).json(requestRow)
   } catch (err) {
     return next(err)
   }

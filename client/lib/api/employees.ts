@@ -191,3 +191,46 @@ export function changeEmployeeEmail(
     { method: "PATCH", accessToken, body: JSON.stringify({ newEmail }) }
   )
 }
+
+export function requestNationalIdChange(
+  accessToken: string,
+  newValue: string
+): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>("/api/employees/national-id-requests", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify({ newValue }),
+  })
+}
+
+export function cancelNationalIdChangeRequest(
+  accessToken: string,
+  requestId: string
+): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/api/employees/national-id-requests/${requestId}/cancel`, {
+    method: "PATCH",
+    accessToken,
+  })
+}
+
+export function approveNationalIdChangeRequest(
+  accessToken: string,
+  requestId: string
+): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/api/employees/national-id-requests/${requestId}/approve`, {
+    method: "PATCH",
+    accessToken,
+  })
+}
+
+export function rejectNationalIdChangeRequest(
+  accessToken: string,
+  requestId: string,
+  note: string
+): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/api/employees/national-id-requests/${requestId}/reject`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify({ note }),
+  })
+}

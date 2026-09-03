@@ -75,6 +75,36 @@ export function employeeBankChangedEvent(args: BankChangedArgs): EventInput {
   }
 }
 
+interface NationalIdChangeRequestedArgs {
+  employeeId: string
+  fullName: string
+  requestId: string
+  actorUserId: string
+}
+
+/**
+ * Mirrors employeeBankChangedEvent exactly: a self-service edit HR needs to
+ * see without going looking for it, this time because it needs a decision
+ * rather than merely being noteworthy.
+ */
+export function employeeNationalIdChangeRequestedEvent(
+  args: NationalIdChangeRequestedArgs
+): EventInput {
+  return {
+    type: "employee.national_id_change_requested",
+    severity: "WARNING",
+    actorUserId: args.actorUserId,
+    entity: "EMPLOYEE",
+    entityId: args.employeeId,
+    subjectEmployeeId: args.employeeId,
+    targetRoles: ["HR_ADMIN", "SUPER_ADMIN"],
+    title: `${args.fullName} requested a national ID change`,
+    meta: "Awaiting HR decision",
+    href: "/employees",
+    payload: { requestId: args.requestId },
+  }
+}
+
 export function employeeExitedEvent(args: ExitedArgs): EventInput {
   return {
     type: "employee.exited",

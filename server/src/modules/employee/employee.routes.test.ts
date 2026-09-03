@@ -35,12 +35,19 @@ vi.mock("./employee.insights", () => ({
   getEmployeeInsights: vi.fn(),
 }))
 
+vi.mock("./employee.changerequest", () => ({
+  requestNationalIdChange: vi.fn(),
+  cancelNationalIdChangeRequest: vi.fn(),
+  decideNationalIdChangeRequest: vi.fn(),
+}))
+
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as employeeService from "./employee.service"
 import * as employeeMedia from "./employee.media"
 import * as employeeUpdate from "./employee.update"
 import * as insights from "./employee.insights"
+import * as changerequest from "./employee.changerequest"
 import prismaForRoutes from "../../config/prisma"
 
 function tokenFor(role: "HR_ADMIN" | "EMPLOYEE" | "FINANCE_OFFICER" | "SUPER_ADMIN", sub = "actor-1") {
@@ -504,5 +511,83 @@ describe("PATCH /api/employees/:id/account", () => {
     const res = await request(app).patch("/api/employees/emp-1/account").send({ isActive: false })
 
     expect(res.status).toBe(401)
+  })
+})
+
+describe("POST /api/employees/national-id-requests", () => {
+  it("201s for an employee", async () => {
+    vi.mocked(changerequest.requestNationalIdChange).mockResolvedValue({ id: "req-1" } as never)
+    const res = await request(app)
+      .post("/api/employees/national-id-requests")
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+      .send({ newValue: "1234567890" })
+    expect(res.status).toBe(201)
+  })
+
+  it("400s an empty value", async () => {
+    const res = await request(app)
+      .post("/api/employees/national-id-requests")
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+      .send({ newValue: "" })
+    expect(res.status).toBe(400)
+  })
+
+  it("401s without a token", async () => {
+    const res = await request(app)
+      .post("/api/employees/national-id-requests")
+      .send({ newValue: "1234567890" })
+    expect(res.status).toBe(401)
+  })
+})
+
+describe("PATCH /api/employees/national-id-requests/:id/cancel", () => {
+  it("200s for the requester", async () => {
+    vi.mocked(changerequest.cancelNationalIdChangeRequest).mockResolvedValue({
+      id: "req-1",
+    } as never)
+    const res = await request(app)
+      .patch("/api/employees/national-id-requests/req-1/cancel")
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(200)
+  })
+})
+
+describe("PATCH /api/employees/national-id-requests/:id/approve", () => {
+  it.each(["HR_ADMIN", "SUPER_ADMIN"] as const)("200s for %s", async (role) => {
+    vi.mocked(changerequest.decideNationalIdChangeRequest).mockResolvedValue({
+      id: "req-1",
+    } as never)
+    const res = await request(app)
+      .patch("/api/employees/national-id-requests/req-1/approve")
+      .set("Authorization", `Bearer ${tokenFor(role)}`)
+    expect(res.status).toBe(200)
+  })
+
+  it.each(["EMPLOYEE", "FINANCE_OFFICER"] as const)("403s %s", async (role) => {
+    const res = await request(app)
+      .patch("/api/employees/national-id-requests/req-1/approve")
+      .set("Authorization", `Bearer ${tokenFor(role)}`)
+    expect(res.status).toBe(403)
+  })
+})
+
+describe("PATCH /api/employees/national-id-requests/:id/reject", () => {
+  it("200s for HR with a note", async () => {
+    vi.mocked(changerequest.decideNationalIdChangeRequest).mockResolvedValue({
+      id: "req-1",
+    } as never)
+    const res = await request(app)
+      .patch("/api/employees/national-id-requests/req-1/reject")
+      .set("Authorization", `Bearer ${tokenFor("HR_ADMIN")}`)
+      .send({ note: "Does not match the document on file" })
+    expect(res.status).toBe(200)
+  })
+
+  it("403s an employee", async () => {
+    const res = await request(app)
+      .patch("/api/employees/national-id-requests/req-1/reject")
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+      .send({ note: "Does not match" })
+    expect(res.status).toBe(403)
   })
 })

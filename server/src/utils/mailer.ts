@@ -42,6 +42,7 @@ export type DispatchKind =
   | "EXPENSE_REJECTED"
   | "PAYROLL_SUBMITTED"
   | "ASSET_REQUEST_DECIDED"
+  | "NATIONAL_ID_CHANGE_DECIDED"
   | "SETTLEMENT_STATEMENT"
 
 export interface MailAttachment {

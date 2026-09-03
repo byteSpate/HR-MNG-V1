@@ -14,7 +14,7 @@ import { signedAvatarUrl } from "../media/media.service"
 import { isMediaConfigured } from "../media/media.provider"
 import { unpackAvatar } from "./employee.media"
 import type { DocumentItem } from "./employee.media"
-import type { Blocker, EmployeeView } from "./employee.types"
+import type { Blocker, EmployeeView, PendingNationalIdChangeRequest } from "./employee.types"
 
 export type Tier = "SELF" | "FULL" | "FINANCE" | "MANAGER" | "COLLEAGUE"
 
@@ -53,12 +53,15 @@ export function visibilityTierFor(
 /**
  * The facts the employee is the authority on.
  *
- * `permanentAddress` moved here from HR-only on 2026-09-02. It was originally
- * excluded because it is the legal address of record and appears on the
- * employment contract, which argued for changing it only with document proof
- * through HR — but the user decided it changes directly instead, the same as
- * `presentAddress`. Nothing downstream treats it as contract data: it is
- * neither read by payroll nor posted to accounting.
+ * `permanentAddress` moved here from HR-only on 2026-09-02, and
+ * `dateOfBirth`/`gender` moved here on 2026-09-03 — all three were
+ * originally excluded on document-proof reasoning that the user decided
+ * did not need to apply.
+ *
+ * `nationalId` is deliberately still absent, and unlike the other three it
+ * never moves here: it goes through `EmployeeChangeRequest` instead, a
+ * request an employee submits and HR decides. See
+ * `employee.changerequest.ts`.
  *
  * Bank fields are absent. Self-service bank editing is the classic
  * payroll-diversion vector — a compromised login redirects that person's
@@ -69,6 +72,8 @@ export const SELF_EDITABLE_FIELDS = [
   "phone",
   "presentAddress",
   "permanentAddress",
+  "dateOfBirth",
+  "gender",
   "emergencyContact",
   "maritalStatus",
   "bloodGroup",
@@ -76,8 +81,6 @@ export const SELF_EDITABLE_FIELDS = [
 
 export const HR_ONLY_EDITABLE_FIELDS = [
   "fullName",
-  "dateOfBirth",
-  "gender",
   "nationalId",
   "designation",
   "departmentId",
@@ -140,7 +143,8 @@ export function projectEmployee(
   employee: EmployeeWithRelations,
   tier: Tier,
   documents?: DocumentItem[],
-  blockers?: Blocker[]
+  blockers?: Blocker[],
+  pendingNationalIdRequest?: PendingNationalIdChangeRequest | null
 ): EmployeeView {
   const view: EmployeeView = {
     id: employee.id,
@@ -169,6 +173,7 @@ export function projectEmployee(
       nationalId: employee.nationalId,
       bloodGroup: employee.bloodGroup,
       maritalStatus: employee.maritalStatus,
+      nationalIdChangeRequest: pendingNationalIdRequest ?? null,
     }
     view.contact = {
       presentAddress: employee.presentAddress,

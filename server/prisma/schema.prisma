@@ -211,7 +211,61 @@ model Employee {
   assetRequests    AssetRequest[]
   assetRecoveries  AssetRecovery[]
 
-  journalLines JournalLine[]
+  journalLines    JournalLine[]
+  changeRequests  EmployeeChangeRequest[]
+}
+
+enum EmployeeChangeField {
+  // The only field this goes through today. A second value is a normal
+  // migration when a second field needs the same treatment — see the doc
+  // comment on EmployeeChangeRequest for why this is a closed enum rather
+  // than a free String.
+  NATIONAL_ID
+}
+
+enum EmployeeChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+/// A change to a field the employee is not trusted to write directly,
+/// submitted by them and decided by HR — the same shape AssetRequest
+/// already uses for "employee asks, HR decides", not EmailChangeRequest's
+/// shape, which is self-service verified by two mailed tokens with no human
+/// decision at all.
+///
+/// At most one PENDING row per (employeeId, field): a new submission
+/// supersedes — cancels — whatever was PENDING before it, rather than
+/// queueing. Enforced in the service, not the schema, the same way
+/// AssetRequest enforces "one open repair per asset" in code rather than a
+/// constraint.
+model EmployeeChangeRequest {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  field EmployeeChangeField
+
+  /// The value at submission time, frozen — not re-read later. If HR looks
+  /// at this a week on, "changed from X to Y" should describe what the
+  /// employee saw when they asked, not whatever the field has drifted to
+  /// since via some other path.
+  oldValue String?
+  newValue String
+
+  status EmployeeChangeStatus @default(PENDING)
+
+  decidedBy    String?
+  decidedAt    DateTime?
+  /// Required on REJECTED, enforced in the service — matching leave and
+  /// expense rejections, which both require a note for the same reason.
+  decisionNote String?
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId, field, status])
 }
 
 enum ExitReason {
