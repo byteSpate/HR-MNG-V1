@@ -4,7 +4,14 @@ import { useState } from "react"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getEmployee, setAccountActive, setSalaryStructure, updateEmployee } from "@/lib/api/employees"
+import {
+  approveNationalIdChangeRequest,
+  getEmployee,
+  rejectNationalIdChangeRequest,
+  setAccountActive,
+  setSalaryStructure,
+  updateEmployee,
+} from "@/lib/api/employees"
 import { listSalaryStructures } from "@/lib/api/payroll"
 import { listShifts } from "@/lib/api/shifts"
 import { ApiError } from "@/lib/api/client"
@@ -20,6 +27,7 @@ import {
 import { EditNameDialog } from "@/components/profile/edit-name-dialog"
 import { HrChangeEmailDialog } from "@/components/profile/hr-change-email-dialog"
 import { ExitDetailsDialog } from "@/components/profile/exit-details-dialog"
+import { NationalIdRejectDialog } from "@/components/profile/national-id-reject-dialog"
 import { DocumentsCard } from "@/components/profile/documents-card"
 import { LeaveBalanceCard } from "@/components/profile/leave-balance-card"
 import { HoldingsCard } from "@/components/asset/holdings-card"
@@ -88,6 +96,20 @@ export function EmployeeDetailPage({
     queryClient.invalidateQueries({ queryKey: ["employee", employeeId] })
     queryClient.invalidateQueries({ queryKey: ["employees"] })
   }
+
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const approveNationalIdMutation = useMutation({
+    mutationFn: (requestId: string) => approveNationalIdChangeRequest(accessToken!, requestId),
+    onSuccess: refresh,
+  })
+  const rejectNationalIdMutation = useMutation({
+    mutationFn: (vars: { requestId: string; note: string }) =>
+      rejectNationalIdChangeRequest(accessToken!, vars.requestId, vars.note),
+    onSuccess: () => {
+      setRejectOpen(false)
+      refresh()
+    },
+  })
 
   // `employeeId` rather than `employee.id`: this mutation is declared
   // unconditionally, before the loading/error early returns below, so the
@@ -281,7 +303,38 @@ export function EmployeeDetailPage({
             rows={[
               { label: "Date of birth", value: formatDateValue(employee.personal.dateOfBirth) },
               { label: "Gender", value: employee.personal.gender },
-              { label: "National ID", value: employee.personal.nationalId },
+              {
+                label: "National ID",
+                value: employee.personal.nationalId,
+                action: employee.personal.nationalIdChangeRequest ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11.5px] text-[#A5AFBE]">
+                      Change to {employee.personal.nationalIdChangeRequest.newValue} pending
+                    </span>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-[12px] font-semibold underline"
+                      disabled={approveNationalIdMutation.isPending}
+                      onClick={() =>
+                        approveNationalIdMutation.mutate(
+                          employee.personal!.nationalIdChangeRequest!.id
+                        )
+                      }
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-[12px] font-semibold text-[#B03A3A] underline"
+                      onClick={() => setRejectOpen(true)}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                ) : undefined,
+              },
               { label: "Blood group", value: employee.personal.bloodGroup },
               { label: "Marital status", value: employee.personal.maritalStatus },
             ]}
@@ -530,6 +583,20 @@ export function EmployeeDetailPage({
         open={exitOpen}
         onOpenChange={setExitOpen}
         onSaved={refresh}
+      />
+
+      <NationalIdRejectDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        pending={rejectNationalIdMutation.isPending}
+        error={rejectNationalIdMutation.error instanceof Error ? rejectNationalIdMutation.error.message : null}
+        onConfirm={(note) =>
+          employee.personal?.nationalIdChangeRequest &&
+          rejectNationalIdMutation.mutate({
+            requestId: employee.personal.nationalIdChangeRequest.id,
+            note,
+          })
+        }
       />
 
       <SalaryStructureDialog
