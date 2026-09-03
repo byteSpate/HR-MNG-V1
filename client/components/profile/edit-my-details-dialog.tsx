@@ -13,18 +13,27 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 /**
- * The six self-editable text fields, in the order they are shown.
+ * The eight self-editable fields, in the order they are shown — all text
+ * except `dateOfBirth`, which is a date.
  *
- * `permanentAddress` joined this list on 2026-09-02 — it used to change only
- * through HR with document proof, until the user decided it should change
- * directly, the same as `presentAddress`.
+ * `permanentAddress` joined this list on 2026-09-02; `dateOfBirth` and
+ * `gender` joined on 2026-09-03. All three used to change only through HR,
+ * until the user decided they should change directly, the same as
+ * `presentAddress`.
  *
- * `profilePicture` is a seventh self-editable field and is deliberately
+ * `nationalId` is deliberately absent: it does not belong in this dialog at
+ * all, because it does not write immediately. It has its own row-level
+ * "Request change" control on the profile page instead, going through
+ * `EmployeeChangeRequest` and HR approval — see `national-id-request-dialog.tsx`.
+ *
+ * `profilePicture` is a ninth self-editable field and is deliberately
  * absent: it takes a file rather than a value and posts to a different
  * endpoint, so it lives on the avatar in the header.
  */
 const FIELDS = [
   { key: "phone", label: "Phone", hint: "Visible to colleagues in the staff directory" },
+  { key: "dateOfBirth", label: "Date of birth", kind: "date" },
+  { key: "gender", label: "Gender" },
   { key: "presentAddress", label: "Present address" },
   { key: "permanentAddress", label: "Permanent address" },
   { key: "emergencyContact", label: "Emergency contact" },
@@ -37,6 +46,8 @@ type FieldKey = (typeof FIELDS)[number]["key"]
 function initialValues(employee: EmployeeView): Record<FieldKey, string> {
   return {
     phone: employee.work.phone ?? "",
+    dateOfBirth: employee.personal?.dateOfBirth ?? "",
+    gender: employee.personal?.gender ?? "",
     presentAddress: employee.contact?.presentAddress ?? "",
     permanentAddress: employee.contact?.permanentAddress ?? "",
     emergencyContact: employee.contact?.emergencyContact ?? "",
@@ -108,6 +119,7 @@ function EditForm({
             </Label>
             <Input
               id={field.key}
+              type={"kind" in field && field.kind === "date" ? "date" : "text"}
               value={values[field.key]}
               onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
             />

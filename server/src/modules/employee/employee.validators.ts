@@ -72,19 +72,21 @@ export const updateEmployeeSchema = z
     // Self-editable
     phone: nullableText(32),
     presentAddress: nullableText(500),
-    emergencyContact: nullableText(300),
-    maritalStatus: nullableText(40),
-    bloodGroup: nullableText(10),
-    // HR-only
-    fullName: z.string().trim().min(1).max(200).optional(),
+    permanentAddress: nullableText(500),
     dateOfBirth: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a YYYY-MM-DD date")
       .nullable()
       .optional(),
     gender: nullableText(40),
+    emergencyContact: nullableText(300),
+    maritalStatus: nullableText(40),
+    bloodGroup: nullableText(10),
+    // HR-only. nationalId never becomes self-editable — it goes through
+    // EmployeeChangeRequest instead, so this same rule shape (min 1, max 50)
+    // is reused there rather than exposed via this schema for SELF.
+    fullName: z.string().trim().min(1).max(200).optional(),
     nationalId: nullableText(50),
-    permanentAddress: nullableText(500),
     designation: z.string().trim().min(1).max(200).optional(),
     departmentId: z.string().min(1).optional(),
     reportingManagerId: z.string().min(1).nullable().optional(),

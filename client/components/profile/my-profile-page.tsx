@@ -150,7 +150,7 @@ function StaffProfile({
         {employee.personal ? (
           <ProfileCard
             title="Personal"
-            lockedHint="Date of birth, gender and national ID are maintained by HR."
+            lockedHint="National ID changes need HR approval before they take effect."
             rows={[
               { label: "Date of birth", value: formatDateValue(employee.personal.dateOfBirth) },
               { label: "Gender", value: employee.personal.gender },

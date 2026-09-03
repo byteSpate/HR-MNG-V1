@@ -92,9 +92,9 @@ describe("updateEmployee authorisation", () => {
     await expect(
       updateEmployee(viewer("EMPLOYEE", "u-1"), "emp-1", {
         nationalId: "1",
-        dateOfBirth: "2000-01-01",
+        fullName: "New Name",
       })
-    ).rejects.toThrowError("You cannot change: nationalId, dateOfBirth")
+    ).rejects.toThrowError("You cannot change: nationalId, fullName")
   })
 
   it("refuses FINANCE any write at all", async () => {
