@@ -5,6 +5,8 @@ import { requireRole } from "../../middleware/requireRole"
 import { Role } from "../../generated/prisma/client"
 import { avatarUpload, documentUpload } from "../media/media.upload"
 import {
+  approveNationalIdChangeHandler,
+  cancelNationalIdChangeHandler,
   clearAvatarHandler,
   createStaffAccountHandler,
   deleteDocumentHandler,
@@ -14,6 +16,8 @@ import {
   getMyProfileHandler,
   listDocumentsHandler,
   listEmployeesHandler,
+  rejectNationalIdChangeHandler,
+  requestNationalIdChangeHandler,
   setAccountActiveHandler,
   setExitDetailsHandler,
   setSalaryStructureHandler,
@@ -32,6 +36,26 @@ router.get("/", requireAuth, listEmployeesHandler)
 
 // BEFORE "/:id", or Express matches :id = "me".
 router.get("/me", requireAuth, getMyProfileHandler)
+
+// BEFORE "/:id" for the same reason — Express would otherwise try to match
+// "national-id-requests" as an employee id. No `requireRole` on POST or
+// cancel: eligibility is "has an employee profile" / "owns the request",
+// both enforced inside the service, same reasoning as "/me" above.
+router.post("/national-id-requests", requireAuth, requestNationalIdChangeHandler)
+router.patch("/national-id-requests/:id/cancel", requireAuth, cancelNationalIdChangeHandler)
+router.patch(
+  "/national-id-requests/:id/approve",
+  requireAuth,
+  requireRole(Role.SUPER_ADMIN, Role.HR_ADMIN),
+  approveNationalIdChangeHandler
+)
+router.patch(
+  "/national-id-requests/:id/reject",
+  requireAuth,
+  requireRole(Role.SUPER_ADMIN, Role.HR_ADMIN),
+  rejectNationalIdChangeHandler
+)
+
 router.get("/:id", requireAuth, getEmployeeHandler)
 
 // No `requireRole`: the permitted field set depends on the relationship

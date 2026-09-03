@@ -114,3 +114,11 @@ export const setAccountActiveSchema = z.object({
 })
 
 export type SetAccountActiveBody = z.infer<typeof setAccountActiveSchema>
+
+export const requestNationalIdChangeSchema = z.object({
+  newValue: z.string().trim().min(1).max(50),
+})
+
+export const decideNationalIdChangeSchema = z.object({
+  note: z.string().trim().min(1).max(500).optional(),
+})
