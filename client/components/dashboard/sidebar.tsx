@@ -1,9 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { RiLoader4Line, RiLogoutBoxRLine } from "@remixicon/react"
+import { RiArrowRightSLine, RiLoader4Line, RiLogoutBoxRLine } from "@remixicon/react"
 
 import { cn } from "@/lib/utils"
 import { BrandLogo } from "@/components/brand/brand"
@@ -26,9 +27,161 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import type { NavGroup } from "@/components/dashboard/types"
+import type { NavGroup, NavItem } from "@/components/dashboard/types"
+
+/** Shared so a parent row and a leaf row are the same control at a glance. */
+function itemClasses(active: boolean) {
+  return cn(
+    "h-auto rounded px-3 py-2 text-[13px] transition-colors hover:bg-white/10 hover:text-white active:bg-white/10 active:text-white",
+    active
+      ? "bg-white/15 font-bold text-white data-active:bg-white/15 data-active:font-bold data-active:text-white"
+      : "font-medium text-white/68"
+  )
+}
+
+function NavBadge({ count }: { count?: number }) {
+  if (!count) return null
+  return (
+    <span className="grid h-[17px] min-w-[18px] place-items-center rounded bg-[#B6BDC6] px-1 text-[10px] font-extrabold text-[#101214]">
+      {count}
+    </span>
+  )
+}
+
+function NavLeaf({
+  item,
+  active,
+  badge,
+  onNavigate,
+}: {
+  item: NavItem
+  active: boolean
+  badge?: number
+  onNavigate: () => void
+}) {
+  const Icon = icons[item.icon]
+  return (
+    <SidebarMenuItem>
+      {/* base-nova is Base UI under the hood: composition is the `render`
+          prop, not `asChild`. */}
+      <SidebarMenuButton
+        render={<Link href={item.href} />}
+        isActive={active}
+        onClick={onNavigate}
+        className={itemClasses(active)}
+      >
+        <Icon className={cn("size-[17px] shrink-0", active ? "opacity-100" : "opacity-75")} />
+        <span className="flex-1">{item.label}</span>
+        <NavBadge count={badge} />
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+/**
+ * An item that holds several pages, each with its own route.
+ *
+ * The parent expands rather than navigating: giving it a page of its own
+ * would mean writing an overview that exists only to hold links. Its `href`
+ * is used for the React key and nothing else.
+ *
+ * Nothing is persisted. One remembered accordion is not worth a storage key
+ * that can come back empty and render a nav that looks broken.
+ */
+function NavParent({
+  item,
+  pathname,
+  badges,
+  onNavigate,
+}: {
+  item: NavItem
+  pathname: string
+  badges: Record<string, number>
+  onNavigate: () => void
+}) {
+  const children = item.children ?? []
+  const holdsCurrent = children.some(
+    (child) => pathname === child.href || pathname.startsWith(`${child.href}/`)
+  )
+  const [open, setOpen] = useState(holdsCurrent)
+  const [routeWasInside, setRouteWasInside] = useState(holdsCurrent)
+
+  // Navigating into the group opens it. Deliberately one-way: it never
+  // force-closes a group the reader opened on purpose.
+  //
+  // React's documented "adjusting state when a prop changes" — a setState
+  // during render, which React applies before it commits. An effect here
+  // would render the group closed and then immediately re-render it open,
+  // which is both a flicker and what `react-hooks/set-state-in-effect`
+  // exists to stop.
+  if (holdsCurrent !== routeWasInside) {
+    setRouteWasInside(holdsCurrent)
+    if (holdsCurrent) setOpen(true)
+  }
+
+  const Icon = icons[item.icon]
+  const panelId = `nav-${item.href.replace(/\W+/g, "-")}`
+  // Counted from the same payload the children read. Two sources drift, and
+  // a parent badge that disagrees with its children is the exact defect the
+  // no-literals rule exists to prevent.
+  const total = children.reduce((sum, child) => sum + (badges[child.href] ?? 0), 0)
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        onClick={() => setOpen((wasOpen) => !wasOpen)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className={itemClasses(holdsCurrent)}
+      >
+        <Icon className={cn("size-[17px] shrink-0", holdsCurrent ? "opacity-100" : "opacity-75")} />
+        <span className="flex-1 text-left">{item.label}</span>
+        <NavBadge count={total} />
+        <RiArrowRightSLine
+          className={cn(
+            "size-4 shrink-0 opacity-60 transition-transform duration-150 ease-out-quint motion-reduce:transition-none",
+            open && "rotate-90"
+          )}
+          aria-hidden="true"
+        />
+      </SidebarMenuButton>
+
+      {open ? (
+        <SidebarMenuSub
+          id={panelId}
+          className="animate-in fade-in slide-in-from-top-1 mx-0 border-white/12 pl-3 duration-200 motion-reduce:animate-none"
+        >
+          {children.map((child) => {
+            const active = pathname === child.href
+            return (
+              <SidebarMenuSubItem key={child.href}>
+                <SidebarMenuSubButton
+                  render={<Link href={child.href} />}
+                  isActive={active}
+                  onClick={onNavigate}
+                  className={cn(
+                    "h-auto rounded px-2.5 py-1.5 text-[12.5px] transition-colors hover:bg-white/10 hover:text-white active:bg-white/10 active:text-white",
+                    active
+                      ? "bg-white/12 font-bold text-white data-active:bg-white/12 data-active:font-bold data-active:text-white"
+                      : "font-medium text-white/60"
+                  )}
+                >
+                  <span className="flex-1">{child.label}</span>
+                  <NavBadge count={badges[child.href]} />
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            )
+          })}
+        </SidebarMenuSub>
+      ) : null}
+    </SidebarMenuItem>
+  )
+}
 
 export function Sidebar({
   navGroups,
@@ -79,39 +232,29 @@ export function Sidebar({
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="gap-0.5">
-                  {group.items.map((item) => {
-                    const active =
-                      item.href === rootHref ? pathname === item.href : pathname.startsWith(item.href)
-                    const Icon = icons[item.icon]
-                    const badge = badges[item.href]
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        {/* base-nova is Base UI under the hood: composition is
-                            the `render` prop, not `asChild`. */}
-                        <SidebarMenuButton
-                          render={<Link href={item.href} />}
-                          isActive={active}
-                          onClick={() => setOpenMobile(false)}
-                          className={cn(
-                            "h-auto rounded px-3 py-2 text-[13px] transition-colors hover:bg-white/10 hover:text-white active:bg-white/10 active:text-white",
-                            active
-                              ? "bg-white/15 font-bold text-white data-active:bg-white/15 data-active:font-bold data-active:text-white"
-                              : "font-medium text-white/68"
-                          )}
-                        >
-                          <Icon
-                            className={cn("size-[17px] shrink-0", active ? "opacity-100" : "opacity-75")}
-                          />
-                          <span className="flex-1">{item.label}</span>
-                          {badge ? (
-                            <span className="grid h-[17px] min-w-[18px] place-items-center rounded bg-[#B6BDC6] px-1 text-[10px] font-extrabold text-[#101214]">
-                              {badge}
-                            </span>
-                          ) : null}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                  {group.items.map((item) =>
+                    item.children?.length ? (
+                      <NavParent
+                        key={item.href}
+                        item={item}
+                        pathname={pathname}
+                        badges={badges}
+                        onNavigate={() => setOpenMobile(false)}
+                      />
+                    ) : (
+                      <NavLeaf
+                        key={item.href}
+                        item={item}
+                        active={
+                          item.href === rootHref
+                            ? pathname === item.href
+                            : pathname.startsWith(item.href)
+                        }
+                        badge={badges[item.href]}
+                        onNavigate={() => setOpenMobile(false)}
+                      />
                     )
-                  })}
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
