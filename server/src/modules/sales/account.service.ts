@@ -5,6 +5,7 @@ import { emitEvent } from "../event/event.emit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { CreateSalesAccountBody } from "./sales.validators"
 import type { SalesAccountSummary } from "./sales.types"
+import { accountScopeFor, employeeIdFor } from "./sales.access"
 
 /**
  * One sentence, used by both paths that can find a clash — the check inside
@@ -137,4 +138,63 @@ export async function createSalesAccount(
     }
     throw err
   }
+}
+
+/** Shared so the list and the detail page cannot describe an account differently. */
+const SUMMARY_INCLUDE = {
+  owner: { select: { fullName: true } },
+  _count: { select: { assignments: true } },
+} as const
+
+type AccountRow = {
+  id: string
+  name: string
+  status: SalesAccountSummary["status"]
+  ownerEmployeeId: string
+  createdAt: Date
+  owner: { fullName: string }
+  _count: { assignments: number }
+}
+
+function toSummary(account: AccountRow): SalesAccountSummary {
+  return {
+    id: account.id,
+    name: account.name,
+    status: account.status,
+    ownerEmployeeId: account.ownerEmployeeId,
+    ownerName: account.owner.fullName,
+    assigneeCount: account._count.assignments,
+    createdAt: account.createdAt.toISOString(),
+  }
+}
+
+export async function listSalesAccounts(
+  actor: AccessTokenPayload
+): Promise<SalesAccountSummary[]> {
+  const employeeId = await employeeIdFor(actor)
+  const accounts = await prisma.salesAccount.findMany({
+    where: accountScopeFor(actor, employeeId),
+    orderBy: { name: "asc" },
+    include: SUMMARY_INCLUDE,
+  })
+  return accounts.map(toSummary)
+}
+
+export async function getSalesAccount(
+  id: string,
+  actor: AccessTokenPayload
+): Promise<SalesAccountSummary> {
+  const employeeId = await employeeIdFor(actor)
+  // The scope is part of the lookup rather than a check after it, so there is
+  // no branch where a caller reads a row they may not see.
+  const account = await prisma.salesAccount.findFirst({
+    where: { AND: [{ id }, accountScopeFor(actor, employeeId)] },
+    include: SUMMARY_INCLUDE,
+  })
+  // 404 and not 403: a 403 would confirm that an account exists to somebody
+  // who is not allowed to know that it does.
+  if (!account) {
+    throw new AppError(404, "That Sales Account does not exist, or is not yours")
+  }
+  return toSummary(account)
 }

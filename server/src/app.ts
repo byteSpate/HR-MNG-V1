@@ -16,6 +16,7 @@ import userRoutes from "./modules/auth/user.routes"
 import costRoutes from "./modules/cost/cost.routes"
 import dashboardRoutes from "./modules/dashboard/dashboard.routes"
 import notificationRoutes from "./modules/notification/notification.routes"
+import salesRoutes from "./modules/sales/sales.routes"
 import departmentRoutes from "./modules/department/department.routes"
 import eventRoutes from "./modules/event/event.routes"
 import expenseRoutes from "./modules/expense/expense.routes"
@@ -73,6 +74,7 @@ app.use("/api/posting-rules", postingRoutes)
 app.use("/api/events", eventRoutes)
 app.use("/api/dashboard", dashboardRoutes)
 app.use("/api/emails", notificationRoutes)
+app.use("/api/sales", salesRoutes)
 
 app.use(errorHandler)
 
