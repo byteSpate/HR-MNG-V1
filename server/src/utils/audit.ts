@@ -31,6 +31,12 @@ export type AuditEntity =
   // else's behalf. Separate from EMPLOYEE_PROFILE because login addresses and
   // authorization grants belong to the account, not the person's HR record.
   | "USER_ACCOUNT"
+  // Sales Hub. USER_ACCOUNT already covers granting and revoking salesRole,
+  // so it is not repeated here.
+  | "SALES_ACCOUNT"
+  | "SALES_ACCOUNT_ASSIGNMENT"
+  | "SALES_CONTACT"
+  | "SALES_COMMUNICATION"
   | "ASSET"
   | "ASSET_CATEGORY"
   | "ASSET_ASSIGNMENT"
