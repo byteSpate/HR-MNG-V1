@@ -27,10 +27,9 @@ export type AuditEntity =
   | "EMPLOYEE_SALARY_STRUCTURE"
   | "EMPLOYEE_DOCUMENT"
   | "EMPLOYEE_PROFILE"
-  // The sign-in identity itself, changed by HR on somebody else's behalf.
-  // Separate from EMPLOYEE_PROFILE because the address is not a profile field:
-  // it is what the account logs in with and where password resets go, so a
-  // change to it is worth finding on its own.
+  // The sign-in identity and its capabilities, changed by HR on somebody
+  // else's behalf. Separate from EMPLOYEE_PROFILE because login addresses and
+  // authorization grants belong to the account, not the person's HR record.
   | "USER_ACCOUNT"
   | "ASSET"
   | "ASSET_CATEGORY"

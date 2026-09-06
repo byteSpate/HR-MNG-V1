@@ -124,6 +124,7 @@ describe("setSalesRole", () => {
       }),
     })
     expect(result).toEqual({ salesRole: "SALES_USER" })
+    expect(revokeAllUserTokens).not.toHaveBeenCalled()
   })
 
   it("revokes access with null and audits the removal", async () => {
@@ -143,6 +144,34 @@ describe("setSalesRole", () => {
       }),
     })
     expect(result).toEqual({ salesRole: null })
+    expect(revokeAllUserTokens).toHaveBeenCalledWith("u-9")
+  })
+
+  it("signs out a Sales Admin demoted to Sales User", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      user: { id: "u-9", salesRole: "SALES_ADMIN" },
+    })
+    transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: "SALES_USER" })
+
+    await setSalesRole("emp-1", { salesRole: "SALES_USER" }, HR_ADMIN)
+
+    expect(revokeAllUserTokens).toHaveBeenCalledWith("u-9")
+  })
+
+  it("does not sign the user out when the role change rolls back", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      user: { id: "u-9", salesRole: "SALES_ADMIN" },
+    })
+    transaction.user.update.mockRejectedValue(new Error("database unavailable"))
+
+    await expect(
+      setSalesRole("emp-1", { salesRole: null }, HR_ADMIN)
+    ).rejects.toThrow("database unavailable")
+    expect(revokeAllUserTokens).not.toHaveBeenCalled()
   })
 
   it("writes nothing when the value is unchanged", async () => {

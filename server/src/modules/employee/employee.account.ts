@@ -52,7 +52,7 @@ export async function setSalesRole(
   body: { salesRole: SalesRole | null },
   actor: AccessTokenPayload
 ): Promise<{ salesRole: SalesRole | null }> {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const employee = await tx.employee.findUnique({
       where: { id: employeeId },
       select: {
@@ -67,7 +67,7 @@ export async function setSalesRole(
 
     const before = employee.user.salesRole
     if (before === body.salesRole) {
-      return { salesRole: before }
+      return { result: { salesRole: before }, narrowedUserId: null }
     }
 
     await tx.user.update({
@@ -85,6 +85,21 @@ export async function setSalesRole(
       note: `Sales Hub access for ${employee.fullName}`,
     })
 
-    return { salesRole: body.salesRole }
+    const narrowed =
+      body.salesRole === null ||
+      (before === "SALES_ADMIN" && body.salesRole === "SALES_USER")
+
+    return {
+      result: { salesRole: body.salesRole },
+      narrowedUserId: narrowed ? employee.user.id : null,
+    }
   })
+
+  // Outside the transaction, and after it: a rollback must not sign out a
+  // user whose Sales Hub access never actually changed.
+  if (outcome.narrowedUserId) {
+    await revokeAllUserTokens(outcome.narrowedUserId)
+  }
+
+  return outcome.result
 }
