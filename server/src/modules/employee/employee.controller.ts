@@ -37,10 +37,11 @@ import {
   documentTypeSchema,
   requestNationalIdChangeSchema,
   setAccountActiveSchema,
+  setSalesRoleSchema,
   setSalaryStructureSchema,
   updateEmployeeSchema,
 } from "./employee.validators"
-import { setAccountActive } from "./employee.account"
+import { setAccountActive, setSalesRole } from "./employee.account"
 
 type RequestWithId = Request<{ id: string }>
 type RequestWithDoc = Request<{ id: string; docId: string }>
@@ -133,6 +134,19 @@ export async function setAccountActiveHandler(
   }
   try {
     return res.status(200).json(await setAccountActive(req.params.id, parsed.data.isActive))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function setSalesRoleHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const body = setSalesRoleSchema.parse(req.body)
+    return res.status(200).json(await setSalesRole(req.params.id, body, req.user!))
   } catch (err) {
     return next(err)
   }
