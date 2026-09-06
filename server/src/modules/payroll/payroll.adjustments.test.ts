@@ -27,7 +27,7 @@ const tx = (prisma as unknown as { __tx: any }).__tx
 
 type TestRole = "EMPLOYEE" | "REPORTING_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | "FINANCE_OFFICER"
 const auth = (role: TestRole) =>
-  `Bearer ${signAccessToken({ sub: "user-1", role: role as never, email: "a@demo.com", mustChangePassword: false })}`
+  `Bearer ${signAccessToken({ sub: "user-1", role: role as never, email: "a@demo.com", mustChangePassword: false, salesRole: null })}`
 
 const validBody = {
   employeeId: "emp-1",

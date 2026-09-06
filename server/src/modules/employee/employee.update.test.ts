@@ -63,7 +63,7 @@ const existing = {
 } as any
 
 function viewer(role: any, sub: string) {
-  return { sub, role, email: "v@b.com", mustChangePassword: false }
+  return { sub, role, email: "v@b.com", mustChangePassword: false, salesRole: null }
 }
 
 beforeEach(() => {

@@ -51,7 +51,7 @@ import * as changerequest from "./employee.changerequest"
 import prismaForRoutes from "../../config/prisma"
 
 function tokenFor(role: "HR_ADMIN" | "EMPLOYEE" | "FINANCE_OFFICER" | "SUPER_ADMIN", sub = "actor-1") {
-  return signAccessToken({ sub, role: role as any, email: "actor@b.com", mustChangePassword: false })
+  return signAccessToken({ sub, role: role as any, email: "actor@b.com", mustChangePassword: false, salesRole: null })
 }
 
 const validBody = {

@@ -23,7 +23,7 @@ import prisma from "../../config/prisma"
 import { signAccessToken } from "../auth/auth.utils"
 
 function tokenFor(role: "EMPLOYEE" | "HR_ADMIN" | "FINANCE_OFFICER") {
-  return signAccessToken({ sub: "actor-1", role: role as any, email: "actor@b.com", mustChangePassword: false })
+  return signAccessToken({ sub: "actor-1", role: role as any, email: "actor@b.com", mustChangePassword: false, salesRole: null })
 }
 
 describe("GET /api/departments", () => {

@@ -17,6 +17,7 @@ function tokenFor(role: "EMPLOYEE" | "HR_ADMIN" | "FINANCE_OFFICER" | "SUPER_ADM
     role: role as any,
     email: "actor@b.com",
     mustChangePassword: false,
+    salesRole: null,
   })
 }
 

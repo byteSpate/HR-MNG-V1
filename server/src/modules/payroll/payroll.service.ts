@@ -351,6 +351,7 @@ const SYSTEM_ACTOR = {
   role: "FINANCE_OFFICER" as const,
   email: "system@payroll.internal",
   mustChangePassword: false,
+  salesRole: null,
 }
 
 const monthLabel = (month: number, year: number) => `${year}-${String(month).padStart(2, "0")}`

@@ -12,7 +12,7 @@ import { projectEmployee } from "./employee.access"
 import type { AccessTokenPayload } from "../auth/auth.types"
 
 function viewer(role: AccessTokenPayload["role"], sub = "u-viewer"): AccessTokenPayload {
-  return { sub, role, email: "v@b.com", mustChangePassword: false }
+  return { sub, role, email: "v@b.com", mustChangePassword: false, salesRole: null }
 }
 
 const subject = { userId: "u-subject", reportingManagerId: "emp-manager" }

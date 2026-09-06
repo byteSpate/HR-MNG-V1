@@ -20,7 +20,7 @@ describe("password hashing", () => {
 })
 
 describe("access tokens", () => {
-  const payload = { sub: "user-1", role: "EMPLOYEE" as const, email: "a@b.com", mustChangePassword: false }
+  const payload = { sub: "user-1", role: "EMPLOYEE" as const, email: "a@b.com", mustChangePassword: false, salesRole: null }
 
   it("round-trips a payload through sign and verify", () => {
     const token = signAccessToken(payload)

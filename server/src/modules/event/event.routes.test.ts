@@ -17,7 +17,7 @@ import { signAccessToken } from "../auth/auth.utils"
 
 type TestRole = "EMPLOYEE" | "REPORTING_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | "FINANCE_OFFICER"
 const auth = (role: TestRole, sub = "user-1") =>
-  `Bearer ${signAccessToken({ sub, role: role as never, email: "a@demo.com", mustChangePassword: false })}`
+  `Bearer ${signAccessToken({ sub, role: role as never, email: "a@demo.com", mustChangePassword: false, salesRole: null })}`
 
 /** Rows a fake database holds, filtered in memory by the where Prisma got. */
 const ROWS = [

@@ -9,7 +9,7 @@ function mockReqRes(authHeader?: string) {
   return { req, res, next }
 }
 
-const basePayload = { sub: "u1", role: "EMPLOYEE" as const, email: "a@b.com", mustChangePassword: false }
+const basePayload = { sub: "u1", role: "EMPLOYEE" as const, email: "a@b.com", mustChangePassword: false, salesRole: null }
 
 describe("requireAuth", () => {
   it("attaches req.user and calls next() for a valid bearer token", () => {

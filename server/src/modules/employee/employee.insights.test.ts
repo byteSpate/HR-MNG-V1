@@ -21,7 +21,7 @@ import prisma from "../../config/prisma"
 import { getEmployeeInsights } from "./employee.insights"
 
 function viewer(role: any, sub = "u-v") {
-  return { sub, role, email: "v@b.com", mustChangePassword: false }
+  return { sub, role, email: "v@b.com", mustChangePassword: false, salesRole: null }
 }
 
 const subject = {

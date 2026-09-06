@@ -11,7 +11,7 @@ vi.mock("../../config/prisma", () => ({
 
 import prisma from "../../config/prisma"
 import { sendPasswordChangedEmail } from "../notification/notification.mailer"
-import { hashPassword } from "./auth.utils"
+import { hashPassword, verifyAccessToken } from "./auth.utils"
 import { changePassword, loginAdmin, loginStaff, logout, refresh, requestPasswordReset, resetPassword } from "./auth.service"
 
 const mockedPrisma = prisma as unknown as {
@@ -101,6 +101,48 @@ describe("loginAdmin", () => {
 })
 
 describe("loginStaff", () => {
+  it("carries salesRole in the access token so requireSales needs no query", async () => {
+    const passwordHash = await hashPassword("correct-password")
+    mockedPrisma.employee.findUnique.mockResolvedValue({
+      employeeCode: "BS-EMP-00001",
+      user: {
+        id: "u1",
+        email: "rahim@demo.com",
+        passwordHash,
+        role: "EMPLOYEE",
+        salesRole: "SALES_USER",
+        isActive: true,
+        mustChangePassword: false,
+      },
+    })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await loginStaff("BS-EMP-00001", "correct-password")
+
+    expect(verifyAccessToken(result.accessToken).salesRole).toBe("SALES_USER")
+  })
+
+  it("carries null salesRole for someone with no Sales Hub access", async () => {
+    const passwordHash = await hashPassword("correct-password")
+    mockedPrisma.employee.findUnique.mockResolvedValue({
+      employeeCode: "BS-EMP-00002",
+      user: {
+        id: "u2",
+        email: "karim@demo.com",
+        passwordHash,
+        role: "EMPLOYEE",
+        salesRole: null,
+        isActive: true,
+        mustChangePassword: false,
+      },
+    })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await loginStaff("BS-EMP-00002", "correct-password")
+
+    expect(verifyAccessToken(result.accessToken).salesRole).toBeNull()
+  })
+
   it("returns tokens, a public user, and employeeCode for a correct EMPLOYEE login", async () => {
     const passwordHash = await hashPassword("temp-password")
     mockedPrisma.employee.findUnique.mockResolvedValue({
@@ -161,6 +203,30 @@ describe("loginStaff", () => {
 })
 
 describe("refresh", () => {
+  it("carries the current salesRole into a rotated access token", async () => {
+    mockedPrisma.refreshToken.findUnique.mockResolvedValue({
+      id: "rt-sales",
+      userId: "u-sales-admin",
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+      revokedAt: null,
+      user: {
+        id: "u-sales-admin",
+        email: "sales-admin@demo.com",
+        role: "EMPLOYEE",
+        salesRole: "SALES_ADMIN",
+        isActive: true,
+        mustChangePassword: false,
+      },
+    })
+    mockedPrisma.employee.findUnique.mockResolvedValue({ employeeCode: "BS-EMP-00003" })
+    mockedPrisma.refreshToken.update.mockResolvedValue({})
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await refresh("sales-admin-refresh-token")
+
+    expect(verifyAccessToken(result.accessToken).salesRole).toBe("SALES_ADMIN")
+  })
+
   it("rotates a valid, unrevoked, unexpired refresh token for an admin user", async () => {
     mockedPrisma.refreshToken.findUnique.mockResolvedValue({
       id: "rt1",
@@ -380,6 +446,33 @@ describe("resetPassword", () => {
 })
 
 describe("changePassword", () => {
+  it("carries salesRole into the replacement access token", async () => {
+    const passwordHash = await hashPassword("old-password")
+    mockedPrisma.user.findUnique.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      passwordHash,
+      role: "EMPLOYEE",
+      salesRole: "SALES_USER",
+      isActive: true,
+      mustChangePassword: true,
+    })
+    mockedPrisma.user.update.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      role: "EMPLOYEE",
+      salesRole: "SALES_USER",
+      isActive: true,
+      mustChangePassword: false,
+    })
+    mockedPrisma.refreshToken.updateMany.mockResolvedValue({ count: 0 })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await changePassword("u1", "old-password", "brand-new-password")
+
+    expect(verifyAccessToken(result.accessToken).salesRole).toBe("SALES_USER")
+  })
+
   it("updates the password, clears mustChangePassword, and returns a fresh access token", async () => {
     const passwordHash = await hashPassword("old-password")
     mockedPrisma.user.findUnique.mockResolvedValue({

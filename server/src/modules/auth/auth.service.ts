@@ -1,7 +1,7 @@
 import { env } from "../../config/env"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
-import { Role } from "../../generated/prisma/client"
+import { Role, type SalesRole } from "../../generated/prisma/client"
 import { generateOpaqueToken, hashPassword, hashToken, signAccessToken, toPublicUser, verifyPassword } from "./auth.utils"
 import { sendPasswordResetEmail } from "./mailer"
 import { sendPasswordChangedEmail } from "../notification/notification.mailer"
@@ -18,6 +18,7 @@ type UserRow = {
   email: string
   passwordHash: string
   role: Role
+  salesRole: SalesRole | null
   isActive: boolean
   mustChangePassword: boolean
 }
@@ -97,6 +98,7 @@ async function issueSession(
     role: user.role,
     email: user.email,
     mustChangePassword: user.mustChangePassword,
+    salesRole: user.salesRole ?? null,
   })
   const refreshToken = await issueRefreshToken(user.id, context)
   return { accessToken, refreshToken, user: toPublicUser(user, employeeCode) }
@@ -194,6 +196,7 @@ export async function refresh(
     role: stored.user.role,
     email: stored.user.email,
     mustChangePassword: stored.user.mustChangePassword,
+    salesRole: stored.user.salesRole ?? null,
   })
   return { accessToken, refreshToken: newRefreshToken, user: toPublicUser(stored.user, employeeCode) }
 }
@@ -302,6 +305,7 @@ export async function changePassword(
     role: updated.role,
     email: updated.email,
     mustChangePassword: false,
+    salesRole: updated.salesRole ?? null,
   })
   // If it was not them, they find out in seconds.
   await sendPasswordChangedEmail({ to: updated.email, userId: updated.id })

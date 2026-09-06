@@ -64,6 +64,7 @@ const authHeader = (role: string) => ({
     role: role as never,
     email: `${role}@demo.com`,
     mustChangePassword: false,
+    salesRole: null,
   })}`,
 })
 

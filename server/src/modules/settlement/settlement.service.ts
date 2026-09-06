@@ -39,6 +39,7 @@ const SYSTEM_ACTOR: AccessTokenPayload = {
   role: "FINANCE_OFFICER",
   email: "system@payroll.internal",
   mustChangePassword: false,
+  salesRole: null,
 }
 
 const SETTLEMENT_INCLUDE = {

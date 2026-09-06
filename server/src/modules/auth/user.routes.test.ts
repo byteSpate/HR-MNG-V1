@@ -39,7 +39,7 @@ import { signAccessToken } from "./auth.utils"
 import { setUserRole, setUserStatus } from "./user.service"
 
 function tokenFor(role: "SUPER_ADMIN" | "EMPLOYEE" | "HR_ADMIN") {
-  return signAccessToken({ sub: "actor-1", role: role as any, email: "actor@b.com", mustChangePassword: false })
+  return signAccessToken({ sub: "actor-1", role: role as any, email: "actor@b.com", mustChangePassword: false, salesRole: null })
 }
 
 beforeEach(() => {

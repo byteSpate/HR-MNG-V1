@@ -128,7 +128,7 @@ describe("POST /api/auth/change-password", () => {
       refreshToken: "new-refresh",
       user: { ...publicUser, mustChangePassword: false },
     })
-    const token = signAccessToken({ sub: "u1", role: "EMPLOYEE" as any, email: "a@b.com", mustChangePassword: true })
+    const token = signAccessToken({ sub: "u1", role: "EMPLOYEE" as any, email: "a@b.com", mustChangePassword: true, salesRole: null })
     const res = await request(app)
       .post("/api/auth/change-password")
       .set("Authorization", `Bearer ${token}`)
