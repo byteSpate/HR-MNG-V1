@@ -17,6 +17,7 @@ model User {
   email               String               @unique
   passwordHash        String
   role                Role
+  salesRole           SalesRole?
   isActive            Boolean              @default(true)
   mustChangePassword  Boolean              @default(false)
   // Identity for an account with no Employee row — Super Admin, HR Admin and
@@ -42,6 +43,17 @@ enum Role {
   FINANCE_OFFICER
   REPORTING_MANAGER
   EMPLOYEE
+}
+
+/// Access to the Sales Hub, held *in addition* to a person's HR role rather
+/// than instead of it: an EMPLOYEE who is also a SALES_USER keeps every
+/// ordinary employee permission. Null means no Sales Hub access at all.
+///
+/// On User and not Employee, because a Sales Admin may be a Super Admin who
+/// has no Employee row (see seed.ts).
+enum SalesRole {
+  SALES_ADMIN
+  SALES_USER
 }
 
 // Additive beyond spec §5 — see "Deviations" section, item 1.
