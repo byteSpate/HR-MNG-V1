@@ -5,7 +5,7 @@ vi.mock("../../config/prisma", () => ({
     $transaction: vi.fn(),
     salesAccount: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn() },
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn() },
-    employee: { findUnique: vi.fn() },
+    employee: { findUnique: vi.fn(), findMany: vi.fn() },
     auditLog: { create: vi.fn() },
     event: { create: vi.fn() },
   },
@@ -28,6 +28,9 @@ beforeEach(() => {
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-1", fullName: "Karim" } as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+  // Every requested assignee exists unless a test says otherwise.
+  vi.mocked(prisma.employee.findMany).mockImplementation((async (args: any) =>
+    args.where.id.in.map((id: string) => ({ id }))) as never)
 })
 
 describe("createSalesAccount", () => {
@@ -116,5 +119,64 @@ describe("createSalesAccount", () => {
         data: [{ salesAccountId: "sa-2", employeeId: "emp-2", assignedBy: "user-1" }],
       })
     )
+  })
+
+  it("refuses an assignee who is not an employee, rather than letting the FK 500", async () => {
+    vi.mocked(prisma.salesAccount.create).mockResolvedValue({
+      id: "sa-3",
+      name: "Ghost Co",
+      status: "ACTIVE",
+      ownerEmployeeId: "emp-1",
+      createdAt: new Date("2026-09-06"),
+    } as any)
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([] as any)
+
+    await expect(
+      createSalesAccount(
+        { name: "Ghost Co", ownerEmployeeId: "emp-1", assigneeIds: ["emp-404"] },
+        ADMIN
+      )
+    ).rejects.toMatchObject({ statusCode: 400 })
+
+    expect(prisma.salesAccountAssignment.createMany).not.toHaveBeenCalled()
+  })
+
+  // A repeated id would violate @@unique([salesAccountId, employeeId]), and
+  // P2002 renders as a 500.
+  it("stores a repeated assignee once", async () => {
+    vi.mocked(prisma.salesAccount.create).mockResolvedValue({
+      id: "sa-4",
+      name: "Twice Ltd",
+      status: "ACTIVE",
+      ownerEmployeeId: "emp-1",
+      createdAt: new Date("2026-09-06"),
+    } as any)
+
+    await createSalesAccount(
+      { name: "Twice Ltd", ownerEmployeeId: "emp-1", assigneeIds: ["emp-2", "emp-2"] },
+      ADMIN
+    )
+
+    expect(prisma.salesAccountAssignment.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [{ salesAccountId: "sa-4", employeeId: "emp-2", assignedBy: "user-1" }],
+      })
+    )
+  })
+
+  // Two admins submitting the same name in the same instant both pass the
+  // check above and both insert. The loser must get the sentence everyone
+  // else gets, not "Internal server error".
+  it("turns a concurrent duplicate into the same 409, still naming the owner", async () => {
+    vi.mocked(prisma.salesAccount.findFirst)
+      .mockResolvedValueOnce(null as any)
+      .mockResolvedValue({ id: "sa-9", name: "Rising Group", owner: { fullName: "Rahim" } } as any)
+    vi.mocked(prisma.salesAccount.create).mockRejectedValue(
+      Object.assign(new Error("Unique constraint failed"), { code: "P2002" })
+    )
+
+    await expect(
+      createSalesAccount({ name: "Rising Group", ownerEmployeeId: "emp-1" }, ADMIN)
+    ).rejects.toMatchObject({ statusCode: 409, message: expect.stringMatching(/Rising Group.*Rahim/) })
   })
 })

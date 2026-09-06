@@ -1,7 +1,9 @@
+import type { SalesAccountStatus } from "../../generated/prisma/client"
+
 export interface SalesAccountSummary {
   id: string
   name: string
-  status: "ACTIVE" | "INACTIVE" | "DO_NOT_CONTACT"
+  status: SalesAccountStatus
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number
