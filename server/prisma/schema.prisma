@@ -225,6 +225,9 @@ model Employee {
 
   journalLines    JournalLine[]
   changeRequests  EmployeeChangeRequest[]
+
+  salesAccountsOwned      SalesAccount[]           @relation("SalesAccountOwner")
+  salesAccountAssignments SalesAccountAssignment[] @relation("SalesAccountAssignee")
 }
 
 enum EmployeeChangeField {
@@ -1999,4 +2002,56 @@ model StatementNote {
   updatedBy String?
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+// ── SALES ─────────────────────────────────────────────────────────────────
+// Always both words, SalesAccount and never Account: Account already means a
+// line in the chart of accounts, and the two live in the same application.
+
+enum SalesAccountStatus {
+  ACTIVE
+  INACTIVE
+  // They asked us to stop. Suppresses every reminder without deleting a word
+  // of the history.
+  DO_NOT_CONTACT
+}
+
+model SalesAccount {
+  id           String             @id @default(uuid())
+  name         String             @unique
+  industry     String?
+  website      String?
+  address      String?
+  status       SalesAccountStatus @default(ACTIVE)
+  statusReason String?
+
+  /// The one employee answerable for this account. Always set, because
+  /// reminders need somewhere to go.
+  ownerEmployeeId String
+  owner           Employee @relation("SalesAccountOwner", fields: [ownerEmployeeId], references: [id])
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments SalesAccountAssignment[]
+
+  @@index([ownerEmployeeId, status])
+  @@index([status])
+}
+
+/// The *extra* people on an account. The Owner is SalesAccount.ownerEmployeeId
+/// and is deliberately not repeated here: storing the same fact twice means
+/// keeping two copies in step forever.
+model SalesAccountAssignment {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee     @relation("SalesAccountAssignee", fields: [employeeId], references: [id])
+  assignedBy     String?
+  assignedAt     DateTime     @default(now())
+
+  @@unique([salesAccountId, employeeId])
+  @@index([employeeId])
 }
