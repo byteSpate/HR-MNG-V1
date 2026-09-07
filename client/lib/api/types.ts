@@ -35,6 +35,93 @@ export interface SalesAccountSummary {
   createdAt: string
 }
 
+export interface CreateSalesAccountBody {
+  name: string
+  ownerEmployeeId: string
+  industry?: string
+  website?: string
+  address?: string
+  assigneeIds?: string[]
+}
+
+export type SalesContactStatus = "UNVERIFIED" | "VERIFIED" | "UNREACHABLE" | "INVALID"
+
+export interface SalesContactSummary {
+  id: string
+  salesAccountId: string
+  name: string
+  designation: string | null
+  phone: string | null
+  email: string | null
+  isPrimary: boolean
+  status: SalesContactStatus
+  /** ISO, or null when nobody has reached this person yet. */
+  verifiedAt: string | null
+  note: string | null
+  createdAt: string
+}
+
+export interface CreateSalesContactBody {
+  name: string
+  designation?: string
+  phone?: string
+  email?: string
+  note?: string
+}
+
+export interface SetContactStatusBody {
+  status: SalesContactStatus
+  note?: string
+}
+
+export type SalesChannel = "CALL" | "EMAIL" | "WHATSAPP" | "OTHER"
+
+export interface SalesCommunicationSummary {
+  id: string
+  salesAccountId: string
+  contactId: string | null
+  channel: SalesChannel
+  occurredAt: string
+  summary: string
+  detail: string | null
+  employeeId: string
+  createdAt: string
+}
+
+export interface LogCommunicationBody {
+  channel: SalesChannel
+  /** ISO 8601. The server refuses one in the future. */
+  occurredAt: string
+  summary: string
+  detail?: string
+  contactId?: string
+}
+
+/** One line of an account's story, rendered rather than raw — the channel is
+    already a label and the author already a name. */
+export interface TimelineItem {
+  id: string
+  kind: "communication" | "event"
+  at: string
+  title: string
+  meta: string | null
+  by: string | null
+}
+
+/** One audit row from the account's own trail, or one of its contacts' —
+    field-by-field, distinct from the Timeline's "what happened". */
+export interface AccountHistoryEntry {
+  id: string
+  entity: "SALES_ACCOUNT" | "SALES_CONTACT"
+  entityId: string
+  action: string
+  changedAt: string
+  changedBy: string | null
+  before: unknown
+  after: unknown
+  note: string | null
+}
+
 export interface LoginResponse {
   accessToken: string
   user: PublicUser
