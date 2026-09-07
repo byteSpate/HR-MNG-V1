@@ -13,6 +13,13 @@ import type { SalesRole } from "@/lib/api/types"
  * listed until a real page backs anything more.
  *
  * A hidden nav item is not access control — the server still refuses.
+ *
+ * The landing page's own nav item reads "Overview", not "Dashboard": the
+ * header's BackToDashboardButton already uses "Dashboard" for the way back
+ * to the person's role dashboard, and the landing page itself says plainly
+ * that there is no dashboard here yet (that arrives with Phase 2) — calling
+ * both "Dashboard" would read as two different destinations for one word,
+ * on screen at the same time.
  */
 export function navGroups(salesRole: SalesRole | null): NavGroup[] {
   // Not yet branched on: an admin-only Setup group belongs here once
@@ -23,7 +30,7 @@ export function navGroups(salesRole: SalesRole | null): NavGroup[] {
     {
       label: "Sales",
       items: [
-        { label: "Dashboard", href: "/sales", icon: "RiDashboardLine" },
+        { label: "Overview", href: "/sales", icon: "RiDashboardLine" },
         { label: "Accounts", href: "/sales/accounts", icon: "RiBuilding2Line" },
       ],
     },

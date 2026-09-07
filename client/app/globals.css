@@ -171,6 +171,32 @@
   animation: fade-in 200ms var(--ease-out-quint) both;
 }
 
+/* ── Click burst ──────────────────────────────────────────────────────────
+   A one-shot particle thrown outward from a click — the Sales Hub door and
+   its way-back button. `--tx`/`--ty` are per-particle, set inline by the
+   caller (a handful of points around a circle, not a random scatter — a
+   random spread reads as noise, a ring reads as a burst).
+
+   Keyframes, not a transition, for the same reason as the entrance motion
+   above: this fires once, per click, and is never interrupted or
+   retargeted. 0.35, not 0, at the far end — same "nothing appears from
+   nothing" logic as `rise-in`, applied to a particle disappearing instead
+   of arriving. */
+@keyframes pop-particle {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.35) rotate(70deg);
+  }
+}
+
+.pop-particle {
+  animation: pop-particle 520ms var(--ease-out-quint) both;
+}
+
 /* Reduced motion means fewer and gentler animations, not zero. The fade
    stays — it still explains that content arrived — and the movement, which
    is the part that causes motion sickness, is what goes. The delay override
@@ -183,5 +209,13 @@
   .rise-in,
   .fade-in {
     animation-delay: 0ms !important;
+  }
+
+  /* Pure decorative motion with nothing to explain — unlike rise-in/fade-in,
+     which still mark that content arrived, a burst carries no information,
+     so it is suppressed entirely rather than reduced to a fade. */
+  .pop-particle {
+    animation: none;
+    opacity: 0;
   }
 }
