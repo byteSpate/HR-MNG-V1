@@ -6,6 +6,7 @@ vi.mock("../../config/prisma", () => ({
     $transaction: vi.fn(),
     salesAccount: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
     salesAccountAssignment: { createMany: vi.fn() },
+    salesCommunication: { create: vi.fn(), findMany: vi.fn() },
     salesContact: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -16,7 +17,7 @@ vi.mock("../../config/prisma", () => ({
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
     user: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
-    event: { create: vi.fn() },
+    event: { create: vi.fn(), findMany: vi.fn() },
   },
 }))
 
@@ -279,5 +280,61 @@ describe("contact routes", () => {
       .expect(400)
 
     expect(prisma.salesContact.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("communication routes", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.event.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.salesCommunication.create).mockResolvedValue({
+      id: "cm-1",
+      salesAccountId: "sa-1",
+      contactId: null,
+      channel: "CALL",
+      occurredAt: new Date("2026-09-04T10:00:00Z"),
+      summary: "Chased the RFQ",
+      detail: null,
+      employeeId: "emp-1",
+      createdAt: new Date("2026-09-07"),
+    } as never)
+  })
+
+  it("403s an authenticated employee with no salesRole", async () => {
+    await request(app)
+      .get("/api/sales/accounts/sa-1/timeline")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: null }))
+      .expect(403)
+  })
+
+  it("201s a logged call and 200s the timeline", async () => {
+    const logged = await request(app)
+      .post("/api/sales/accounts/sa-1/communications")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ channel: "CALL", occurredAt: "2026-09-04T10:00:00Z", summary: "Chased the RFQ" })
+
+    expect(logged.status).toBe(201)
+    expect(logged.body).toMatchObject({ id: "cm-1", employeeId: "emp-1" })
+
+    const timeline = await request(app)
+      .get("/api/sales/accounts/sa-1/timeline")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(timeline.status).toBe(200)
+    expect(timeline.body).toEqual({ items: [] })
+  })
+
+  it("400s a channel the enum does not have", async () => {
+    await request(app)
+      .post("/api/sales/accounts/sa-1/communications")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ channel: "VISIT", occurredAt: "2026-09-04T10:00:00Z", summary: "Went there" })
+      .expect(400)
+
+    expect(prisma.salesCommunication.create).not.toHaveBeenCalled()
   })
 })

@@ -2,9 +2,11 @@ import type { NextFunction, Request, Response } from "express"
 
 import { createSalesAccount, getSalesAccount, listSalesAccounts } from "./account.service"
 import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
+import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
   createSalesAccountSchema,
   createSalesContactSchema,
+  logCommunicationSchema,
   setContactStatusSchema,
 } from "./sales.validators"
 
@@ -90,6 +92,31 @@ export async function setContactStatusHandler(
   try {
     const body = setContactStatusSchema.parse(req.body)
     return res.status(200).json(await setContactStatus(req.params.id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function logCommunicationHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const body = logCommunicationSchema.parse(req.body)
+    return res.status(201).json(await logCommunication(req.params.id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getAccountTimelineHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await getAccountTimeline(req.params.id, req.user!))
   } catch (err) {
     return next(err)
   }

@@ -32,3 +32,15 @@ export const setContactStatusSchema = z.object({
 })
 
 export type SetContactStatusBody = z.infer<typeof setContactStatusSchema>
+
+export const logCommunicationSchema = z.object({
+  channel: z.enum(["CALL", "EMAIL", "WHATSAPP", "OTHER"]),
+  /** ISO 8601. The service refuses one in the future. */
+  occurredAt: z.string().datetime({ offset: true }),
+  summary: z.string().trim().min(2, "Say what happened").max(300),
+  detail: z.string().trim().max(4000).optional(),
+  /** Optional: plenty of calls are to a switchboard rather than a person. */
+  contactId: z.string().uuid().optional(),
+})
+
+export type LogCommunicationBody = z.infer<typeof logCommunicationSchema>
