@@ -5,7 +5,7 @@ import { emitEvent } from "../event/event.emit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { CreateSalesAccountBody } from "./sales.validators"
 import type { SalesAccountSummary } from "./sales.types"
-import { accountScopeFor, employeeIdFor } from "./sales.access"
+import { ACCOUNT_NOT_VISIBLE, accountScopeFor, employeeIdFor } from "./sales.access"
 
 /**
  * One sentence, used by both paths that can find a clash — the check inside
@@ -194,7 +194,7 @@ export async function getSalesAccount(
   // 404 and not 403: a 403 would confirm that an account exists to somebody
   // who is not allowed to know that it does.
   if (!account) {
-    throw new AppError(404, "That Sales Account does not exist, or is not yours")
+    throw new AppError(404, ACCOUNT_NOT_VISIBLE)
   }
   return toSummary(account)
 }

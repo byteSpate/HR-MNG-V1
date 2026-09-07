@@ -6,6 +6,13 @@ vi.mock("../../config/prisma", () => ({
     $transaction: vi.fn(),
     salesAccount: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
     salesAccountAssignment: { createMany: vi.fn() },
+    salesContact: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
     user: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
@@ -185,5 +192,92 @@ describe("POST /api/sales/accounts", () => {
       .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_ADMIN" }))
       .send({ name: "New Co" })
       .expect(400)
+  })
+})
+
+describe("contact routes", () => {
+  const CONTACT = {
+    id: "c-1",
+    salesAccountId: "sa-1",
+    name: "Mr Rahman",
+    designation: null,
+    phone: "01700000000",
+    email: null,
+    isPrimary: false,
+    status: "UNVERIFIED",
+    verifiedAt: null,
+    note: null,
+    createdAt: new Date("2026-09-07"),
+  }
+
+  beforeEach(() => {
+    // In scope, owned by the caller's own employee row.
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue(CONTACT as never)
+    vi.mocked(prisma.salesContact.findMany).mockResolvedValue([CONTACT] as never)
+    vi.mocked(prisma.salesContact.create).mockResolvedValue(CONTACT as never)
+    vi.mocked(prisma.salesContact.update).mockResolvedValue(CONTACT as never)
+  })
+
+  it("403s an authenticated employee with no salesRole", async () => {
+    await request(app)
+      .post("/api/sales/accounts/sa-1/contacts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: null }))
+      .send({ name: "Mr Rahman" })
+      .expect(403)
+
+    expect(prisma.salesContact.create).not.toHaveBeenCalled()
+  })
+
+  // Adding a contact to an account you already hold is ordinary work, not an
+  // administrative act — unlike creating the account itself.
+  it("201s a Sales User adding a contact", async () => {
+    const res = await request(app)
+      .post("/api/sales/accounts/sa-1/contacts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ name: "Mr Rahman", phone: "01700000000" })
+
+    expect(res.status).toBe(201)
+    expect(res.body).toMatchObject({ id: "c-1", name: "Mr Rahman", isPrimary: false })
+  })
+
+  it("404s a contact on an account outside the caller's scope", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+
+    const res = await request(app)
+      .patch("/api/sales/contacts/c-1/primary")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(res.status).toBe(404)
+    expect(res.body.error).toMatch(/does not exist, or is not yours/)
+    expect(prisma.salesContact.update).not.toHaveBeenCalled()
+  })
+
+  it("200s a status change and lists contacts back", async () => {
+    await request(app)
+      .patch("/api/sales/contacts/c-1/status")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ status: "VERIFIED" })
+      .expect(200)
+
+    const list = await request(app)
+      .get("/api/sales/accounts/sa-1/contacts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(list.body).toHaveLength(1)
+  })
+
+  it("400s a status that is not one of the four", async () => {
+    await request(app)
+      .patch("/api/sales/contacts/c-1/status")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ status: "MAYBE" })
+      .expect(400)
+
+    expect(prisma.salesContact.update).not.toHaveBeenCalled()
   })
 })
