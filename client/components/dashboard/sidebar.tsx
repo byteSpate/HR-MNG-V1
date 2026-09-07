@@ -4,13 +4,14 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { RiArrowRightSLine, RiLoader4Line, RiLogoutBoxRLine } from "@remixicon/react"
+import { RiArrowLeftSLine, RiArrowRightSLine, RiLoader4Line, RiLogoutBoxRLine } from "@remixicon/react"
 
 import { cn } from "@/lib/utils"
 import { BrandLogo } from "@/components/brand/brand"
 import { icons } from "@/components/dashboard/icons"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import { getDashboard } from "@/lib/api/dashboard"
+import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { useSession } from "@/lib/auth/session-context"
 import { useIdentity } from "@/lib/auth/use-identity"
 import { useSignOut } from "@/lib/auth/use-sign-out"
@@ -33,6 +34,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import type { NavGroup, NavItem } from "@/components/dashboard/types"
+
+// One visual difference between the role dashboards and the Sales Hub: the
+// hub's sidebar is a lighter black. Same temperature, same white text —
+// enough that you can tell where you are from a glance. No new palette
+// enters the codebase; two already run side by side here.
+const GRADIENT = {
+  default: "from-[#17191C] to-[#0B0D0F]",
+  sales: "from-[#242830] to-[#14171C]",
+} as const
 
 /** Shared so a parent row and a leaf row are the same control at a glance. */
 function itemClasses(active: boolean) {
@@ -187,15 +197,20 @@ export function Sidebar({
   navGroups,
   rootHref,
   profileHref,
+  tone = "default",
 }: {
   navGroups: NavGroup[]
   rootHref: string
   profileHref: string
+  tone?: "default" | "sales"
 }) {
   const pathname = usePathname()
-  const { accessToken, status } = useSession()
+  const { accessToken, status, user } = useSession()
   const { name, avatarUrl, subtitle, loading } = useIdentity()
   const { signOut, signingOut } = useSignOut()
+  // Computed from the person's role, not from browser history: history is
+  // empty on a fresh tab and wrong after a refresh.
+  const backToDashboardHref = rootHref === "/sales" && user ? ROLE_ROUTES[user.role] : null
   // Closing the drawer on navigation is ours to do — the sidebar primitive has
   // no router awareness, so without this the overlay stays sitting over the
   // page you just navigated to.
@@ -213,7 +228,7 @@ export function Sidebar({
 
   return (
     <UiSidebar collapsible="offcanvas" className="border-r-0">
-      <div className="flex h-full flex-col bg-linear-to-b from-[#17191C] to-[#0B0D0F] px-3 pt-[18px] pb-3.5 text-white">
+      <div className={cn("flex h-full flex-col bg-linear-to-b px-3 pt-[18px] pb-3.5 text-white", GRADIENT[tone])}>
         <SidebarHeader className="mb-1.5 gap-4 p-0 px-2.5 pt-1 pb-4">
           {/* The lockup already carries the tagline, so the only line worth
               adding here is which system you are in. */}
@@ -260,6 +275,17 @@ export function Sidebar({
             </SidebarGroup>
           ))}
         </SidebarContent>
+
+        {backToDashboardHref ? (
+          <Link
+            href={backToDashboardHref}
+            onClick={() => setOpenMobile(false)}
+            className="mt-3 flex items-center gap-2 rounded-md px-2.5 py-2 text-[12.5px] font-semibold text-white/60 transition-colors duration-150 ease-out-quint hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none motion-reduce:transition-none"
+          >
+            <RiArrowLeftSLine className="size-4" aria-hidden="true" />
+            Back to dashboard
+          </Link>
+        ) : null}
 
         <SidebarFooter className="mt-3 flex-row items-center gap-1 rounded-md border border-white/[0.09] bg-white/[0.07] p-1.5 transition-colors duration-200 ease-out-quint hover:border-white/15 motion-reduce:transition-none">
           {loading ? (

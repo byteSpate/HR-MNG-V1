@@ -1,5 +1,6 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import { Header } from "@/components/dashboard/header"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
@@ -9,10 +10,19 @@ import type { NavGroup } from "@/components/dashboard/types"
 export function DashboardShell({
   navGroups,
   rootHref,
+  tone = "default",
+  mainClassName = "max-w-[1220px] 2xl:max-w-[1600px]",
   children,
 }: {
   navGroups: NavGroup[]
   rootHref: string
+  /** The one visual difference between the role dashboards and the Sales
+      Hub: a lighter sidebar. Defaults to today's value, so the five role
+      layouts render unchanged. */
+  tone?: "default" | "sales"
+  /** The content cap. Defaults to today's value; the Sales Hub passes a
+      wider one — its tables want more columns than a role dashboard's. */
+  mainClassName?: string
   children: React.ReactNode
 }) {
   // Every role group has a `/profile` route under its own root, so this is
@@ -28,12 +38,12 @@ export function DashboardShell({
       {/* HelpProvider wraps every role dashboard via this shared shell: the
           panel renders once above the page, and the header trigger opens it. */}
       <HelpProvider>
-        <Sidebar navGroups={navGroups} rootHref={rootHref} profileHref={profileHref} />
+        <Sidebar navGroups={navGroups} rootHref={rootHref} profileHref={profileHref} tone={tone} />
         {/* Deliberately not SidebarInset: that renders its own <main>, and the
             content area below already is one. Nested <main> is invalid. */}
         <div className="flex min-w-0 flex-1 flex-col">
           <Header profileHref={profileHref} />
-          <main className="mx-auto flex w-full max-w-[1220px] flex-1 flex-col px-4 pb-8 sm:px-6 lg:px-7 2xl:max-w-[1600px]">
+          <main className={cn("mx-auto flex w-full flex-1 flex-col px-4 pb-8 sm:px-6 lg:px-7", mainClassName)}>
             {children}
           </main>
         </div>
