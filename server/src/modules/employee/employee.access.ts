@@ -114,7 +114,7 @@ export const EMPLOYEE_INCLUDE = {
   reportingManager: { select: { id: true, fullName: true } },
   shift: { select: { id: true, name: true } },
   salaryStructure: { select: { id: true, name: true, currency: true } },
-  user: { select: { email: true, isActive: true } },
+  user: { select: { email: true, isActive: true, salesRole: true } },
 } satisfies Prisma.EmployeeInclude
 
 export type EmployeeWithRelations = Prisma.EmployeeGetPayload<{
@@ -193,6 +193,7 @@ export function projectEmployee(
       // Behind canSeeEmployment on purpose: who is locked out is not
       // directory information, so COLLEAGUE never receives it.
       accountActive: employee.user.isActive,
+      salesRole: employee.user.salesRole,
       // FULL only, deliberately not SELF.
       ...(tier === "FULL" ? { deviceUserId: employee.deviceUserId } : {}),
     }

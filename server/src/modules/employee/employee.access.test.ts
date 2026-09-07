@@ -173,7 +173,7 @@ const row = {
   lastWorkingDay: null,
   exitReason: null,
   exitNote: null,
-  user: { email: "rita@demo.com", isActive: true },
+  user: { email: "rita@demo.com", isActive: true, salesRole: null },
 } as any
 
 describe("projectEmployee", () => {
@@ -348,5 +348,20 @@ describe("projectEmployee — accountActive", () => {
   it("is present for FINANCE and MANAGER, which do see employment", () => {
     expect(projectEmployee(row, "FINANCE").employment?.accountActive).toBe(true)
     expect(projectEmployee(row, "MANAGER").employment?.accountActive).toBe(true)
+  })
+})
+
+describe("projectEmployee — salesRole", () => {
+  it("reports null for an employee with no Sales Hub access", () => {
+    expect(projectEmployee(row, "FULL").employment?.salesRole).toBeNull()
+  })
+
+  it("reports the granted role", () => {
+    const granted = { ...row, user: { email: "rita@demo.com", isActive: true, salesRole: "SALES_USER" } } as never
+    expect(projectEmployee(granted, "FULL").employment?.salesRole).toBe("SALES_USER")
+  })
+
+  it("is absent for COLLEAGUE, same as the rest of the employment group", () => {
+    expect(projectEmployee(row, "COLLEAGUE").employment).toBeUndefined()
   })
 })

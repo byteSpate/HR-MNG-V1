@@ -21,6 +21,7 @@ import type {
   EmploymentStatus,
   EmploymentType,
   ExitReason,
+  SalesRole,
 } from "../../generated/prisma/client"
 import type { DocumentItem } from "./employee.media"
 
@@ -76,6 +77,11 @@ export interface EmploymentDetails {
    * a distinction the schema draws on purpose.
    */
   accountActive: boolean
+  /** The second permission axis, held alongside `role` rather than instead
+      of it. Null means no Sales Hub access. Granting/revoking is HR/Super
+      Admin only — see PATCH /:id/sales-role — but seeing the current value
+      is not sensitive, so it is exposed at the same tier as accountActive. */
+  salesRole: SalesRole | null
   /** FULL only. A biometric enrolment id the employee cannot act on. */
   deviceUserId?: string | null
 }
