@@ -41,7 +41,14 @@ export function generateTemporaryPassword(): string {
 }
 
 export function toPublicUser(
-  user: { id: string; email: string; role: PublicUser["role"]; isActive: boolean; mustChangePassword: boolean },
+  user: {
+    id: string
+    email: string
+    role: PublicUser["role"]
+    isActive: boolean
+    mustChangePassword: boolean
+    salesRole?: PublicUser["salesRole"] | null
+  },
   employeeCode?: string
 ): PublicUser {
   return {
@@ -51,5 +58,6 @@ export function toPublicUser(
     isActive: user.isActive,
     mustChangePassword: user.mustChangePassword,
     employeeCode,
+    salesRole: user.salesRole ?? null,
   }
 }

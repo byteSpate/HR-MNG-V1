@@ -9,6 +9,10 @@ export type Role = "SUPER_ADMIN" | "HR_ADMIN" | "FINANCE_OFFICER" | "REPORTING_M
 export interface PostingRule { id: string; event: string; key: string; accountId: string; note: string | null; account: { code: string; name: string } }
 export interface UnresolvedKey { event: string; key: string }
 
+/** The second permission axis, held alongside `role` rather than instead of
+    it. Null means no Sales Hub access at all. */
+export type SalesRole = "SALES_ADMIN" | "SALES_USER"
+
 export interface PublicUser {
   id: string
   email: string
@@ -16,6 +20,19 @@ export interface PublicUser {
   isActive: boolean
   mustChangePassword: boolean
   employeeCode?: string
+  salesRole: SalesRole | null
+}
+
+export type SalesAccountStatus = "ACTIVE" | "INACTIVE" | "DO_NOT_CONTACT"
+
+export interface SalesAccountSummary {
+  id: string
+  name: string
+  status: SalesAccountStatus
+  ownerEmployeeId: string
+  ownerName: string
+  assigneeCount: number
+  createdAt: string
 }
 
 export interface LoginResponse {

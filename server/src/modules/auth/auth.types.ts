@@ -21,4 +21,7 @@ export interface PublicUser {
   isActive: boolean
   mustChangePassword: boolean
   employeeCode?: string
+  /** Mirrors AccessTokenPayload.salesRole — the client needs it in the
+      session to decide whether to show a door to the Sales Hub. */
+  salesRole: SalesRole | null
 }

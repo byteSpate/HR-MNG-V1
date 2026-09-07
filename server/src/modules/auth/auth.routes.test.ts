@@ -15,7 +15,14 @@ import app from "../../app"
 import * as authService from "./auth.service"
 import { signAccessToken } from "./auth.utils"
 
-const publicUser = { id: "u1", email: "a@b.com", role: "SUPER_ADMIN" as any, isActive: true, mustChangePassword: false }
+const publicUser = {
+  id: "u1",
+  email: "a@b.com",
+  role: "SUPER_ADMIN" as any,
+  isActive: true,
+  mustChangePassword: false,
+  salesRole: null,
+}
 
 describe("POST /api/auth/login (administrative)", () => {
   it("returns 200, sets a refreshToken cookie, and returns the access token + user", async () => {

@@ -75,7 +75,20 @@ describe("toPublicUser", () => {
       isActive: true,
       mustChangePassword: true,
       employeeCode: undefined,
+      salesRole: null,
     })
+  })
+
+  it("carries salesRole through when the user has Sales Hub access", () => {
+    const user = {
+      id: "u1",
+      email: "a@b.com",
+      role: "EMPLOYEE" as const,
+      isActive: true,
+      mustChangePassword: true,
+      salesRole: "SALES_ADMIN" as const,
+    }
+    expect(toPublicUser(user).salesRole).toBe("SALES_ADMIN")
   })
 
   it("includes employeeCode when passed", () => {
