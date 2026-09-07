@@ -12,6 +12,7 @@ export function DashboardShell({
   rootHref,
   tone = "default",
   mainClassName = "max-w-[1220px] 2xl:max-w-[1600px]",
+  profileHref: profileHrefOverride,
   children,
 }: {
   navGroups: NavGroup[]
@@ -23,11 +24,17 @@ export function DashboardShell({
   /** The content cap. Defaults to today's value; the Sales Hub passes a
       wider one — its tables want more columns than a role dashboard's. */
   mainClassName?: string
+  /** Overrides the derived `${rootHref}/profile`. The Sales Hub has no
+      profile page of its own — the account menu there needs to point at
+      the person's actual role dashboard's profile instead, which is not
+      derivable from `rootHref="/sales"`. */
+  profileHref?: string
   children: React.ReactNode
 }) {
   // Every role group has a `/profile` route under its own root, so this is
-  // derivable rather than another prop each layout has to remember to pass.
-  const profileHref = `${rootHref}/profile`
+  // derivable rather than another prop each layout has to remember to pass —
+  // true for all five role dashboards, not for the Sales Hub above.
+  const profileHref = profileHrefOverride ?? `${rootHref}/profile`
 
   return (
     // The primitive's default width is 16rem; ours is 236px. It sets the
