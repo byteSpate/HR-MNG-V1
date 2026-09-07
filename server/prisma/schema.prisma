@@ -228,6 +228,7 @@ model Employee {
 
   salesAccountsOwned      SalesAccount[]           @relation("SalesAccountOwner")
   salesAccountAssignments SalesAccountAssignment[] @relation("SalesAccountAssignee")
+  salesCommunications     SalesCommunication[]
 }
 
 enum EmployeeChangeField {
@@ -2034,7 +2035,9 @@ model SalesAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignments SalesAccountAssignment[]
+  assignments    SalesAccountAssignment[]
+  contacts       SalesContact[]
+  communications SalesCommunication[]
 
   @@index([ownerEmployeeId, status])
   @@index([status])
@@ -2054,4 +2057,89 @@ model SalesAccountAssignment {
 
   @@unique([salesAccountId, employeeId])
   @@index([employeeId])
+}
+
+enum SalesContactStatus {
+  UNVERIFIED
+  VERIFIED
+  UNREACHABLE
+  INVALID
+}
+
+/// A named person at an account.
+///
+/// Exactly one contact per account may be primary, and that is enforced in
+/// `setPrimaryContact` — one transaction that demotes the old primary before
+/// promoting the new one. A partial unique index
+/// (`ON ("salesAccountId") WHERE "isPrimary"`) would say it in the database
+/// instead, but Prisma cannot express one, so every later
+/// `migrate diff --from-config-datasource` would emit a DROP for it and
+/// somebody would eventually apply that migration without reading it.
+model SalesContact {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+
+  name        String
+  designation String?
+  phone       String?
+  email       String?
+  isPrimary   Boolean @default(false)
+
+  /// Verified means somebody actually reached them, not that a number was
+  /// written down. Cleared when a later attempt proves otherwise: a stale
+  /// verification is worse than none.
+  status     SalesContactStatus @default(UNVERIFIED)
+  verifiedAt DateTime?
+  verifiedBy String?
+
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  communications SalesCommunication[]
+
+  @@index([salesAccountId, status])
+}
+
+enum SalesChannel {
+  CALL
+  EMAIL
+  WHATSAPP
+  OTHER
+  // No VISIT: a visit produces Meeting Minutes, so it is a SalesMeeting.
+}
+
+/// One entry in an account's Timeline: a call made, an email sent, a message
+/// answered.
+model SalesCommunication {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+
+  /// Optional: plenty of calls are to a switchboard rather than to a named
+  /// person. SetNull and not Cascade — deleting a contact must not delete the
+  /// record of having spoken to them.
+  contactId String?
+  contact   SalesContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  channel    SalesChannel
+  occurredAt DateTime
+  summary    String
+  detail     String?
+
+  /// Frozen. Authorship survives reassignment — who made the call does not
+  /// change when the account changes hands. A real relation rather than a
+  /// loose id, so the Timeline can name the author and an unknown id is
+  /// refused by the database instead of stored.
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salesAccountId, occurredAt])
+  @@index([employeeId, occurredAt])
+  @@index([contactId])
 }
