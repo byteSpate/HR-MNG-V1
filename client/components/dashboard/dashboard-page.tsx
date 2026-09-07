@@ -16,7 +16,6 @@ import { DataTable } from "@/components/dashboard/data-table"
 import { HeroBanner, HERO_OVERLAP_PX } from "@/components/dashboard/hero-banner"
 import { StatsGrid } from "@/components/dashboard/stat-card"
 import { TimeClockCard } from "@/components/dashboard/time-clock-card"
-import { HubEntryCard } from "@/components/sales/hub-entry-card"
 import type { Stat } from "@/components/dashboard/types"
 import type { DashboardStat, Role } from "@/lib/api/types"
 
@@ -108,7 +107,7 @@ function PanelGrid({ narrow, wide }: { narrow: ReactNode[]; wide: ReactNode[] })
  * role branch here — including whichever role gets one next.
  */
 export function DashboardPage() {
-  const { accessToken, status: sessionStatus, user } = useSession()
+  const { accessToken, status: sessionStatus } = useSession()
   const queryClient = useQueryClient()
   const [punchError, setPunchError] = useState<string | null>(null)
 
@@ -212,11 +211,6 @@ export function DashboardPage() {
     )
   }
 
-  // Renders nothing for anyone without hub access, rather than a disabled
-  // card advertising a room they cannot enter.
-  if (user && (user.role === "SUPER_ADMIN" || user.salesRole)) {
-    narrow.push(<HubEntryCard key="sales-hub" />)
-  }
 
   if (payload.feed) {
     wide.push(<ActivityFeed key="feed" items={payload.feed} viewAllHref={`${root}/reports`} />)
