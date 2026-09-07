@@ -12,6 +12,7 @@ import {
   logCommunicationHandler,
   listContactsHandler,
   listSalesAccountsHandler,
+  listSalesEligibleEmployeesHandler,
   setContactStatusHandler,
   setPrimaryContactHandler,
 } from "./sales.controller"
@@ -24,6 +25,15 @@ const router = Router()
 router.get("/accounts", requireAuth, requireSales(), listSalesAccountsHandler)
 router.get("/accounts/:id", requireAuth, requireSales(), getSalesAccountHandler)
 router.post("/accounts", requireAuth, requireSales(SalesRole.SALES_ADMIN), createSalesAccountHandler)
+
+// Who the owner/collaborator pickers on the create form may offer — Sales
+// Admin only, same guard as creating the account itself.
+router.get(
+  "/employees",
+  requireAuth,
+  requireSales(SalesRole.SALES_ADMIN),
+  listSalesEligibleEmployeesHandler
+)
 
 // Contacts are ordinary work on an account you already hold, so they need no
 // Sales Admin. `requireAccountAccess` inside each service is what stops a

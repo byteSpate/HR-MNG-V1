@@ -35,6 +35,14 @@ export interface SalesAccountSummary {
   createdAt: string
 }
 
+/** Who the "New Sales Account" owner/collaborator pickers may offer —
+    employees who already hold a salesRole, and only those. */
+export interface SalesEligibleEmployee {
+  id: string
+  fullName: string
+  designation: string
+}
+
 export interface CreateSalesAccountBody {
   name: string
   ownerEmployeeId: string
@@ -830,6 +838,9 @@ export interface EmploymentDetails {
    * it is revoked. Render both, never one in place of the other.
    */
   accountActive: boolean
+  /** The second permission axis, held alongside `role`. Null means no Sales
+      Hub access. Granting/revoking is HR/Super Admin only. */
+  salesRole: SalesRole | null
   deviceUserId?: string | null
 }
 

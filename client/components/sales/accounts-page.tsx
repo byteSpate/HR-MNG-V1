@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { createSalesAccount, listSalesAccounts } from "@/lib/api/sales"
-import { listEmployees } from "@/lib/api/employees"
+import { createSalesAccount, listSalesAccounts, listSalesEligibleEmployees } from "@/lib/api/sales"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type { CreateSalesAccountBody, SalesAccountSummary } from "@/lib/api/types"
@@ -60,10 +59,16 @@ export function AccountsPage() {
     enabled: isAuthed,
   })
 
-  const employeesQuery = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => listEmployees(accessToken!),
-    enabled: isAuthed && createOpen,
+  // Only Sales Admin can open this dialog, and only Sales Admin may call this
+  // endpoint — same guard as creating the account itself. Scoped to people
+  // who already hold a salesRole: this is the actual fix, not just a nicer
+  // picker. Without it the server's own validation was the only thing
+  // stopping an account from being handed to someone who could not open the
+  // hub to see it.
+  const eligibleQuery = useQuery({
+    queryKey: ["sales", "eligible-employees"],
+    queryFn: () => listSalesEligibleEmployees(accessToken!),
+    enabled: isAuthed && createOpen && canCreate,
   })
 
   function resetForm() {
@@ -116,7 +121,7 @@ export function AccountsPage() {
 
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
   const rows = useMemo(() => toRows(accounts), [accounts])
-  const employees = employeesQuery.data ?? []
+  const employees = eligibleQuery.data ?? []
   const isLoading = sessionStatus === "loading" || accountsQuery.isPending
 
   return (
@@ -157,19 +162,24 @@ export function AccountsPage() {
                 <Input id="sa-name" value={name} onChange={(e) => setName(e.target.value)} />
               </Field>
 
-              <Field label="Owner" hint="Answerable for this account. Reminders go to them.">
+              <Field
+                label="Owner"
+                hint={
+                  employees.length === 0 && !eligibleQuery.isPending
+                    ? "Nobody has Sales Hub access yet. Grant it from an employee's record before creating an account for them."
+                    : "Answerable for this account. Reminders go to them."
+                }
+              >
                 <Select value={ownerEmployeeId} onValueChange={(v) => setOwnerEmployeeId(v ?? "")}>
                   <SelectTrigger className="w-full">
                     <SelectValue>
-                      {(v: string | null) =>
-                        employees.find((e) => e.id === v)?.work.fullName ?? "Select an owner"
-                      }
+                      {(v: string | null) => employees.find((e) => e.id === v)?.fullName ?? "Select an owner"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {employees.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
-                        {e.work.fullName} — {e.work.designation}
+                        {e.fullName} — {e.designation}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -200,7 +210,7 @@ export function AccountsPage() {
                       .map((e) => (
                         <CheckboxField
                           key={e.id}
-                          label={e.work.fullName}
+                          label={e.fullName}
                           checked={assigneeIds.includes(e.id)}
                           onChange={(next) =>
                             setAssigneeIds((prev) =>

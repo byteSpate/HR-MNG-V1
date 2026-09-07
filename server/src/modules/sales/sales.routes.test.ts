@@ -169,6 +169,7 @@ describe("POST /api/sales/accounts", () => {
     vi.mocked(prisma.employee.findUnique).mockResolvedValue({
       id: validBody.ownerEmployeeId,
       fullName: "Karim",
+      user: { salesRole: "SALES_USER" },
     } as never)
     vi.mocked(prisma.salesAccount.create).mockResolvedValue({
       id: "sa-2",

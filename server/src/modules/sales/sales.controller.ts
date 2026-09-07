@@ -1,6 +1,12 @@
 import type { NextFunction, Request, Response } from "express"
 
-import { createSalesAccount, getAccountHistory, getSalesAccount, listSalesAccounts } from "./account.service"
+import {
+  createSalesAccount,
+  getAccountHistory,
+  getSalesAccount,
+  listSalesAccounts,
+  listSalesEligibleEmployees,
+} from "./account.service"
 import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
@@ -29,6 +35,18 @@ export async function getSalesAccountHandler(
 ) {
   try {
     return res.status(200).json(await getSalesAccount(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function listSalesEligibleEmployeesHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await listSalesEligibleEmployees())
   } catch (err) {
     return next(err)
   }

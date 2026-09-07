@@ -39,10 +39,21 @@ export async function createSalesAccount(
 
       const owner = await tx.employee.findUnique({
         where: { id: body.ownerEmployeeId },
-        select: { id: true, fullName: true },
+        select: { id: true, fullName: true, user: { select: { salesRole: true } } },
       })
       if (!owner) {
         throw new AppError(400, "That owner is not an employee")
+      }
+      // Otherwise the owner is a real person answerable for an account they
+      // cannot themselves open — requireSales blocks the door regardless of
+      // what ownerEmployeeId says about them. Granting is deliberately not
+      // this service's job: setSalesRole is guarded by requireRole, not
+      // requireSales, precisely so a Sales Admin cannot widen their own team.
+      if (!owner.user?.salesRole) {
+        throw new AppError(
+          400,
+          `${owner.fullName} does not have Sales Hub access yet. Grant it from their employee record before making them the owner.`
+        )
       }
 
       // The owner is already on the account. Storing them again as an
@@ -61,12 +72,21 @@ export async function createSalesAccount(
         // not one per id.
         const found = await tx.employee.findMany({
           where: { id: { in: extras } },
-          select: { id: true },
+          select: { id: true, fullName: true, user: { select: { salesRole: true } } },
         })
-        const known = new Set(found.map((employee) => employee.id))
+        const byId = new Map(found.map((employee) => [employee.id, employee]))
         for (const id of extras) {
-          if (!known.has(id)) {
+          const employee = byId.get(id)
+          if (!employee) {
             throw new AppError(400, `${id} is not an employee`)
+          }
+          // Same rule as the owner: a collaborator who cannot open the hub
+          // cannot work the account they were just added to.
+          if (!employee.user?.salesRole) {
+            throw new AppError(
+              400,
+              `${employee.fullName} does not have Sales Hub access yet. Grant it from their employee record first.`
+            )
           }
         }
       }
@@ -138,6 +158,27 @@ export async function createSalesAccount(
     }
     throw err
   }
+}
+
+export interface SalesEligibleEmployee {
+  id: string
+  fullName: string
+  designation: string
+}
+
+/**
+ * Who the "New Sales Account" owner/collaborator pickers may offer —
+ * employees who already hold a salesRole, and only those. Filtering here
+ * rather than trusting the client is what actually closes the gap: without
+ * it, `createSalesAccount`'s own validation is the only thing standing
+ * between a Sales Admin and naming someone who cannot open the hub.
+ */
+export async function listSalesEligibleEmployees(): Promise<SalesEligibleEmployee[]> {
+  return prisma.employee.findMany({
+    where: { user: { salesRole: { not: null } } },
+    select: { id: true, fullName: true, designation: true },
+    orderBy: { fullName: "asc" },
+  })
 }
 
 /** Shared so the list and the detail page cannot describe an account differently. */

@@ -15,7 +15,7 @@ vi.mock("../../config/prisma", () => ({
 
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
-import { createSalesAccount, getAccountHistory } from "./account.service"
+import { createSalesAccount, getAccountHistory, listSalesEligibleEmployees } from "./account.service"
 
 const USER = {
   sub: "user-2",
@@ -36,12 +36,21 @@ const ADMIN = {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
-  vi.mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-1", fullName: "Karim" } as any)
+  vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+    id: "emp-1",
+    fullName: "Karim",
+    user: { salesRole: "SALES_ADMIN" },
+  } as any)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
-  // Every requested assignee exists unless a test says otherwise.
+  // Every requested assignee exists and already has Sales Hub access, unless
+  // a test says otherwise.
   vi.mocked(prisma.employee.findMany).mockImplementation((async (args: any) =>
-    args.where.id.in.map((id: string) => ({ id }))) as never)
+    args.where.id.in.map((id: string) => ({
+      id,
+      fullName: id,
+      user: { salesRole: "SALES_USER" },
+    }))) as never)
 })
 
 describe("createSalesAccount", () => {
@@ -148,6 +157,39 @@ describe("createSalesAccount", () => {
         ADMIN
       )
     ).rejects.toMatchObject({ statusCode: 400 })
+
+    expect(prisma.salesAccountAssignment.createMany).not.toHaveBeenCalled()
+  })
+
+  // The gap this closes: nothing previously stopped a Sales Admin naming
+  // someone owner who had never been granted salesRole. They would then own
+  // an account they cannot themselves open — requireSales blocks the door
+  // regardless of what ownerEmployeeId says about them.
+  it("refuses an owner who has no Sales Hub access", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: "emp-1",
+      fullName: "Karim",
+      user: { salesRole: null },
+    } as any)
+
+    await expect(
+      createSalesAccount({ name: "New Co", ownerEmployeeId: "emp-1" }, ADMIN)
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/Karim/) })
+
+    expect(prisma.salesAccount.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a collaborator who has no Sales Hub access", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      { id: "emp-2", fullName: "Rahim", user: { salesRole: null } },
+    ] as any)
+
+    await expect(
+      createSalesAccount(
+        { name: "New Co", ownerEmployeeId: "emp-1", assigneeIds: ["emp-2"] },
+        ADMIN
+      )
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/Rahim/) })
 
     expect(prisma.salesAccountAssignment.createMany).not.toHaveBeenCalled()
   })
@@ -285,5 +327,23 @@ describe("getAccountHistory", () => {
     await expect(getAccountHistory("sa-9", USER)).rejects.toThrow(AppError)
 
     expect(prisma.auditLog.findMany).not.toHaveBeenCalled()
+  })
+})
+
+describe("listSalesEligibleEmployees", () => {
+  it("asks Prisma for employees whose user already holds a salesRole", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      { id: "emp-1", fullName: "Karim", designation: "Sales Lead" },
+    ] as any)
+
+    const result = await listSalesEligibleEmployees()
+
+    expect(prisma.employee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { user: { salesRole: { not: null } } },
+        orderBy: { fullName: "asc" },
+      })
+    )
+    expect(result).toEqual([{ id: "emp-1", fullName: "Karim", designation: "Sales Lead" }])
   })
 })

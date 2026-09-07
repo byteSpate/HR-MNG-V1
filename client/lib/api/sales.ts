@@ -7,12 +7,19 @@ import type {
   SalesAccountSummary,
   SalesCommunicationSummary,
   SalesContactSummary,
+  SalesEligibleEmployee,
   SetContactStatusBody,
   TimelineItem,
 } from "./types"
 
 export function listSalesAccounts(accessToken: string): Promise<SalesAccountSummary[]> {
   return apiFetch<SalesAccountSummary[]>("/api/sales/accounts", { accessToken })
+}
+
+/** Sales Admin only — the same people the create-account form's owner and
+    collaborator pickers may offer. */
+export function listSalesEligibleEmployees(accessToken: string): Promise<SalesEligibleEmployee[]> {
+  return apiFetch<SalesEligibleEmployee[]>("/api/sales/employees", { accessToken })
 }
 
 export function getSalesAccount(accessToken: string, id: string): Promise<SalesAccountSummary> {
