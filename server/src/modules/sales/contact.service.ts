@@ -120,30 +120,62 @@ export async function setPrimaryContact(
 ): Promise<SalesContactSummary> {
   const { contact } = await requireContactAccess(contactId, actor)
 
-  // Nothing to do, and nothing to audit. An audit row saying a contact was
-  // promoted to a position it already held is noise in the one place that
-  // has to stay readable.
-  if (contact.isPrimary) {
-    return toSummary(contact)
-  }
-
   return prisma.$transaction(async (tx) => {
+    // A transaction alone does not serialize two concurrent promotions on the
+    // same account — without this lock, two transactions can each demote the
+    // primary they saw and promote a different contact, leaving both marked
+    // primary. Every primary-contact write for this account contends for the
+    // same row lock, so the second one waits and sees what the first left.
+    await tx.$queryRaw`SELECT id FROM "SalesAccount" WHERE id = ${contact.salesAccountId} FOR UPDATE`
+
+    // Re-read after the lock: a concurrent request may have changed this
+    // contact, or the account's primary, between the check above and here.
+    const target = await tx.salesContact.findFirst({
+      where: { id: contact.id, salesAccountId: contact.salesAccountId },
+    })
+    if (!target) {
+      throw new AppError(404, "That contact does not exist")
+    }
+
+    // Nothing to do, and nothing to audit. An audit row saying a contact was
+    // promoted to a position it already held is noise in the one place that
+    // has to stay readable.
+    if (target.isPrimary) {
+      return toSummary(target)
+    }
+
+    const previousPrimary = await tx.salesContact.findFirst({
+      where: { salesAccountId: target.salesAccountId, isPrimary: true },
+    })
+
     // Demote first. Between these two statements the account momentarily has
     // no primary, which is a state the UI already handles; the other order
     // gives it two, which is a state nothing can resolve.
-    await tx.salesContact.updateMany({
-      where: { salesAccountId: contact.salesAccountId, isPrimary: true },
-      data: { isPrimary: false },
-    })
+    if (previousPrimary) {
+      await tx.salesContact.update({
+        where: { id: previousPrimary.id },
+        data: { isPrimary: false },
+      })
+
+      await writeAudit(tx, {
+        entity: "SALES_CONTACT",
+        entityId: previousPrimary.id,
+        action: "UPDATE",
+        changedBy: actor.sub,
+        before: { isPrimary: true },
+        after: { isPrimary: false },
+        note: `${target.name} was selected as the primary contact`,
+      })
+    }
 
     const promoted = await tx.salesContact.update({
-      where: { id: contact.id },
+      where: { id: target.id },
       data: { isPrimary: true },
     })
 
     await writeAudit(tx, {
       entity: "SALES_CONTACT",
-      entityId: contact.id,
+      entityId: target.id,
       action: "UPDATE",
       changedBy: actor.sub,
       before: { isPrimary: false },
