@@ -5,15 +5,25 @@ vi.mock("../../config/prisma", () => ({
     $transaction: vi.fn(),
     salesAccount: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn() },
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn() },
+    salesContact: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
-    auditLog: { create: vi.fn() },
+    user: { findUnique: vi.fn() },
+    auditLog: { create: vi.fn(), findMany: vi.fn() },
     event: { create: vi.fn() },
   },
 }))
 
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
-import { createSalesAccount } from "./account.service"
+import { createSalesAccount, getAccountHistory } from "./account.service"
+
+const USER = {
+  sub: "user-2",
+  role: "EMPLOYEE",
+  email: "rahim@demo.com",
+  mustChangePassword: false,
+  salesRole: "SALES_USER",
+} as any
 
 const ADMIN = {
   sub: "user-1",
@@ -27,6 +37,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-1", fullName: "Karim" } as any)
+  vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
   // Every requested assignee exists unless a test says otherwise.
   vi.mocked(prisma.employee.findMany).mockImplementation((async (args: any) =>
@@ -178,5 +189,101 @@ describe("createSalesAccount", () => {
     await expect(
       createSalesAccount({ name: "Rising Group", ownerEmployeeId: "emp-1" }, ADMIN)
     ).rejects.toMatchObject({ statusCode: 409, message: expect.stringMatching(/Rising Group.*Rahim/) })
+  })
+})
+
+describe("getAccountHistory", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-1" } as any)
+  })
+
+  it("merges SALES_ACCOUNT and SALES_CONTACT audit rows for this account, newest first", async () => {
+    vi.mocked(prisma.salesContact.findMany).mockResolvedValue([{ id: "c-1" }, { id: "c-2" }] as any)
+    vi.mocked(prisma.auditLog.findMany).mockResolvedValue([
+      {
+        id: "al-2",
+        entity: "SALES_CONTACT",
+        entityId: "c-1",
+        action: "UPDATE",
+        changedAt: new Date("2026-09-06"),
+        changedBy: "user-1",
+        before: { isPrimary: false },
+        after: { isPrimary: true },
+        note: null,
+      },
+      {
+        id: "al-1",
+        entity: "SALES_ACCOUNT",
+        entityId: "sa-1",
+        action: "CREATE",
+        changedAt: new Date("2026-09-01"),
+        changedBy: "user-1",
+        before: null,
+        after: { name: "Rising Group" },
+        note: null,
+      },
+    ] as any)
+
+    const result = await getAccountHistory("sa-1", USER)
+
+    expect(prisma.salesContact.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { salesAccountId: "sa-1" } })
+    )
+    expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [
+            { entity: "SALES_ACCOUNT", entityId: "sa-1" },
+            { entity: "SALES_CONTACT", entityId: { in: ["c-1", "c-2"] } },
+          ],
+        },
+        orderBy: { changedAt: "desc" },
+      })
+    )
+    expect(result).toEqual([
+      {
+        id: "al-2",
+        entity: "SALES_CONTACT",
+        entityId: "c-1",
+        action: "UPDATE",
+        changedAt: "2026-09-06T00:00:00.000Z",
+        changedBy: "user-1",
+        before: { isPrimary: false },
+        after: { isPrimary: true },
+        note: null,
+      },
+      {
+        id: "al-1",
+        entity: "SALES_ACCOUNT",
+        entityId: "sa-1",
+        action: "CREATE",
+        changedAt: "2026-09-01T00:00:00.000Z",
+        changedBy: "user-1",
+        before: null,
+        after: { name: "Rising Group" },
+        note: null,
+      },
+    ])
+  })
+
+  it("does not filter by contact when the account has no contacts yet", async () => {
+    vi.mocked(prisma.salesContact.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as any)
+
+    await getAccountHistory("sa-1", USER)
+
+    expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { OR: [{ entity: "SALES_ACCOUNT", entityId: "sa-1" }] },
+      })
+    )
+  })
+
+  it("refuses a history read for an account the caller cannot see", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+
+    await expect(getAccountHistory("sa-9", USER)).rejects.toThrow(AppError)
+
+    expect(prisma.auditLog.findMany).not.toHaveBeenCalled()
   })
 })

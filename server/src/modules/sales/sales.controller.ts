@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express"
 
-import { createSalesAccount, getSalesAccount, listSalesAccounts } from "./account.service"
+import { createSalesAccount, getAccountHistory, getSalesAccount, listSalesAccounts } from "./account.service"
 import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
@@ -105,6 +105,18 @@ export async function logCommunicationHandler(
   try {
     const body = logCommunicationSchema.parse(req.body)
     return res.status(201).json(await logCommunication(req.params.id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getAccountHistoryHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await getAccountHistory(req.params.id, req.user!))
   } catch (err) {
     return next(err)
   }

@@ -43,6 +43,24 @@ export interface SalesCommunicationSummary {
 }
 
 /**
+ * One audit row from the account's own trail, or one of its contacts' —
+ * the field-by-field record, distinct from the Timeline's "what happened".
+ * `before`/`after` are only ever the changed fields, per `writeAudit`'s own
+ * contract, never a full snapshot.
+ */
+export interface AccountHistoryEntry {
+  id: string
+  entity: "SALES_ACCOUNT" | "SALES_CONTACT"
+  entityId: string
+  action: string
+  changedAt: string
+  changedBy: string | null
+  before: unknown
+  after: unknown
+  note: string | null
+}
+
+/**
  * One line of an account's story, from either of the two tables that hold it.
  *
  * Rendered rather than raw: the channel is already a label and the author is

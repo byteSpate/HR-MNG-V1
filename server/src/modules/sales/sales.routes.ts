@@ -6,6 +6,7 @@ import { requireSales } from "../../middleware/requireSales"
 import {
   addContactHandler,
   createSalesAccountHandler,
+  getAccountHistoryHandler,
   getAccountTimelineHandler,
   getSalesAccountHandler,
   logCommunicationHandler,
@@ -32,9 +33,11 @@ router.post("/accounts/:id/contacts", requireAuth, requireSales(), addContactHan
 router.patch("/contacts/:id/primary", requireAuth, requireSales(), setPrimaryContactHandler)
 router.patch("/contacts/:id/status", requireAuth, requireSales(), setContactStatusHandler)
 
-// The Timeline is a read of the account, so it is guarded exactly as the
-// account is. Logging a call is ordinary work on one, like a contact.
+// The Timeline and the History are both reads of the account, so both are
+// guarded exactly as the account is. Logging a call is ordinary work on
+// one, like a contact.
 router.get("/accounts/:id/timeline", requireAuth, requireSales(), getAccountTimelineHandler)
+router.get("/accounts/:id/history", requireAuth, requireSales(), getAccountHistoryHandler)
 router.post(
   "/accounts/:id/communications",
   requireAuth,

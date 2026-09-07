@@ -4,8 +4,8 @@ import { writeAudit } from "../../utils/audit"
 import { emitEvent } from "../event/event.emit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { CreateSalesAccountBody } from "./sales.validators"
-import type { SalesAccountSummary } from "./sales.types"
-import { ACCOUNT_NOT_VISIBLE, accountScopeFor, employeeIdFor } from "./sales.access"
+import type { AccountHistoryEntry, SalesAccountSummary } from "./sales.types"
+import { ACCOUNT_NOT_VISIBLE, accountScopeFor, employeeIdFor, requireAccountAccess } from "./sales.access"
 
 /**
  * One sentence, used by both paths that can find a clash — the check inside
@@ -197,4 +197,52 @@ export async function getSalesAccount(
     throw new AppError(404, ACCOUNT_NOT_VISIBLE)
   }
   return toSummary(account)
+}
+
+/**
+ * The field-by-field record for an account: its own audit rows, plus its
+ * contacts'. Not the contacts' communications — logging one is not audited
+ * in its own right (`communication.service.ts`: "a communication is already
+ * a Timeline row"), so there is nothing here to merge in for it.
+ *
+ * Merged in the service for the same reason the Timeline is: `AuditLog` is
+ * polymorphic by `(entity, entityId)`, so a contact's rows live under its
+ * own id, not the account's — one query with an `OR`, not the account read
+ * followed by one query per contact.
+ */
+export async function getAccountHistory(
+  accountId: string,
+  actor: AccessTokenPayload
+): Promise<AccountHistoryEntry[]> {
+  await requireAccountAccess(accountId, actor)
+
+  const contacts = await prisma.salesContact.findMany({
+    where: { salesAccountId: accountId },
+    select: { id: true },
+  })
+  const contactIds = contacts.map((c) => c.id)
+
+  const rows = await prisma.auditLog.findMany({
+    where: {
+      OR: [
+        { entity: "SALES_ACCOUNT", entityId: accountId },
+        ...(contactIds.length > 0
+          ? [{ entity: "SALES_CONTACT" as const, entityId: { in: contactIds } }]
+          : []),
+      ],
+    },
+    orderBy: { changedAt: "desc" },
+  })
+
+  return rows.map((row) => ({
+    id: row.id,
+    entity: row.entity as AccountHistoryEntry["entity"],
+    entityId: row.entityId,
+    action: row.action,
+    changedAt: row.changedAt.toISOString(),
+    changedBy: row.changedBy,
+    before: row.before,
+    after: row.after,
+    note: row.note,
+  }))
 }
