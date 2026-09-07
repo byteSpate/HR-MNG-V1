@@ -4,14 +4,13 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { RiArrowLeftSLine, RiArrowRightSLine, RiLoader4Line, RiLogoutBoxRLine } from "@remixicon/react"
+import { RiArrowRightSLine, RiLoader4Line, RiLogoutBoxRLine } from "@remixicon/react"
 
 import { cn } from "@/lib/utils"
 import { BrandLogo } from "@/components/brand/brand"
 import { icons } from "@/components/dashboard/icons"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import { getDashboard } from "@/lib/api/dashboard"
-import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { useSession } from "@/lib/auth/session-context"
 import { useIdentity } from "@/lib/auth/use-identity"
 import { useSignOut } from "@/lib/auth/use-sign-out"
@@ -205,12 +204,9 @@ export function Sidebar({
   tone?: "default" | "sales"
 }) {
   const pathname = usePathname()
-  const { accessToken, status, user } = useSession()
+  const { accessToken, status } = useSession()
   const { name, avatarUrl, subtitle, loading } = useIdentity()
   const { signOut, signingOut } = useSignOut()
-  // Computed from the person's role, not from browser history: history is
-  // empty on a fresh tab and wrong after a refresh.
-  const backToDashboardHref = rootHref === "/sales" && user ? ROLE_ROUTES[user.role] : null
   // Closing the drawer on navigation is ours to do — the sidebar primitive has
   // no router awareness, so without this the overlay stays sitting over the
   // page you just navigated to.
@@ -275,17 +271,6 @@ export function Sidebar({
             </SidebarGroup>
           ))}
         </SidebarContent>
-
-        {backToDashboardHref ? (
-          <Link
-            href={backToDashboardHref}
-            onClick={() => setOpenMobile(false)}
-            className="mt-3 flex items-center gap-2 rounded-md px-2.5 py-2 text-[12.5px] font-semibold text-white/60 transition-colors duration-150 ease-out-quint hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none motion-reduce:transition-none"
-          >
-            <RiArrowLeftSLine className="size-4" aria-hidden="true" />
-            Back to dashboard
-          </Link>
-        ) : null}
 
         <SidebarFooter className="mt-3 flex-row items-center gap-1 rounded-md border border-white/[0.09] bg-white/[0.07] p-1.5 transition-colors duration-200 ease-out-quint hover:border-white/15 motion-reduce:transition-none">
           {loading ? (

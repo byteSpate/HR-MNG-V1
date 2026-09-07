@@ -1,13 +1,15 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { RiBuilding2Line } from "@remixicon/react"
 
 import { useSession } from "@/lib/auth/session-context"
 
 /**
  * The one entry point into the Sales Hub, in the header's icon cluster next
- * to the notification bell.
+ * to the notification bell. Hidden while already inside the hub — see
+ * `BackToDashboardButton`, which takes over the same slot there.
  *
  * The ring is an animated gradient **border**, not a spinning disc: the
  * pill's own white background covers everything except a 1.5px gap right at
@@ -25,9 +27,10 @@ import { useSession } from "@/lib/auth/session-context"
  * server-side; everyone else needs a granted salesRole.
  */
 export function SalesHubButton() {
+  const pathname = usePathname()
   const { user } = useSession()
   const canEnter = !!user && (user.role === "SUPER_ADMIN" || !!user.salesRole)
-  if (!canEnter) return null
+  if (!canEnter || pathname.startsWith("/sales")) return null
 
   return (
     <Link
@@ -41,9 +44,9 @@ export function SalesHubButton() {
           animation's `transform: rotate()` cannot clobber this one's
           centring translate. */}
       <span aria-hidden className="absolute top-1/2 left-1/2 size-44 -translate-x-1/2 -translate-y-1/2">
-        <span className="absolute inset-0 animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_225deg,#f43f5e,#f97316,#eab308,#22c55e,#06b6d4,#6366f1,#d946ef,#f43f5e)] motion-reduce:animate-none" />
+        <span className="absolute inset-0 animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_225deg,#f43f5e,#f97316,#eab308,#22c55e,#06b6d4,#6366f1,#d946ef,#f43f5e)] transition-[filter] duration-150 ease-out group-active:brightness-125 group-active:saturate-150 motion-reduce:animate-none" />
       </span>
-      <span className="relative z-10 flex h-8.5 items-center gap-1.5 rounded-full bg-white px-3.5 text-[12.5px] font-bold text-[#17191C] transition-[background-color,transform] duration-150 ease-out-quint group-hover:bg-[#F4F6F9] group-active:scale-97 motion-reduce:transition-none">
+      <span className="relative z-10 flex h-8.5 items-center gap-1.5 rounded-full bg-white px-3.5 text-[12.5px] font-bold text-[#17191C] transition-[background-color,transform] duration-150 ease-out-quint group-hover:bg-[#F4F6F9] group-active:scale-93 group-active:translate-y-px motion-reduce:transition-none">
         <RiBuilding2Line className="size-4" aria-hidden />
         Sales Hub
       </span>
