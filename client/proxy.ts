@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const PROTECTED_PREFIXES = ["/admin", "/hr", "/finance", "/manager", "/employee"]
+// /sales is a role-agnostic route group (entered by salesRole, not by Role),
+// but the cookie-presence check below does not care — it only needs a prefix
+// to guard.
+const PROTECTED_PREFIXES = ["/admin", "/hr", "/finance", "/manager", "/employee", "/sales"]
 
 export function proxy(request: NextRequest) {
   const isProtected = PROTECTED_PREFIXES.some((prefix) => request.nextUrl.pathname.startsWith(prefix))
@@ -18,5 +21,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/hr/:path*", "/finance/:path*", "/manager/:path*", "/employee/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/hr/:path*",
+    "/finance/:path*",
+    "/manager/:path*",
+    "/employee/:path*",
+    "/sales/:path*",
+  ],
 }
