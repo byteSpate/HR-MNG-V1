@@ -1132,8 +1132,26 @@ describe("half-day leave", () => {
     ...PRO_RATED_HALF,
   }
 
-  // Mon 2026-09-07: a working day, in the future, no weekly off.
-  const DATE = "2026-09-07"
+  /**
+   * The next Monday, computed rather than written down.
+   *
+   * This was the literal "2026-09-07", commented "a working day, in the
+   * future" — true on the day it was written and false from 2026-09-08
+   * onward, at which point three tests here began failing against
+   * `allowsBackdating: false` with "Casual leave cannot start in the past".
+   * A date that has to stay in the future cannot be a constant.
+   *
+   * Monday specifically: always a working day under the default shift, whose
+   * weekly off is Friday. `|| 7` keeps it strictly in the future on a day
+   * that is itself a Monday.
+   */
+  const DATE = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + (((8 - d.getDay()) % 7) || 7))
+    const month = `${d.getMonth() + 1}`.padStart(2, "0")
+    const day = `${d.getDate()}`.padStart(2, "0")
+    return `${d.getFullYear()}-${month}-${day}`
+  })()
 
   const halfDayBody = {
     leaveTypeId: "lt-1",
