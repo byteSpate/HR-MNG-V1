@@ -12,16 +12,29 @@ export const createSalesAccountSchema = z.object({
 
 export type CreateSalesAccountBody = z.infer<typeof createSalesAccountSchema>
 
-export const createSalesContactSchema = z.object({
-  name: z.string().trim().min(2, "A contact needs a name").max(160),
-  designation: z.string().trim().max(120).optional(),
-  // Both optional on purpose. "There is a procurement head called Rahman and
-  // we do not have his number yet" is a real state, and it is exactly what
-  // UNVERIFIED is for.
-  phone: z.string().trim().max(32).optional(),
-  email: z.string().trim().email("That is not an email address").toLowerCase().optional(),
-  note: z.string().trim().max(500).optional(),
-})
+export const createSalesContactSchema = z
+  .object({
+    name: z.string().trim().min(2, "A contact needs a name").max(160),
+    designation: z.string().trim().max(120).optional(),
+    // Individually optional, but the refine below requires at least one.
+    // Which one exists varies — a switchboard number with no personal
+    // address, or an email off a tender document with no direct line — so
+    // neither can be mandatory on its own.
+    phone: z.string().trim().max(32).optional(),
+    email: z.string().trim().email("That is not an email address").toLowerCase().optional(),
+    note: z.string().trim().max(500).optional(),
+  })
+  // A contact nobody can contact is just a name in a list. The previous
+  // version allowed it, reasoning that "we know a procurement head exists but
+  // have no number yet" is a real state — it is, but it belongs in the note,
+  // not as a contact row every later screen has to treat as unreachable.
+  //
+  // Existing rows are untouched: the column stays nullable, so contacts
+  // created before this rule still load.
+  .refine((body) => Boolean(body.phone) || Boolean(body.email), {
+    message: "Add a phone number or an email — a contact needs at least one way to reach them",
+    path: ["phone"],
+  })
 
 export type CreateSalesContactBody = z.infer<typeof createSalesContactSchema>
 

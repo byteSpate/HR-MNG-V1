@@ -122,6 +122,58 @@ describe("loginStaff", () => {
     expect(verifyAccessToken(result.accessToken).salesRole).toBe("SALES_USER")
   })
 
+  // The hole this closes was found in live testing: stripping the role from
+  // the JWT alone was not enough, because the client hides the hub button and
+  // gates the route on the `salesRole` in the PublicUser payload. With only
+  // the claim stripped, a resigned employee was still shown the door and then
+  // got a 403 behind it. Both must say the same thing.
+  it("strips salesRole from both the token and the user payload for a resigned employee", async () => {
+    const passwordHash = await hashPassword("correct-password")
+    mockedPrisma.employee.findUnique.mockResolvedValue({
+      employeeCode: "BS-EMP-DEMO",
+      employmentStatus: "RESIGNED",
+      user: {
+        id: "u9",
+        email: "ayesha@demo.com",
+        passwordHash,
+        role: "EMPLOYEE",
+        salesRole: "SALES_USER",
+        isActive: true,
+        mustChangePassword: false,
+      },
+    })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await loginStaff("BS-EMP-DEMO", "correct-password")
+
+    expect(verifyAccessToken(result.accessToken).salesRole).toBeNull()
+    expect(result.user.salesRole).toBeNull()
+  })
+
+  // Leaving is a departure; being away is not.
+  it("keeps salesRole for an employee who is only on leave", async () => {
+    const passwordHash = await hashPassword("correct-password")
+    mockedPrisma.employee.findUnique.mockResolvedValue({
+      employeeCode: "BS-EMP-00001",
+      employmentStatus: "ON_LEAVE",
+      user: {
+        id: "u1",
+        email: "rahim@demo.com",
+        passwordHash,
+        role: "EMPLOYEE",
+        salesRole: "SALES_USER",
+        isActive: true,
+        mustChangePassword: false,
+      },
+    })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await loginStaff("BS-EMP-00001", "correct-password")
+
+    expect(verifyAccessToken(result.accessToken).salesRole).toBe("SALES_USER")
+    expect(result.user.salesRole).toBe("SALES_USER")
+  })
+
   it("carries null salesRole for someone with no Sales Hub access", async () => {
     const passwordHash = await hashPassword("correct-password")
     mockedPrisma.employee.findUnique.mockResolvedValue({
@@ -446,6 +498,52 @@ describe("resetPassword", () => {
 })
 
 describe("changePassword", () => {
+  it("refuses to mint a new session for a deactivated account", async () => {
+    const passwordHash = await hashPassword("old-password")
+    mockedPrisma.user.findUnique.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      passwordHash,
+      role: "EMPLOYEE",
+      isActive: false,
+      mustChangePassword: false,
+    })
+
+    await expect(changePassword("u1", "old-password", "brand-new-password")).rejects.toMatchObject({
+      statusCode: 403,
+      message: "This account has been deactivated",
+    })
+    expect(mockedPrisma.user.update).not.toHaveBeenCalled()
+    expect(mockedPrisma.refreshToken.create).not.toHaveBeenCalled()
+  })
+
+  it("preserves employeeCode in the replacement session user", async () => {
+    const passwordHash = await hashPassword("old-password")
+    mockedPrisma.user.findUnique.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      passwordHash,
+      role: "EMPLOYEE",
+      isActive: true,
+      mustChangePassword: false,
+      employee: { employeeCode: "BS-EMP-00001" },
+    })
+    mockedPrisma.user.update.mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      role: "EMPLOYEE",
+      salesRole: null,
+      isActive: true,
+      mustChangePassword: false,
+    })
+    mockedPrisma.refreshToken.updateMany.mockResolvedValue({ count: 0 })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await changePassword("u1", "old-password", "brand-new-password")
+
+    expect(result.user.employeeCode).toBe("BS-EMP-00001")
+  })
+
   it("carries salesRole into the replacement access token", async () => {
     const passwordHash = await hashPassword("old-password")
     mockedPrisma.user.findUnique.mockResolvedValue({
@@ -471,6 +569,46 @@ describe("changePassword", () => {
     const result = await changePassword("u1", "old-password", "brand-new-password")
 
     expect(verifyAccessToken(result.accessToken).salesRole).toBe("SALES_USER")
+  })
+
+  /**
+   * The third and least obvious way to mint a token.
+   *
+   * Resigning does not revoke refresh tokens or disable the login — account
+   * status and employment status are deliberately independent — so a resigned
+   * employee's session keeps rotating. Login and refresh both strip the sales
+   * role, but this endpoint needs only `requireAuth` and the person's own
+   * current password, which they still know. Reading the raw column here
+   * would have handed back a full-strength token indefinitely, bounded by
+   * nothing.
+   */
+  it("strips salesRole when a resigned employee changes their password", async () => {
+    const passwordHash = await hashPassword("old-password")
+    mockedPrisma.user.findUnique.mockResolvedValue({
+      id: "u9",
+      email: "ayesha@demo.com",
+      passwordHash,
+      role: "EMPLOYEE",
+      salesRole: "SALES_USER",
+      isActive: true,
+      mustChangePassword: false,
+    })
+    mockedPrisma.user.update.mockResolvedValue({
+      id: "u9",
+      email: "ayesha@demo.com",
+      role: "EMPLOYEE",
+      salesRole: "SALES_USER",
+      isActive: true,
+      mustChangePassword: false,
+    })
+    mockedPrisma.employee.findUnique.mockResolvedValue({ employmentStatus: "RESIGNED" })
+    mockedPrisma.refreshToken.updateMany.mockResolvedValue({ count: 0 })
+    mockedPrisma.refreshToken.create.mockResolvedValue({})
+
+    const result = await changePassword("u9", "old-password", "brand-new-password")
+
+    expect(verifyAccessToken(result.accessToken).salesRole).toBeNull()
+    expect(result.user.salesRole).toBeNull()
   })
 
   it("updates the password, clears mustChangePassword, and returns a fresh access token", async () => {

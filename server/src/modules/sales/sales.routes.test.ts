@@ -4,7 +4,13 @@ import request from "supertest"
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
-    salesAccount: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
+    salesAccount: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      create: vi.fn(),
+    },
     salesAccountAssignment: { createMany: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
     salesContact: {
@@ -85,14 +91,48 @@ describe("GET /api/sales/accounts", () => {
     )
   })
 
-  it("does not scope a Sales Admin", async () => {
+  // "My Accounts" means owned or assigned, for everyone. A Sales Admin may
+  // reach every account, but that is a permission, not a claim that all of
+  // them are theirs — scoping this by permission made the page an exact copy
+  // of "All Accounts" for every admin who opened it.
+  it("scopes a Sales Admin's My Accounts to what they own or are assigned to", async () => {
     await request(app)
       .get("/api/sales/accounts")
       .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_ADMIN" }))
       .expect(200)
 
     expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: {} })
+      expect.objectContaining({
+        where: {
+          OR: [{ ownerEmployeeId: "emp-1" }, { assignments: { some: { employeeId: "emp-1" } } }],
+        },
+      })
+    )
+  })
+
+  it("returns nothing for a Super Admin with no employee row", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: null } as never)
+
+    await request(app)
+      .get("/api/sales/accounts")
+      .set("Authorization", auth({ role: "SUPER_ADMIN", salesRole: null }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "__none__" } })
+    )
+  })
+
+  // ?scope=all is the shared directory, and is the one list that deliberately
+  // shows every account to every hub member.
+  it("does not scope ?scope=all", async () => {
+    await request(app)
+      .get("/api/sales/accounts?scope=all")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
+      expect.not.objectContaining({ where: expect.anything() })
     )
   })
 })
@@ -100,8 +140,8 @@ describe("GET /api/sales/accounts", () => {
 describe("GET /api/sales/accounts/:id", () => {
   // A 403 would confirm the account exists to somebody not allowed to know
   // that it does.
-  it("404s, not 403s, when the account is outside the caller's scope", async () => {
-    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+  it("404s, not 403s, when the account does not exist", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null as never)
 
     const res = await request(app)
       .get("/api/sales/accounts/sa-9")
@@ -111,32 +151,77 @@ describe("GET /api/sales/accounts/:id", () => {
     // Asserted so this cannot pass because the route is missing — an
     // unmounted router 404s too, and that is a different fact entirely.
     expect(res.body.error).toMatch(/does not exist, or is not yours/)
-    expect(prisma.salesAccount.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          AND: [
-            { id: "sa-9" },
-            {
-              OR: [
-                { ownerEmployeeId: "emp-1" },
-                { assignments: { some: { employeeId: "emp-1" } } },
-              ],
-            },
-          ],
-        },
-      })
-    )
   })
 
-  it("returns the account when it is in scope", async () => {
-    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+  // "All Accounts" is a shared read-only directory: opening a row you do not
+  // own or manage still 200s, just with canManage: false.
+  it("returns an account outside the caller's scope, read-only", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-9",
+      ownerEmployeeId: "emp-9",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue({
+      id: "sa-9",
+      name: "Rising Group",
+      status: "ACTIVE",
+      ownerEmployeeId: "emp-9",
+      createdAt: new Date("2026-09-06"),
+      owner: { fullName: "Karim" },
+      assignments: [],
+    } as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-9")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ id: "sa-9", ownerName: "Karim", canManage: false })
+  })
+
+  // A Super Admin passes every permission check and then takes a 400 from
+  // logCommunication, which has a required employeeId and no Employee row to
+  // fill it. canManage stays true — they really can add contacts — but the
+  // client must not offer them a "Log a call" button that cannot work.
+  it("says a Super Admin with no employee row may manage but not log activity", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: null } as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-9",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue({
+      id: "sa-1",
+      name: "Rising Group",
+      status: "ACTIVE",
+      ownerEmployeeId: "emp-9",
+      createdAt: new Date("2026-09-06"),
+      owner: { fullName: "Karim" },
+      assignments: [],
+    } as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "SUPER_ADMIN", salesRole: null }))
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ canManage: true, canLogActivity: false })
+  })
+
+  it("returns the account when it is in scope, with named assignees", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue({
       id: "sa-1",
       name: "Rising Group",
       status: "ACTIVE",
       ownerEmployeeId: "emp-1",
       createdAt: new Date("2026-09-06"),
       owner: { fullName: "Karim" },
-      _count: { assignments: 2 },
+      assignments: [
+        { employee: { id: "emp-2", fullName: "Rahim" } },
+        { employee: { id: "emp-3", fullName: "Sadia" } },
+      ],
     } as never)
 
     const res = await request(app)
@@ -144,7 +229,16 @@ describe("GET /api/sales/accounts/:id", () => {
       .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
 
     expect(res.status).toBe(200)
-    expect(res.body).toMatchObject({ id: "sa-1", ownerName: "Karim", assigneeCount: 2 })
+    expect(res.body).toMatchObject({
+      id: "sa-1",
+      ownerName: "Karim",
+      assigneeCount: 2,
+      assignees: [
+        { id: "emp-2", fullName: "Rahim" },
+        { id: "emp-3", fullName: "Sadia" },
+      ],
+      canManage: true,
+    })
   })
 })
 
@@ -169,7 +263,9 @@ describe("POST /api/sales/accounts", () => {
     vi.mocked(prisma.employee.findUnique).mockResolvedValue({
       id: validBody.ownerEmployeeId,
       fullName: "Karim",
-      user: { salesRole: "SALES_USER" },
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_USER", isActive: true },
     } as never)
     vi.mocked(prisma.salesAccount.create).mockResolvedValue({
       id: "sa-2",
@@ -215,6 +311,10 @@ describe("contact routes", () => {
   beforeEach(() => {
     // In scope, owned by the caller's own employee row.
     vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
       id: "sa-1",
       ownerEmployeeId: "emp-1",
     } as never)
@@ -287,6 +387,10 @@ describe("contact routes", () => {
 describe("communication routes", () => {
   beforeEach(() => {
     vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
       id: "sa-1",
       ownerEmployeeId: "emp-1",
     } as never)

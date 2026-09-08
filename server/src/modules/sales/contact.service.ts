@@ -5,7 +5,7 @@ import { emitEvent } from "../event/event.emit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { SalesContactSummary } from "./sales.types"
 import type { CreateSalesContactBody, SetContactStatusBody } from "./sales.validators"
-import { requireAccountAccess } from "./sales.access"
+import { requireAccountAccess, requireAccountVisible } from "./sales.access"
 
 type ContactRow = {
   id: string
@@ -63,7 +63,9 @@ export async function listContacts(
   accountId: string,
   actor: AccessTokenPayload
 ): Promise<SalesContactSummary[]> {
-  await requireAccountAccess(accountId, actor)
+  // A read, not a write: any Sales Hub member may see an account's contacts,
+  // same as the account itself. Adding one stays owner/assignee/admin only.
+  await requireAccountVisible(accountId, actor)
   const contacts = await prisma.salesContact.findMany({
     where: { salesAccountId: accountId },
     // The primary is who you ring first, so it is who you read first.

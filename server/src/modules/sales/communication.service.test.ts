@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
-    salesAccount: { findFirst: vi.fn() },
+    salesAccount: { findFirst: vi.fn(), findUnique: vi.fn() },
     salesContact: { findFirst: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
     user: { findUnique: vi.fn() },
@@ -36,6 +36,10 @@ beforeEach(() => {
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+    id: "sa-1",
+    ownerEmployeeId: "emp-9",
+  } as any)
+  vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
     id: "sa-1",
     ownerEmployeeId: "emp-9",
   } as any)
@@ -88,6 +92,9 @@ describe("logCommunication", () => {
     expect(prisma.salesCommunication.create).not.toHaveBeenCalled()
   })
 
+  // logCommunication is a write, so it still goes through the strict
+  // owner/assignee/admin gate (requireAccountAccess), not the permissive
+  // visibility one — an out-of-scope caller is refused just as before.
   it("refuses a communication on an account the caller cannot see", async () => {
     vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
 
@@ -202,11 +209,36 @@ describe("getAccountTimeline", () => {
     )
   })
 
-  it("refuses a timeline for an account the caller cannot see", async () => {
-    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+  // The timeline is a read, gated by the permissive requireAccountVisible:
+  // any Sales Hub member may open it, so this only 404s for an account that
+  // genuinely does not exist.
+  it("refuses a timeline for an account that does not exist", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null)
 
     await expect(getAccountTimeline("sa-9", USER)).rejects.toThrow(AppError)
 
     expect(prisma.salesCommunication.findMany).not.toHaveBeenCalled()
+  })
+
+  // The bug this fixes: a communication's long-form note was saved but never
+  // read back, so it never reached the caller who typed it.
+  it("carries the detail note through to the timeline item", async () => {
+    vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([
+      {
+        id: "cm-1",
+        channel: "CALL",
+        occurredAt: new Date("2026-09-03"),
+        summary: "Chased the RFQ",
+        detail: "Promised a revised quote by Thursday",
+        employeeId: "emp-2",
+        employee: { fullName: "Rahim" },
+        contact: null,
+      },
+    ] as any)
+    vi.mocked(prisma.event.findMany).mockResolvedValue([] as any)
+
+    const { items } = await getAccountTimeline("sa-1", USER)
+
+    expect(items[0]).toMatchObject({ detail: "Promised a revised quote by Thursday" })
   })
 })

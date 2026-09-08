@@ -17,6 +17,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { revokeAllUserTokens } from "../auth/auth.service"
+import { employmentAllowsSales } from "../sales/sales.eligibility"
 
 export async function setAccountActive(
   employeeId: string,
@@ -42,6 +43,17 @@ export async function setAccountActive(
   return { id: employeeId, accountActive: updated.isActive }
 }
 
+export interface SetSalesRoleResult {
+  salesRole: SalesRole | null
+  /**
+   * How many Sales Accounts this person still owns, present only when
+   * revoking left them unable to work those accounts. Absent means there is
+   * nothing to report — see the count inside `setSalesRole` for why this
+   * informs rather than blocks.
+   */
+  orphanedAccounts?: number
+}
+
 /**
  * Grants or revokes the Sales Hub capability attached to an employee's login.
  * The account change and its audit row commit together; unchanged values are
@@ -51,13 +63,15 @@ export async function setSalesRole(
   employeeId: string,
   body: { salesRole: SalesRole | null },
   actor: AccessTokenPayload
-): Promise<{ salesRole: SalesRole | null }> {
+): Promise<SetSalesRoleResult> {
   const outcome = await prisma.$transaction(async (tx) => {
     const employee = await tx.employee.findUnique({
       where: { id: employeeId },
       select: {
         id: true,
         fullName: true,
+        employmentStatus: true,
+        lastWorkingDay: true,
         user: { select: { id: true, salesRole: true } },
       },
     })
@@ -66,9 +80,35 @@ export async function setSalesRole(
     }
 
     const before = employee.user.salesRole
-    if (before === body.salesRole) {
-      return { result: { salesRole: before }, narrowedUserId: null }
+
+    // Granting to someone who has left produces a role the door will not
+    // honour anyway — effectiveSalesRole strips it from every token they
+    // could be issued. Refusing here says so out loud, rather than letting HR
+    // set a value that silently does nothing. Revoking (null) stays allowed:
+    // tidying up after a departure must never be blocked.
+    if (
+      body.salesRole !== null &&
+      !employmentAllowsSales(employee.employmentStatus, employee.lastWorkingDay)
+    ) {
+      throw new AppError(
+        400,
+        `${employee.fullName} has left the company, so Techno Sales Hub access cannot be granted. Reinstate their employment first.`
+      )
     }
+    if (before === body.salesRole) {
+      return { result: { salesRole: before }, narrowedUserId: null, orphaned: 0 }
+    }
+
+    // Counted before the write, and only when access is going away entirely.
+    // Revocation is deliberately not blocked — the account keeps its owner
+    // for the record, and HR must never be stuck behind a Sales Hub rule —
+    // but HR should not have to discover afterwards that four accounts now
+    // have nobody able to work them. Same shape as the holiday and shift
+    // writes, which report their impact rather than refusing.
+    const orphaned =
+      body.salesRole === null
+        ? await tx.salesAccount.count({ where: { ownerEmployeeId: employee.id } })
+        : 0
 
     await tx.user.update({
       where: { id: employee.user.id },
@@ -92,6 +132,7 @@ export async function setSalesRole(
     return {
       result: { salesRole: body.salesRole },
       narrowedUserId: narrowed ? employee.user.id : null,
+      orphaned,
     }
   })
 
@@ -101,5 +142,9 @@ export async function setSalesRole(
     await revokeAllUserTokens(outcome.narrowedUserId)
   }
 
-  return outcome.result
+  // Omitted entirely when nothing was orphaned, so a caller can treat its
+  // presence as "there is something to tell the user about".
+  return outcome.orphaned > 0
+    ? { ...outcome.result, orphanedAccounts: outcome.orphaned }
+    : outcome.result
 }

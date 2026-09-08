@@ -4,6 +4,7 @@ import {
   createSalesAccount,
   getAccountHistory,
   getSalesAccount,
+  listAllSalesAccounts,
   listSalesAccounts,
   listSalesEligibleEmployees,
 } from "./account.service"
@@ -22,7 +23,14 @@ export async function listSalesAccountsHandler(
   next: NextFunction
 ) {
   try {
-    return res.status(200).json(await listSalesAccounts(req.user!))
+    // ?scope=all is "All Accounts" — the shared, read-only directory. Its
+    // default (no query, or anything else) is "My Accounts" — owner,
+    // assignee, or admin — the behaviour this route always had.
+    const items =
+      req.query.scope === "all"
+        ? await listAllSalesAccounts(req.user!)
+        : await listSalesAccounts(req.user!)
+    return res.status(200).json(items)
   } catch (err) {
     return next(err)
   }

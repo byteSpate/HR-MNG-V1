@@ -6,6 +6,9 @@ vi.mock("../../config/prisma", () => ({
       employee: { findUnique: vi.fn() },
       user: { update: vi.fn() },
       auditLog: { create: vi.fn() },
+      // Revoking access counts the accounts it leaves without a working
+      // owner, so HR is told rather than having to find out later.
+      salesAccount: { count: vi.fn(async () => 0) },
     }
     return {
       employee: { findUnique: vi.fn() },
@@ -103,6 +106,7 @@ describe("setSalesRole", () => {
     transaction.employee.findUnique.mockResolvedValue({
       id: "emp-1",
       fullName: "Rahim",
+      employmentStatus: "ACTIVE",
       user: { id: "u-9", salesRole: null },
     })
     transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: "SALES_USER" })
@@ -127,10 +131,46 @@ describe("setSalesRole", () => {
     expect(revokeAllUserTokens).not.toHaveBeenCalled()
   })
 
+  // The gap found in manual testing: a resigned employee still held
+  // SALES_USER, still owned an account, and could still open the hub. A grant
+  // like that produces a role no token will ever carry, so it is refused out
+  // loud rather than saved to do nothing.
+  it("refuses to grant access to someone who has left", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Ayesha Rahman",
+      employmentStatus: "RESIGNED",
+      user: { id: "u-9", salesRole: null },
+    })
+
+    await expect(
+      setSalesRole("emp-1", { salesRole: "SALES_USER" }, HR_ADMIN)
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/Ayesha Rahman/) })
+
+    expect(transaction.user.update).not.toHaveBeenCalled()
+    expect(transaction.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  // Tidying up after a departure must never be blocked by the rule above.
+  it("still allows revoking access from someone who has left", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Ayesha Rahman",
+      employmentStatus: "RESIGNED",
+      user: { id: "u-9", salesRole: "SALES_USER" },
+    })
+    transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: null })
+
+    await expect(setSalesRole("emp-1", { salesRole: null }, HR_ADMIN)).resolves.toEqual({
+      salesRole: null,
+    })
+  })
+
   it("revokes access with null and audits the removal", async () => {
     transaction.employee.findUnique.mockResolvedValue({
       id: "emp-1",
       fullName: "Rahim",
+      employmentStatus: "ACTIVE",
       user: { id: "u-9", salesRole: "SALES_ADMIN" },
     })
     transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: null })

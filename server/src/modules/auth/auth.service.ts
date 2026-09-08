@@ -1,7 +1,8 @@
 import { env } from "../../config/env"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
-import { Role, type SalesRole } from "../../generated/prisma/client"
+import { Role, type EmploymentStatus, type SalesRole } from "../../generated/prisma/client"
+import { effectiveSalesRole } from "../sales/sales.eligibility"
 import { generateOpaqueToken, hashPassword, hashToken, signAccessToken, toPublicUser, verifyPassword } from "./auth.utils"
 import { sendPasswordResetEmail } from "./mailer"
 import { sendPasswordChangedEmail } from "../notification/notification.mailer"
@@ -88,20 +89,55 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
   })
 }
 
+/**
+ * The sales role a token may carry, resolved against employment.
+ *
+ * Every place that mints a token goes through here rather than reading
+ * `user.salesRole` directly, because the claim and the `PublicUser` handed to
+ * the client have to agree: the client hides the hub button and gates its
+ * route on `salesRole`, so if the two disagree, someone who has left is shown
+ * a door that then 403s behind them.
+ *
+ * Short-circuits before querying when there is no granted role to strip, and
+ * for the administrative roles, which have no Employee row to check.
+ */
+async function resolveSalesRole(user: {
+  id: string
+  role: Role
+  salesRole: SalesRole | null
+}): Promise<SalesRole | null> {
+  if (!user.salesRole) return null
+  if (!STAFF_ROLES.includes(user.role)) return user.salesRole
+  const employee = await prisma.employee.findUnique({
+    where: { userId: user.id },
+    // lastWorkingDay too: an exit is recorded the day it is agreed, routinely
+    // weeks before the person actually leaves. Without it, somebody serving
+    // notice loses the hub mid-handover.
+    select: { employmentStatus: true, lastWorkingDay: true },
+  })
+  return effectiveSalesRole(
+    user.salesRole,
+    employee?.employmentStatus ?? null,
+    employee?.lastWorkingDay ?? null
+  )
+}
+
 async function issueSession(
   user: UserRow,
   context: SessionContext,
   employeeCode?: string
 ): Promise<SessionResult> {
+  const salesRole = await resolveSalesRole(user)
   const accessToken = signAccessToken({
     sub: user.id,
     role: user.role,
     email: user.email,
     mustChangePassword: user.mustChangePassword,
-    salesRole: user.salesRole ?? null,
+    salesRole,
   })
   const refreshToken = await issueRefreshToken(user.id, context)
-  return { accessToken, refreshToken, user: toPublicUser(user, employeeCode) }
+  // The same resolved value the token carries, never the raw column.
+  return { accessToken, refreshToken, user: toPublicUser({ ...user, salesRole }, employeeCode) }
 }
 
 export async function loginAdmin(
@@ -182,6 +218,11 @@ export async function refresh(
     employeeCode = employee?.employeeCode
   }
 
+  // Re-resolved on every refresh rather than carried over from the old token:
+  // this is what makes a resignation take effect within the 15-minute access
+  // token lifetime rather than at the end of the session.
+  const salesRole = await resolveSalesRole(stored.user)
+
   // The replacement token joins the same session rather than starting a new
   // one. `startedAt` and `userAgent` come off the row being replaced; the
   // address comes off this request, so a session that moved shows where it
@@ -196,9 +237,13 @@ export async function refresh(
     role: stored.user.role,
     email: stored.user.email,
     mustChangePassword: stored.user.mustChangePassword,
-    salesRole: stored.user.salesRole ?? null,
+    salesRole,
   })
-  return { accessToken, refreshToken: newRefreshToken, user: toPublicUser(stored.user, employeeCode) }
+  return {
+    accessToken,
+    refreshToken: newRefreshToken,
+    user: toPublicUser({ ...stored.user, salesRole }, employeeCode),
+  }
 }
 
 export async function logout(rawRefreshToken: string): Promise<void> {
@@ -281,9 +326,18 @@ export async function changePassword(
   newPassword: string,
   context: SessionContext = {}
 ): Promise<{ accessToken: string; refreshToken: string; user: PublicUser }> {
-  const user = await prisma.user.findUnique({ where: { id: userId } })
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { employee: { select: { employeeCode: true } } },
+  })
   if (!user) {
     throw new AppError(404, "User not found")
+  }
+  // `requireAuth` proves only that the access token was valid when issued.
+  // A disabled login must not use this endpoint to mint a fresh session while
+  // that old token is still inside its lifetime.
+  if (!user.isActive) {
+    throw new AppError(403, "This account has been deactivated")
   }
   const valid = await verifyPassword(currentPassword, user.passwordHash)
   if (!valid) {
@@ -300,14 +354,21 @@ export async function changePassword(
   // A new session rather than a continuation: every other device was just
   // signed out, and the sign-in list should show this one starting here.
   const refreshToken = await issueRefreshToken(userId, context)
+  // Resolved here too: changing a password must not be a way to mint a
+  // stronger token than signing in would give you.
+  const salesRole = await resolveSalesRole(updated)
   const accessToken = signAccessToken({
     sub: updated.id,
     role: updated.role,
     email: updated.email,
     mustChangePassword: false,
-    salesRole: updated.salesRole ?? null,
+    salesRole,
   })
   // If it was not them, they find out in seconds.
   await sendPasswordChangedEmail({ to: updated.email, userId: updated.id })
-  return { accessToken, refreshToken, user: toPublicUser(updated) }
+  return {
+    accessToken,
+    refreshToken,
+    user: toPublicUser({ ...updated, salesRole }, user.employee?.employeeCode),
+  }
 }

@@ -4,7 +4,7 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
-    salesAccount: { findFirst: vi.fn() },
+    salesAccount: { findFirst: vi.fn(), findUnique: vi.fn() },
     salesContact: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
@@ -53,6 +53,10 @@ beforeEach(() => {
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
   // In scope unless a test says otherwise.
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+    id: "sa-1",
+    ownerEmployeeId: "emp-9",
+  } as any)
+  vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
     id: "sa-1",
     ownerEmployeeId: "emp-9",
   } as any)
@@ -119,8 +123,11 @@ describe("listContacts", () => {
     )
   })
 
-  it("refuses a list for an account the caller cannot see", async () => {
-    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+  // listContacts is a read, gated by the permissive requireAccountVisible:
+  // any Sales Hub member may see an account's contacts, so this only 404s
+  // for an account that genuinely does not exist.
+  it("refuses a list for an account that does not exist", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null)
 
     await expect(listContacts("sa-9", USER)).rejects.toThrow(AppError)
 

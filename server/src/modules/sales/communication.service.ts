@@ -5,7 +5,7 @@ import type { SalesChannel } from "../../generated/prisma/client"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { SalesCommunicationSummary, TimelineItem } from "./sales.types"
 import type { LogCommunicationBody } from "./sales.validators"
-import { requireAccountAccess } from "./sales.access"
+import { requireAccountAccess, requireAccountVisible } from "./sales.access"
 
 /**
  * How many rows of each source the Timeline reads.
@@ -132,7 +132,9 @@ export async function getAccountTimeline(
   accountId: string,
   actor: AccessTokenPayload
 ): Promise<{ items: TimelineItem[] }> {
-  await requireAccountAccess(accountId, actor)
+  // A read: any Sales Hub member may see an account's story. Logging a new
+  // entry stays owner/assignee/admin only, via logCommunication above.
+  await requireAccountVisible(accountId, actor)
 
   const [communications, events] = await Promise.all([
     prisma.salesCommunication.findMany({
@@ -161,6 +163,11 @@ export async function getAccountTimeline(
         ? `${CHANNEL_LABEL[row.channel]} · ${row.contact.name}`
         : CHANNEL_LABEL[row.channel],
       by: row.employee.fullName,
+      // The bug this fixes: `detail` was saved and never read back, so what
+      // a caller typed into the long-form note vanished from their own eyes
+      // the moment they logged it, even though it was sitting in the row
+      // the whole time.
+      detail: row.detail,
     })),
     ...events.map((row) => ({
       id: `event:${row.id}`,
@@ -172,6 +179,8 @@ export async function getAccountTimeline(
       // a name. Event titles are written to carry the actor already — "Rising
       // Group added to the Sales Hub" — so an opaque uuid would add nothing.
       by: null,
+      // No free-text body of its own — the title already is the sentence.
+      detail: null,
     })),
   ]
 

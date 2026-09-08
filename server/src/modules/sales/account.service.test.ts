@@ -7,7 +7,7 @@ vi.mock("../../config/prisma", () => ({
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn() },
     salesContact: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
-    user: { findUnique: vi.fn() },
+    user: { findUnique: vi.fn(), findMany: vi.fn() },
     auditLog: { create: vi.fn(), findMany: vi.fn() },
     event: { create: vi.fn() },
   },
@@ -36,20 +36,28 @@ const ADMIN = {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+  // The default owner: a Sales User who still works here. Owners must be
+  // Sales Users — an admin administers the hub rather than carrying accounts
+  // in it — so this cannot be SALES_ADMIN.
   vi.mocked(prisma.employee.findUnique).mockResolvedValue({
     id: "emp-1",
     fullName: "Karim",
-    user: { salesRole: "SALES_ADMIN" },
+    employmentStatus: "ACTIVE",
+    lastWorkingDay: null,
+    user: { salesRole: "SALES_USER", isActive: true },
   } as any)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
+  vi.mocked(prisma.user.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
-  // Every requested assignee exists and already has Sales Hub access, unless
-  // a test says otherwise.
+  // Every requested assignee exists, holds Sales User, still works here and
+  // still has a working login, unless a test says otherwise.
   vi.mocked(prisma.employee.findMany).mockImplementation((async (args: any) =>
-    args.where.id.in.map((id: string) => ({
+    (args.where?.id?.in ?? []).map((id: string) => ({
       id,
       fullName: id,
-      user: { salesRole: "SALES_USER" },
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_USER", isActive: true },
     }))) as never)
 })
 
@@ -58,6 +66,9 @@ describe("createSalesAccount", () => {
     vi.mocked(prisma.salesAccount.create).mockResolvedValue({
       id: "sa-1",
       name: "Rising Group",
+      industry: "Textiles",
+      website: "rising.example",
+      address: null,
       status: "ACTIVE",
       ownerEmployeeId: "emp-1",
       createdAt: new Date("2026-09-05"),
@@ -69,6 +80,10 @@ describe("createSalesAccount", () => {
     )
 
     expect(result.name).toBe("Rising Group")
+    // Stored at creation and read straight back, same as everything else on
+    // the row — nothing typed into these fields should vanish from the
+    // caller's own eyes the moment they save it.
+    expect(result).toMatchObject({ industry: "Textiles", website: "rising.example", address: null })
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -169,6 +184,7 @@ describe("createSalesAccount", () => {
     vi.mocked(prisma.employee.findUnique).mockResolvedValue({
       id: "emp-1",
       fullName: "Karim",
+      employmentStatus: "ACTIVE",
       user: { salesRole: null },
     } as any)
 
@@ -179,9 +195,58 @@ describe("createSalesAccount", () => {
     expect(prisma.salesAccount.create).not.toHaveBeenCalled()
   })
 
+  // An account owned by someone who left is answerable to nobody, and their
+  // tokens no longer carry a sales role, so they could not open it anyway.
+  it("refuses an owner who has left the company", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: "emp-1",
+      fullName: "Ayesha",
+      employmentStatus: "RESIGNED",
+      user: { salesRole: "SALES_USER" },
+    } as any)
+
+    await expect(
+      createSalesAccount({ name: "New Co", ownerEmployeeId: "emp-1" }, ADMIN)
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/left the company/) })
+
+    expect(prisma.salesAccount.create).not.toHaveBeenCalled()
+  })
+
+  // Sales Admins manage the hub rather than owning accounts inside it.
+  it("refuses a Sales Admin as the owner", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: "emp-1",
+      fullName: "Jamal",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_ADMIN", isActive: true },
+    } as any)
+
+    await expect(
+      createSalesAccount({ name: "New Co", ownerEmployeeId: "emp-1" }, ADMIN)
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/Sales Admin/) })
+
+    expect(prisma.salesAccount.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a Sales Admin as a collaborator", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      { id: "emp-2", fullName: "Jamal", employmentStatus: "ACTIVE", user: { salesRole: "SALES_ADMIN" } },
+    ] as any)
+
+    await expect(
+      createSalesAccount(
+        { name: "New Co", ownerEmployeeId: "emp-1", assigneeIds: ["emp-2"] },
+        ADMIN
+      )
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/Jamal/) })
+
+    expect(prisma.salesAccountAssignment.createMany).not.toHaveBeenCalled()
+  })
+
   it("refuses a collaborator who has no Sales Hub access", async () => {
     vi.mocked(prisma.employee.findMany).mockResolvedValue([
-      { id: "emp-2", fullName: "Rahim", user: { salesRole: null } },
+      { id: "emp-2", fullName: "Rahim", employmentStatus: "ACTIVE", user: { salesRole: null } },
     ] as any)
 
     await expect(
@@ -236,7 +301,7 @@ describe("createSalesAccount", () => {
 
 describe("getAccountHistory", () => {
   beforeEach(() => {
-    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-1" } as any)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-1" } as any)
   })
 
   it("merges SALES_ACCOUNT and SALES_CONTACT audit rows for this account, newest first", async () => {
@@ -266,8 +331,9 @@ describe("getAccountHistory", () => {
       },
     ] as any)
 
-    const result = await getAccountHistory("sa-1", USER)
+    const { items: result, truncated } = await getAccountHistory("sa-1", USER)
 
+    expect(truncated).toBe(false)
     expect(prisma.salesContact.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { salesAccountId: "sa-1" } })
     )
@@ -282,6 +348,9 @@ describe("getAccountHistory", () => {
         orderBy: { changedAt: "desc" },
       })
     )
+    // Rendered, not raw: column names become phrases, SHOUTING enum values
+    // become sentence case, and a first-time value has no `before` so the
+    // panel shows one value rather than an arrow from nothing.
     expect(result).toEqual([
       {
         id: "al-2",
@@ -289,9 +358,8 @@ describe("getAccountHistory", () => {
         entityId: "c-1",
         action: "UPDATE",
         changedAt: "2026-09-06T00:00:00.000Z",
-        changedBy: "user-1",
-        before: { isPrimary: false },
-        after: { isPrimary: true },
+        changedByName: null,
+        changes: [{ field: "isPrimary", label: "Primary contact", before: "No", after: "Yes" }],
         note: null,
       },
       {
@@ -300,12 +368,79 @@ describe("getAccountHistory", () => {
         entityId: "sa-1",
         action: "CREATE",
         changedAt: "2026-09-01T00:00:00.000Z",
-        changedBy: "user-1",
-        before: null,
-        after: { name: "Rising Group" },
+        changedByName: null,
+        changes: [{ field: "name", label: "Name", before: null, after: "Rising Group" }],
         note: null,
       },
     ])
+  })
+
+  // The defect this fixes: the panel printed `ownerEmployeeId:
+  // "88604c6a-…"` — a column name and a uuid, neither of which means
+  // anything to the person reading it.
+  it("resolves an owner id to a name and drops the account id as noise", async () => {
+    vi.mocked(prisma.salesContact.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      { id: "emp-7", fullName: "Ayesha Rahman" },
+    ] as any)
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      { id: "user-1", email: "admin@demo.com", employee: { fullName: "The Admin" } },
+    ] as any)
+    vi.mocked(prisma.auditLog.findMany).mockResolvedValue([
+      {
+        id: "al-3",
+        entity: "SALES_ACCOUNT",
+        entityId: "sa-1",
+        action: "CREATE",
+        changedAt: new Date("2026-09-06"),
+        changedBy: "user-1",
+        before: null,
+        after: {
+          name: "Rising Group",
+          status: "ACTIVE",
+          ownerEmployeeId: "emp-7",
+          salesAccountId: "sa-1",
+        },
+        note: null,
+      },
+    ] as any)
+
+    const { items: [entry] } = await getAccountHistory("sa-1", USER)
+
+    expect(entry.changedByName).toBe("The Admin")
+    expect(entry.changes).toEqual([
+      { field: "name", label: "Name", before: null, after: "Rising Group" },
+      { field: "status", label: "Status", before: null, after: "Active" },
+      { field: "ownerEmployeeId", label: "Owner", before: null, after: "Ayesha Rahman" },
+    ])
+  })
+
+  // A person can be deleted; their audit rows outlive them.
+  it("says so plainly when an id no longer resolves", async () => {
+    vi.mocked(prisma.salesContact.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.auditLog.findMany).mockResolvedValue([
+      {
+        id: "al-4",
+        entity: "SALES_ACCOUNT",
+        entityId: "sa-1",
+        action: "UPDATE",
+        changedAt: new Date("2026-09-06"),
+        changedBy: null,
+        before: { ownerEmployeeId: "11111111-1111-4111-8111-111111111111" },
+        after: { ownerEmployeeId: "22222222-2222-4222-8222-222222222222" },
+        note: null,
+      },
+    ] as any)
+
+    const { items: [entry] } = await getAccountHistory("sa-1", USER)
+
+    expect(entry.changes[0]).toEqual({
+      field: "ownerEmployeeId",
+      label: "Owner",
+      before: "Someone no longer on file",
+      after: "Someone no longer on file",
+    })
   })
 
   it("does not filter by contact when the account has no contacts yet", async () => {
@@ -321,8 +456,10 @@ describe("getAccountHistory", () => {
     )
   })
 
-  it("refuses a history read for an account the caller cannot see", async () => {
-    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+  // Visibility is now permissive (any Sales Hub member), so this only 404s
+  // for an account that genuinely does not exist — not an out-of-scope one.
+  it("refuses a history read for an account that does not exist", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null)
 
     await expect(getAccountHistory("sa-9", USER)).rejects.toThrow(AppError)
 
@@ -331,7 +468,9 @@ describe("getAccountHistory", () => {
 })
 
 describe("listSalesEligibleEmployees", () => {
-  it("asks Prisma for employees whose user already holds a salesRole", async () => {
+  // Two rules in one query: Sales Users only (an admin administers the hub
+  // rather than owning accounts in it), and only people who still work here.
+  it("offers only employed Sales Users", async () => {
     vi.mocked(prisma.employee.findMany).mockResolvedValue([
       { id: "emp-1", fullName: "Karim", designation: "Sales Lead" },
     ] as any)
@@ -340,10 +479,47 @@ describe("listSalesEligibleEmployees", () => {
 
     expect(prisma.employee.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { user: { salesRole: { not: null } } },
+        where: { user: { salesRole: "SALES_USER", isActive: true } },
         orderBy: { fullName: "asc" },
       })
     )
     expect(result).toEqual([{ id: "emp-1", fullName: "Karim", designation: "Sales Lead" }])
+  })
+
+  // A deactivated login cannot authenticate, so offering them as an owner
+  // hands the account to somebody who can never open it.
+  it("leaves out anyone whose login is deactivated", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([] as any)
+
+    await listSalesEligibleEmployees()
+
+    const where = vi.mocked(prisma.employee.findMany).mock.calls[0][0]?.where as any
+    expect(where.user.isActive).toBe(true)
+  })
+
+  // Employment status alone would cut off somebody serving notice, on
+  // exactly the accounts they are trying to hand over.
+  it("still offers a leaver who is inside their notice period", async () => {
+    const nextMonth = new Date(Date.now() + 30 * 86_400_000)
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      {
+        id: "emp-1",
+        fullName: "Karim",
+        designation: "Sales Lead",
+        employmentStatus: "RESIGNED",
+        lastWorkingDay: nextMonth,
+      },
+      {
+        id: "emp-2",
+        fullName: "Ayesha",
+        designation: "Engineer",
+        employmentStatus: "RESIGNED",
+        lastWorkingDay: new Date("2020-01-01"),
+      },
+    ] as any)
+
+    const result = await listSalesEligibleEmployees()
+
+    expect(result.map((e) => e.fullName)).toEqual(["Karim"])
   })
 })
