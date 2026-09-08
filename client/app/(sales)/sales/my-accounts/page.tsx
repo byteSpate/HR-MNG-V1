@@ -1,5 +1,5 @@
 import { AccountsPage } from "@/components/sales/accounts-page"
 
 export default function Page() {
-  return <AccountsPage scope="all" />
+  return <AccountsPage scope="mine" />
 }

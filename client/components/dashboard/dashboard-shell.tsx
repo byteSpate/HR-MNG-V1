@@ -11,6 +11,8 @@ export function DashboardShell({
   navGroups,
   rootHref,
   tone = "default",
+  systemLabel,
+  accessLabel,
   mainClassName = "max-w-[1220px] 2xl:max-w-[1600px]",
   profileHref: profileHrefOverride,
   children,
@@ -29,6 +31,12 @@ export function DashboardShell({
       the person's actual role dashboard's profile instead, which is not
       derivable from `rootHref="/sales"`. */
   profileHref?: string
+  /** Which system the rail belongs to. Defaults to "HR & Payroll" inside
+      Sidebar; the hub passes its own name. */
+  systemLabel?: string
+  /** A second permission axis worth naming on screen — the hub's "Sales
+      Admin" / "Sales User". Nothing else passes it. */
+  accessLabel?: string
   children: React.ReactNode
 }) {
   // Every role group has a `/profile` route under its own root, so this is
@@ -45,7 +53,14 @@ export function DashboardShell({
       {/* HelpProvider wraps every role dashboard via this shared shell: the
           panel renders once above the page, and the header trigger opens it. */}
       <HelpProvider>
-        <Sidebar navGroups={navGroups} rootHref={rootHref} profileHref={profileHref} tone={tone} />
+        <Sidebar
+          navGroups={navGroups}
+          rootHref={rootHref}
+          profileHref={profileHref}
+          tone={tone}
+          systemLabel={systemLabel}
+          accessLabel={accessLabel}
+        />
         {/* Deliberately not SidebarInset: that renders its own <main>, and the
             content area below already is one. Nested <main> is invalid. */}
         <div className="flex min-w-0 flex-1 flex-col">

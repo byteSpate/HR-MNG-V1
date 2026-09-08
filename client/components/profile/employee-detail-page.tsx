@@ -39,6 +39,7 @@ import { ProfileInsights } from "@/components/profile/profile-insights"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PanelNotice } from "@/components/dashboard/record-kit"
 
 const SALES_ROLE_LABEL: Record<"NONE" | SalesRole, string> = {
   NONE: "No access",
@@ -77,6 +78,7 @@ export function EmployeeDetailPage({
   const [shiftError, setShiftError] = useState<string | null>(null)
   const [accountError, setAccountError] = useState<string | null>(null)
   const [salesRoleError, setSalesRoleError] = useState<string | null>(null)
+  const [salesRoleNotice, setSalesRoleNotice] = useState<string | null>(null)
 
   const employeeQuery = useQuery({
     queryKey: ["employee", employeeId],
@@ -170,8 +172,18 @@ export function EmployeeDetailPage({
   // Same reason as accountMutation: declared before the early returns.
   const salesRoleMutation = useMutation({
     mutationFn: (next: SalesRole | null) => setSalesRole(accessToken!, employeeId, next),
-    onSuccess: () => {
+    onMutate: () => {
       setSalesRoleError(null)
+      setSalesRoleNotice(null)
+    },
+    onSuccess: (result) => {
+      setSalesRoleError(null)
+      const count = result.orphanedAccounts ?? 0
+      setSalesRoleNotice(
+        count > 0
+          ? `Sales Hub access was updated. ${count} ${count === 1 ? "account now needs" : "accounts now need"} a new owner and ${count === 1 ? "is" : "are"} flagged in All Accounts.`
+          : null
+      )
       refresh()
     },
     onError: (err) => {
@@ -298,7 +310,7 @@ export function EmployeeDetailPage({
                   "Deactivate login" a plain button. */}
               {canGrantSalesRole ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11.5px] font-semibold text-muted-foreground">Sales Hub</span>
+                  <span className="text-[11.5px] font-semibold text-muted-foreground">Techno Sales Hub</span>
                   <Select
                     value={salesRole ?? "NONE"}
                     onValueChange={(v) =>
@@ -332,6 +344,12 @@ export function EmployeeDetailPage({
       {salesRoleError ? (
         <div className="mb-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-3 text-[13px] text-[#B03A3A]">
           {salesRoleError}
+        </div>
+      ) : null}
+
+      {salesRoleNotice ? (
+        <div className="mb-4">
+          <PanelNotice onDismiss={() => setSalesRoleNotice(null)}>{salesRoleNotice}</PanelNotice>
         </div>
       ) : null}
 

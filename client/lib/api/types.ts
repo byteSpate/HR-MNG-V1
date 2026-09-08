@@ -13,6 +13,13 @@ export interface UnresolvedKey { event: string; key: string }
     it. Null means no Sales Hub access at all. */
 export type SalesRole = "SALES_ADMIN" | "SALES_USER"
 
+export interface SetSalesRoleResult {
+  salesRole: SalesRole | null
+  /** Present when revoking or narrowing access leaves owned accounts without
+      an owner who can work them. */
+  orphanedAccounts?: number
+}
+
 export interface PublicUser {
   id: string
   email: string
@@ -28,10 +35,27 @@ export type SalesAccountStatus = "ACTIVE" | "INACTIVE" | "DO_NOT_CONTACT"
 export interface SalesAccountSummary {
   id: string
   name: string
+  industry: string | null
+  website: string | null
+  address: string | null
   status: SalesAccountStatus
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number
+  /** Named, not just counted — "All Accounts" shows who, not just how many. */
+  assignees: { id: string; fullName: string }[]
+  /** Owner, assignee, or admin — computed per viewer. Gates write controls
+      without re-deriving the server's rule client-side. */
+  canManage: boolean
+  /** Whether the *owner* can still work this account — role, employment and
+      a working login. False after their access is revoked or their exit is
+      recorded, since neither operation reassigns the account. */
+  ownerActive: boolean
+  /** Narrower than `canManage`: a communication's author is a required
+      column, so an account with no Employee row behind it (Super Admin, HR
+      Admin) is refused by the server however senior. Gates "Log a call"
+      specifically, so the button is never offered where it cannot work. */
+  canLogActivity: boolean
   createdAt: string
 }
 
@@ -114,6 +138,18 @@ export interface TimelineItem {
   title: string
   meta: string | null
   by: string | null
+  /** The long-form note on a communication. Null for an event. */
+  detail: string | null
+}
+
+/** One changed field, already rendered server-side: `label` is a phrase
+    rather than a column name, and ids have been resolved to people's names. */
+export interface HistoryChange {
+  field: string
+  label: string
+  /** Null when the field was set for the first time — show one value, not an arrow. */
+  before: string | null
+  after: string
 }
 
 /** One audit row from the account's own trail, or one of its contacts' —
@@ -124,10 +160,17 @@ export interface AccountHistoryEntry {
   entityId: string
   action: string
   changedAt: string
-  changedBy: string | null
-  before: unknown
-  after: unknown
+  /** Already a name, not a user id. Null when nothing recorded who did it. */
+  changedByName: string | null
+  changes: HistoryChange[]
   note: string | null
+}
+
+/** One page of history. Wrapped so a capped read can admit it is capped. */
+export interface AccountHistory {
+  items: AccountHistoryEntry[]
+  truncated: boolean
+  limit: number
 }
 
 export interface LoginResponse {

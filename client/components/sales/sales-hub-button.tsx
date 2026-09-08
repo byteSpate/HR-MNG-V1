@@ -10,7 +10,7 @@ const RAINBOW_RING = ["#f43f5e", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#6
 const RAINBOW_BURST = ["#f43f5e", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#6366f1"]
 
 /**
- * The one entry point into the Sales Hub, in the header's icon cluster next
+ * The one entry point into the Techno Sales Hub, in the header's icon cluster next
  * to the notification bell. Hidden while already inside the hub — see
  * `BackToDashboardButton`, which takes over the same slot there. The
  * animated ring/burst/click behaviour lives in `AnimatedNavButton`; this
@@ -31,8 +31,8 @@ export function SalesHubButton() {
   return (
     <AnimatedNavButton
       href="/sales"
-      ariaLabel="Open Sales Hub"
-      label="Sales Hub"
+      ariaLabel="Open Techno Sales Hub"
+      label="Techno Sales Hub"
       icon={RiBuilding2Line}
       ringGradientStops={RAINBOW_RING}
       pillClassName="bg-white text-[#17191C] shadow-[0_1px_2px_rgba(23,25,28,0.06)] group-hover:bg-[#F4F6F9]"

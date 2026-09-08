@@ -17,7 +17,7 @@ const sora = Sora({
 })
 
 export const metadata: Metadata = {
-  title: "Sales Hub | byteSpate",
+  title: "Techno Sales Hub | byteSpate",
 }
 
 export default function SalesLayout({ children }: { children: React.ReactNode }) {

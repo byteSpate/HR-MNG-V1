@@ -10,6 +10,7 @@ import type {
   ExitReason,
   MyProfileResponse,
   SalesRole,
+  SetSalesRoleResult,
   SignedDocumentUrl,
   UpdateEmployeeInput,
 } from "./types"
@@ -92,8 +93,8 @@ export function setSalesRole(
   accessToken: string,
   employeeId: string,
   salesRole: SalesRole | null
-): Promise<{ salesRole: SalesRole | null }> {
-  return apiFetch<{ salesRole: SalesRole | null }>(`/api/employees/${employeeId}/sales-role`, {
+): Promise<SetSalesRoleResult> {
+  return apiFetch<SetSalesRoleResult>(`/api/employees/${employeeId}/sales-role`, {
     method: "PATCH",
     accessToken,
     body: JSON.stringify({ salesRole }),

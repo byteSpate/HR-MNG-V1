@@ -4,6 +4,7 @@
 // boundary, but this lookup (used only inside the client Sidebar) can.
 
 import {
+  RiApps2Line,
   RiBankLine,
   RiBarChartLine,
   RiBillLine,
@@ -40,6 +41,7 @@ import {
 } from "@remixicon/react"
 
 export const icons = {
+  RiApps2Line,
   RiDashboardLine,
   RiTimeLine,
   RiCalendarEventLine,

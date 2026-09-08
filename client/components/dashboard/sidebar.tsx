@@ -197,11 +197,20 @@ export function Sidebar({
   rootHref,
   profileHref,
   tone = "default",
+  systemLabel = "HR & Payroll",
+  accessLabel,
 }: {
   navGroups: NavGroup[]
   rootHref: string
   profileHref: string
   tone?: "default" | "sales"
+  /** Which system this rail belongs to. The five role dashboards are all
+      "HR & Payroll"; the hub overrides it with its own name. */
+  systemLabel?: string
+  /** The viewer's standing *within* that system, when it is a second axis
+      the role label does not cover — "Sales Admin" or "Sales User". Omitted
+      everywhere else, where `role` already says it. */
+  accessLabel?: string
 }) {
   const pathname = usePathname()
   const { accessToken, status } = useSession()
@@ -230,7 +239,18 @@ export function Sidebar({
               adding here is which system you are in. */}
           <div className="grid gap-2">
             <BrandLogo tone="dark" width={172} />
-            <div className="px-0.5 text-[10.5px] tracking-widest text-white/50">HR &amp; Payroll</div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-0.5">
+              <span className="text-[10.5px] tracking-widest text-white/50">{systemLabel}</span>
+              {/* Not decoration: a Sales Admin and a Sales User see the same
+                  screens with different controls on them, and until now the
+                  only way to tell which you held was to notice what was
+                  missing. */}
+              {accessLabel ? (
+                <span className="rounded-full bg-white/12 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-white/75 uppercase">
+                  {accessLabel}
+                </span>
+              ) : null}
+            </div>
           </div>
           <Separator className="bg-white/10" />
         </SidebarHeader>

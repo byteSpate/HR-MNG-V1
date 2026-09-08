@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
 import type {
-  AccountHistoryEntry,
+  AccountHistory,
   CreateSalesAccountBody,
   CreateSalesContactBody,
   LogCommunicationBody,
@@ -12,8 +12,16 @@ import type {
   TimelineItem,
 } from "./types"
 
+/** "My Accounts" — owner, assignee, or admin. */
 export function listSalesAccounts(accessToken: string): Promise<SalesAccountSummary[]> {
   return apiFetch<SalesAccountSummary[]>("/api/sales/accounts", { accessToken })
+}
+
+/** "All Accounts" — the shared, read-only directory: every account, to every
+    Sales Hub member, with `canManage` telling the client which ones the
+    viewer can actually work rather than merely see. */
+export function listAllSalesAccounts(accessToken: string): Promise<SalesAccountSummary[]> {
+  return apiFetch<SalesAccountSummary[]>("/api/sales/accounts?scope=all", { accessToken })
 }
 
 /** Sales Admin only — the same people the create-account form's owner and
@@ -94,6 +102,6 @@ export function logCommunication(
 export function getAccountHistory(
   accessToken: string,
   accountId: string
-): Promise<AccountHistoryEntry[]> {
-  return apiFetch<AccountHistoryEntry[]>(`/api/sales/accounts/${accountId}/history`, { accessToken })
+): Promise<AccountHistory> {
+  return apiFetch<AccountHistory>(`/api/sales/accounts/${accountId}/history`, { accessToken })
 }

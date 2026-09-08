@@ -51,7 +51,15 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable, geistHeading.variable, notoBengali.variable)}
     >
-      <body className="min-h-full flex flex-col"><QueryProvider><SessionProvider>{children}</SessionProvider></QueryProvider></body>
+      {/* suppressHydrationWarning sits on <body> and nowhere else, and it is
+          not covering for a render bug of ours. Browser extensions mutate
+          <body> before React hydrates — Grammarly writes
+          `data-gr-ext-installed` and `data-new-gr-c-s-check-loaded`, password
+          managers write their own — and React then reports attributes it
+          never put there. The flag is one level deep: it silences the
+          mismatch on this element's own attributes only, so a genuine
+          mismatch anywhere inside the tree is still reported. */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col"><QueryProvider><SessionProvider>{children}</SessionProvider></QueryProvider></body>
     </html>
   );
 }

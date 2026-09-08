@@ -35,21 +35,45 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const canEnter = !!user && (user.role === "SUPER_ADMIN" || !!user.salesRole)
 
-  useEffect(() => {
-    if (status === "authenticated" && user && !canEnter) {
-      router.replace(ROLE_ROUTES[user.role])
-    }
-  }, [status, user, canEnter, router])
+  // Two ways to be in the wrong place, needing different destinations. The
+  // second was missing: when the silent refresh fails — a stale or expired
+  // refresh cookie, which `client/proxy.ts` cannot catch because it only
+  // checks the cookie is *present* — status settles on "unauthenticated" and
+  // nothing moved, leaving a visitor inside an empty hub shell whose every
+  // panel then failed to load.
+  const wrongRole = status === "authenticated" && !!user && !canEnter
+  const signedOut = status === "unauthenticated"
 
-  if (status === "authenticated" && user && !canEnter) {
+  useEffect(() => {
+    if (wrongRole && user) router.replace(ROLE_ROUTES[user.role])
+    else if (signedOut) router.replace("/login")
+  }, [wrongRole, signedOut, user, router])
+
+  if (wrongRole || signedOut) {
     return null
   }
 
   return (
     <DashboardShell
-      navGroups={navGroups(user?.salesRole ?? null)}
+      // `employeeCode` is the session's one signal for "this login has an
+      // Employee row" — attached on login and re-attached on refresh for
+      // staff, absent for the three administrative roles, which have no
+      // Employee row at all. Accounts are owned by employees, so its absence
+      // means this person can never own one.
+      navGroups={navGroups(user?.salesRole ?? null, !!user?.employeeCode)}
       rootHref="/sales"
       tone="sales"
+      systemLabel="Techno Sales Hub"
+      // A Super Admin holds no salesRole but is treated as a Sales Admin by
+      // requireSales, so the rail names what they can actually do here rather
+      // than what their row happens to store.
+      accessLabel={
+        user?.salesRole === "SALES_ADMIN" || user?.role === "SUPER_ADMIN"
+          ? "Sales Admin"
+          : user?.salesRole === "SALES_USER"
+            ? "Sales User"
+            : undefined
+      }
       // Wider than a role dashboard's 1220/1600px cap: the accounts table
       // (Day 5) and, later, the Opportunities pipeline want more columns
       // than a role dashboard's panels ever did.
