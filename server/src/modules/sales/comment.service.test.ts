@@ -105,4 +105,13 @@ describe("sales comments", () => {
       }),
     }))
   })
+
+  it("does not let a former admin edit a management note after demotion", async () => {
+    vi.mocked(prisma.salesComment.findUnique).mockResolvedValue({
+      ...COMMENT, kind: "MANAGEMENT_NOTE",
+    } as any)
+    await expect(updateSalesComment("comment-1", { body: "Changed" }, USER))
+      .rejects.toThrow(/management note.*Sales Admin/i)
+    expect(prisma.salesComment.update).not.toHaveBeenCalled()
+  })
 })

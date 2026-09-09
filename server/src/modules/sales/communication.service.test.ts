@@ -243,4 +243,30 @@ describe("getAccountTimeline", () => {
 
     expect(items[0]).toMatchObject({ detail: "Promised a revised quote by Thursday" })
   })
+
+  it("does not leak restricted Remarks through the shared read-only Timeline", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.salesComment.findMany).mockResolvedValue([{
+      id: "comment-1", kind: "MANAGEMENT_NOTE", body: "Confidential margin note",
+      createdAt: new Date("2026-09-04"), author: { fullName: "Manager" },
+    }] as any)
+
+    const { items } = await getAccountTimeline("sa-1", USER)
+
+    expect(items.some((item) => item.kind === "comment")).toBe(false)
+    expect(prisma.salesComment.findMany).not.toHaveBeenCalled()
+  })
+
+  it("includes Remarks for an account owner", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-2" } as any)
+    vi.mocked(prisma.salesComment.findMany).mockResolvedValue([{
+      id: "comment-1", kind: "GENERAL", body: "Send revision",
+      createdAt: new Date("2026-09-04"), author: { fullName: "Rahim" },
+    }] as any)
+
+    const { items } = await getAccountTimeline("sa-1", USER)
+    expect(items).toContainEqual(expect.objectContaining({
+      kind: "comment", title: "Remark", detail: "Send revision", by: "Rahim",
+    }))
+  })
 })

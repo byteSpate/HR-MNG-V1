@@ -67,6 +67,16 @@ describe("opportunity lines", () => {
     expect(prisma.opportunityLine.delete).toHaveBeenCalledWith({ where: { id: "line-1" } })
   })
 
+  it("lets an editor clear optional prices instead of silently storing zero", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({
+      ...LINE, unitValue: dec("100"), lineValue: dec("200"),
+    } as any)
+    await updateOpportunityLine("line-1", { unitValue: null, lineValue: null } as any, USER)
+    expect(prisma.opportunityLine.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ unitValue: null, lineValue: null }),
+    }))
+  })
+
   it("refuses reorder arrays that omit or introduce line ids", async () => {
     await expect(reorderOpportunityLines("opp-1", { lineIds: ["line-1", "line-2"] }, USER))
       .rejects.toThrow(/all.*lines/i)

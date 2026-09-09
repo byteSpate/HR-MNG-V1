@@ -37,7 +37,10 @@ const USER = {
 } as any
 
 const ACCOUNT = { id: "account-1", name: "Rising Group", ownerEmployeeId: "emp-1" }
-const OWNER = { id: "emp-1", fullName: "Rahim" }
+const OWNER = {
+  id: "emp-1", fullName: "Rahim", employmentStatus: "ACTIVE", lastWorkingDay: null,
+  user: { salesRole: "SALES_USER", isActive: true },
+}
 const NOW = new Date("2026-09-09T10:00:00.000Z")
 
 const opportunity = (overrides: Record<string, unknown> = {}) => ({
@@ -121,7 +124,7 @@ describe("opportunity serials and creation", () => {
   })
 
   it("adds a missing owner assignment inside the creation transaction when requested", async () => {
-    vi.mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-2", fullName: "Karim" } as any)
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({ ...OWNER, id: "emp-2", fullName: "Karim" } as any)
     await createOpportunity({
       salesAccountId: ACCOUNT.id, name: "Core refresh", track: "NETWORKING",
       ownerEmployeeId: "emp-2", addAssignment: true,
@@ -129,6 +132,17 @@ describe("opportunity serials and creation", () => {
     expect(prisma.salesAccountAssignment.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ salesAccountId: ACCOUNT.id, employeeId: "emp-2" }),
     })
+  })
+
+  it("does not auto-assign an employee who cannot open the Sales Hub", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      ...OWNER, id: "emp-2", fullName: "Karim", user: { salesRole: "SALES_USER", isActive: false },
+    } as any)
+    await expect(createOpportunity({
+      salesAccountId: ACCOUNT.id, name: "Core refresh", track: "NETWORKING",
+      ownerEmployeeId: "emp-2", addAssignment: true,
+    }, USER)).rejects.toThrow(/deactivated|cannot open/i)
+    expect(prisma.salesAccountAssignment.create).not.toHaveBeenCalled()
   })
 })
 
@@ -225,6 +239,15 @@ describe("stage, status, and next step", () => {
     await changeOpportunityStatus("opp-1", { status: "WON" }, USER)
     const data = vi.mocked(prisma.opportunity.update).mock.calls[0][0].data as any
     expect(data.wonByEmployeeId).toBeUndefined()
+  })
+
+  it("stamps the current owner as winner on the first win", async () => {
+    await changeOpportunityStatus("opp-1", { status: "WON" }, USER)
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ wonBy: { connect: { id: "emp-1" } } }),
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
+    expect(prisma.event.create).toHaveBeenCalledTimes(1)
   })
 
   it("updates next-step date at UTC midnight with one audit and one event", async () => {
