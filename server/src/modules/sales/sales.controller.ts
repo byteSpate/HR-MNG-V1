@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express"
 
 import {
   createSalesAccount,
+  updateSalesAccount,
   getAccountHistory,
   getSalesAccount,
   listAllSalesAccounts,
@@ -12,6 +13,7 @@ import { addContact, listContacts, setContactStatus, setPrimaryContact } from ".
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
   createSalesAccountSchema,
+  updateSalesAccountSchema,
   createSalesContactSchema,
   logCommunicationSchema,
   setContactStatusSchema,
@@ -155,6 +157,19 @@ export async function getAccountTimelineHandler(
 ) {
   try {
     return res.status(200).json(await getAccountTimeline(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function updateSalesAccountHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const body = updateSalesAccountSchema.parse(req.body)
+    return res.status(200).json(await updateSalesAccount(req.params.id, body, req.user!))
   } catch (err) {
     return next(err)
   }

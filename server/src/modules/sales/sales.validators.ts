@@ -12,6 +12,38 @@ export const createSalesAccountSchema = z.object({
 
 export type CreateSalesAccountBody = z.infer<typeof createSalesAccountSchema>
 
+/**
+ * Editing an account. Every field optional, because the form sends only what
+ * changed — but not *all* optional: a body with nothing in it is a mistake
+ * worth naming rather than a silent 200 that changed nothing.
+ *
+ * `industry`, `website` and `address` are nullable as well as optional, and
+ * the two mean different things: absent leaves the value alone, null clears
+ * it. Without that distinction there is no way to remove a website once one
+ * has been typed.
+ *
+ * `statusReason` is deliberately *not* conditionally required here. Whether a
+ * reason is needed depends on the status the account is moving to, and that
+ * rule lives in the service beside the status change itself — the same place
+ * owner eligibility is enforced, and for the same reason: the service is the
+ * boundary, not the schema.
+ */
+export const updateSalesAccountSchema = z
+  .object({
+    name: z.string().trim().min(2, "A Sales Account needs a name").max(160).optional(),
+    ownerEmployeeId: z.string().uuid("Choose an owner").optional(),
+    industry: z.string().trim().max(120).nullable().optional(),
+    website: z.string().trim().max(200).nullable().optional(),
+    address: z.string().trim().max(400).nullable().optional(),
+    status: z.enum(["ACTIVE", "INACTIVE", "DO_NOT_CONTACT"]).optional(),
+    statusReason: z.string().trim().max(400).nullable().optional(),
+  })
+  .refine((body) => Object.values(body).some((value) => value !== undefined), {
+    message: "Nothing was changed",
+  })
+
+export type UpdateSalesAccountBody = z.infer<typeof updateSalesAccountSchema>
+
 export const createSalesContactSchema = z
   .object({
     name: z.string().trim().min(2, "A contact needs a name").max(160),

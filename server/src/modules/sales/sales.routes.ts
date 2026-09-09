@@ -15,6 +15,7 @@ import {
   listSalesEligibleEmployeesHandler,
   setContactStatusHandler,
   setPrimaryContactHandler,
+  updateSalesAccountHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -25,6 +26,10 @@ const router = Router()
 router.get("/accounts", requireAuth, requireSales(), listSalesAccountsHandler)
 router.get("/accounts/:id", requireAuth, requireSales(), getSalesAccountHandler)
 router.post("/accounts", requireAuth, requireSales(SalesRole.SALES_ADMIN), createSalesAccountHandler)
+// Editing is requireSales() and not SALES_ADMIN: the write gate inside the
+// service narrows it to the owner, the collaborators and admins. An owner
+// fixing a typo on their own account should not need an admin.
+router.patch("/accounts/:id", requireAuth, requireSales(), updateSalesAccountHandler)
 
 // Who the owner/collaborator pickers on the create form may offer — Sales
 // Admin only, same guard as creating the account itself.

@@ -20,6 +20,7 @@ import type { HistoryChange } from "./sales.types"
 const FIELD_LABEL: Record<string, string> = {
   name: "Name",
   status: "Status",
+  statusReason: "Reason",
   ownerEmployeeId: "Owner",
   industry: "Industry",
   website: "Website",

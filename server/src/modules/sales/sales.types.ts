@@ -11,6 +11,12 @@ export interface SalesAccountSummary {
   website: string | null
   address: string | null
   status: SalesAccountStatus
+  /**
+   * Why the account is Inactive or Do Not Contact. The service requires one
+   * whenever the status leaves ACTIVE and clears it on the way back, so a
+   * status badge is never rendered without the sentence explaining it.
+   */
+  statusReason: string | null
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number

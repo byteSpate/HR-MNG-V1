@@ -623,7 +623,7 @@ describe("updateSalesAccount", () => {
 
     await expect(
       updateSalesAccount("sa-1", { name: "bengal group" }, ADMIN)
-    ).rejects.toMatchObject({ status: 409, message: expect.stringContaining("Rahim") })
+    ).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining("Rahim") })
     expect(prisma.salesAccount.update).not.toHaveBeenCalled()
   })
 
@@ -652,7 +652,7 @@ describe("updateSalesAccount", () => {
 
     await expect(
       updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, ADMIN)
-    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("Nasir") })
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining("Nasir") })
   })
 
   it("refuses an owner with no hub access", async () => {
@@ -667,7 +667,7 @@ describe("updateSalesAccount", () => {
     await expect(
       updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, ADMIN)
     ).rejects.toMatchObject({
-      status: 400,
+      statusCode: 400,
       message: expect.stringContaining("Techno Sales Hub access"),
     })
   })
@@ -683,7 +683,7 @@ describe("updateSalesAccount", () => {
 
     await expect(
       updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, ADMIN)
-    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("Sales Admin") })
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining("Sales Admin") })
   })
 
   it("reassigns the owner and puts it on the timeline", async () => {
@@ -707,7 +707,7 @@ describe("updateSalesAccount", () => {
   it("requires a reason before an account can go INACTIVE", async () => {
     await expect(
       updateSalesAccount("sa-1", { status: "INACTIVE" }, ADMIN)
-    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("why") })
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining("why") })
     expect(prisma.salesAccount.update).not.toHaveBeenCalled()
   })
 
