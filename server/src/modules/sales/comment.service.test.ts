@@ -84,7 +84,7 @@ describe("sales comments", () => {
   })
 
   it("does not return comments when the entity is outside the caller's access", async () => {
-    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null as any)
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as any)
     await expect(listSalesComments({ entity: "SALES_ACCOUNT", entityId: "hidden" }, USER))
       .rejects.toThrow(/does not exist, or is not yours/i)
     expect(prisma.salesComment.findMany).not.toHaveBeenCalled()

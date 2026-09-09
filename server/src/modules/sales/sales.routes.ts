@@ -16,6 +16,22 @@ import {
   setContactStatusHandler,
   setPrimaryContactHandler,
   updateSalesAccountHandler,
+  addOpportunityLineHandler,
+  changeOpportunityNextStepHandler,
+  changeOpportunityStageHandler,
+  changeOpportunityStatusHandler,
+  createOpportunityHandler,
+  createSalesCommentHandler,
+  deleteOpportunityLineHandler,
+  getOpportunityHandler,
+  getOpportunityTimelineHandler,
+  listOpportunitiesHandler,
+  listSalesCommentsHandler,
+  reorderOpportunityLinesHandler,
+  suggestOpportunityLinesHandler,
+  updateOpportunityHandler,
+  updateOpportunityLineHandler,
+  updateSalesCommentHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -59,5 +75,24 @@ router.post(
   requireSales(),
   logCommunicationHandler
 )
+
+router.get("/opportunities", requireAuth, requireSales(), listOpportunitiesHandler)
+router.post("/opportunities", requireAuth, requireSales(), createOpportunityHandler)
+router.get("/opportunities/:id", requireAuth, requireSales(), getOpportunityHandler)
+router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunityHandler)
+router.patch("/opportunities/:id/stage", requireAuth, requireSales(), changeOpportunityStageHandler)
+router.patch("/opportunities/:id/status", requireAuth, requireSales(), changeOpportunityStatusHandler)
+router.patch("/opportunities/:id/next-step", requireAuth, requireSales(), changeOpportunityNextStepHandler)
+router.get("/opportunities/:id/timeline", requireAuth, requireSales(), getOpportunityTimelineHandler)
+
+router.post("/opportunities/:id/lines", requireAuth, requireSales(), addOpportunityLineHandler)
+router.put("/opportunities/:id/lines/reorder", requireAuth, requireSales(), reorderOpportunityLinesHandler)
+router.patch("/lines/:lineId", requireAuth, requireSales(), updateOpportunityLineHandler)
+router.delete("/lines/:lineId", requireAuth, requireSales(), deleteOpportunityLineHandler)
+router.get("/suggestions/oem", requireAuth, requireSales(), suggestOpportunityLinesHandler)
+
+router.get("/comments", requireAuth, requireSales(), listSalesCommentsHandler)
+router.post("/comments", requireAuth, requireSales(), createSalesCommentHandler)
+router.patch("/comments/:id", requireAuth, requireSales(), updateSalesCommentHandler)
 
 export default router

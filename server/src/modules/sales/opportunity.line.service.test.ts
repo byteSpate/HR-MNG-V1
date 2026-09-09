@@ -93,8 +93,13 @@ describe("OEM suggestions", () => {
     expect(prisma.opportunityLine.groupBy).toHaveBeenCalledWith(expect.objectContaining({
       by: ["oemBrand"], take: 20,
       where: expect.objectContaining({
-        oemBrand: { contains: "cis", mode: "insensitive" },
-        opportunity: { salesAccount: expect.any(Object) },
+        oemBrand: { not: null, contains: "cis", mode: "insensitive" },
+        opportunity: { salesAccount: {
+          OR: [
+            { ownerEmployeeId: "emp-1" },
+            { assignments: { some: { employeeId: "emp-1" } } },
+          ],
+        } },
       }),
     }))
   })

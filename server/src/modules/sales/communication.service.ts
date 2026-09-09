@@ -136,7 +136,7 @@ export async function getAccountTimeline(
   // entry stays owner/assignee/admin only, via logCommunication above.
   await requireAccountVisible(accountId, actor)
 
-  const [communications, events] = await Promise.all([
+  const [communications, events, comments] = await Promise.all([
     prisma.salesCommunication.findMany({
       where: { salesAccountId: accountId },
       orderBy: { occurredAt: "desc" },
@@ -150,6 +150,12 @@ export async function getAccountTimeline(
       where: { entity: "SALES_ACCOUNT", entityId: accountId },
       orderBy: { createdAt: "desc" },
       take: TIMELINE_LIMIT,
+    }),
+    prisma.salesComment.findMany({
+      where: { entity: "SALES_ACCOUNT", entityId: accountId },
+      orderBy: { createdAt: "desc" },
+      take: TIMELINE_LIMIT,
+      include: { author: { select: { fullName: true } } },
     }),
   ])
 
@@ -181,6 +187,15 @@ export async function getAccountTimeline(
       by: null,
       // No free-text body of its own — the title already is the sentence.
       detail: null,
+    })),
+    ...comments.map((row) => ({
+      id: `comment:${row.id}`,
+      kind: "comment" as const,
+      at: row.createdAt.toISOString(),
+      title: row.kind === "MANAGEMENT_NOTE" ? "Management note" : "Remark",
+      meta: row.kind === "CUSTOMER_FEEDBACK" ? "Customer feedback" : null,
+      by: row.author.fullName,
+      detail: row.body,
     })),
   ]
 

@@ -1,8 +1,75 @@
 import type {
+  OpportunityStage,
+  OpportunityStatus,
+  SalesCommentKind,
+  SalesTrack,
   SalesAccountStatus,
   SalesChannel,
   SalesContactStatus,
 } from "../../generated/prisma/client"
+
+export interface OpportunityLineSummary {
+  id: string
+  opportunityId: string
+  product: string
+  oemBrand: string | null
+  model: string | null
+  quantity: number | null
+  unitValue: string | null
+  lineValue: string | null
+  note: string | null
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OpportunitySummary {
+  id: string
+  serial: string
+  salesAccountId: string
+  salesAccountName: string
+  name: string
+  track: SalesTrack
+  amount: string | null
+  currency: string
+  expectedCloseDate: string | null
+  oemAccountManager: string | null
+  status: OpportunityStatus
+  statusReason: string | null
+  closedAt: string | null
+  stage: OpportunityStage
+  stageChangedAt: string
+  nextStep: string | null
+  nextStepDueOn: string | null
+  ownerEmployeeId: string
+  ownerName: string
+  wonByEmployeeId: string | null
+  lastActivityAt: string
+  createdAt: string
+  updatedAt: string
+  lines: OpportunityLineSummary[]
+  lineTotal: string
+  unpricedLineCount: number
+  amountDiffersFromLines: boolean
+}
+
+export interface SalesCommentSummary {
+  id: string
+  entity: "SALES_ACCOUNT" | "OPPORTUNITY"
+  entityId: string
+  kind: SalesCommentKind
+  body: string
+  authorEmployeeId: string
+  authorName: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SalesCommentPage {
+  items: SalesCommentSummary[]
+  truncated: boolean
+  limit: number
+}
 
 export interface SalesAccountSummary {
   id: string
@@ -135,7 +202,7 @@ export interface AccountHistory {
 export interface TimelineItem {
   /** Prefixed by kind, because a communication and an event can share an id. */
   id: string
-  kind: "communication" | "event"
+  kind: "communication" | "event" | "comment"
   at: string
   title: string
   meta: string | null

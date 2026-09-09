@@ -89,3 +89,98 @@ export const logCommunicationSchema = z.object({
 })
 
 export type LogCommunicationBody = z.infer<typeof logCommunicationSchema>
+
+const money = z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, "Enter an amount with up to two decimal places")
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+const opportunityStage = z.enum([
+  "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING",
+  "QUOTATION_SUBMITTED", "NEGOTIATION", "AWAITING_DECISION",
+])
+const opportunityStatus = z.enum(["ONGOING", "WON", "LOST", "CANCELLED"])
+
+export const createOpportunitySchema = z.object({
+  salesAccountId: z.string().uuid(),
+  name: z.string().trim().min(2, "An Opportunity needs a name").max(180),
+  track: z.enum(["NETWORKING"]),
+  amount: money.optional(),
+  expectedCloseDate: dateOnly.optional(),
+  oemAccountManager: z.string().trim().max(160).optional(),
+  ownerEmployeeId: z.string().uuid().optional(),
+  addAssignment: z.boolean().optional(),
+})
+export type CreateOpportunityBody = z.infer<typeof createOpportunitySchema>
+
+export const listOpportunitySchema = z.object({
+  status: opportunityStatus.optional(),
+  stage: opportunityStage.optional(),
+  salesAccountId: z.string().uuid().optional(),
+  ownerEmployeeId: z.string().uuid().optional(),
+  mine: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+  cursor: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+})
+export type ListOpportunityQuery = z.infer<typeof listOpportunitySchema>
+
+export const updateOpportunitySchema = z.object({
+  name: z.string().trim().min(2).max(180).optional(),
+  track: z.enum(["NETWORKING"]).optional(),
+  amount: money.nullable().optional(),
+  expectedCloseDate: dateOnly.nullable().optional(),
+  oemAccountManager: z.string().trim().max(160).nullable().optional(),
+  ownerEmployeeId: z.string().uuid().optional(),
+  addAssignment: z.boolean().optional(),
+}).refine((body) => Object.keys(body).some((key) => key !== "addAssignment"), { message: "Nothing was changed" })
+export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
+
+export const changeOpportunityStageSchema = z.object({ stage: opportunityStage })
+export const changeOpportunityStatusSchema = z.object({
+  status: opportunityStatus,
+  statusReason: z.string().trim().max(500).optional(),
+})
+export const changeOpportunityNextStepSchema = z.object({
+  nextStep: z.string().trim().max(500).nullable().optional(),
+  nextStepDueOn: dateOnly.nullable().optional(),
+}).refine((body) => body.nextStep !== undefined || body.nextStepDueOn !== undefined, { message: "Nothing was changed" })
+
+export const createOpportunityLineSchema = z.object({
+  product: z.string().trim().min(1, "A line needs a product").max(180),
+  oemBrand: z.string().trim().max(120).optional(),
+  model: z.string().trim().max(120).optional(),
+  quantity: z.number().int().positive().optional(),
+  unitValue: money.optional(),
+  lineValue: money.optional(),
+  note: z.string().trim().max(500).optional(),
+})
+export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
+  .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
+export const reorderOpportunityLinesSchema = z.object({
+  lineIds: z.array(z.string().uuid()).min(1).refine((ids) => new Set(ids).size === ids.length, { message: "Line ids must be unique" }),
+})
+export const opportunitySuggestionSchema = z.object({
+  field: z.enum(["product", "brand", "model"]), q: z.string().trim().max(120).default(""),
+})
+
+export const salesCommentEntitySchema = z.enum(["SALES_ACCOUNT", "OPPORTUNITY"])
+export const createSalesCommentSchema = z.object({
+  entity: salesCommentEntitySchema,
+  entityId: z.string().uuid(),
+  kind: z.enum(["GENERAL", "CUSTOMER_FEEDBACK", "MANAGEMENT_NOTE"]),
+  body: z.string().trim().min(1, "A comment cannot be empty").max(4000),
+})
+export const listSalesCommentSchema = z.object({
+  entity: salesCommentEntitySchema, entityId: z.string().uuid(),
+})
+export const updateSalesCommentSchema = z.object({
+  body: z.string().trim().min(1, "A comment cannot be empty").max(4000),
+})
+
+export type ChangeOpportunityStageBody = z.infer<typeof changeOpportunityStageSchema>
+export type ChangeOpportunityStatusBody = z.infer<typeof changeOpportunityStatusSchema>
+export type ChangeOpportunityNextStepBody = z.infer<typeof changeOpportunityNextStepSchema>
+export type CreateOpportunityLineBody = z.infer<typeof createOpportunityLineSchema>
+export type UpdateOpportunityLineBody = z.infer<typeof updateOpportunityLineSchema>
+export type ReorderOpportunityLinesBody = z.infer<typeof reorderOpportunityLinesSchema>
+export type OpportunitySuggestionQuery = z.infer<typeof opportunitySuggestionSchema>
+export type CreateSalesCommentBody = z.infer<typeof createSalesCommentSchema>
+export type ListSalesCommentQuery = z.infer<typeof listSalesCommentSchema>
+export type UpdateSalesCommentBody = z.infer<typeof updateSalesCommentSchema>

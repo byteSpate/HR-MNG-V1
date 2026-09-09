@@ -68,8 +68,8 @@ beforeEach(() => {
   vi.mocked(prisma.opportunity.count).mockResolvedValue(0)
   vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity() as any)
   vi.mocked(prisma.opportunity.findUnique).mockResolvedValue(opportunity() as any)
-  vi.mocked(prisma.opportunity.update).mockImplementation(async (args: any) =>
-    opportunity({ ...args.data }) as any)
+  vi.mocked(prisma.opportunity.update).mockImplementation((async (args: any) =>
+    opportunity({ ...args.data }) as any) as any)
 })
 
 describe("opportunity serials and creation", () => {
@@ -150,8 +150,8 @@ describe("opportunity reads and plain edits", () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
       amount: dec("300"),
       lines: [
-        { id: "l1", product: "Switch", lineValue: dec("250"), order: 0 },
-        { id: "l2", product: "Service", lineValue: null, order: 1 },
+        { id: "l1", opportunityId: "opp-1", product: "Switch", lineValue: dec("250"), order: 0, createdAt: NOW, updatedAt: NOW },
+        { id: "l2", opportunityId: "opp-1", product: "Service", lineValue: null, order: 1, createdAt: NOW, updatedAt: NOW },
       ],
     }) as any)
     const result = await getOpportunity("opp-1", USER)
@@ -163,7 +163,7 @@ describe("opportunity reads and plain edits", () => {
 
   it("does not call a null deal amount different from its line total", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
-      amount: null, lines: [{ id: "l1", product: "Switch", lineValue: dec("250"), order: 0 }],
+      amount: null, lines: [{ id: "l1", opportunityId: "opp-1", product: "Switch", lineValue: dec("250"), order: 0, createdAt: NOW, updatedAt: NOW }],
     }) as any)
     await expect(getOpportunity("opp-1", USER)).resolves.toMatchObject({
       amount: null, amountDiffersFromLines: false,

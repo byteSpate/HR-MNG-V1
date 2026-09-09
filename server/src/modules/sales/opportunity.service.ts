@@ -1,0 +1,269 @@
+import prisma from "../../config/prisma"
+import type { Prisma } from "../../generated/prisma/client"
+import { AppError } from "../../middleware/errorHandler"
+import { writeAudit } from "../../utils/audit"
+import type { AccessTokenPayload } from "../auth/auth.types"
+import { emitEvent } from "../event/event.emit"
+import { dec } from "../payroll/payroll.money"
+import { accountScopeFor, employeeIdFor, OPPORTUNITY_NOT_VISIBLE, requireAccountAccess } from "./sales.access"
+import { nextOpportunitySerial } from "./sales.serial"
+import { presentOpportunity } from "./opportunity.present"
+import type {
+  ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
+  CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
+} from "./sales.validators"
+import type { TimelineItem } from "./sales.types"
+
+const INCLUDE = {
+  owner: { select: { id: true, fullName: true } },
+  salesAccount: { select: { id: true, name: true, ownerEmployeeId: true } },
+  lines: { orderBy: { order: "asc" as const } },
+} as const
+
+const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prisma
+const day = (value: string | null | undefined) => value ? new Date(`${value}T00:00:00.000Z`) : null
+
+async function ownerFor(
+  tx: Prisma.TransactionClient,
+  account: { id: string; ownerEmployeeId: string },
+  ownerEmployeeId: string | undefined,
+  addAssignment: boolean | undefined,
+  actor: AccessTokenPayload
+) {
+  const ownerId = ownerEmployeeId ?? account.ownerEmployeeId
+  const owner = await tx.employee.findUnique({ where: { id: ownerId }, select: { id: true, fullName: true } })
+  if (!owner) throw new AppError(400, "That Opportunity owner is not an employee")
+  if (owner.id === account.ownerEmployeeId) return owner
+
+  const assignment = await tx.salesAccountAssignment.findUnique({
+    where: { salesAccountId_employeeId: { salesAccountId: account.id, employeeId: owner.id } },
+    select: { id: true },
+  })
+  if (assignment) return owner
+  if (!addAssignment) {
+    throw new AppError(
+      409,
+      `${owner.fullName} does not have access to this Sales Account. Send addAssignment: true to add them as a collaborator in the same action.`
+    )
+  }
+  await tx.salesAccountAssignment.create({
+    data: { salesAccountId: account.id, employeeId: owner.id, assignedBy: actor.sub },
+  })
+  await writeAudit(tx, {
+    entity: "SALES_ACCOUNT_ASSIGNMENT", entityId: account.id, action: "ASSIGN",
+    changedBy: actor.sub, after: { employeeId: owner.id },
+  })
+  return owner
+}
+
+export async function createOpportunity(body: CreateOpportunityBody, actor: AccessTokenPayload) {
+  return prisma.$transaction(async (tx) => {
+    const access = await requireAccountAccess(body.salesAccountId, actor, asClient(tx))
+    const account = { id: access.accountId, ownerEmployeeId: access.ownerEmployeeId }
+    const owner = await ownerFor(tx, account, body.ownerEmployeeId, body.addAssignment, actor)
+    const serial = await nextOpportunitySerial(tx)
+    const now = new Date()
+    const created = await tx.opportunity.create({
+      data: {
+        serial, salesAccountId: account.id, name: body.name, track: body.track,
+        amount: body.amount === undefined ? null : dec(body.amount),
+        expectedCloseDate: day(body.expectedCloseDate),
+        oemAccountManager: body.oemAccountManager ?? null,
+        ownerEmployeeId: owner.id, stage: "REQUIREMENT_RECEIVED", status: "ONGOING",
+        stageChangedAt: now, lastActivityAt: now, createdBy: actor.sub,
+      },
+      include: INCLUDE,
+    })
+    await writeAudit(tx, {
+      entity: "OPPORTUNITY", entityId: created.id, action: "CREATE", changedBy: actor.sub,
+      after: { serial, salesAccountId: account.id, name: body.name, ownerEmployeeId: owner.id },
+    })
+    await emitEvent(tx, {
+      type: "sales.opportunity.created", entity: "OPPORTUNITY", entityId: created.id,
+      actorUserId: actor.sub, subjectEmployeeId: owner.id, managerEmployeeId: null,
+      title: `${serial} · ${body.name} created`, meta: `Owner: ${owner.fullName}`,
+      href: `/opportunities/${created.id}`,
+    })
+    return presentOpportunity(created)
+  })
+}
+
+export async function listOpportunities(query: ListOpportunityQuery, actor: AccessTokenPayload) {
+  const employeeId = await employeeIdFor(actor)
+  const limit = query.limit ?? 50
+  const where: Prisma.OpportunityWhereInput = {
+    salesAccount: accountScopeFor(actor, employeeId),
+    ...(query.status ? { status: query.status } : {}),
+    ...(query.stage ? { stage: query.stage } : {}),
+    ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
+    ...(query.ownerEmployeeId ? { ownerEmployeeId: query.ownerEmployeeId } : {}),
+    ...(query.mine ? { ownerEmployeeId: employeeId ?? "__none__" } : {}),
+  }
+  const rows = await prisma.opportunity.findMany({
+    where, include: INCLUDE, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1, ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+  })
+  const hasMore = rows.length > limit
+  const page = rows.slice(0, limit)
+  return { items: page.map(presentOpportunity), nextCursor: hasMore ? page.at(-1)!.id : null }
+}
+
+export async function getOpportunity(id: string, actor: AccessTokenPayload) {
+  const employeeId = await employeeIdFor(actor)
+  const row = await prisma.opportunity.findFirst({
+    where: { AND: [{ id }, { salesAccount: accountScopeFor(actor, employeeId) }] },
+    include: INCLUDE,
+  })
+  if (!row) throw new AppError(404, OPPORTUNITY_NOT_VISIBLE)
+  return presentOpportunity(row)
+}
+
+async function loadForWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {
+  const employeeId = await employeeIdFor(actor, asClient(tx))
+  const row = await tx.opportunity.findFirst({
+    where: { AND: [{ id }, { salesAccount: accountScopeFor(actor, employeeId) }] },
+    include: INCLUDE,
+  })
+  if (!row) throw new AppError(404, OPPORTUNITY_NOT_VISIBLE)
+  return row
+}
+
+async function auditFields(
+  tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload,
+  before: Record<string, unknown>, after: Record<string, unknown>
+) {
+  for (const field of Object.keys(before)) {
+    await writeAudit(tx, {
+      entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
+      before: { [field]: before[field] } as Prisma.InputJsonObject,
+      after: { [field]: after[field] } as Prisma.InputJsonObject,
+    })
+  }
+}
+
+export async function updateOpportunity(id: string, body: UpdateOpportunityBody, actor: AccessTokenPayload) {
+  return prisma.$transaction(async (tx) => {
+    const current = await loadForWrite(tx, id, actor)
+    const data: Record<string, unknown> = {}
+    const before: Record<string, unknown> = {}
+    const after: Record<string, unknown> = {}
+    const stage = (field: string, next: unknown, previous: unknown) => {
+      if (next !== undefined && String(next) !== String(previous)) {
+        data[field] = next; before[field] = previous; after[field] = next
+      }
+    }
+    stage("name", body.name, current.name)
+    stage("track", body.track, current.track)
+    if (body.amount !== undefined) stage("amount", body.amount === null ? null : dec(body.amount), current.amount)
+    if (body.expectedCloseDate !== undefined) stage("expectedCloseDate", day(body.expectedCloseDate), current.expectedCloseDate)
+    if (body.oemAccountManager !== undefined) stage("oemAccountManager", body.oemAccountManager, current.oemAccountManager)
+    if (body.ownerEmployeeId && body.ownerEmployeeId !== current.ownerEmployeeId) {
+      const owner = await ownerFor(tx, current.salesAccount, body.ownerEmployeeId, body.addAssignment, actor)
+      stage("ownerEmployeeId", owner.id, current.ownerEmployeeId)
+    }
+    if (Object.keys(data).length === 0) return presentOpportunity(current)
+    data.lastActivityAt = new Date()
+    const updated = await tx.opportunity.update({ where: { id }, data, include: INCLUDE })
+    await auditFields(tx, id, actor, before, after)
+    return presentOpportunity(updated)
+  })
+}
+
+export async function changeOpportunityStage(id: string, body: ChangeOpportunityStageBody, actor: AccessTokenPayload) {
+  return prisma.$transaction(async (tx) => {
+    const current = await loadForWrite(tx, id, actor)
+    if (current.status !== "ONGOING") throw new AppError(409, "Reopen this Opportunity before changing its stage")
+    if (current.stage === body.stage) return presentOpportunity(current)
+    const now = new Date()
+    const updated = await tx.opportunity.update({
+      where: { id }, data: { stage: body.stage, stageChangedAt: now, lastActivityAt: now }, include: INCLUDE,
+    })
+    await writeAudit(tx, {
+      entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
+      before: { stage: current.stage }, after: { stage: body.stage },
+    })
+    await emitEvent(tx, {
+      type: "sales.opportunity.stage_changed", entity: "OPPORTUNITY", entityId: id,
+      actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
+      title: `${current.serial} moved to ${body.stage}`, href: `/opportunities/${id}`,
+    })
+    return presentOpportunity(updated)
+  })
+}
+
+export async function changeOpportunityStatus(id: string, body: ChangeOpportunityStatusBody, actor: AccessTokenPayload) {
+  return prisma.$transaction(async (tx) => {
+    const current = await loadForWrite(tx, id, actor)
+    if (current.status === body.status) return presentOpportunity(current)
+    if ((body.status === "LOST" || body.status === "CANCELLED") && !body.statusReason?.trim()) {
+      throw new AppError(400, `${body.status === "LOST" ? "Lost" : "Cancelled"} Opportunities require a reason`)
+    }
+    const now = new Date()
+    const data: Prisma.OpportunityUpdateInput = {
+      status: body.status, lastActivityAt: now,
+      statusReason: body.status === "LOST" || body.status === "CANCELLED" ? body.statusReason!.trim() : null,
+      closedAt: body.status === "ONGOING" ? null : now,
+      ...(body.status === "WON" && current.wonByEmployeeId === null
+        ? { wonBy: { connect: { id: current.ownerEmployeeId } } } : {}),
+    }
+    const updated = await tx.opportunity.update({ where: { id }, data, include: INCLUDE })
+    await writeAudit(tx, {
+      entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
+      before: { status: current.status }, after: { status: body.status }, note: body.statusReason,
+    })
+    await emitEvent(tx, {
+      type: body.status === "WON" ? "sales.opportunity.won" : "sales.opportunity.closed",
+      entity: "OPPORTUNITY", entityId: id, actorUserId: actor.sub,
+      subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
+      title: body.status === "ONGOING"
+        ? `${current.serial} reopened`
+        : `${current.serial} marked ${body.status.toLowerCase()}`,
+      meta: body.statusReason ?? null, href: `/opportunities/${id}`,
+    })
+    return presentOpportunity(updated)
+  })
+}
+
+export async function changeOpportunityNextStep(id: string, body: ChangeOpportunityNextStepBody, actor: AccessTokenPayload) {
+  return prisma.$transaction(async (tx) => {
+    const current = await loadForWrite(tx, id, actor)
+    const nextStep = body.nextStep === undefined ? current.nextStep : body.nextStep || null
+    const nextStepDueOn = body.nextStepDueOn === undefined ? current.nextStepDueOn : day(body.nextStepDueOn)
+    const now = new Date()
+    const updated = await tx.opportunity.update({
+      where: { id }, data: { nextStep, nextStepDueOn, lastActivityAt: now }, include: INCLUDE,
+    })
+    await writeAudit(tx, {
+      entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
+      before: { nextStep: current.nextStep, nextStepDueOn: current.nextStepDueOn },
+      after: { nextStep, nextStepDueOn },
+    })
+    await emitEvent(tx, {
+      type: "sales.opportunity.next_step_changed", entity: "OPPORTUNITY", entityId: id,
+      actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
+      title: `${current.serial} next step changed`, meta: nextStep, href: `/opportunities/${id}`,
+    })
+    return presentOpportunity(updated)
+  })
+}
+
+export async function getOpportunityTimeline(id: string, actor: AccessTokenPayload): Promise<{ items: TimelineItem[] }> {
+  const visible = await getOpportunity(id, actor)
+  const [comments, events] = await Promise.all([
+    prisma.salesComment.findMany({
+      where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100,
+      include: { author: { select: { fullName: true } } },
+    }),
+    prisma.event.findMany({ where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100 }),
+  ])
+  const items: TimelineItem[] = [
+    ...comments.map((row) => ({ id: `comment:${row.id}`, kind: "comment" as const,
+      at: row.createdAt.toISOString(), title: row.kind === "MANAGEMENT_NOTE" ? "Management note" : "Comment",
+      meta: null, by: row.author.fullName, detail: row.body })),
+    ...events.map((row) => ({ id: `event:${row.id}`, kind: "event" as const,
+      at: row.createdAt.toISOString(), title: row.title, meta: row.meta, by: null, detail: null })),
+  ]
+  items.sort((a, b) => b.at.localeCompare(a.at))
+  void visible
+  return { items: items.slice(0, 100) }
+}

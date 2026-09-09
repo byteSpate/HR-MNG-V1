@@ -12,11 +12,42 @@ import {
 import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
+  changeOpportunityNextStep,
+  changeOpportunityStage,
+  changeOpportunityStatus,
+  createOpportunity,
+  getOpportunity,
+  getOpportunityTimeline,
+  listOpportunities,
+  updateOpportunity,
+} from "./opportunity.service"
+import {
+  addOpportunityLine,
+  deleteOpportunityLine,
+  reorderOpportunityLines,
+  suggestOpportunityLineValues,
+  updateOpportunityLine,
+} from "./opportunity.line.service"
+import { createSalesComment, listSalesComments, updateSalesComment } from "./comment.service"
+import {
+  changeOpportunityNextStepSchema,
+  changeOpportunityStageSchema,
+  changeOpportunityStatusSchema,
+  createOpportunityLineSchema,
+  createOpportunitySchema,
+  createSalesCommentSchema,
   createSalesAccountSchema,
   updateSalesAccountSchema,
   createSalesContactSchema,
   logCommunicationSchema,
+  listOpportunitySchema,
+  listSalesCommentSchema,
+  opportunitySuggestionSchema,
+  reorderOpportunityLinesSchema,
   setContactStatusSchema,
+  updateOpportunityLineSchema,
+  updateOpportunitySchema,
+  updateSalesCommentSchema,
 } from "./sales.validators"
 
 export async function listSalesAccountsHandler(
@@ -173,4 +204,84 @@ export async function updateSalesAccountHandler(
   } catch (err) {
     return next(err)
   }
+}
+
+export async function createOpportunityHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(201).json(await createOpportunity(createOpportunitySchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function listOpportunitiesHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listOpportunities(listOpportunitySchema.parse(req.query), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function getOpportunityHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await getOpportunity(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function updateOpportunityHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await updateOpportunity(req.params.id, updateOpportunitySchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function changeOpportunityStageHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await changeOpportunityStage(req.params.id, changeOpportunityStageSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function changeOpportunityStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await changeOpportunityStatus(req.params.id, changeOpportunityStatusSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function changeOpportunityNextStepHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await changeOpportunityNextStep(req.params.id, changeOpportunityNextStepSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function getOpportunityTimelineHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await getOpportunityTimeline(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function addOpportunityLineHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(201).json(await addOpportunityLine(req.params.id, createOpportunityLineSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function updateOpportunityLineHandler(req: Request<{ lineId: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await updateOpportunityLine(req.params.lineId, updateOpportunityLineSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function deleteOpportunityLineHandler(req: Request<{ lineId: string }>, res: Response, next: NextFunction) {
+  try { await deleteOpportunityLine(req.params.lineId, req.user!); return res.status(204).send() }
+  catch (err) { return next(err) }
+}
+
+export async function reorderOpportunityLinesHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await reorderOpportunityLines(req.params.id, reorderOpportunityLinesSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function suggestOpportunityLinesHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await suggestOpportunityLineValues(opportunitySuggestionSchema.parse(req.query), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function createSalesCommentHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(201).json(await createSalesComment(createSalesCommentSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function listSalesCommentsHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listSalesComments(listSalesCommentSchema.parse(req.query), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function updateSalesCommentHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await updateSalesComment(req.params.id, updateSalesCommentSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
 }

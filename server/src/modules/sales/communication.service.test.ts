@@ -6,6 +6,7 @@ vi.mock("../../config/prisma", () => ({
     salesAccount: { findFirst: vi.fn(), findUnique: vi.fn() },
     salesContact: { findFirst: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
+    salesComment: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
     employee: { findUnique: vi.fn() },
     event: { findMany: vi.fn(), create: vi.fn() },
@@ -54,6 +55,7 @@ beforeEach(() => {
     employeeId: "emp-2",
     createdAt: new Date("2026-09-07"),
   } as any)
+  vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as any)
 })
 
 describe("logCommunication", () => {

@@ -15,6 +15,10 @@ vi.mock("../../config/prisma", () => ({
     },
     salesAccountAssignment: { createMany: vi.fn(), deleteMany: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
+    salesComment: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    opportunity: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    opportunityLine: { aggregate: vi.fn(), create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), delete: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
+    idCounter: { upsert: vi.fn() },
     salesContact: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -57,6 +61,7 @@ beforeEach(() => {
     (fn as unknown as (c: typeof prisma) => unknown)(prisma)) as never)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as never)
   vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as never)
+  vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as never)
 })
 
 describe("GET /api/sales/accounts", () => {
