@@ -184,6 +184,22 @@ describe("opportunity reads and plain edits", () => {
     })
   })
 
+  it("does not report a difference when no line has been priced yet", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      amount: dec("500000"),
+      lines: [
+        { id: "l1", opportunityId: "opp-1", product: "Switch", lineValue: null, order: 0, createdAt: NOW, updatedAt: NOW },
+        { id: "l2", opportunityId: "opp-1", product: "Service", lineValue: null, order: 1, createdAt: NOW, updatedAt: NOW },
+      ],
+    }) as any)
+    // Nothing has been costed, so there is no line total to differ from.
+    // Reporting a difference offers "set deal value to line total", and the
+    // total of nothing is zero, so pressing it would wipe a real deal value.
+    await expect(getOpportunity("opp-1", USER)).resolves.toMatchObject({
+      unpricedLineCount: 2, amountDiffersFromLines: false,
+    })
+  })
+
   it("uses the not-visible refusal for an opportunity outside the shared directory", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(null as any)
     await expect(getOpportunity("missing", USER)).rejects.toThrow(/does not exist, or is not yours/i)

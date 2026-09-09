@@ -32,6 +32,12 @@ export function presentOpportunity(row: any): OpportunitySummary {
     lastActivityAt: row.lastActivityAt.toISOString(), createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(), lines: rows.map(presentLine),
     lineTotal: toMoneyString(total), unpricedLineCount: rows.length - priced.length,
-    amountDiffersFromLines: amount !== null && rows.length > 0 && !amount.equals(total),
+    // `priced.length`, not `rows.length`. Lines nobody has costed are not
+    // summed as zero, so when none of them carries a value there is no line
+    // total to differ from. Comparing anyway reports a difference on every
+    // uncosted deal — and the one remedy offered for that is "set deal value
+    // to line total", which is zero, so pressing it would wipe a real number
+    // in the name of tidying up.
+    amountDiffersFromLines: amount !== null && priced.length > 0 && !amount.equals(total),
   }
 }
