@@ -229,6 +229,10 @@ model Employee {
   salesAccountsOwned      SalesAccount[]           @relation("SalesAccountOwner")
   salesAccountAssignments SalesAccountAssignment[] @relation("SalesAccountAssignee")
   salesCommunications     SalesCommunication[]
+  opportunitiesOwned      Opportunity[]            @relation("OpportunityOwner")
+  opportunitiesWon        Opportunity[]            @relation("OpportunityWonBy")
+  salesComments           SalesComment[]
+  salesTargets            SalesTarget[]
 }
 
 enum EmployeeChangeField {
@@ -1052,15 +1056,6 @@ enum SettlementStatus {
 }
 
 // ── REPORTING & COMMUNICATION ─────────────────
-model Report {
-  id          String   @id @default(uuid())
-  employeeId  String
-  managerId   String
-  content     String
-  period      String
-  submittedAt DateTime @default(now())
-}
-
 model Announcement {
   id          String @id @default(uuid())
   title       String
@@ -2038,6 +2033,7 @@ model SalesAccount {
   assignments    SalesAccountAssignment[]
   contacts       SalesContact[]
   communications SalesCommunication[]
+  opportunities  Opportunity[]
 
   @@index([ownerEmployeeId, status])
   @@index([status])
@@ -2142,4 +2138,238 @@ model SalesCommunication {
   @@index([salesAccountId, occurredAt])
   @@index([employeeId, occurredAt])
   @@index([contactId])
+}
+
+// ── OPPORTUNITIES ─────────────────────────────────────────────────────────
+// Phase 2. The part that replaces the spreadsheet.
+
+/// One value on purpose. The Software department workflow is not built, and a
+/// door with nothing behind it is worse than no door: it invites a form that
+/// cannot be submitted. A second value is a normal migration on the day
+/// somebody builds what sits behind it.
+enum SalesTrack {
+  NETWORKING
+}
+
+/// Did we get it? The outcome. Distinct from Stage, which is the position.
+enum OpportunityStatus {
+  ONGOING
+  WON
+  /// A competitor won.
+  LOST
+  /// Nobody won — the customer shelved it, the budget went. Both LOST and
+  /// CANCELLED require a reason; the difference is who ended up with the deal.
+  CANCELLED
+}
+
+/// How far along, and *who we are waiting on* — which is what makes a stage
+/// actionable rather than decorative. Only meaningful while status is ONGOING;
+/// on close it freezes at whatever it was, because "lost at Negotiation" and
+/// "lost at OEM Pricing" are different businesses and the second one is
+/// usually a pricing problem somebody can fix.
+///
+/// Deliberately an enum and not a settings table: funnel reports need stable
+/// buckets, and a configurable list means last quarter's chart silently
+/// rewrites itself when somebody edits it.
+enum OpportunityStage {
+  /// Waiting on us to start. They have said what they need; nothing worked out yet.
+  REQUIREMENT_RECEIVED
+  /// Waiting on us. Sizing, topology, the HLD if one is being written.
+  SOLUTION_DESIGN
+  /// Waiting on the OEM. Price, availability, special bid. We cannot quote yet.
+  OEM_PRICING
+  /// Waiting on the customer. They have our number.
+  QUOTATION_SUBMITTED
+  /// Both sides. They came back; commercial back-and-forth.
+  NEGOTIATION
+  /// Waiting on the customer, with nothing left for us to do but chase.
+  AWAITING_DECISION
+}
+
+model Opportunity {
+  id             String       @id @default(uuid())
+  /// BS-OPP-00001, from the same IdCounter mechanism issuing employee codes
+  /// and asset tags.
+  serial         String       @unique
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+
+  /// The meeting it came out of. The relation arrives with SalesMeeting in
+  /// phase 3; the column exists now so that is a relation change and not a
+  /// backfill.
+  meetingId String?
+
+  track SalesTrack @default(NETWORKING)
+
+  /// Was `projectName` in the first analysis. Renamed: the business calls it
+  /// the Opportunity Name and the examples are "Routing", "Firewall Upgrade" —
+  /// not project names.
+  name String
+
+  /// The OEM's person handling us. One relationship per deal, not one per
+  /// product line, so it sits here and not on the line.
+  oemAccountManager String?
+
+  /// THE deal value, and the only figure the dashboard, the funnel and the
+  /// quarterly achievement read. Line values are detail beside it and are
+  /// never silently synchronised with it. Nullable because an unpriced deal is
+  /// a real state and must not be stored as zero.
+  amount   Decimal? @db.Decimal(14, 2)
+  /// Every deal is in taka today. The column stays and the UI shows no
+  /// selector — a control that cannot do anything is a bug — so a future USD
+  /// deal is a UI change rather than a migration.
+  currency Currency @default(BDT)
+
+  expectedCloseDate DateTime?
+
+  status       OpportunityStatus @default(ONGOING)
+  /// Required for LOST and CANCELLED.
+  statusReason String?
+  /// Set when status leaves ONGOING. This — not updatedAt — is what a
+  /// quarter's achievement is counted on.
+  closedAt     DateTime?
+
+  stage          OpportunityStage @default(REQUIREMENT_RECEIVED)
+  /// Stamped on every stage change, so "stuck in OEM Pricing for 40 days" is
+  /// one indexed comparison rather than a scan of the audit log.
+  stageChangedAt DateTime         @default(now())
+
+  /// The current intention, of which there is exactly one. Previous next steps
+  /// live in the audit log rather than in a table of their own.
+  nextStep      String?
+  /// Date only, stored at UTC midnight.
+  nextStepDueOn DateTime?
+
+  /// The person running THIS deal — not necessarily the account's Owner. One
+  /// company can have a firewall deal run by one person and a switching deal
+  /// run by another. Defaults to the account Owner on create, and must already
+  /// have access to the account.
+  ownerEmployeeId String
+  owner           Employee @relation("OpportunityOwner", fields: [ownerEmployeeId], references: [id])
+
+  /// Stamped once, when status first becomes WON, copied from ownerEmployeeId
+  /// as it stood that day. Never moves again — handing an account over next
+  /// year changes who works it from then on; it does not rewrite who closed
+  /// what last March. This, not ownerEmployeeId, is what achievement counts.
+  /// Restrict, not the default SET NULL an optional relation would get: this
+  /// credit is a historical fact, and a cascade that quietly nulls it is the
+  /// one way it could "move" after all. Nothing deletes employees today, so
+  /// this constrains a path that does not exist yet rather than an existing one.
+  wonByEmployeeId String?
+  wonBy           Employee? @relation("OpportunityWonBy", fields: [wonByEmployeeId], references: [id], onDelete: Restrict)
+
+  lastActivityAt DateTime @default(now())
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lines OpportunityLine[]
+
+  @@index([salesAccountId])
+  @@index([status, expectedCloseDate])
+  @@index([ownerEmployeeId, status])
+  @@index([status, lastActivityAt])
+  @@index([status, stage])
+  /// The quarterly achievement query.
+  @@index([wonByEmployeeId, closedAt])
+}
+
+/// Products, models, quantities and values. An Opportunity may hold several,
+/// which is why one text field could not carry it.
+model OpportunityLine {
+  id            String      @id @default(uuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  /// Free text with suggestions from prior values — the same treatment the OEM
+  /// brand gets, for the same reason: a closed list would be wrong within a
+  /// month and nobody would be able to record the deal they actually have.
+  product   String
+  oemBrand  String?
+  model     String?
+  /// Nullable because some lines are services, not units.
+  quantity  Int?
+  unitValue Decimal? @db.Decimal(14, 2)
+  /// Never derived silently from quantity × unitValue. A number written
+  /// without being asked for is the same defect as a faked one; the interface
+  /// offers to fill it and a person presses the button.
+  lineValue Decimal? @db.Decimal(14, 2)
+  note      String?
+  order     Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([opportunityId, order])
+}
+
+/// The same rows render as **Remarks** on a Sales Account and **Comments** on
+/// an Opportunity. That is the business's own vocabulary and the two labels
+/// must not be made consistent with each other.
+enum SalesCommentKind {
+  /// The employee's own words.
+  GENERAL
+  /// What the customer said. Offered only on an Opportunity, because feedback
+  /// is always about a specific deal.
+  CUSTOMER_FEEDBACK
+  /// Written by management, usually during a Saturday funnel review.
+  MANAGEMENT_NOTE
+}
+
+/// Polymorphic, exactly as AuditLog and Event already are — so there is no FK
+/// to the target and no join table per entity type.
+model SalesComment {
+  /// "SALES_ACCOUNT" | "OPPORTUNITY" today. "SALES_MEETING" | "SALES_TASK" |
+  /// "PROJECT" | "WEEKLY_REPORT" arrive with the tables they name.
+  id       String           @id @default(uuid())
+  entity   String
+  entityId String
+  kind     SalesCommentKind
+  body     String
+
+  /// A real relation rather than a loose id, for the same reason
+  /// SalesCommunication.employeeId is one: the feed can name the author, and
+  /// an unknown id is refused by the database instead of stored.
+  authorEmployeeId String
+  author           Employee @relation(fields: [authorEmployeeId], references: [id])
+
+  /// Set when the comment was written during a Saturday review, which makes
+  /// "what did management say about this deal last week" one query. Stays null
+  /// until the funnel module exists in phase 6.
+  funnelMeetingId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entity, entityId, createdAt])
+  @@index([funnelMeetingId, createdAt])
+}
+
+/// One row per person per quarter. Absent means no target was set — which the
+/// dashboard shows as *not set*, never as a target of zero.
+model SalesTarget {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  /// Calendar, not financial. Named so it cannot be mistaken for the ledger's
+  /// year, which starts in July. Sales counts January to March as Q1 and the
+  /// ledger does not; anything putting the two figures side by side has to say
+  /// which year it means.
+  calendarYear Int
+  /// 1-4, January-March first.
+  quarter      Int
+
+  /// A count of deals. Not money — the value of a deal is a separate fact and
+  /// is never what a target measures. A won deal counts as one whether or not
+  /// anybody typed a value against it.
+  targetDeals Int
+  note        String?
+  setBy       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, calendarYear, quarter])
+  @@index([calendarYear, quarter])
 }
