@@ -70,13 +70,24 @@ export async function updateOpportunityLine(
       }
     }
     for (const field of ["unitValue", "lineValue"] as const) {
-      if (body[field] !== undefined) {
-        const next = dec(body[field]!)
-        if (current[field] == null || !next.equals(current[field]!)) {
-          data[field] = next
-          before[field] = current[field] == null ? null : toMoneyString(dec(current[field]!))
-          after[field] = toMoneyString(next)
-        }
+      if (body[field] === undefined) continue
+      const submitted = body[field]
+      const stored = current[field] == null ? null : toMoneyString(dec(current[field]!))
+      // Clearing a price. Distinct from leaving it alone, and emphatically
+      // distinct from writing zero: an unpriced line is one nobody has costed
+      // yet, and a zero-priced line is one somebody is giving away.
+      if (submitted === null) {
+        if (current[field] == null) continue
+        data[field] = null
+        before[field] = stored
+        after[field] = null
+        continue
+      }
+      const next = dec(submitted)
+      if (current[field] == null || !next.equals(current[field]!)) {
+        data[field] = next
+        before[field] = stored
+        after[field] = toMoneyString(next)
       }
     }
     if (Object.keys(data).length === 0) return presentLine(current)

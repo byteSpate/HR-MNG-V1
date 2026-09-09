@@ -152,6 +152,11 @@ export const createOpportunityLineSchema = z.object({
   note: z.string().trim().max(500).optional(),
 })
 export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
+  // Prices are nullable on edit though not on create, and the two states are
+  // different answers: absent leaves the price alone, null takes it back off.
+  // Without that difference a price typed by mistake can never be undone, and
+  // storing 0 instead would claim the line is free.
+  .extend({ unitValue: money.nullable().optional(), lineValue: money.nullable().optional() })
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
 export const reorderOpportunityLinesSchema = z.object({
   lineIds: z.array(z.string().uuid()).min(1).refine((ids) => new Set(ids).size === ids.length, { message: "Line ids must be unique" }),

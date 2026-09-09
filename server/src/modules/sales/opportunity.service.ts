@@ -6,6 +6,7 @@ import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
 import { dec } from "../payroll/payroll.money"
 import { accountScopeFor, employeeIdFor, OPPORTUNITY_NOT_VISIBLE, requireAccountAccess } from "./sales.access"
+import { employmentAllowsSales } from "./sales.eligibility"
 import { nextOpportunitySerial } from "./sales.serial"
 import { presentOpportunity } from "./opportunity.present"
 import type {
@@ -31,7 +32,16 @@ async function ownerFor(
   actor: AccessTokenPayload
 ) {
   const ownerId = ownerEmployeeId ?? account.ownerEmployeeId
-  const owner = await tx.employee.findUnique({ where: { id: ownerId }, select: { id: true, fullName: true } })
+  const owner = await tx.employee.findUnique({
+    where: { id: ownerId },
+    select: {
+      id: true,
+      fullName: true,
+      employmentStatus: true,
+      lastWorkingDay: true,
+      user: { select: { salesRole: true, isActive: true } },
+    },
+  })
   if (!owner) throw new AppError(400, "That Opportunity owner is not an employee")
   if (owner.id === account.ownerEmployeeId) return owner
 
@@ -46,6 +56,31 @@ async function ownerFor(
       `${owner.fullName} does not have access to this Sales Account. Send addAssignment: true to add them as a collaborator in the same action.`
     )
   }
+  // Adding the assignment is adding a collaborator, so it answers to the same
+  // three facts that adding one through the account does. Without this,
+  // addAssignment: true was a way round every one of them — it could put
+  // somebody on an account when they had never been granted hub access, had
+  // left the company, or had a deactivated login, and then make them
+  // answerable for a deal they cannot open.
+  if (!owner.user?.salesRole) {
+    throw new AppError(
+      400,
+      `${owner.fullName} does not have Techno Sales Hub access yet. Grant it from their employee record first.`
+    )
+  }
+  if (!employmentAllowsSales(owner.employmentStatus, owner.lastWorkingDay)) {
+    throw new AppError(
+      400,
+      `${owner.fullName} has left the company and cannot be added as a collaborator.`
+    )
+  }
+  if (!owner.user.isActive) {
+    throw new AppError(
+      400,
+      `${owner.fullName}'s login has been deactivated, so they cannot open the hub.`
+    )
+  }
+
   await tx.salesAccountAssignment.create({
     data: { salesAccountId: account.id, employeeId: owner.id, assignedBy: actor.sub },
   })

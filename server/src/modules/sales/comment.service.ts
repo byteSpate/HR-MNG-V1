@@ -28,10 +28,21 @@ async function authorize(
   return requireOpportunityAccess(entityId, actor, client)
 }
 
-function requireManagement(actor: AccessTokenPayload, kind: SalesCommentKind) {
+/**
+ * Checked on the way in *and* on every later edit, against the role the caller
+ * holds right now rather than the one they held when they wrote it. Authorship
+ * alone is not enough: somebody who wrote a management note as an admin and
+ * was afterwards demoted to Sales User is still its author, and would
+ * otherwise keep editing a note their current role forbids them to write.
+ */
+function requireManagement(
+  actor: AccessTokenPayload,
+  kind: SalesCommentKind,
+  verb: "written" | "edited" = "written"
+) {
   if (kind !== "MANAGEMENT_NOTE") return
   if (actor.role !== Role.SUPER_ADMIN && actor.salesRole !== SalesRole.SALES_ADMIN) {
-    throw new AppError(403, "A management note can only be written by a Sales Admin")
+    throw new AppError(403, `A management note can only be ${verb} by a Sales Admin`)
   }
 }
 
@@ -80,6 +91,7 @@ export async function updateSalesComment(
     })
     if (!current) throw new AppError(404, "That Sales comment does not exist, or is not yours")
     await authorize(current.entity as "SALES_ACCOUNT" | "OPPORTUNITY", current.entityId, actor, asClient(tx))
+    requireManagement(actor, current.kind, "edited")
     const employeeId = await employeeIdFor(actor, asClient(tx))
     if (!employeeId || current.authorEmployeeId !== employeeId) {
       throw new AppError(403, "Only the author can edit this comment")
