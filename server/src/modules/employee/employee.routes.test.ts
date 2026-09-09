@@ -29,6 +29,7 @@ vi.mock("./employee.update", () => ({
 
 vi.mock("./employee.account", () => ({
   setAccountActive: vi.fn(async () => ({ id: "emp-1", accountActive: false })),
+  setSalesRole: vi.fn(async (_id: string, body: { salesRole: string | null }) => body),
 }))
 
 vi.mock("./employee.insights", () => ({
@@ -48,10 +49,21 @@ import * as employeeMedia from "./employee.media"
 import * as employeeUpdate from "./employee.update"
 import * as insights from "./employee.insights"
 import * as changerequest from "./employee.changerequest"
+import * as employeeAccount from "./employee.account"
 import prismaForRoutes from "../../config/prisma"
 
-function tokenFor(role: "HR_ADMIN" | "EMPLOYEE" | "FINANCE_OFFICER" | "SUPER_ADMIN", sub = "actor-1") {
-  return signAccessToken({ sub, role: role as any, email: "actor@b.com", mustChangePassword: false })
+function tokenFor(
+  role: "HR_ADMIN" | "EMPLOYEE" | "FINANCE_OFFICER" | "SUPER_ADMIN",
+  sub = "actor-1",
+  salesRole: "SALES_ADMIN" | "SALES_USER" | null = null
+) {
+  return signAccessToken({
+    sub,
+    role: role as any,
+    email: "actor@b.com",
+    mustChangePassword: false,
+    salesRole,
+  })
 }
 
 const validBody = {
@@ -509,6 +521,70 @@ describe("PATCH /api/employees/:id/account", () => {
 
   it("401s without a token", async () => {
     const res = await request(app).patch("/api/employees/emp-1/account").send({ isActive: false })
+
+    expect(res.status).toBe(401)
+  })
+})
+
+describe("PATCH /api/employees/:id/sales-role", () => {
+  const url = "/api/employees/emp-1/sales-role"
+
+  beforeEach(() => vi.clearAllMocks())
+
+  it.each(["HR_ADMIN", "SUPER_ADMIN"] as const)(
+    "lets %s grant Sales Hub access",
+    async (role) => {
+      const res = await request(app)
+        .patch(url)
+        .set("Authorization", `Bearer ${tokenFor(role)}`)
+        .send({ salesRole: "SALES_USER" })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ salesRole: "SALES_USER" })
+      expect(employeeAccount.setSalesRole).toHaveBeenCalledWith(
+        "emp-1",
+        { salesRole: "SALES_USER" },
+        expect.objectContaining({ role })
+      )
+    }
+  )
+
+  it("does not let a Sales Admin widen their own team", async () => {
+    const res = await request(app)
+      .patch(url)
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE", "sales-admin-1", "SALES_ADMIN")}`)
+      .send({ salesRole: "SALES_USER" })
+
+    expect(res.status).toBe(403)
+    expect(employeeAccount.setSalesRole).not.toHaveBeenCalled()
+  })
+
+  it("accepts null to revoke Sales Hub access", async () => {
+    const res = await request(app)
+      .patch(url)
+      .set("Authorization", `Bearer ${tokenFor("HR_ADMIN")}`)
+      .send({ salesRole: null })
+
+    expect(res.status).toBe(200)
+    expect(employeeAccount.setSalesRole).toHaveBeenCalledWith(
+      "emp-1",
+      { salesRole: null },
+      expect.anything()
+    )
+  })
+
+  it("400s an unknown sales role", async () => {
+    const res = await request(app)
+      .patch(url)
+      .set("Authorization", `Bearer ${tokenFor("HR_ADMIN")}`)
+      .send({ salesRole: "SALES_OWNER" })
+
+    expect(res.status).toBe(400)
+    expect(employeeAccount.setSalesRole).not.toHaveBeenCalled()
+  })
+
+  it("401s without a token", async () => {
+    const res = await request(app).patch(url).send({ salesRole: "SALES_USER" })
 
     expect(res.status).toBe(401)
   })

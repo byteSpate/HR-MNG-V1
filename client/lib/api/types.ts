@@ -9,6 +9,17 @@ export type Role = "SUPER_ADMIN" | "HR_ADMIN" | "FINANCE_OFFICER" | "REPORTING_M
 export interface PostingRule { id: string; event: string; key: string; accountId: string; note: string | null; account: { code: string; name: string } }
 export interface UnresolvedKey { event: string; key: string }
 
+/** The second permission axis, held alongside `role` rather than instead of
+    it. Null means no Sales Hub access at all. */
+export type SalesRole = "SALES_ADMIN" | "SALES_USER"
+
+export interface SetSalesRoleResult {
+  salesRole: SalesRole | null
+  /** Present when revoking or narrowing access leaves owned accounts without
+      an owner who can work them. */
+  orphanedAccounts?: number
+}
+
 export interface PublicUser {
   id: string
   email: string
@@ -16,6 +27,150 @@ export interface PublicUser {
   isActive: boolean
   mustChangePassword: boolean
   employeeCode?: string
+  salesRole: SalesRole | null
+}
+
+export type SalesAccountStatus = "ACTIVE" | "INACTIVE" | "DO_NOT_CONTACT"
+
+export interface SalesAccountSummary {
+  id: string
+  name: string
+  industry: string | null
+  website: string | null
+  address: string | null
+  status: SalesAccountStatus
+  ownerEmployeeId: string
+  ownerName: string
+  assigneeCount: number
+  /** Named, not just counted — "All Accounts" shows who, not just how many. */
+  assignees: { id: string; fullName: string }[]
+  /** Owner, assignee, or admin — computed per viewer. Gates write controls
+      without re-deriving the server's rule client-side. */
+  canManage: boolean
+  /** Whether the *owner* can still work this account — role, employment and
+      a working login. False after their access is revoked or their exit is
+      recorded, since neither operation reassigns the account. */
+  ownerActive: boolean
+  /** Narrower than `canManage`: a communication's author is a required
+      column, so an account with no Employee row behind it (Super Admin, HR
+      Admin) is refused by the server however senior. Gates "Log a call"
+      specifically, so the button is never offered where it cannot work. */
+  canLogActivity: boolean
+  createdAt: string
+}
+
+/** Who the "New Sales Account" owner/collaborator pickers may offer —
+    employees who already hold a salesRole, and only those. */
+export interface SalesEligibleEmployee {
+  id: string
+  fullName: string
+  designation: string
+}
+
+export interface CreateSalesAccountBody {
+  name: string
+  ownerEmployeeId: string
+  industry?: string
+  website?: string
+  address?: string
+  assigneeIds?: string[]
+}
+
+export type SalesContactStatus = "UNVERIFIED" | "VERIFIED" | "UNREACHABLE" | "INVALID"
+
+export interface SalesContactSummary {
+  id: string
+  salesAccountId: string
+  name: string
+  designation: string | null
+  phone: string | null
+  email: string | null
+  isPrimary: boolean
+  status: SalesContactStatus
+  /** ISO, or null when nobody has reached this person yet. */
+  verifiedAt: string | null
+  note: string | null
+  createdAt: string
+}
+
+export interface CreateSalesContactBody {
+  name: string
+  designation?: string
+  phone?: string
+  email?: string
+  note?: string
+}
+
+export interface SetContactStatusBody {
+  status: SalesContactStatus
+  note?: string
+}
+
+export type SalesChannel = "CALL" | "EMAIL" | "WHATSAPP" | "OTHER"
+
+export interface SalesCommunicationSummary {
+  id: string
+  salesAccountId: string
+  contactId: string | null
+  channel: SalesChannel
+  occurredAt: string
+  summary: string
+  detail: string | null
+  employeeId: string
+  createdAt: string
+}
+
+export interface LogCommunicationBody {
+  channel: SalesChannel
+  /** ISO 8601. The server refuses one in the future. */
+  occurredAt: string
+  summary: string
+  detail?: string
+  contactId?: string
+}
+
+/** One line of an account's story, rendered rather than raw — the channel is
+    already a label and the author already a name. */
+export interface TimelineItem {
+  id: string
+  kind: "communication" | "event"
+  at: string
+  title: string
+  meta: string | null
+  by: string | null
+  /** The long-form note on a communication. Null for an event. */
+  detail: string | null
+}
+
+/** One changed field, already rendered server-side: `label` is a phrase
+    rather than a column name, and ids have been resolved to people's names. */
+export interface HistoryChange {
+  field: string
+  label: string
+  /** Null when the field was set for the first time — show one value, not an arrow. */
+  before: string | null
+  after: string
+}
+
+/** One audit row from the account's own trail, or one of its contacts' —
+    field-by-field, distinct from the Timeline's "what happened". */
+export interface AccountHistoryEntry {
+  id: string
+  entity: "SALES_ACCOUNT" | "SALES_CONTACT"
+  entityId: string
+  action: string
+  changedAt: string
+  /** Already a name, not a user id. Null when nothing recorded who did it. */
+  changedByName: string | null
+  changes: HistoryChange[]
+  note: string | null
+}
+
+/** One page of history. Wrapped so a capped read can admit it is capped. */
+export interface AccountHistory {
+  items: AccountHistoryEntry[]
+  truncated: boolean
+  limit: number
 }
 
 export interface LoginResponse {
@@ -726,6 +881,9 @@ export interface EmploymentDetails {
    * it is revoked. Render both, never one in place of the other.
    */
   accountActive: boolean
+  /** The second permission axis, held alongside `role`. Null means no Sales
+      Hub access. Granting/revoking is HR/Super Admin only. */
+  salesRole: SalesRole | null
   deviceUserId?: string | null
 }
 

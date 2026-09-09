@@ -9,6 +9,8 @@ import type {
   EmployeeView,
   ExitReason,
   MyProfileResponse,
+  SalesRole,
+  SetSalesRoleResult,
   SignedDocumentUrl,
   UpdateEmployeeInput,
 } from "./types"
@@ -80,6 +82,23 @@ export function setAccountActive(
       body: JSON.stringify({ isActive }),
     }
   )
+}
+
+/**
+ * Grants or revokes the Sales Hub capability attached to an employee's
+ * login. HR/Super Admin only on the server — deliberately not requireSales,
+ * so a Sales Admin cannot widen their own team. `null` revokes.
+ */
+export function setSalesRole(
+  accessToken: string,
+  employeeId: string,
+  salesRole: SalesRole | null
+): Promise<SetSalesRoleResult> {
+  return apiFetch<SetSalesRoleResult>(`/api/employees/${employeeId}/sales-role`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify({ salesRole }),
+  })
 }
 
 /**

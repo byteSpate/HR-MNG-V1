@@ -29,6 +29,7 @@ function tokenFor(role: TestRole) {
     role: role as never,
     email: "actor@demo.com",
     mustChangePassword: false,
+    salesRole: null,
   })
 }
 

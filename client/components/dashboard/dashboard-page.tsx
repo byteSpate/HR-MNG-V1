@@ -211,6 +211,7 @@ export function DashboardPage() {
     )
   }
 
+
   if (payload.feed) {
     wide.push(<ActivityFeed key="feed" items={payload.feed} viewAllHref={`${root}/reports`} />)
   }

@@ -9,7 +9,7 @@ import { signAccessToken } from "../auth/auth.utils"
 import { getDashboard } from "./dashboard.service"
 
 const auth = (role: Role) =>
-  `Bearer ${signAccessToken({ sub: "user-1", role, email: "a@demo.com", mustChangePassword: false })}`
+  `Bearer ${signAccessToken({ sub: "user-1", role, email: "a@demo.com", mustChangePassword: false, salesRole: null })}`
 
 beforeEach(() => {
   // Echoes back whatever role the service was handed, so the route tests are

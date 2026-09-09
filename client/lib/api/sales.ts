@@ -1,0 +1,107 @@
+import { apiFetch } from "./client"
+import type {
+  AccountHistory,
+  CreateSalesAccountBody,
+  CreateSalesContactBody,
+  LogCommunicationBody,
+  SalesAccountSummary,
+  SalesCommunicationSummary,
+  SalesContactSummary,
+  SalesEligibleEmployee,
+  SetContactStatusBody,
+  TimelineItem,
+} from "./types"
+
+/** "My Accounts" — owner, assignee, or admin. */
+export function listSalesAccounts(accessToken: string): Promise<SalesAccountSummary[]> {
+  return apiFetch<SalesAccountSummary[]>("/api/sales/accounts", { accessToken })
+}
+
+/** "All Accounts" — the shared, read-only directory: every account, to every
+    Sales Hub member, with `canManage` telling the client which ones the
+    viewer can actually work rather than merely see. */
+export function listAllSalesAccounts(accessToken: string): Promise<SalesAccountSummary[]> {
+  return apiFetch<SalesAccountSummary[]>("/api/sales/accounts?scope=all", { accessToken })
+}
+
+/** Sales Admin only — the same people the create-account form's owner and
+    collaborator pickers may offer. */
+export function listSalesEligibleEmployees(accessToken: string): Promise<SalesEligibleEmployee[]> {
+  return apiFetch<SalesEligibleEmployee[]>("/api/sales/employees", { accessToken })
+}
+
+export function getSalesAccount(accessToken: string, id: string): Promise<SalesAccountSummary> {
+  return apiFetch<SalesAccountSummary>(`/api/sales/accounts/${id}`, { accessToken })
+}
+
+export function createSalesAccount(
+  accessToken: string,
+  body: CreateSalesAccountBody
+): Promise<SalesAccountSummary> {
+  return apiFetch<SalesAccountSummary>("/api/sales/accounts", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function listContacts(accessToken: string, accountId: string): Promise<SalesContactSummary[]> {
+  return apiFetch<SalesContactSummary[]>(`/api/sales/accounts/${accountId}/contacts`, { accessToken })
+}
+
+export function addContact(
+  accessToken: string,
+  accountId: string,
+  body: CreateSalesContactBody
+): Promise<SalesContactSummary> {
+  return apiFetch<SalesContactSummary>(`/api/sales/accounts/${accountId}/contacts`, {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function setPrimaryContact(accessToken: string, contactId: string): Promise<SalesContactSummary> {
+  return apiFetch<SalesContactSummary>(`/api/sales/contacts/${contactId}/primary`, {
+    method: "PATCH",
+    accessToken,
+  })
+}
+
+export function setContactStatus(
+  accessToken: string,
+  contactId: string,
+  body: SetContactStatusBody
+): Promise<SalesContactSummary> {
+  return apiFetch<SalesContactSummary>(`/api/sales/contacts/${contactId}/status`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function getAccountTimeline(
+  accessToken: string,
+  accountId: string
+): Promise<{ items: TimelineItem[] }> {
+  return apiFetch<{ items: TimelineItem[] }>(`/api/sales/accounts/${accountId}/timeline`, { accessToken })
+}
+
+export function logCommunication(
+  accessToken: string,
+  accountId: string,
+  body: LogCommunicationBody
+): Promise<SalesCommunicationSummary> {
+  return apiFetch<SalesCommunicationSummary>(`/api/sales/accounts/${accountId}/communications`, {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function getAccountHistory(
+  accessToken: string,
+  accountId: string
+): Promise<AccountHistory> {
+  return apiFetch<AccountHistory>(`/api/sales/accounts/${accountId}/history`, { accessToken })
+}

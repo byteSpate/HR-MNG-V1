@@ -115,6 +115,12 @@ export const setAccountActiveSchema = z.object({
 
 export type SetAccountActiveBody = z.infer<typeof setAccountActiveSchema>
 
+export const setSalesRoleSchema = z.object({
+  salesRole: z.enum(["SALES_ADMIN", "SALES_USER"]).nullable(),
+})
+
+export type SetSalesRoleBody = z.infer<typeof setSalesRoleSchema>
+
 export const requestNationalIdChangeSchema = z.object({
   newValue: z.string().trim().min(1).max(50),
 })

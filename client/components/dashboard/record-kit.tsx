@@ -214,7 +214,13 @@ export function PanelTable({
   onRetry: () => void
   emptyTitle: string
   emptyBody: string
-  emptyAction: string
+  /**
+   * Omit where the viewer genuinely has nothing to do about it — a Sales User
+   * looking at an empty shared directory they cannot add to. A button that
+   * navigates to the page it is already on is worse than no button, and the
+   * empty copy is what carries the explanation.
+   */
+  emptyAction?: string
   /**
    * Defaults to a plus, because on the settings panels empty always means
    * "nothing has been created yet". A filtered list is empty for a different
@@ -263,13 +269,15 @@ export function PanelTable({
               {emptyBody}
             </p>
           </div>
-          <Button
-            onClick={onEmptyAction}
-            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-          >
-            {emptyActionIcon ?? <RiAddLine className="size-4" aria-hidden />}
-            {emptyAction}
-          </Button>
+          {emptyAction ? (
+            <Button
+              onClick={onEmptyAction}
+              className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            >
+              {emptyActionIcon ?? <RiAddLine className="size-4" aria-hidden />}
+              {emptyAction}
+            </Button>
+          ) : null}
         </div>
       </PanelShell>
     )

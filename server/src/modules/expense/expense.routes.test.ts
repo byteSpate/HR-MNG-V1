@@ -22,7 +22,7 @@ import * as outstanding from "./expense.outstanding"
 
 type TestRole = "EMPLOYEE" | "REPORTING_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | "FINANCE_OFFICER"
 const auth = (role: TestRole) =>
-  `Bearer ${signAccessToken({ sub: "user-1", role: role as never, email: "a@demo.com", mustChangePassword: false })}`
+  `Bearer ${signAccessToken({ sub: "user-1", role: role as never, email: "a@demo.com", mustChangePassword: false, salesRole: null })}`
 
 const validBody = { name: "Water jar", amount: 1200, categoryId: "11111111-1111-4111-8111-111111111111", currency: "BDT", expenseDate: "2026-08-03" }
 

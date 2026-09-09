@@ -25,7 +25,7 @@ const actor = (role: TestRole, sub = "user-1") =>
   ({ sub, role, email: "a@demo.com", mustChangePassword: false }) as never
 
 const auth = (role: TestRole) =>
-  `Bearer ${signAccessToken({ sub: "user-1", role: role as never, email: "a@demo.com", mustChangePassword: false })}`
+  `Bearer ${signAccessToken({ sub: "user-1", role: role as never, email: "a@demo.com", mustChangePassword: false, salesRole: null })}`
 
 function payslipRow(over: Record<string, unknown> = {}) {
   return {

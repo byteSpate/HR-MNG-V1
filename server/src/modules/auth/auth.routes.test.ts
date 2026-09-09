@@ -15,7 +15,14 @@ import app from "../../app"
 import * as authService from "./auth.service"
 import { signAccessToken } from "./auth.utils"
 
-const publicUser = { id: "u1", email: "a@b.com", role: "SUPER_ADMIN" as any, isActive: true, mustChangePassword: false }
+const publicUser = {
+  id: "u1",
+  email: "a@b.com",
+  role: "SUPER_ADMIN" as any,
+  isActive: true,
+  mustChangePassword: false,
+  salesRole: null,
+}
 
 describe("POST /api/auth/login (administrative)", () => {
   it("returns 200, sets a refreshToken cookie, and returns the access token + user", async () => {
@@ -128,7 +135,7 @@ describe("POST /api/auth/change-password", () => {
       refreshToken: "new-refresh",
       user: { ...publicUser, mustChangePassword: false },
     })
-    const token = signAccessToken({ sub: "u1", role: "EMPLOYEE" as any, email: "a@b.com", mustChangePassword: true })
+    const token = signAccessToken({ sub: "u1", role: "EMPLOYEE" as any, email: "a@b.com", mustChangePassword: true, salesRole: null })
     const res = await request(app)
       .post("/api/auth/change-password")
       .set("Authorization", `Bearer ${token}`)

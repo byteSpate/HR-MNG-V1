@@ -10,13 +10,14 @@ import {
   rejectNationalIdChangeRequest,
   setAccountActive,
   setSalaryStructure,
+  setSalesRole,
   updateEmployee,
 } from "@/lib/api/employees"
 import { listSalaryStructures } from "@/lib/api/payroll"
 import { listShifts } from "@/lib/api/shifts"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
-import type { EmployeeView } from "@/lib/api/types"
+import type { EmployeeView, SalesRole } from "@/lib/api/types"
 import { SalaryStructureDialog } from "@/components/employees/salary-structure-dialog"
 import { ShiftDialog } from "@/components/employees/shift-dialog"
 import {
@@ -36,7 +37,15 @@ import { ProfileCard, formatDateValue } from "@/components/profile/profile-card"
 import { ProfileHeader } from "@/components/profile/profile-header"
 import { ProfileInsights } from "@/components/profile/profile-insights"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PanelNotice } from "@/components/dashboard/record-kit"
+
+const SALES_ROLE_LABEL: Record<"NONE" | SalesRole, string> = {
+  NONE: "No access",
+  SALES_USER: "Sales User",
+  SALES_ADMIN: "Sales Admin",
+}
 
 /**
  * Renders whichever groups are present in the payload.
@@ -68,6 +77,8 @@ export function EmployeeDetailPage({
   const [assigningShift, setAssigningShift] = useState(false)
   const [shiftError, setShiftError] = useState<string | null>(null)
   const [accountError, setAccountError] = useState<string | null>(null)
+  const [salesRoleError, setSalesRoleError] = useState<string | null>(null)
+  const [salesRoleNotice, setSalesRoleNotice] = useState<string | null>(null)
 
   const employeeQuery = useQuery({
     queryKey: ["employee", employeeId],
@@ -158,6 +169,28 @@ export function EmployeeDetailPage({
     },
   })
 
+  // Same reason as accountMutation: declared before the early returns.
+  const salesRoleMutation = useMutation({
+    mutationFn: (next: SalesRole | null) => setSalesRole(accessToken!, employeeId, next),
+    onMutate: () => {
+      setSalesRoleError(null)
+      setSalesRoleNotice(null)
+    },
+    onSuccess: (result) => {
+      setSalesRoleError(null)
+      const count = result.orphanedAccounts ?? 0
+      setSalesRoleNotice(
+        count > 0
+          ? `Sales Hub access was updated. ${count} ${count === 1 ? "account now needs" : "accounts now need"} a new owner and ${count === 1 ? "is" : "are"} flagged in All Accounts.`
+          : null
+      )
+      refresh()
+    },
+    onError: (err) => {
+      setSalesRoleError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+    },
+  })
+
   if (sessionStatus === "loading" || employeeQuery.isPending) {
     return (
       <div className="space-y-3 pt-7">
@@ -185,6 +218,11 @@ export function EmployeeDetailPage({
   // control can never 403 when pressed.
   const canToggleAccount = user?.role === "SUPER_ADMIN" && !!employee.employment
   const accountActive = employee.employment?.accountActive ?? true
+  // Mirrors requireRole on PATCH /:id/sales-role — deliberately not
+  // requireSales, so a Sales Admin cannot widen their own team.
+  const canGrantSalesRole =
+    (user?.role === "HR_ADMIN" || user?.role === "SUPER_ADMIN") && !!employee.employment
+  const salesRole = employee.employment?.salesRole ?? null
   // Mirrors PAYROLL_ADMIN_ROLES in payroll.service, the same way
   // canToggleAccount mirrors requireRole on PATCH /:id/account. Everyone else
   // reaching this page is a Reporting Manager looking at a report, and the
@@ -231,7 +269,7 @@ export function EmployeeDetailPage({
         onAvatarChanged={refresh}
         onEditName={canEditName ? () => setEditingName(true) : undefined}
         action={
-          canEdit || canToggleAccount ? (
+          canEdit || canToggleAccount || canGrantSalesRole ? (
             <>
               {/*
                 Only actions with no row of their own live up here.
@@ -266,6 +304,32 @@ export function EmployeeDetailPage({
                       : "Reactivate login"}
                 </Button>
               ) : null}
+              {/* A second permission axis, held alongside role rather than
+                  instead of it — see PATCH /:id/sales-role. No dialog: the
+                  change is a single field, the same reasoning that keeps
+                  "Deactivate login" a plain button. */}
+              {canGrantSalesRole ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11.5px] font-semibold text-muted-foreground">Techno Sales Hub</span>
+                  <Select
+                    value={salesRole ?? "NONE"}
+                    onValueChange={(v) =>
+                      v && salesRoleMutation.mutate(v === "NONE" ? null : (v as SalesRole))
+                    }
+                  >
+                    <SelectTrigger className="h-9 w-36" disabled={salesRoleMutation.isPending}>
+                      <SelectValue>
+                        {(v: string | null) => SALES_ROLE_LABEL[(v as "NONE" | SalesRole) ?? "NONE"]}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">No access</SelectItem>
+                      <SelectItem value="SALES_USER">Sales User</SelectItem>
+                      <SelectItem value="SALES_ADMIN">Sales Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
             </>
           ) : null
         }
@@ -274,6 +338,18 @@ export function EmployeeDetailPage({
       {accountError ? (
         <div className="mb-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-3 text-[13px] text-[#B03A3A]">
           {accountError}
+        </div>
+      ) : null}
+
+      {salesRoleError ? (
+        <div className="mb-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-3 text-[13px] text-[#B03A3A]">
+          {salesRoleError}
+        </div>
+      ) : null}
+
+      {salesRoleNotice ? (
+        <div className="mb-4">
+          <PanelNotice onDismiss={() => setSalesRoleNotice(null)}>{salesRoleNotice}</PanelNotice>
         </div>
       ) : null}
 

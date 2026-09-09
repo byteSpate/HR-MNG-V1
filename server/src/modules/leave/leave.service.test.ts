@@ -55,6 +55,27 @@ vi.mock("../notification/notification.recipients", () => ({
 import { sendLeaveDecidedEmail, sendLeaveRequestedEmail } from "../notification/notification.mailer"
 import prisma from "../../config/prisma"
 import { parseDateOnly } from "./leave.dates"
+
+/**
+ * A Monday at least a week away, as YYYY-MM-DD. `offsetDays` walks forward
+ * from it, so nextMonday(2) is the Wednesday.
+ *
+ * Two properties matter, and the fixed dates this replaces only had one of
+ * them. The window has to be in the future, because leave that has already
+ * started can be neither cancelled nor reverted — so a hardcoded date fails
+ * on the day it arrives, which is exactly what "2026-09-07" did on
+ * 2026-09-07. And it has to start on a Monday, because a plain relative
+ * offset straddles the Friday weekly off on some run dates, charging 2 days
+ * instead of 3 and failing an assertion that is about event payloads rather
+ * than day counting.
+ */
+function nextMonday(offsetDays = 0): string {
+  const d = new Date()
+  d.setUTCHours(0, 0, 0, 0)
+  d.setUTCDate(d.getUTCDate() + 7)
+  d.setUTCDate(d.getUTCDate() + ((1 - d.getUTCDay() + 7) % 7) + offsetDays)
+  return d.toISOString().slice(0, 10)
+}
 import {
   applyForLeave,
   approveLeaveRequest,
@@ -746,12 +767,10 @@ describe("leave decisions", () => {
       employeeId: "emp-1",
       leaveTypeId: "lt-1",
       status: "PENDING",
-      // Fixed, not `futureDate(...)`: a relative window silently straddles the
-      // Friday weekly-off on some run dates, charging 2 days instead of 3 and
-      // failing an assertion that is about event payloads, not day counting.
-      // Mon 2026-09-07 to Wed 2026-09-09 contains no weekly off.
-      startDate: parseDateOnly("2026-09-07"),
-      endDate: parseDateOnly("2026-09-09"),
+      // Monday to Wednesday, so the window contains no weekly off. See
+      // `nextMonday` for why this is neither a fixed date nor a plain offset.
+      startDate: parseDateOnly(nextMonday()),
+      endDate: parseDateOnly(nextMonday(2)),
       reason: null,
       approvedBy: null,
       decidedAt: null,
@@ -1113,8 +1132,26 @@ describe("half-day leave", () => {
     ...PRO_RATED_HALF,
   }
 
-  // Mon 2026-09-07: a working day, in the future, no weekly off.
-  const DATE = "2026-09-07"
+  /**
+   * The next Monday, computed rather than written down.
+   *
+   * This was the literal "2026-09-07", commented "a working day, in the
+   * future" — true on the day it was written and false from 2026-09-08
+   * onward, at which point three tests here began failing against
+   * `allowsBackdating: false` with "Casual leave cannot start in the past".
+   * A date that has to stay in the future cannot be a constant.
+   *
+   * Monday specifically: always a working day under the default shift, whose
+   * weekly off is Friday. `|| 7` keeps it strictly in the future on a day
+   * that is itself a Monday.
+   */
+  const DATE = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + (((8 - d.getDay()) % 7) || 7))
+    const month = `${d.getMonth() + 1}`.padStart(2, "0")
+    const day = `${d.getDate()}`.padStart(2, "0")
+    return `${d.getFullYear()}-${month}-${day}`
+  })()
 
   const halfDayBody = {
     leaveTypeId: "lt-1",
@@ -1281,8 +1318,8 @@ describe("punch-flag recompute on leave decisions", () => {
     employeeId: "emp-1",
     leaveTypeId: "lt-1",
     status: "PENDING",
-    startDate: parseDateOnly("2026-09-07"),
-    endDate: parseDateOnly("2026-09-07"),
+    startDate: parseDateOnly(nextMonday()),
+    endDate: parseDateOnly(nextMonday()),
     startSession: "FIRST_HALF",
     endSession: "FIRST_HALF",
     reason: null,
@@ -1311,7 +1348,7 @@ describe("punch-flag recompute on leave decisions", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           employeeId: "emp-1",
-          date: { gte: parseDateOnly("2026-09-07"), lte: parseDateOnly("2026-09-07") },
+          date: { gte: parseDateOnly(nextMonday()), lte: parseDateOnly(nextMonday()) },
         }),
       })
     )
@@ -1341,7 +1378,7 @@ describe("punch-flag recompute on leave decisions", () => {
 import { getBalancesFor } from "./leave.service"
 
 function viewer(role: any, sub: string) {
-  return { sub, role, email: "v@b.com", mustChangePassword: false }
+  return { sub, role, email: "v@b.com", mustChangePassword: false, salesRole: null }
 }
 
 describe("getBalancesFor", () => {

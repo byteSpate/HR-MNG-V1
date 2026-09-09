@@ -19,6 +19,7 @@ import {
   rejectNationalIdChangeHandler,
   requestNationalIdChangeHandler,
   setAccountActiveHandler,
+  setSalesRoleHandler,
   setExitDetailsHandler,
   setSalaryStructureHandler,
   updateEmployeeHandler,
@@ -112,6 +113,16 @@ router.patch(
   requireAuth,
   requireRole(Role.SUPER_ADMIN),
   setAccountActiveHandler
+)
+
+// Sales Hub access is an account capability granted by HR or Super Admin.
+// It deliberately does not use requireSales: a Sales Admin cannot widen
+// their own team, and HR must be able to grant the first Sales Admin role.
+router.patch(
+  "/:id/sales-role",
+  requireAuth,
+  requireRole(Role.HR_ADMIN, Role.SUPER_ADMIN),
+  setSalesRoleHandler
 )
 
 // No `requireRole`: listing is self-or-HR, so what a caller may do depends on

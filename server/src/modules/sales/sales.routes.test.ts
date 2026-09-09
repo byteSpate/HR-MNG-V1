@@ -1,0 +1,445 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import request from "supertest"
+
+vi.mock("../../config/prisma", () => ({
+  default: {
+    $transaction: vi.fn(),
+    salesAccount: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      create: vi.fn(),
+    },
+    salesAccountAssignment: { createMany: vi.fn() },
+    salesCommunication: { create: vi.fn(), findMany: vi.fn() },
+    salesContact: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    employee: { findUnique: vi.fn(), findMany: vi.fn() },
+    user: { findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
+    event: { create: vi.fn(), findMany: vi.fn() },
+  },
+}))
+
+import app from "../../app"
+import prisma from "../../config/prisma"
+import { signAccessToken } from "../auth/auth.utils"
+
+type Actor = {
+  role: "EMPLOYEE" | "HR_ADMIN" | "SUPER_ADMIN"
+  salesRole: "SALES_ADMIN" | "SALES_USER" | null
+  sub?: string
+}
+
+function tokenFor({ role, salesRole, sub = "user-1" }: Actor) {
+  return signAccessToken({
+    sub,
+    role: role as never,
+    email: "actor@demo.com",
+    mustChangePassword: false,
+    salesRole: salesRole as never,
+  })
+}
+
+const auth = (actor: Actor) => `Bearer ${tokenFor(actor)}`
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(prisma.$transaction).mockImplementation((async (fn: never) =>
+    (fn as unknown as (c: typeof prisma) => unknown)(prisma)) as never)
+  vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as never)
+  vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as never)
+})
+
+describe("GET /api/sales/accounts", () => {
+  it("401s without a token", async () => {
+    await request(app).get("/api/sales/accounts").expect(401)
+  })
+
+  it("403s an authenticated employee with no salesRole", async () => {
+    await request(app)
+      .get("/api/sales/accounts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: null }))
+      .expect(403)
+  })
+
+  it("200s a Sales User", async () => {
+    await request(app)
+      .get("/api/sales/accounts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+  })
+
+  it("scopes a Sales User to what they own or are assigned to", async () => {
+    await request(app)
+      .get("/api/sales/accounts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [{ ownerEmployeeId: "emp-1" }, { assignments: { some: { employeeId: "emp-1" } } }],
+        },
+      })
+    )
+  })
+
+  // "My Accounts" means owned or assigned, for everyone. A Sales Admin may
+  // reach every account, but that is a permission, not a claim that all of
+  // them are theirs — scoping this by permission made the page an exact copy
+  // of "All Accounts" for every admin who opened it.
+  it("scopes a Sales Admin's My Accounts to what they own or are assigned to", async () => {
+    await request(app)
+      .get("/api/sales/accounts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_ADMIN" }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [{ ownerEmployeeId: "emp-1" }, { assignments: { some: { employeeId: "emp-1" } } }],
+        },
+      })
+    )
+  })
+
+  it("returns nothing for a Super Admin with no employee row", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: null } as never)
+
+    await request(app)
+      .get("/api/sales/accounts")
+      .set("Authorization", auth({ role: "SUPER_ADMIN", salesRole: null }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "__none__" } })
+    )
+  })
+
+  // ?scope=all is the shared directory, and is the one list that deliberately
+  // shows every account to every hub member.
+  it("does not scope ?scope=all", async () => {
+    await request(app)
+      .get("/api/sales/accounts?scope=all")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
+      expect.not.objectContaining({ where: expect.anything() })
+    )
+  })
+})
+
+describe("GET /api/sales/accounts/:id", () => {
+  // A 403 would confirm the account exists to somebody not allowed to know
+  // that it does.
+  it("404s, not 403s, when the account does not exist", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-9")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(res.status).toBe(404)
+    // Asserted so this cannot pass because the route is missing — an
+    // unmounted router 404s too, and that is a different fact entirely.
+    expect(res.body.error).toMatch(/does not exist, or is not yours/)
+  })
+
+  // "All Accounts" is a shared read-only directory: opening a row you do not
+  // own or manage still 200s, just with canManage: false.
+  it("returns an account outside the caller's scope, read-only", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-9",
+      ownerEmployeeId: "emp-9",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue({
+      id: "sa-9",
+      name: "Rising Group",
+      status: "ACTIVE",
+      ownerEmployeeId: "emp-9",
+      createdAt: new Date("2026-09-06"),
+      owner: { fullName: "Karim" },
+      assignments: [],
+    } as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-9")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ id: "sa-9", ownerName: "Karim", canManage: false })
+  })
+
+  // A Super Admin passes every permission check and then takes a 400 from
+  // logCommunication, which has a required employeeId and no Employee row to
+  // fill it. canManage stays true — they really can add contacts — but the
+  // client must not offer them a "Log a call" button that cannot work.
+  it("says a Super Admin with no employee row may manage but not log activity", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: null } as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-9",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue({
+      id: "sa-1",
+      name: "Rising Group",
+      status: "ACTIVE",
+      ownerEmployeeId: "emp-9",
+      createdAt: new Date("2026-09-06"),
+      owner: { fullName: "Karim" },
+      assignments: [],
+    } as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "SUPER_ADMIN", salesRole: null }))
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ canManage: true, canLogActivity: false })
+  })
+
+  it("returns the account when it is in scope, with named assignees", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue({
+      id: "sa-1",
+      name: "Rising Group",
+      status: "ACTIVE",
+      ownerEmployeeId: "emp-1",
+      createdAt: new Date("2026-09-06"),
+      owner: { fullName: "Karim" },
+      assignments: [
+        { employee: { id: "emp-2", fullName: "Rahim" } },
+        { employee: { id: "emp-3", fullName: "Sadia" } },
+      ],
+    } as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({
+      id: "sa-1",
+      ownerName: "Karim",
+      assigneeCount: 2,
+      assignees: [
+        { id: "emp-2", fullName: "Rahim" },
+        { id: "emp-3", fullName: "Sadia" },
+      ],
+      canManage: true,
+    })
+  })
+})
+
+describe("POST /api/sales/accounts", () => {
+  const validBody = {
+    name: "New Co",
+    ownerEmployeeId: "11111111-1111-4111-8111-111111111111",
+  }
+
+  it("403s a Sales User", async () => {
+    await request(app)
+      .post("/api/sales/accounts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send(validBody)
+      .expect(403)
+
+    expect(prisma.salesAccount.create).not.toHaveBeenCalled()
+  })
+
+  it("201s for a Sales Admin", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: validBody.ownerEmployeeId,
+      fullName: "Karim",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_USER", isActive: true },
+    } as never)
+    vi.mocked(prisma.salesAccount.create).mockResolvedValue({
+      id: "sa-2",
+      name: "New Co",
+      status: "ACTIVE",
+      ownerEmployeeId: validBody.ownerEmployeeId,
+      createdAt: new Date("2026-09-06"),
+    } as never)
+
+    const res = await request(app)
+      .post("/api/sales/accounts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_ADMIN" }))
+      .send(validBody)
+
+    expect(res.status).toBe(201)
+    expect(res.body).toMatchObject({ id: "sa-2", name: "New Co" })
+  })
+
+  it("400s a body with no owner", async () => {
+    await request(app)
+      .post("/api/sales/accounts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_ADMIN" }))
+      .send({ name: "New Co" })
+      .expect(400)
+  })
+})
+
+describe("contact routes", () => {
+  const CONTACT = {
+    id: "c-1",
+    salesAccountId: "sa-1",
+    name: "Mr Rahman",
+    designation: null,
+    phone: "01700000000",
+    email: null,
+    isPrimary: false,
+    status: "UNVERIFIED",
+    verifiedAt: null,
+    note: null,
+    createdAt: new Date("2026-09-07"),
+  }
+
+  beforeEach(() => {
+    // In scope, owned by the caller's own employee row.
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue(CONTACT as never)
+    vi.mocked(prisma.salesContact.findMany).mockResolvedValue([CONTACT] as never)
+    vi.mocked(prisma.salesContact.create).mockResolvedValue(CONTACT as never)
+    vi.mocked(prisma.salesContact.update).mockResolvedValue(CONTACT as never)
+  })
+
+  it("403s an authenticated employee with no salesRole", async () => {
+    await request(app)
+      .post("/api/sales/accounts/sa-1/contacts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: null }))
+      .send({ name: "Mr Rahman" })
+      .expect(403)
+
+    expect(prisma.salesContact.create).not.toHaveBeenCalled()
+  })
+
+  // Adding a contact to an account you already hold is ordinary work, not an
+  // administrative act — unlike creating the account itself.
+  it("201s a Sales User adding a contact", async () => {
+    const res = await request(app)
+      .post("/api/sales/accounts/sa-1/contacts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ name: "Mr Rahman", phone: "01700000000" })
+
+    expect(res.status).toBe(201)
+    expect(res.body).toMatchObject({ id: "c-1", name: "Mr Rahman", isPrimary: false })
+  })
+
+  it("404s a contact on an account outside the caller's scope", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+
+    const res = await request(app)
+      .patch("/api/sales/contacts/c-1/primary")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(res.status).toBe(404)
+    expect(res.body.error).toMatch(/does not exist, or is not yours/)
+    expect(prisma.salesContact.update).not.toHaveBeenCalled()
+  })
+
+  it("200s a status change and lists contacts back", async () => {
+    await request(app)
+      .patch("/api/sales/contacts/c-1/status")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ status: "VERIFIED" })
+      .expect(200)
+
+    const list = await request(app)
+      .get("/api/sales/accounts/sa-1/contacts")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(list.body).toHaveLength(1)
+  })
+
+  it("400s a status that is not one of the four", async () => {
+    await request(app)
+      .patch("/api/sales/contacts/c-1/status")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ status: "MAYBE" })
+      .expect(400)
+
+    expect(prisma.salesContact.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("communication routes", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.event.findMany).mockResolvedValue([] as never)
+    vi.mocked(prisma.salesCommunication.create).mockResolvedValue({
+      id: "cm-1",
+      salesAccountId: "sa-1",
+      contactId: null,
+      channel: "CALL",
+      occurredAt: new Date("2026-09-04T10:00:00Z"),
+      summary: "Chased the RFQ",
+      detail: null,
+      employeeId: "emp-1",
+      createdAt: new Date("2026-09-07"),
+    } as never)
+  })
+
+  it("403s an authenticated employee with no salesRole", async () => {
+    await request(app)
+      .get("/api/sales/accounts/sa-1/timeline")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: null }))
+      .expect(403)
+  })
+
+  it("201s a logged call and 200s the timeline", async () => {
+    const logged = await request(app)
+      .post("/api/sales/accounts/sa-1/communications")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ channel: "CALL", occurredAt: "2026-09-04T10:00:00Z", summary: "Chased the RFQ" })
+
+    expect(logged.status).toBe(201)
+    expect(logged.body).toMatchObject({ id: "cm-1", employeeId: "emp-1" })
+
+    const timeline = await request(app)
+      .get("/api/sales/accounts/sa-1/timeline")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+
+    expect(timeline.status).toBe(200)
+    expect(timeline.body).toEqual({ items: [] })
+  })
+
+  it("400s a channel the enum does not have", async () => {
+    await request(app)
+      .post("/api/sales/accounts/sa-1/communications")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ channel: "VISIT", occurredAt: "2026-09-04T10:00:00Z", summary: "Went there" })
+      .expect(400)
+
+    expect(prisma.salesCommunication.create).not.toHaveBeenCalled()
+  })
+})

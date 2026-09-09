@@ -20,7 +20,7 @@ describe("password hashing", () => {
 })
 
 describe("access tokens", () => {
-  const payload = { sub: "user-1", role: "EMPLOYEE" as const, email: "a@b.com", mustChangePassword: false }
+  const payload = { sub: "user-1", role: "EMPLOYEE" as const, email: "a@b.com", mustChangePassword: false, salesRole: null }
 
   it("round-trips a payload through sign and verify", () => {
     const token = signAccessToken(payload)
@@ -75,7 +75,20 @@ describe("toPublicUser", () => {
       isActive: true,
       mustChangePassword: true,
       employeeCode: undefined,
+      salesRole: null,
     })
+  })
+
+  it("carries salesRole through when the user has Sales Hub access", () => {
+    const user = {
+      id: "u1",
+      email: "a@b.com",
+      role: "EMPLOYEE" as const,
+      isActive: true,
+      mustChangePassword: true,
+      salesRole: "SALES_ADMIN" as const,
+    }
+    expect(toPublicUser(user).salesRole).toBe("SALES_ADMIN")
   })
 
   it("includes employeeCode when passed", () => {

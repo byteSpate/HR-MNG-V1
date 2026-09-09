@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { NotificationBell } from "@/components/dashboard/notification-bell"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import { HelpTrigger } from "@/components/help/help-sheet"
+import { BackToDashboardButton } from "@/components/sales/back-to-dashboard-button"
+import { SalesHubButton } from "@/components/sales/sales-hub-button"
 import { useIdentity } from "@/lib/auth/use-identity"
 import { useSignOut } from "@/lib/auth/use-sign-out"
 
@@ -148,6 +150,8 @@ export function Header({ profileHref }: { profileHref: string }) {
         <div className="flex items-center gap-2">
           <HelpTrigger />
           <NotificationBell />
+          <SalesHubButton />
+          <BackToDashboardButton />
         </div>
         <AccountMenu profileHref={profileHref} />
       </div>

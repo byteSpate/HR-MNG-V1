@@ -1,10 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("../../config/prisma", () => ({
-  default: {
-    employee: { findUnique: vi.fn() },
-    user: { update: vi.fn() },
-  },
+  default: (() => {
+    const tx = {
+      employee: { findUnique: vi.fn() },
+      user: { update: vi.fn() },
+      auditLog: { create: vi.fn() },
+      // Revoking access counts the accounts it leaves without a working
+      // owner, so HR is told rather than having to find out later.
+      salesAccount: { count: vi.fn(async () => 0) },
+    }
+    return {
+      employee: { findUnique: vi.fn() },
+      user: { update: vi.fn() },
+      $transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx)),
+      __tx: tx,
+    }
+  })(),
 }))
 
 vi.mock("../auth/auth.service", () => ({
@@ -13,8 +25,25 @@ vi.mock("../auth/auth.service", () => ({
 
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
+import type { AccessTokenPayload } from "../auth/auth.types"
 import { revokeAllUserTokens } from "../auth/auth.service"
-import { setAccountActive } from "./employee.account"
+import { setAccountActive, setSalesRole } from "./employee.account"
+
+const transaction = (prisma as unknown as {
+  __tx: {
+    employee: { findUnique: ReturnType<typeof vi.fn> }
+    user: { update: ReturnType<typeof vi.fn> }
+    auditLog: { create: ReturnType<typeof vi.fn> }
+  }
+}).__tx
+
+const HR_ADMIN: AccessTokenPayload = {
+  sub: "hr-user-1",
+  role: "HR_ADMIN",
+  email: "hr@example.com",
+  mustChangePassword: false,
+  salesRole: null,
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -69,5 +98,157 @@ describe("setAccountActive", () => {
 
     await expect(setAccountActive("nope", false)).rejects.toThrow(AppError)
     await expect(setAccountActive("nope", false)).rejects.toMatchObject({ statusCode: 404 })
+  })
+})
+
+describe("setSalesRole", () => {
+  it("grants access and audits it as a USER_ACCOUNT change", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      employmentStatus: "ACTIVE",
+      user: { id: "u-9", salesRole: null },
+    })
+    transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: "SALES_USER" })
+
+    const result = await setSalesRole("emp-1", { salesRole: "SALES_USER" }, HR_ADMIN)
+
+    expect(transaction.user.update).toHaveBeenCalledWith({
+      where: { id: "u-9" },
+      data: { salesRole: "SALES_USER" },
+    })
+    expect(transaction.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entity: "USER_ACCOUNT",
+        entityId: "u-9",
+        action: "UPDATE",
+        before: { salesRole: null },
+        after: { salesRole: "SALES_USER" },
+        changedBy: "hr-user-1",
+      }),
+    })
+    expect(result).toEqual({ salesRole: "SALES_USER" })
+    expect(revokeAllUserTokens).not.toHaveBeenCalled()
+  })
+
+  // The gap found in manual testing: a resigned employee still held
+  // SALES_USER, still owned an account, and could still open the hub. A grant
+  // like that produces a role no token will ever carry, so it is refused out
+  // loud rather than saved to do nothing.
+  it("refuses to grant access to someone who has left", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Ayesha Rahman",
+      employmentStatus: "RESIGNED",
+      user: { id: "u-9", salesRole: null },
+    })
+
+    await expect(
+      setSalesRole("emp-1", { salesRole: "SALES_USER" }, HR_ADMIN)
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(/Ayesha Rahman/) })
+
+    expect(transaction.user.update).not.toHaveBeenCalled()
+    expect(transaction.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  // Tidying up after a departure must never be blocked by the rule above.
+  it("still allows revoking access from someone who has left", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Ayesha Rahman",
+      employmentStatus: "RESIGNED",
+      user: { id: "u-9", salesRole: "SALES_USER" },
+    })
+    transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: null })
+
+    await expect(setSalesRole("emp-1", { salesRole: null }, HR_ADMIN)).resolves.toEqual({
+      salesRole: null,
+    })
+  })
+
+  it("revokes access with null and audits the removal", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      employmentStatus: "ACTIVE",
+      user: { id: "u-9", salesRole: "SALES_ADMIN" },
+    })
+    transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: null })
+
+    const result = await setSalesRole("emp-1", { salesRole: null }, HR_ADMIN)
+
+    expect(transaction.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        before: { salesRole: "SALES_ADMIN" },
+        after: { salesRole: null },
+      }),
+    })
+    expect(result).toEqual({ salesRole: null })
+    expect(revokeAllUserTokens).toHaveBeenCalledWith("u-9")
+  })
+
+  it("signs out a Sales Admin demoted to Sales User", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      user: { id: "u-9", salesRole: "SALES_ADMIN" },
+    })
+    transaction.user.update.mockResolvedValue({ id: "u-9", salesRole: "SALES_USER" })
+
+    await setSalesRole("emp-1", { salesRole: "SALES_USER" }, HR_ADMIN)
+
+    expect(revokeAllUserTokens).toHaveBeenCalledWith("u-9")
+  })
+
+  it("does not sign the user out when the role change rolls back", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      user: { id: "u-9", salesRole: "SALES_ADMIN" },
+    })
+    transaction.user.update.mockRejectedValue(new Error("database unavailable"))
+
+    await expect(
+      setSalesRole("emp-1", { salesRole: null }, HR_ADMIN)
+    ).rejects.toThrow("database unavailable")
+    expect(revokeAllUserTokens).not.toHaveBeenCalled()
+  })
+
+  it("writes nothing when the value is unchanged", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      user: { id: "u-9", salesRole: "SALES_USER" },
+    })
+
+    const result = await setSalesRole("emp-1", { salesRole: "SALES_USER" }, HR_ADMIN)
+
+    expect(transaction.user.update).not.toHaveBeenCalled()
+    expect(transaction.auditLog.create).not.toHaveBeenCalled()
+    expect(result).toEqual({ salesRole: "SALES_USER" })
+  })
+
+  it("404s for an employee with no user account", async () => {
+    transaction.employee.findUnique.mockResolvedValue({
+      id: "emp-1",
+      fullName: "Rahim",
+      user: null,
+    })
+
+    await expect(
+      setSalesRole("emp-1", { salesRole: "SALES_USER" }, HR_ADMIN)
+    ).rejects.toMatchObject({ statusCode: 404 })
+    expect(transaction.user.update).not.toHaveBeenCalled()
+    expect(transaction.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it("404s for an unknown employee", async () => {
+    transaction.employee.findUnique.mockResolvedValue(null)
+
+    await expect(
+      setSalesRole("nope", { salesRole: "SALES_USER" }, HR_ADMIN)
+    ).rejects.toMatchObject({ statusCode: 404 })
+    expect(transaction.user.update).not.toHaveBeenCalled()
+    expect(transaction.auditLog.create).not.toHaveBeenCalled()
   })
 })

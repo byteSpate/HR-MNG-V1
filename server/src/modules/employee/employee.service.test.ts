@@ -33,7 +33,7 @@ import { createStaffAccountSchema } from "./employee.validators"
 import { sendCredentialsEmail } from "../auth/mailer"
 
 function viewerToken(role: any, sub = "u-viewer") {
-  return { sub, role, email: "v@b.com", mustChangePassword: false }
+  return { sub, role, email: "v@b.com", mustChangePassword: false, salesRole: null }
 }
 
 const dbRow = {
