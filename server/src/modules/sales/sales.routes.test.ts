@@ -4,6 +4,7 @@ import request from "supertest"
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
     salesAccount: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -12,7 +13,7 @@ vi.mock("../../config/prisma", () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
-    salesAccountAssignment: { createMany: vi.fn() },
+    salesAccountAssignment: { createMany: vi.fn(), deleteMany: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
     salesContact: {
       findUnique: vi.fn(),
@@ -471,6 +472,7 @@ describe("PATCH /api/sales/accounts/:id", () => {
       ownerEmployeeId: "emp-1",
     } as never)
     vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue(CURRENT as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(CURRENT as never)
     vi.mocked(prisma.salesAccount.update).mockImplementation((async (args: never) => ({
       ...CURRENT,
       ...(args as { data: object }).data,
@@ -501,18 +503,30 @@ describe("PATCH /api/sales/accounts/:id", () => {
     expect(res.body).toMatchObject({ industry: "Garments" })
   })
 
-  it("404s a hub member who does not work the account", async () => {
-    // The write gate finds nothing in this caller scope. 404 and not 403,
-    // matching every other write that hangs off an account.
-    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+  it("403s a hub member who can see but does not work the account", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      ...CURRENT,
+      ownerEmployeeId: "emp-9",
+      assignments: [],
+    } as never)
 
     await request(app)
       .patch("/api/sales/accounts/sa-1")
       .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
       .send({ industry: "Garments" })
-      .expect(404)
+      .expect(403)
 
     expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+
+  it("404s when the account genuinely does not exist", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null as never)
+
+    await request(app)
+      .patch("/api/sales/accounts/missing")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ industry: "Garments" })
+      .expect(404)
   })
 
   it("400s an empty body rather than reporting a save that changed nothing", async () => {

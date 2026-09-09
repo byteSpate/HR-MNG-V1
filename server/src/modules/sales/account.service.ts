@@ -7,10 +7,10 @@ import type { CreateSalesAccountBody, UpdateSalesAccountBody } from "./sales.val
 import type { AccountHistory, AccountHistoryEntry, SalesAccountSummary } from "./sales.types"
 import { EmploymentStatus, SalesRole, type Prisma } from "../../generated/prisma/client"
 import {
+  ACCOUNT_NOT_VISIBLE,
   canManageAccount,
   employeeIdFor,
   ownedScopeFor,
-  requireAccountAccess,
   requireAccountVisible,
 } from "./sales.access"
 import {
@@ -64,6 +64,28 @@ function findClash(client: typeof prisma, name: string) {
     where: { name: { equals: name, mode: "insensitive" } },
     include: { owner: { select: { fullName: true } } },
   })
+}
+
+/**
+ * PostgreSQL's ordinary unique index on `name` is case-sensitive, while the
+ * Sales Account rule is not. Serialize Sales Account name writes before the
+ * case-insensitive lookup, so `Acme` and `acme` cannot both pass an absent-row
+ * precheck and commit concurrently.
+ *
+ * This intentionally uses one fixed, two-part PostgreSQL advisory key rather
+ * than hashing a JavaScript-normalized name. JavaScript case folding and the
+ * database collation can disagree for Unicode, which could give two names
+ * PostgreSQL considers equal different locks. Account creates and renames are
+ * rare, so serializing just those writes is the safer tradeoff. The lock
+ * releases automatically on commit or rollback.
+ */
+async function lockAccountNames(client: typeof prisma): Promise<void> {
+  await client.$queryRaw`SELECT pg_advisory_xact_lock(1935762243, 1)`
+}
+
+/** Lock one existing account before its authorization and before-values are read. */
+async function lockAccountRow(client: typeof prisma, id: string): Promise<void> {
+  await client.$queryRaw`SELECT "id" FROM "SalesAccount" WHERE "id" = ${id} FOR UPDATE`
 }
 
 /**
@@ -131,8 +153,9 @@ export async function createSalesAccount(
 
   try {
     return await prisma.$transaction(async (tx) => {
-      // `name @unique` is exact-match only, so the case-insensitive refusal is
-      // here rather than in the database.
+      // `name @unique` is exact-match only. The advisory lock makes this
+      // case-insensitive refusal atomic without a second schema migration.
+      await lockAccountNames(tx as typeof prisma)
       const clash = await findClash(tx as typeof prisma, body.name)
       if (clash) {
         throw new AppError(409, duplicateNameMessage(clash.name, clash.owner.fullName))
@@ -495,25 +518,42 @@ const STATUS_LABEL: Record<SalesAccountSummary["status"], string> = {
  * column that nothing could set — states the system could hold but never
  * reach.
  *
- * Behind `requireAccountAccess`, the write gate, and not the permissive
- * `requireAccountVisible`: everyone in the hub may read the directory, but
- * changing a record stays with the people who work it.
+ * Behind the transaction's freshly evaluated `canManageAccount` write gate:
+ * everyone in the hub may read the directory, but changing a record stays
+ * with the owner, collaborators and admins.
  */
 export async function updateSalesAccount(
   id: string,
   body: UpdateSalesAccountBody,
   actor: AccessTokenPayload
 ): Promise<SalesAccountSummary> {
-  // Also yields the caller's own employee id, which `toSummary` needs to
-  // decide whether this account is theirs — one lookup, not two.
-  const { employeeId } = await requireAccountAccess(id, actor)
+  // A stable fact about the caller. Account authorization itself happens
+  // only after the account row is locked and freshly read below.
+  const employeeId = await employeeIdFor(actor)
 
   try {
     return await prisma.$transaction(async (tx) => {
-      const current = await tx.salesAccount.findUniqueOrThrow({
+      await lockAccountRow(tx as typeof prisma, id)
+      const current = await tx.salesAccount.findUnique({
         where: { id },
         include: SUMMARY_INCLUDE,
       })
+      if (!current) {
+        throw new AppError(404, ACCOUNT_NOT_VISIBLE)
+      }
+      if (
+        !canManageAccount(
+          actor,
+          employeeId,
+          current.ownerEmployeeId,
+          current.assignments.map((assignment) => assignment.employee.id)
+        )
+      ) {
+        throw new AppError(
+          403,
+          "You can view this Sales Account, but only its owner, collaborators, or a Sales Admin can edit it"
+        )
+      }
 
       const data: Record<string, string | null> = {}
       const before: Record<string, string | null> = {}
@@ -538,6 +578,7 @@ export async function updateSalesAccount(
         value === undefined ? undefined : value === "" ? null : value
 
       if (body.name !== undefined && body.name !== current.name) {
+        await lockAccountNames(tx as typeof prisma)
         const clash = await findClash(tx as typeof prisma, body.name)
         // Excluding this account's own row. The check is case-insensitive, so
         // correcting "rising group" to "Rising Group" finds itself, and
@@ -564,18 +605,31 @@ export async function updateSalesAccount(
       const nextStatus = body.status ?? current.status
       const statusChanged = nextStatus !== current.status
 
-      if (statusChanged || body.statusReason !== undefined) {
+      if (statusChanged) {
         if (nextStatus === "ACTIVE") {
           // A reason left behind on a reactivated account reads as a live
           // warning about an account nobody is warning you about.
           stage("statusReason", null, current.statusReason)
         } else {
-          const reason = blankToNull(body.statusReason) ?? current.statusReason
+          // A different non-active status describes a different decision.
+          // Do not silently carry an old Inactive reason into Do Not Contact,
+          // or vice versa.
+          const reason = blankToNull(body.statusReason)
           if (!reason) {
             throw new AppError(
               400,
               `Say why ${current.name} is being marked ${STATUS_LABEL[nextStatus]}. The reason is shown beside the status, so whoever opens this next knows what happened.`
             )
+          }
+          stage("statusReason", reason, current.statusReason)
+        }
+      } else if (body.statusReason !== undefined) {
+        if (nextStatus === "ACTIVE") {
+          stage("statusReason", null, current.statusReason)
+        } else {
+          const reason = blankToNull(body.statusReason)
+          if (!reason) {
+            throw new AppError(400, `A ${STATUS_LABEL[nextStatus]} account must keep a reason`)
           }
           stage("statusReason", reason, current.statusReason)
         }
@@ -589,23 +643,33 @@ export async function updateSalesAccount(
         return toSummary(current, actor, employeeId)
       }
 
+      if (newOwner) {
+        // Ownership already grants access. Keeping the same employee in the
+        // assignment table stores one fact twice and inflates assigneeCount.
+        await tx.salesAccountAssignment.deleteMany({
+          where: { salesAccountId: id, employeeId: newOwner.id },
+        })
+      }
+
       const updated = await tx.salesAccount.update({
         where: { id },
         data: data as Prisma.SalesAccountUncheckedUpdateInput,
         include: SUMMARY_INCLUDE,
       })
 
-      // One row carrying only the fields that moved, matching
-      // employee.update.ts. `presentChanges` renders it as one labelled line
-      // per field, so a single save reads as a single event in History.
-      await writeAudit(tx, {
-        entity: "SALES_ACCOUNT",
-        entityId: id,
-        action: "UPDATE",
-        changedBy: actor.sub,
-        before,
-        after,
-      })
+      // The plan makes a field the atomic history fact. Keep every row and
+      // the account write in this transaction so a failed audit still rolls
+      // back the entire save.
+      for (const field of Object.keys(before)) {
+        await writeAudit(tx, {
+          entity: "SALES_ACCOUNT",
+          entityId: id,
+          action: "UPDATE",
+          changedBy: actor.sub,
+          before: { [field]: before[field] },
+          after: { [field]: after[field] },
+        })
+      }
 
       if (newOwner) {
         await emitEvent(tx, {
@@ -643,10 +707,11 @@ export async function updateSalesAccount(
       return toSummary(updated, actor, employeeId)
     })
   } catch (err) {
-    // Two admins renaming two accounts to the same thing in the same instant:
-    // both pass the check above, and the loser lands here. Caught outside the
-    // transaction because the failed statement has already aborted it, so the
-    // re-read needs a fresh connection.
+    // The advisory lock closes races through this service, while the existing
+    // exact-match database constraint remains the final guard for any legacy
+    // or out-of-band writer. Translate that constraint outside the transaction:
+    // the failed statement has already aborted it, so the re-read needs a fresh
+    // connection.
     if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
       const clash = body.name ? await findClash(prisma, body.name) : null
       throw clash && clash.id !== id
