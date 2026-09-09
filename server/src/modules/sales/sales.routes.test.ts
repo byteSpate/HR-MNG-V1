@@ -10,6 +10,7 @@ vi.mock("../../config/prisma", () => ({
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
     salesAccountAssignment: { createMany: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
@@ -441,5 +442,84 @@ describe("communication routes", () => {
       .expect(400)
 
     expect(prisma.salesCommunication.create).not.toHaveBeenCalled()
+  })
+})
+
+describe("PATCH /api/sales/accounts/:id", () => {
+  const CURRENT = {
+    id: "sa-1",
+    name: "Rising Group",
+    industry: "Textiles",
+    website: null,
+    address: null,
+    status: "ACTIVE",
+    statusReason: null,
+    ownerEmployeeId: "emp-1",
+    createdAt: new Date("2026-09-05"),
+    owner: {
+      fullName: "Karim",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_USER", isActive: true },
+    },
+    assignments: [],
+  }
+
+  beforeEach(() => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue(CURRENT as never)
+    vi.mocked(prisma.salesAccount.update).mockImplementation((async (args: never) => ({
+      ...CURRENT,
+      ...(args as { data: object }).data,
+    })) as never)
+  })
+
+  it("401s without a token", async () => {
+    await request(app).patch("/api/sales/accounts/sa-1").send({ industry: "X" }).expect(401)
+  })
+
+  it("403s an authenticated employee with no salesRole", async () => {
+    await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: null }))
+      .send({ industry: "X" })
+      .expect(403)
+
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+
+  it("200s for the owner, who is a Sales User and not an admin", async () => {
+    const res = await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ industry: "Garments" })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ industry: "Garments" })
+  })
+
+  it("404s a hub member who does not work the account", async () => {
+    // The write gate finds nothing in this caller scope. 404 and not 403,
+    // matching every other write that hangs off an account.
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+
+    await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ industry: "Garments" })
+      .expect(404)
+
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+
+  it("400s an empty body rather than reporting a save that changed nothing", async () => {
+    await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_ADMIN" }))
+      .send({})
+      .expect(400)
   })
 })
