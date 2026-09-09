@@ -34,6 +34,7 @@ beforeEach(() => {
   vi.mocked(opportunities.getOpportunity).mockResolvedValue({ id: "opp-1" } as any)
   vi.mocked(opportunities.changeOpportunityStage).mockResolvedValue({ id: "opp-1" } as any)
   vi.mocked(lines.addOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
+  vi.mocked(lines.updateOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
   vi.mocked(lines.suggestOpportunityLineValues).mockResolvedValue([])
   vi.mocked(comments.createSalesComment).mockResolvedValue({ id: "comment-1" } as any)
   vi.mocked(comments.listSalesComments).mockResolvedValue({ items: [], truncated: false, limit: 100 } as any)
@@ -72,6 +73,15 @@ describe("Phase 2 sales routes", () => {
       .send({ product: "Switch" }).expect(201)
     await request(app).get("/api/sales/suggestions/oem?field=brand&q=cis")
       .set("Authorization", auth("SALES_USER")).expect(200)
+  })
+
+  it("allows an optional line quantity to be cleared", async () => {
+    await request(app).patch("/api/sales/lines/line-1")
+      .set("Authorization", auth("SALES_USER"))
+      .send({ quantity: null }).expect(200)
+    expect(lines.updateOpportunityLine).toHaveBeenCalledWith(
+      "line-1", { quantity: null }, expect.objectContaining({ sub: "user-1" })
+    )
   })
 
   it("creates and lists comments but exposes no delete route", async () => {

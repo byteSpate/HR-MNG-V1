@@ -14,8 +14,10 @@ const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prism
 function present(row: any): SalesCommentSummary {
   return {
     id: row.id, entity: row.entity, entityId: row.entityId, kind: row.kind,
-    body: row.body, authorEmployeeId: row.authorEmployeeId,
-    authorName: row.author?.fullName ?? "", createdAt: row.createdAt.toISOString(),
+    body: row.body, authorUserId: row.authorUserId,
+    authorEmployeeId: row.authorEmployeeId ?? null,
+    authorName: row.author?.fullName ?? row.authorUser?.displayName ?? row.authorUser?.email ?? "",
+    createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
 }
@@ -48,19 +50,18 @@ function requireManagement(
 
 export async function createSalesComment(body: CreateSalesCommentBody, actor: AccessTokenPayload) {
   requireManagement(actor, body.kind)
-  if (body.entity === "SALES_ACCOUNT" && body.kind === "CUSTOMER_FEEDBACK") {
-    throw new AppError(400, "Customer feedback belongs to an Opportunity")
-  }
   return prisma.$transaction(async (tx) => {
     await authorize(body.entity, body.entityId, actor, asClient(tx))
     const authorEmployeeId = await employeeIdFor(actor, asClient(tx))
-    if (!authorEmployeeId) throw new AppError(400, "Only an employee can write a Sales comment")
     const row = await tx.salesComment.create({
       data: {
         entity: body.entity, entityId: body.entityId, kind: body.kind, body: body.body,
-        authorEmployeeId, funnelMeetingId: null,
+        authorUserId: actor.sub, authorEmployeeId, funnelMeetingId: null,
       },
-      include: { author: { select: { fullName: true } } },
+      include: {
+        author: { select: { fullName: true } },
+        authorUser: { select: { displayName: true, email: true } },
+      },
     })
     await writeAudit(tx, {
       entity: "SALES_COMMENT", entityId: row.id, action: "CREATE", changedBy: actor.sub,
@@ -77,7 +78,10 @@ export async function listSalesComments(
   const rows = await prisma.salesComment.findMany({
     where: { entity: query.entity, entityId: query.entityId },
     orderBy: { createdAt: "desc" }, take: LIMIT + 1,
-    include: { author: { select: { fullName: true } } },
+    include: {
+      author: { select: { fullName: true } },
+      authorUser: { select: { displayName: true, email: true } },
+    },
   })
   return { items: rows.slice(0, LIMIT).map(present), truncated: rows.length > LIMIT, limit: LIMIT }
 }
@@ -87,19 +91,25 @@ export async function updateSalesComment(
 ) {
   return prisma.$transaction(async (tx) => {
     const current = await tx.salesComment.findUnique({
-      where: { id }, include: { author: { select: { fullName: true } } },
+      where: { id },
+      include: {
+        author: { select: { fullName: true } },
+        authorUser: { select: { displayName: true, email: true } },
+      },
     })
     if (!current) throw new AppError(404, "That Sales comment does not exist, or is not yours")
     await authorize(current.entity as "SALES_ACCOUNT" | "OPPORTUNITY", current.entityId, actor, asClient(tx))
     requireManagement(actor, current.kind, "edited")
-    const employeeId = await employeeIdFor(actor, asClient(tx))
-    if (!employeeId || current.authorEmployeeId !== employeeId) {
+    if (current.authorUserId !== actor.sub) {
       throw new AppError(403, "Only the author can edit this comment")
     }
     if (current.body === body.body) return present(current)
     const updated = await tx.salesComment.update({
       where: { id }, data: { body: body.body },
-      include: { author: { select: { fullName: true } } },
+      include: {
+        author: { select: { fullName: true } },
+        authorUser: { select: { displayName: true, email: true } },
+      },
     })
     await writeAudit(tx, {
       entity: "SALES_COMMENT", entityId: id, action: "UPDATE", changedBy: actor.sub,

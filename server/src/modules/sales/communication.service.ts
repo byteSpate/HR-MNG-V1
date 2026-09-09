@@ -177,7 +177,10 @@ export async function getAccountTimeline(
           where: { entity: "SALES_ACCOUNT", entityId: accountId },
           orderBy: { createdAt: "desc" },
           take: TIMELINE_LIMIT,
-          include: { author: { select: { fullName: true } } },
+          include: {
+            author: { select: { fullName: true } },
+            authorUser: { select: { displayName: true, email: true } },
+          },
         })
       : [],
   ])
@@ -217,7 +220,7 @@ export async function getAccountTimeline(
       at: row.createdAt.toISOString(),
       title: row.kind === "MANAGEMENT_NOTE" ? "Management note" : "Remark",
       meta: row.kind === "CUSTOMER_FEEDBACK" ? "Customer feedback" : null,
-      by: row.author.fullName,
+      by: row.author?.fullName ?? row.authorUser.displayName ?? row.authorUser.email,
       detail: row.body,
     })),
   ]

@@ -19,11 +19,13 @@ const USER = {
   mustChangePassword: false, salesRole: "SALES_USER",
 } as any
 const ADMIN = { ...USER, salesRole: "SALES_ADMIN" } as any
+const SUPER_ADMIN = { ...USER, role: "SUPER_ADMIN", salesRole: null } as any
 const COMMENT = {
   id: "comment-1", entity: "SALES_ACCOUNT", entityId: "account-1", kind: "GENERAL",
-  body: "Customer wants a revised quote", authorEmployeeId: "emp-1", funnelMeetingId: null,
+  body: "Customer wants a revised quote", authorUserId: "user-1",
+  authorEmployeeId: "emp-1", funnelMeetingId: null,
   createdAt: new Date("2026-09-09T10:00:00Z"), updatedAt: new Date("2026-09-09T10:00:00Z"),
-  author: { fullName: "Rahim" },
+  author: { fullName: "Rahim" }, authorUser: { displayName: null, email: "sales@example.com" },
 }
 
 beforeEach(() => {
@@ -49,7 +51,9 @@ describe("sales comments", () => {
     }, USER)
     expect(result.authorName).toBe("Rahim")
     expect(prisma.salesComment.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ authorEmployeeId: "emp-1", funnelMeetingId: null }),
+      data: expect.objectContaining({
+        authorUserId: "user-1", authorEmployeeId: "emp-1", funnelMeetingId: null,
+      }),
     }))
     expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ entity: "SALES_COMMENT", action: "CREATE" }),
@@ -62,13 +66,33 @@ describe("sales comments", () => {
     }, USER)).rejects.toThrow(/management note.*Sales Admin/i)
   })
 
-  it("allows an admin management note but rejects customer feedback on an account", async () => {
+  it("allows an admin management note and leaves account feedback to the client UI", async () => {
     await expect(createSalesComment({
       entity: "SALES_ACCOUNT", entityId: "account-1", kind: "MANAGEMENT_NOTE", body: "Watch margin",
     }, ADMIN)).resolves.toBeDefined()
     await expect(createSalesComment({
       entity: "SALES_ACCOUNT", entityId: "account-1", kind: "CUSTOMER_FEEDBACK", body: "Happy",
-    }, ADMIN)).rejects.toThrow(/opportunity/i)
+    }, ADMIN)).resolves.toBeDefined()
+  })
+
+  it("lets a Super Admin without an Employee row write a management note", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: null } as any)
+    vi.mocked(prisma.salesComment.create).mockResolvedValue({
+      ...COMMENT,
+      authorUserId: SUPER_ADMIN.sub,
+      authorEmployeeId: null,
+      author: null,
+      authorUser: { displayName: "System Admin", email: "admin@example.com" },
+    } as any)
+
+    const result = await createSalesComment({
+      entity: "SALES_ACCOUNT", entityId: "account-1", kind: "MANAGEMENT_NOTE", body: "Watch margin",
+    }, SUPER_ADMIN)
+
+    expect(result.authorName).toBe("System Admin")
+    expect(prisma.salesComment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ authorUserId: SUPER_ADMIN.sub, authorEmployeeId: null }),
+    }))
   })
 
   it("returns newest first, capped at 100, and says when the 101st exists", async () => {
@@ -91,7 +115,9 @@ describe("sales comments", () => {
   })
 
   it("refuses another author's edit", async () => {
-    vi.mocked(prisma.salesComment.findUnique).mockResolvedValue({ ...COMMENT, authorEmployeeId: "emp-2" } as any)
+    vi.mocked(prisma.salesComment.findUnique).mockResolvedValue({
+      ...COMMENT, authorUserId: "user-2", authorEmployeeId: "emp-2",
+    } as any)
     await expect(updateSalesComment("comment-1", { body: "Changed" }, USER))
       .rejects.toThrow(/author/i)
   })

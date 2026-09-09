@@ -33,6 +33,7 @@ model User {
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   emailChangeRequests EmailChangeRequest[]
+  salesCommentsAuthored SalesComment[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -2327,11 +2328,14 @@ model SalesComment {
   kind     SalesCommentKind
   body     String
 
-  /// A real relation rather than a loose id, for the same reason
-  /// SalesCommunication.employeeId is one: the feed can name the author, and
-  /// an unknown id is refused by the database instead of stored.
-  authorEmployeeId String
-  author           Employee @relation(fields: [authorEmployeeId], references: [id])
+  /// The authenticated author. This is the durable identity used for edit
+  /// ownership and also supports Super Admin, who intentionally has no
+  /// Employee row. The Employee relation remains when one exists so sales
+  /// feeds can use HR's canonical staff name.
+  authorUserId     String
+  authorUser       User      @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+  authorEmployeeId String?
+  author           Employee? @relation(fields: [authorEmployeeId], references: [id])
 
   /// Set when the comment was written during a Saturday review, which makes
   /// "what did management say about this deal last week" one query. Stays null
@@ -2343,6 +2347,7 @@ model SalesComment {
 
   @@index([entity, entityId, createdAt])
   @@index([funnelMeetingId, createdAt])
+  @@index([authorUserId])
 }
 
 /// One row per person per quarter. Absent means no target was set — which the

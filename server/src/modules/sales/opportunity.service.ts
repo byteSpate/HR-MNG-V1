@@ -43,25 +43,9 @@ async function ownerFor(
     },
   })
   if (!owner) throw new AppError(400, "That Opportunity owner is not an employee")
-  if (owner.id === account.ownerEmployeeId) return owner
-
-  const assignment = await tx.salesAccountAssignment.findUnique({
-    where: { salesAccountId_employeeId: { salesAccountId: account.id, employeeId: owner.id } },
-    select: { id: true },
-  })
-  if (assignment) return owner
-  if (!addAssignment) {
-    throw new AppError(
-      409,
-      `${owner.fullName} does not have access to this Sales Account. Send addAssignment: true to add them as a collaborator in the same action.`
-    )
-  }
-  // Adding the assignment is adding a collaborator, so it answers to the same
-  // three facts that adding one through the account does. Without this,
-  // addAssignment: true was a way round every one of them — it could put
-  // somebody on an account when they had never been granted hub access, had
-  // left the company, or had a deactivated login, and then make them
-  // answerable for a deal they cannot open.
+  // Relationship access and actual Hub eligibility are separate facts. An
+  // owner or existing collaborator remains named on the account after access
+  // is revoked, so validate eligibility before accepting either shortcut.
   if (!owner.user?.salesRole) {
     throw new AppError(
       400,
@@ -78,6 +62,20 @@ async function ownerFor(
     throw new AppError(
       400,
       `${owner.fullName}'s login has been deactivated, so they cannot open the hub.`
+    )
+  }
+
+  if (owner.id === account.ownerEmployeeId) return owner
+
+  const assignment = await tx.salesAccountAssignment.findUnique({
+    where: { salesAccountId_employeeId: { salesAccountId: account.id, employeeId: owner.id } },
+    select: { id: true },
+  })
+  if (assignment) return owner
+  if (!addAssignment) {
+    throw new AppError(
+      409,
+      `${owner.fullName} does not have access to this Sales Account. Send addAssignment: true to add them as a collaborator in the same action.`
     )
   }
 
@@ -237,7 +235,9 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
     const data: Prisma.OpportunityUpdateInput = {
       status: body.status, lastActivityAt: now,
       statusReason: body.status === "LOST" || body.status === "CANCELLED" ? body.statusReason!.trim() : null,
-      closedAt: body.status === "ONGOING" ? null : now,
+      ...(body.status === "ONGOING"
+        ? { closedAt: null }
+        : current.status === "ONGOING" ? { closedAt: now } : {}),
       ...(body.status === "WON" && current.wonByEmployeeId === null
         ? { wonBy: { connect: { id: current.ownerEmployeeId } } } : {}),
     }
@@ -287,14 +287,18 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
   const [comments, events] = await Promise.all([
     prisma.salesComment.findMany({
       where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100,
-      include: { author: { select: { fullName: true } } },
+      include: {
+        author: { select: { fullName: true } },
+        authorUser: { select: { displayName: true, email: true } },
+      },
     }),
     prisma.event.findMany({ where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100 }),
   ])
   const items: TimelineItem[] = [
     ...comments.map((row) => ({ id: `comment:${row.id}`, kind: "comment" as const,
       at: row.createdAt.toISOString(), title: row.kind === "MANAGEMENT_NOTE" ? "Management note" : "Comment",
-      meta: null, by: row.author.fullName, detail: row.body })),
+      meta: null, by: row.author?.fullName ?? row.authorUser.displayName ?? row.authorUser.email,
+      detail: row.body })),
     ...events.map((row) => ({ id: `event:${row.id}`, kind: "event" as const,
       at: row.createdAt.toISOString(), title: row.title, meta: row.meta, by: null, detail: null })),
   ]

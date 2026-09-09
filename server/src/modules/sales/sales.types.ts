@@ -59,7 +59,8 @@ export interface SalesCommentSummary {
   entityId: string
   kind: SalesCommentKind
   body: string
-  authorEmployeeId: string
+  authorUserId: string
+  authorEmployeeId: string | null
   authorName: string
   createdAt: string
   updatedAt: string

@@ -116,7 +116,9 @@ describe("opportunity serials and creation", () => {
   })
 
   it("names an owner without account access and explains addAssignment", async () => {
-    vi.mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-2", fullName: "Karim" } as any)
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      ...OWNER, id: "emp-2", fullName: "Karim",
+    } as any)
     await expect(createOpportunity({
       salesAccountId: ACCOUNT.id, name: "Core refresh", track: "NETWORKING",
       ownerEmployeeId: "emp-2",
@@ -143,6 +145,19 @@ describe("opportunity serials and creation", () => {
       ownerEmployeeId: "emp-2", addAssignment: true,
     }, USER)).rejects.toThrow(/deactivated|cannot open/i)
     expect(prisma.salesAccountAssignment.create).not.toHaveBeenCalled()
+  })
+
+  it("does not accept an ineligible owner merely because they are already assigned", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      ...OWNER, id: "emp-2", fullName: "Karim", user: { salesRole: null, isActive: true },
+    } as any)
+    vi.mocked(prisma.salesAccountAssignment.findUnique).mockResolvedValue({ id: "assignment-1" } as any)
+
+    await expect(createOpportunity({
+      salesAccountId: ACCOUNT.id, name: "Core refresh", track: "NETWORKING",
+      ownerEmployeeId: "emp-2",
+    }, USER)).rejects.toThrow(/Sales Hub access/i)
+    expect(prisma.opportunity.create).not.toHaveBeenCalled()
   })
 })
 
@@ -264,6 +279,19 @@ describe("stage, status, and next step", () => {
     }))
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves closedAt when correcting one closed status to another", async () => {
+    const originallyClosedAt = new Date("2026-08-31T09:00:00.000Z")
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      status: "LOST", statusReason: "Budget", closedAt: originallyClosedAt,
+    }) as any)
+
+    await changeOpportunityStatus("opp-1", { status: "CANCELLED", statusReason: "Project stopped" }, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.not.objectContaining({ closedAt: expect.anything() }),
+    }))
   })
 
   it("updates next-step date at UTC midnight with one audit and one event", async () => {
