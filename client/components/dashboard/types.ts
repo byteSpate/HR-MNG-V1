@@ -76,15 +76,32 @@ export type ChartBar = {
   height: number
 }
 
+export type NavChild = {
+  label: string
+  href: string
+}
+
 /**
  * No `badge` here. Counts come from the dashboard payload, keyed by `href` —
  * a literal in a nav config is a number that was true once and drifts
- * silently forever after.
+ * silently forever after. A parent's badge is the sum of its children's,
+ * counted from that same payload for the same reason.
  */
 export type NavItem = {
   label: string
   href: string
   icon: IconName
+  /**
+   * Present only where an item genuinely holds several different pages, each
+   * with its own route. A page that holds three things as tabs behind one URL
+   * cannot be linked to, and the back button does not move between them.
+   *
+   * Never one child: an item with a single child is worse than a plain link,
+   * hiding a page behind a click for no reason. A parent with children
+   * expands rather than navigating, so its own `href` is used only to decide
+   * which group opens on load.
+   */
+  children?: NavChild[]
 }
 
 export type NavGroup = {
