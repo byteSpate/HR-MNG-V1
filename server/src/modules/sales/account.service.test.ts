@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
-    salesAccount: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn() },
+    salesAccount: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      update: vi.fn(),
+    },
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn() },
     salesContact: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
@@ -15,7 +21,12 @@ vi.mock("../../config/prisma", () => ({
 
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
-import { createSalesAccount, getAccountHistory, listSalesEligibleEmployees } from "./account.service"
+import {
+  createSalesAccount,
+  getAccountHistory,
+  listSalesEligibleEmployees,
+  updateSalesAccount,
+} from "./account.service"
 
 const USER = {
   sub: "user-2",
@@ -521,5 +532,233 @@ describe("listSalesEligibleEmployees", () => {
     const result = await listSalesEligibleEmployees()
 
     expect(result.map((e) => e.fullName)).toEqual(["Karim"])
+  })
+})
+
+describe("updateSalesAccount", () => {
+  /**
+   * The row as it stands before each test edits it. A Sales User owns it and
+   * still works here, so a test changing something else does not trip the
+   * owner rules on the way past.
+   */
+  const CURRENT = {
+    id: "sa-1",
+    name: "Rising Group",
+    industry: "Textiles",
+    website: null,
+    address: null,
+    status: "ACTIVE",
+    statusReason: null,
+    ownerEmployeeId: "emp-1",
+    createdAt: new Date("2026-09-05"),
+    owner: {
+      fullName: "Karim",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_USER", isActive: true },
+    },
+    assignments: [],
+  }
+
+  beforeEach(() => {
+    // Two callers share one findFirst mock: the access gate looks an account
+    // up by id, the duplicate check looks one up by name. Branching on the
+    // shape of `where` keeps them apart, so a test can stage a name clash
+    // without also making the account invisible.
+    vi.mocked(prisma.salesAccount.findFirst).mockImplementation((async (args: any) =>
+      args?.where?.name ? null : { id: "sa-1", ownerEmployeeId: "emp-1" }) as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue(CURRENT as any)
+    vi.mocked(prisma.salesAccount.update).mockImplementation((async (args: any) => ({
+      ...CURRENT,
+      ...args.data,
+    })) as never)
+  })
+
+  it("renames the account and audits the change", async () => {
+    const result = await updateSalesAccount("sa-1", { name: "Rising Group Ltd" }, ADMIN)
+
+    expect(result.name).toBe("Rising Group Ltd")
+    expect(prisma.salesAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { name: "Rising Group Ltd" } })
+    )
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          entity: "SALES_ACCOUNT",
+          action: "UPDATE",
+          before: { name: "Rising Group" },
+          after: { name: "Rising Group Ltd" },
+        }),
+      })
+    )
+  })
+
+  it("audits only the fields that changed", async () => {
+    await updateSalesAccount("sa-1", { name: "Rising Group", industry: "Garments" }, ADMIN)
+
+    // `name` was submitted unchanged. A save that re-sends every field must
+    // not produce a history row claiming the name was edited.
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          before: { industry: "Textiles" },
+          after: { industry: "Garments" },
+        }),
+      })
+    )
+  })
+
+  it("writes nothing at all when no field actually changed", async () => {
+    await updateSalesAccount("sa-1", { name: "Rising Group" }, ADMIN)
+
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+    expect(prisma.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a rename onto an existing name, and names its owner", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockImplementation((async (args: any) =>
+      args?.where?.name
+        ? { id: "sa-9", name: "Bengal Group", owner: { fullName: "Rahim" } }
+        : { id: "sa-1", ownerEmployeeId: "emp-1" }) as never)
+
+    await expect(
+      updateSalesAccount("sa-1", { name: "bengal group" }, ADMIN)
+    ).rejects.toMatchObject({ status: 409, message: expect.stringContaining("Rahim") })
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+
+  it("does not treat the account's own name as a clash when only the case changes", async () => {
+    // findFirst is case-insensitive, so renaming "Rising Group" to "Rising
+    // group" finds this very row. Excluding self is the difference between a
+    // capitalisation fix and a dead end.
+    vi.mocked(prisma.salesAccount.findFirst).mockImplementation((async (args: any) =>
+      args?.where?.name
+        ? { id: "sa-1", name: "Rising Group", owner: { fullName: "Karim" } }
+        : { id: "sa-1", ownerEmployeeId: "emp-1" }) as never)
+
+    await expect(
+      updateSalesAccount("sa-1", { name: "Rising group" }, ADMIN)
+    ).resolves.toMatchObject({ name: "Rising group" })
+  })
+
+  it("refuses an owner who has left the company", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: "emp-9",
+      fullName: "Nasir",
+      employmentStatus: "RESIGNED",
+      lastWorkingDay: new Date("2026-01-31"),
+      user: { salesRole: "SALES_USER", isActive: true },
+    } as any)
+
+    await expect(
+      updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, ADMIN)
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("Nasir") })
+  })
+
+  it("refuses an owner with no hub access", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: "emp-9",
+      fullName: "Nasir",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: null, isActive: true },
+    } as any)
+
+    await expect(
+      updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, ADMIN)
+    ).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringContaining("Techno Sales Hub access"),
+    })
+  })
+
+  it("refuses a Sales Admin as owner", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: "emp-9",
+      fullName: "Nasir",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_ADMIN", isActive: true },
+    } as any)
+
+    await expect(
+      updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, ADMIN)
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("Sales Admin") })
+  })
+
+  it("reassigns the owner and puts it on the timeline", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+      id: "emp-9",
+      fullName: "Nasir",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_USER", isActive: true },
+    } as any)
+
+    await updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, ADMIN)
+
+    expect(prisma.event.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ type: "sales.account.reassigned" }),
+      })
+    )
+  })
+
+  it("requires a reason before an account can go INACTIVE", async () => {
+    await expect(
+      updateSalesAccount("sa-1", { status: "INACTIVE" }, ADMIN)
+    ).rejects.toMatchObject({ status: 400, message: expect.stringContaining("why") })
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+
+  it("records the reason and puts the status change on the timeline", async () => {
+    await updateSalesAccount(
+      "sa-1",
+      { status: "DO_NOT_CONTACT", statusReason: "They asked us to stop calling" },
+      ADMIN
+    )
+
+    expect(prisma.salesAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "DO_NOT_CONTACT",
+          statusReason: "They asked us to stop calling",
+        }),
+      })
+    )
+    expect(prisma.event.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ type: "sales.account.status_changed" }),
+      })
+    )
+  })
+
+  it("clears the reason when the account becomes ACTIVE again", async () => {
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue({
+      ...CURRENT,
+      status: "INACTIVE",
+      statusReason: "Dormant since March",
+    } as any)
+
+    await updateSalesAccount("sa-1", { status: "ACTIVE" }, ADMIN)
+
+    // A stale reason on an active account reads as a live warning about an
+    // account nobody is warning you about.
+    expect(prisma.salesAccount.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "ACTIVE", statusReason: null }),
+      })
+    )
+  })
+
+  it("refuses a caller who does not work the account", async () => {
+    // The write gate finds nothing in the caller's scope. 404 and not 403,
+    // matching every other write on an account — see ACCOUNT_NOT_VISIBLE.
+    vi.mocked(prisma.salesAccount.findFirst).mockImplementation((async () => null) as never)
+
+    await expect(updateSalesAccount("sa-1", { name: "Anything" }, USER)).rejects.toBeInstanceOf(
+      AppError
+    )
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
   })
 })
