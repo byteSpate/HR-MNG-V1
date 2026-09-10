@@ -53,6 +53,8 @@ import {
   HISTORY_ENTITY_ICON,
 } from "@/components/sales/sales-shared"
 import { Button } from "@/components/ui/button"
+import { AccountEditDialog } from "@/components/sales/account-edit-dialog"
+import { CommentPanel } from "@/components/sales/comment-panel"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -709,14 +711,28 @@ function HistoryPanel({ accountId }: { accountId: string }) {
 /* -------------------------------------------------------------------------- */
 
 export function AccountDetail({ accountId }: { accountId: string }) {
-  const { accessToken, status: sessionStatus } = useSession()
+  const { accessToken, user, status: sessionStatus } = useSession()
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
+
+  const [editOpen, setEditOpen] = useState(false)
+  // Opening from the flag rather than the Edit button changes the dialog's
+  // title and leads with the owner, because the reason is already known.
+  const [editFocusOwner, setEditFocusOwner] = useState(false)
+
+  // Management notes are admin-only to write. The server refuses either way;
+  // hiding the option keeps a control that cannot act off the screen.
+  const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
 
   const accountQuery = useQuery({
     queryKey: ["sales", "accounts", accountId],
     queryFn: () => getSalesAccount(accessToken!, accountId),
     enabled: isAuthed,
   })
+
+  function openEdit(focusOwner: boolean) {
+    setEditFocusOwner(focusOwner)
+    setEditOpen(true)
+  }
 
   return (
     <>
@@ -758,7 +774,22 @@ export function AccountDetail({ accountId }: { accountId: string }) {
               tone={ACCOUNT_STATUS_TONE[accountQuery.data.status]}
             />
             {!accountQuery.data.canManage ? <Tag label="View only" tone="neutral" /> : null}
+            {accountQuery.data.canManage ? (
+              <Button
+                type="button"
+                onClick={() => openEdit(false)}
+                className="ml-auto h-8 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              >
+                Edit
+              </Button>
+            ) : null}
           </div>
+
+          {/* The reason lives beside the status it explains. Without it a
+              Do Not Contact badge is a decision with no record of why. */}
+          {accountQuery.data.statusReason ? (
+            <p className="mt-2 text-[12.5px] text-[#5F6B7C]">{accountQuery.data.statusReason}</p>
+          ) : null}
 
           <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[#5F6B7C]">
             <span>Owner: {accountQuery.data.ownerName}</span>
@@ -794,8 +825,22 @@ export function AccountDetail({ accountId }: { accountId: string }) {
           {!accountQuery.data.ownerActive ? (
             <p className="mt-3 flex items-start gap-1.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2 text-[12px] leading-relaxed text-[#8A5E0C]">
               <RiAlertLine className="mt-px size-3.5 shrink-0" aria-hidden />
-              {accountQuery.data.ownerName} can no longer work this account — their Techno Sales
-              Hub access has been removed or they have left. It needs a new owner.
+              <span>
+                {accountQuery.data.ownerName} can no longer work this account — their Techno Sales
+                Hub access has been removed or they have left. It needs a new owner.
+                {/* The flag used to state a problem the interface could not
+                    solve. It now leads to the one action that clears it. */}
+                {accountQuery.data.canManage ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => openEdit(true)}
+                    className="ml-1.5 h-auto p-0 text-[12px] font-bold text-[#8A5E0C] underline"
+                  >
+                    Choose a new owner
+                  </Button>
+                ) : null}
+              </span>
             </p>
           ) : null}
 
@@ -818,9 +863,31 @@ export function AccountDetail({ accountId }: { accountId: string }) {
               canManage={accountQuery.data.canManage}
               canLog={accountQuery.data.canLogActivity}
             />
+            {/* "Remarks" here and "Comments" on a deal, from one component.
+                That is the business's own vocabulary and the two must not be
+                made consistent with each other. */}
+            <CommentPanel
+              entity="SALES_ACCOUNT"
+              entityId={accountId}
+              label="Remarks"
+              // Customer feedback is offered on a deal only: feedback is
+              // always about a specific deal, and the server no longer
+              // refuses the row, so the restriction lives here.
+              kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
+              canWrite={accountQuery.data.canManage}
+            />
             <HistoryPanel accountId={accountId} />
           </div>
         </div>
+      ) : null}
+
+      {accountQuery.data && accountQuery.data.canManage ? (
+        <AccountEditDialog
+          account={accountQuery.data}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          focusOwner={editFocusOwner}
+        />
       ) : null}
     </>
   )
