@@ -39,6 +39,10 @@ export interface SalesAccountSummary {
   website: string | null
   address: string | null
   status: SalesAccountStatus
+  /** Why the account is Inactive or Do Not Contact. The server requires one
+      whenever the status leaves ACTIVE and clears it on the way back, so a
+      status badge is never shown without the sentence explaining it. */
+  statusReason: string | null
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number
@@ -2138,4 +2142,243 @@ export interface EmailDispatch {
 export interface EmailDispatchPage {
   items: EmailDispatch[]
   nextCursor: string | null
+}
+
+// ── SALES: OPPORTUNITIES, COMMENTS, TARGETS, DASHBOARD ────────────────────
+// Hand-mirrored from server/src/modules/sales/sales.types.ts. There is no
+// shared package between the two projects and that is deliberate, so a drift
+// here surfaces as a runtime undefined rather than a type error. Read the two
+// files side by side when changing either.
+
+export type SalesTrack = "NETWORKING"
+
+export type OpportunityStatus = "ONGOING" | "WON" | "LOST" | "CANCELLED"
+
+/**
+ * Each stage is defined by who the deal is waiting on, which is what makes it
+ * actionable rather than decorative. Meaningful only while the status is
+ * ONGOING; on close it freezes at whatever it was, and the interface reads it
+ * in the past tense — "Lost, at Negotiation".
+ */
+export type OpportunityStage =
+  | "REQUIREMENT_RECEIVED"
+  | "SOLUTION_DESIGN"
+  | "OEM_PRICING"
+  | "QUOTATION_SUBMITTED"
+  | "NEGOTIATION"
+  | "AWAITING_DECISION"
+
+export interface OpportunityLineSummary {
+  id: string
+  opportunityId: string
+  product: string
+  oemBrand: string | null
+  model: string | null
+  quantity: number | null
+  /** Null means nobody has costed this line. Never render it as zero. */
+  unitValue: string | null
+  lineValue: string | null
+  note: string | null
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OpportunitySummary {
+  id: string
+  serial: string
+  salesAccountId: string
+  salesAccountName: string
+  name: string
+  track: SalesTrack
+  /** Null means unpriced. The deal value, and the only figure that counts. */
+  amount: string | null
+  currency: string
+  expectedCloseDate: string | null
+  oemAccountManager: string | null
+  status: OpportunityStatus
+  statusReason: string | null
+  closedAt: string | null
+  stage: OpportunityStage
+  stageChangedAt: string
+  nextStep: string | null
+  nextStepDueOn: string | null
+  ownerEmployeeId: string
+  ownerName: string
+  wonByEmployeeId: string | null
+  lastActivityAt: string
+  createdAt: string
+  updatedAt: string
+  lines: OpportunityLineSummary[]
+  /** Sum of the priced lines only. */
+  lineTotal: string
+  unpricedLineCount: number
+  /**
+   * True only when at least one line carries a value and the total differs
+   * from the deal value. The interface says so and offers one button; it
+   * never synchronises on its own.
+   */
+  amountDiffersFromLines: boolean
+}
+
+export interface OpportunityPage {
+  items: OpportunitySummary[]
+  nextCursor: string | null
+}
+
+export interface CreateOpportunityBody {
+  salesAccountId: string
+  name: string
+  track: SalesTrack
+  amount?: string
+  expectedCloseDate?: string
+  oemAccountManager?: string
+  ownerEmployeeId?: string
+  /** Adds the owner as a collaborator in the same action when they lack access. */
+  addAssignment?: boolean
+}
+
+export interface UpdateOpportunityBody {
+  name?: string
+  track?: SalesTrack
+  amount?: string | null
+  expectedCloseDate?: string | null
+  oemAccountManager?: string | null
+  ownerEmployeeId?: string
+  addAssignment?: boolean
+}
+
+export interface OpportunityLineBody {
+  product: string
+  oemBrand?: string
+  model?: string
+  quantity?: number
+  unitValue?: string
+  lineValue?: string
+  note?: string
+}
+
+/** Null clears a value; absent leaves it alone. The two are different asks. */
+export interface UpdateOpportunityLineBody {
+  product?: string
+  oemBrand?: string | null
+  model?: string | null
+  quantity?: number | null
+  unitValue?: string | null
+  lineValue?: string | null
+  note?: string | null
+}
+
+export type SalesCommentKind = "GENERAL" | "CUSTOMER_FEEDBACK" | "MANAGEMENT_NOTE"
+
+export interface SalesCommentSummary {
+  id: string
+  entity: "SALES_ACCOUNT" | "OPPORTUNITY"
+  entityId: string
+  kind: SalesCommentKind
+  body: string
+  authorUserId: string
+  authorEmployeeId: string | null
+  authorName: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SalesCommentPage {
+  items: SalesCommentSummary[]
+  /** More exist beyond `limit`. Say so; a capped list looks like a short one. */
+  truncated: boolean
+  limit: number
+}
+
+export interface CreateSalesCommentBody {
+  entity: "SALES_ACCOUNT" | "OPPORTUNITY"
+  entityId: string
+  kind: SalesCommentKind
+  body: string
+}
+
+export interface SalesTargetQuarter {
+  quarter: number
+  /** Null means nobody set one. Render "Not set", never a target of zero. */
+  target: number | null
+  note: string | null
+  achievement: number
+  valueWon: string
+  unpricedWonCount: number
+}
+
+export interface SalesTargetYear {
+  employeeId: string
+  employeeName: string
+  calendarYear: number
+  quarters: SalesTargetQuarter[]
+}
+
+export interface SetSalesTargetBody {
+  employeeId: string
+  calendarYear: number
+  quarter: number
+  targetDeals: number
+  note?: string
+}
+
+export interface SalesActionRow {
+  key: string
+  label: string
+  count: number
+  detail: string
+  tone: Tone
+  /** Role-agnostic. The client prefixes `/sales`. */
+  href: string
+}
+
+export interface SalesTeamRow {
+  employeeId: string
+  employeeName: string
+  target: number | null
+  achievement: number
+  valueWon: string
+  ongoing: number
+}
+
+export interface SalesQuarterRow {
+  quarter: number
+  target: number | null
+  achievement: number
+  valueWon: string
+}
+
+export interface SalesDashboardPayload {
+  scope: "me" | "employee" | "all"
+  employeeId: string | null
+  employeeName: string
+  calendarYear: number
+  quarter: number
+  stats: DashboardStat[]
+  quarters: SalesQuarterRow[]
+  actions: SalesActionRow[]
+  team?: SalesTeamRow[]
+  badges: Record<string, number>
+  /**
+   * What this page cannot show yet. Rendered as a sentence, because an empty
+   * "Tasks due" row would read as "no tasks" — a number nobody measured.
+   */
+  notBuilt: string[]
+}
+
+/**
+ * Editing an account. Absent leaves a field alone; null clears it. The two
+ * are different asks, and without the distinction a website typed once can
+ * never be removed.
+ */
+export interface UpdateSalesAccountBody {
+  name?: string
+  ownerEmployeeId?: string
+  industry?: string | null
+  website?: string | null
+  address?: string | null
+  status?: SalesAccountStatus
+  /** Required by the server whenever the status leaves ACTIVE. */
+  statusReason?: string | null
 }

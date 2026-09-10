@@ -9,6 +9,23 @@ import type {
   SalesContactSummary,
   SalesEligibleEmployee,
   SetContactStatusBody,
+  CreateOpportunityBody,
+  CreateSalesCommentBody,
+  OpportunityLineBody,
+  OpportunityLineSummary,
+  OpportunityPage,
+  OpportunityStage,
+  OpportunityStatus,
+  OpportunitySummary,
+  SalesCommentPage,
+  SalesCommentSummary,
+  SalesDashboardPayload,
+  SalesTargetQuarter,
+  SalesTargetYear,
+  SetSalesTargetBody,
+  UpdateOpportunityBody,
+  UpdateOpportunityLineBody,
+  UpdateSalesAccountBody,
   TimelineItem,
 } from "./types"
 
@@ -104,4 +121,227 @@ export function getAccountHistory(
   accountId: string
 ): Promise<AccountHistory> {
   return apiFetch<AccountHistory>(`/api/sales/accounts/${accountId}/history`, { accessToken })
+}
+
+// ── Phase 2 ───────────────────────────────────────────────────────────────
+
+export function updateSalesAccount(
+  accessToken: string,
+  id: string,
+  body: UpdateSalesAccountBody
+): Promise<SalesAccountSummary> {
+  return apiFetch<SalesAccountSummary>(`/api/sales/accounts/${id}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export interface ListOpportunitiesQuery {
+  status?: OpportunityStatus
+  stage?: OpportunityStage
+  salesAccountId?: string
+  ownerEmployeeId?: string
+  mine?: boolean
+  cursor?: string
+  limit?: number
+}
+
+export function listOpportunities(
+  accessToken: string,
+  query: ListOpportunitiesQuery = {}
+): Promise<OpportunityPage> {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== "") search.set(key, String(value))
+  }
+  const qs = search.toString()
+  return apiFetch<OpportunityPage>(`/api/sales/opportunities${qs ? `?${qs}` : ""}`, { accessToken })
+}
+
+export function getOpportunity(accessToken: string, id: string): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}`, { accessToken })
+}
+
+export function createOpportunity(
+  accessToken: string,
+  body: CreateOpportunityBody
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>("/api/sales/opportunities", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateOpportunity(
+  accessToken: string,
+  id: string,
+  body: UpdateOpportunityBody
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function changeOpportunityStage(
+  accessToken: string,
+  id: string,
+  stage: OpportunityStage
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/stage`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify({ stage }),
+  })
+}
+
+export function changeOpportunityStatus(
+  accessToken: string,
+  id: string,
+  body: { status: OpportunityStatus; statusReason?: string }
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/status`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function changeOpportunityNextStep(
+  accessToken: string,
+  id: string,
+  body: { nextStep?: string | null; nextStepDueOn?: string | null }
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/next-step`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function getOpportunityTimeline(
+  accessToken: string,
+  id: string
+): Promise<{ items: TimelineItem[] }> {
+  return apiFetch<{ items: TimelineItem[] }>(`/api/sales/opportunities/${id}/timeline`, {
+    accessToken,
+  })
+}
+
+export function addOpportunityLine(
+  accessToken: string,
+  opportunityId: string,
+  body: OpportunityLineBody
+): Promise<OpportunityLineSummary> {
+  return apiFetch<OpportunityLineSummary>(`/api/sales/opportunities/${opportunityId}/lines`, {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateOpportunityLine(
+  accessToken: string,
+  lineId: string,
+  body: UpdateOpportunityLineBody
+): Promise<OpportunityLineSummary> {
+  return apiFetch<OpportunityLineSummary>(`/api/sales/lines/${lineId}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function deleteOpportunityLine(accessToken: string, lineId: string): Promise<void> {
+  return apiFetch<void>(`/api/sales/lines/${lineId}`, { method: "DELETE", accessToken })
+}
+
+export function reorderOpportunityLines(
+  accessToken: string,
+  opportunityId: string,
+  lineIds: string[]
+): Promise<OpportunityLineSummary[]> {
+  return apiFetch<OpportunityLineSummary[]>(
+    `/api/sales/opportunities/${opportunityId}/lines/reorder`,
+    { method: "PATCH", accessToken, body: JSON.stringify({ lineIds }) }
+  )
+}
+
+export function suggestOpportunityLineValues(
+  accessToken: string,
+  field: "product" | "brand" | "model",
+  q = ""
+): Promise<string[]> {
+  const search = new URLSearchParams({ field })
+  if (q) search.set("q", q)
+  return apiFetch<string[]>(`/api/sales/suggestions/oem?${search.toString()}`, { accessToken })
+}
+
+export function listSalesComments(
+  accessToken: string,
+  entity: "SALES_ACCOUNT" | "OPPORTUNITY",
+  entityId: string
+): Promise<SalesCommentPage> {
+  const search = new URLSearchParams({ entity, entityId })
+  return apiFetch<SalesCommentPage>(`/api/sales/comments?${search.toString()}`, { accessToken })
+}
+
+export function createSalesComment(
+  accessToken: string,
+  body: CreateSalesCommentBody
+): Promise<SalesCommentSummary> {
+  return apiFetch<SalesCommentSummary>("/api/sales/comments", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateSalesComment(
+  accessToken: string,
+  id: string,
+  body: string
+): Promise<SalesCommentSummary> {
+  return apiFetch<SalesCommentSummary>(`/api/sales/comments/${id}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify({ body }),
+  })
+}
+
+export function getSalesTargetYear(
+  accessToken: string,
+  calendarYear: number,
+  employeeId?: string
+): Promise<SalesTargetYear> {
+  const search = new URLSearchParams({ calendarYear: String(calendarYear) })
+  if (employeeId) search.set("employeeId", employeeId)
+  return apiFetch<SalesTargetYear>(`/api/sales/targets?${search.toString()}`, { accessToken })
+}
+
+export function setSalesTarget(
+  accessToken: string,
+  body: SetSalesTargetBody
+): Promise<SalesTargetQuarter> {
+  return apiFetch<SalesTargetQuarter>("/api/sales/targets", {
+    method: "PUT",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+/** `employeeId` is a uuid, or the literal "all" for the team roll-up. */
+export function getSalesDashboard(
+  accessToken: string,
+  employeeId?: string
+): Promise<SalesDashboardPayload> {
+  const search = new URLSearchParams()
+  if (employeeId) search.set("employeeId", employeeId)
+  const qs = search.toString()
+  return apiFetch<SalesDashboardPayload>(`/api/sales/dashboard${qs ? `?${qs}` : ""}`, {
+    accessToken,
+  })
 }
