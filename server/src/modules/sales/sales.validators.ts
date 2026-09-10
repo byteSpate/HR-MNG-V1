@@ -196,7 +196,7 @@ export type UpdateSalesCommentBody = z.infer<typeof updateSalesCommentSchema>
 
 export const getTargetYearSchema = z.object({
   calendarYear: z.coerce.number().int().min(2000).max(2100),
-  employeeId: z.string().uuid().optional(),
+  employeeId: z.union([z.literal("all"), z.string().uuid("Choose an employee")]).optional(),
 })
 export type GetTargetYearQueryInput = z.infer<typeof getTargetYearSchema>
 
@@ -212,7 +212,10 @@ export const setSalesTargetSchema = z.object({
 export type SetSalesTargetInput = z.infer<typeof setSalesTargetSchema>
 
 export const salesDashboardSchema = z.object({
-  employeeId: z.string().uuid().optional(),
-  scope: z.enum(["me", "all"]).optional(),
+  // A uuid, or the literal "all" for the team roll-up. Documented that way in
+  // the plan, so PR D is written against it; a second spelling would be two
+  // ways to say one thing.
+  employeeId: z.union([z.literal("all"), z.string().uuid("Choose an employee")]).optional(),
+
 })
 export type SalesDashboardInput = z.infer<typeof salesDashboardSchema>

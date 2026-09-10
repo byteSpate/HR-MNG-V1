@@ -7,6 +7,7 @@ vi.mock("../../config/prisma", () => ({
     opportunity: { findMany: vi.fn(), count: vi.fn() },
     salesAccount: { count: vi.fn(), findMany: vi.fn() },
     salesCommunication: { findMany: vi.fn() },
+    auditLog: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
     user: { findUnique: vi.fn() },
   },
@@ -41,6 +42,7 @@ beforeEach(() => {
   vi.mocked(prisma.employee.findUnique).mockResolvedValue({
     id: "emp-2",
     fullName: "Rahim",
+    userId: "user-2",
   } as never)
   vi.mocked(prisma.salesTarget.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.opportunity.findMany).mockResolvedValue([] as never)
@@ -48,6 +50,7 @@ beforeEach(() => {
   vi.mocked(prisma.salesAccount.count).mockResolvedValue(0 as never)
   vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([] as never)
+  vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.employee.findMany).mockResolvedValue([] as never)
 })
 
@@ -162,18 +165,98 @@ describe("the sales dashboard", () => {
 
   it("lets an admin roll the whole team up, naming each person", async () => {
     vi.mocked(prisma.employee.findMany).mockResolvedValue([
-      { id: "emp-2", fullName: "Rahim" },
-      { id: "emp-3", fullName: "Nasir" },
+      { id: "emp-2", fullName: "Rahim", userId: "user-2" },
+      { id: "emp-3", fullName: "Nasir", userId: "user-3" },
     ] as never)
 
-    const payload = await getSalesDashboard({ now: NOW, scope: "all" }, ADMIN)
+    const payload = await getSalesDashboard({ now: NOW, employeeId: "all" }, ADMIN)
 
     expect(payload.team?.map((row) => row.employeeName)).toEqual(["Rahim", "Nasir"])
   })
 
   it("refuses a Sales User asking for the team roll-up", async () => {
-    await expect(getSalesDashboard({ now: NOW, scope: "all" }, USER)).rejects.toMatchObject({
+    await expect(getSalesDashboard({ now: NOW, employeeId: "all" }, USER)).rejects.toMatchObject({
       statusCode: 403,
     })
+  })
+})
+
+describe("the sales dashboard, after review", () => {
+  it("credits work to whoever did it, not to the current owner", async () => {
+    await getSalesDashboard({ now: NOW }, USER)
+
+    // An opportunity changes hands. Counting activity by ownerEmployeeId
+    // would hand the new owner credit for work they did not do, and take it
+    // from the person who did. The audit trail records who acted.
+    expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ entity: "OPPORTUNITY", changedBy: "user-2" }),
+      })
+    )
+  })
+
+  it("reads activity from an immutable timestamp, not from lastActivityAt", async () => {
+    await getSalesDashboard({ now: NOW }, USER)
+
+    // lastActivityAt holds only the most recent touch, so a deal worked in Q1
+    // and again in Q3 vanishes from Q1 entirely. An audit row is written once
+    // and never moves.
+    const workedCalls = vi
+      .mocked(prisma.opportunity.findMany)
+      .mock.calls.map((call) => JSON.stringify((call[0] as object) ?? {}))
+    expect(workedCalls.some((c) => c.includes("lastActivityAt"))).toBe(false)
+  })
+
+  it("gives an admin both bands, not a stripped payload", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      { id: "emp-2", fullName: "Rahim", userId: "user-2" },
+    ] as never)
+
+    const payload = await getSalesDashboard({ now: NOW, employeeId: "all" }, ADMIN)
+
+    expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
+    expect(payload.actions.map((row) => row.key)).toEqual([
+      "closing",
+      "unverified",
+      "quiet",
+      "stuck",
+    ])
+    expect(Object.keys(payload.badges)).toHaveLength(4)
+  })
+
+  it("takes the documented employeeId=all rather than a second spelling", async () => {
+    const payload = await getSalesDashboard({ now: NOW, employeeId: "all" }, ADMIN)
+    expect(payload.scope).toBe("all")
+  })
+
+  it("includes an opportunity closing today", async () => {
+    await getSalesDashboard({ now: NOW }, USER)
+
+    const closing = vi
+      .mocked(prisma.opportunity.count)
+      .mock.calls.map((call) => call[0] as { where?: { expectedCloseDate?: { gte?: Date } } })
+      .find((args) => args?.where?.expectedCloseDate)
+
+    // expectedCloseDate is date-only at UTC midnight. Starting the window at
+    // the current instant drops everything due today the moment midnight
+    // passes.
+    expect(closing?.where?.expectedCloseDate?.gte?.toISOString()).toBe("2026-02-15T00:00:00.000Z")
+  })
+
+  it("takes every stat tone from the tone policy, including the flat ones", async () => {
+    vi.mocked(prisma.salesTarget.findMany).mockResolvedValue([
+      { quarter: 1, targetDeals: 4 },
+    ] as never)
+    vi.mocked(prisma.opportunity.findMany).mockImplementation((async (args: never) => {
+      const where = (args as { where?: { status?: string } }).where
+      return where?.status === "WON" ? [{ amount: dec("1.00") }] : []
+    }) as never)
+
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    // One win against a target of four is 25 per cent, which the rate policy
+    // calls red. A literal would have said "neutral".
+    expect(stat(payload, "Against Target")?.tone).toBe("red")
+    expect(stat(payload, "Total Opportunities")?.tone).toBe("neutral")
   })
 })

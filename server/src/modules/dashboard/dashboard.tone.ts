@@ -8,6 +8,17 @@
 import type { Tone } from "./dashboard.types"
 
 export const toneFor = {
+  /**
+   * A stat that reports a fact with no good or bad direction — a total, a
+   * count of what exists. Named rather than written as a literal "neutral" at
+   * each call site, so "which stats carry no health signal" is a decision
+   * recorded in this file with the thresholds, and changing it later is one
+   * edit rather than a search.
+   */
+  informational(): Tone {
+    return "neutral"
+  },
+
   /** An approval queue. Empty is the healthy state. */
   queue(count: number): Tone {
     if (count === 0) return "green"
