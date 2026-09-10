@@ -5,7 +5,13 @@ import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
 import { dec } from "../payroll/payroll.money"
-import { accountScopeFor, employeeIdFor, OPPORTUNITY_NOT_VISIBLE, requireAccountAccess } from "./sales.access"
+import {
+  accountScopeFor,
+  canManageAccount,
+  employeeIdFor,
+  OPPORTUNITY_NOT_VISIBLE,
+  requireAccountAccess,
+} from "./sales.access"
 import { employmentAllowsSales } from "./sales.eligibility"
 import { nextOpportunitySerial } from "./sales.serial"
 import { presentOpportunity } from "./opportunity.present"
@@ -17,9 +23,33 @@ import type { TimelineItem } from "./sales.types"
 
 const INCLUDE = {
   owner: { select: { id: true, fullName: true } },
-  salesAccount: { select: { id: true, name: true, ownerEmployeeId: true } },
+  // Assignments come along so the payload can answer "may this viewer change
+  // it". The directory is shared, so seeing a deal and being able to work it
+  // are different questions, and only the server can answer the second.
+  salesAccount: {
+    select: {
+      id: true,
+      name: true,
+      ownerEmployeeId: true,
+      assignments: { select: { employeeId: true } },
+    },
+  },
   lines: { orderBy: { order: "asc" as const } },
 } as const
+
+/** Whether `actor` may write to this deal, decided from its parent account. */
+function canManageDeal(
+  row: { salesAccount: { ownerEmployeeId: string; assignments: { employeeId: string }[] } },
+  actor: AccessTokenPayload,
+  employeeId: string | null
+): boolean {
+  return canManageAccount(
+    actor,
+    employeeId,
+    row.salesAccount.ownerEmployeeId,
+    row.salesAccount.assignments.map((a) => a.employeeId)
+  )
+}
 
 const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prisma
 const day = (value: string | null | undefined) => value ? new Date(`${value}T00:00:00.000Z`) : null
@@ -138,7 +168,10 @@ export async function listOpportunities(query: ListOpportunityQuery, actor: Acce
   })
   const hasMore = rows.length > limit
   const page = rows.slice(0, limit)
-  return { items: page.map(presentOpportunity), nextCursor: hasMore ? page.at(-1)!.id : null }
+  return {
+    items: page.map((row) => presentOpportunity(row, canManageDeal(row, actor, employeeId))),
+    nextCursor: hasMore ? page.at(-1)!.id : null,
+  }
 }
 
 export async function getOpportunity(id: string, actor: AccessTokenPayload) {
@@ -148,7 +181,7 @@ export async function getOpportunity(id: string, actor: AccessTokenPayload) {
     include: INCLUDE,
   })
   if (!row) throw new AppError(404, OPPORTUNITY_NOT_VISIBLE)
-  return presentOpportunity(row)
+  return presentOpportunity(row, canManageDeal(row, actor, employeeId))
 }
 
 async function loadForWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {

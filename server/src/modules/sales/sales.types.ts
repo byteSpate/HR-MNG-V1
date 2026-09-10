@@ -52,6 +52,9 @@ export interface OpportunitySummary {
   lineTotal: string
   unpricedLineCount: number
   amountDiffersFromLines: boolean
+  /** Whether this viewer may change the deal. The directory is shared, so
+      seeing one and being able to work it are different questions. */
+  canManage: boolean
 }
 
 export interface SalesCommentSummary {

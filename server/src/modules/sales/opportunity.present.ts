@@ -12,7 +12,7 @@ export function presentLine(row: any): OpportunityLineSummary {
   }
 }
 
-export function presentOpportunity(row: any): OpportunitySummary {
+export function presentOpportunity(row: any, canManage = true): OpportunitySummary {
   const rows = row.lines ?? []
   const priced = rows.filter((line: any) => line.lineValue != null)
   const total = sum(priced.map((line: any) => dec(line.lineValue)))
@@ -39,5 +39,8 @@ export function presentOpportunity(row: any): OpportunitySummary {
     // to line total", which is zero, so pressing it would wipe a real number
     // in the name of tidying up.
     amountDiffersFromLines: amount !== null && priced.length > 0 && !amount.equals(total),
+    // Decided by the caller, which knows the actor. Defaults to true because
+    // every other call site is a write the actor just made.
+    canManage,
   }
 }

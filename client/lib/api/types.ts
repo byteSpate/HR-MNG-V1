@@ -2219,6 +2219,9 @@ export interface OpportunitySummary {
    * never synchronises on its own.
    */
   amountDiffersFromLines: boolean
+  /** Whether this viewer may change the deal. Decided by the server: the
+      directory is shared, so seeing one and working it are different. */
+  canManage: boolean
 }
 
 export interface OpportunityPage {

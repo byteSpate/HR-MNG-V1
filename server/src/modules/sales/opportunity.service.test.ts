@@ -36,7 +36,14 @@ const USER = {
   mustChangePassword: false, salesRole: "SALES_USER",
 } as any
 
-const ACCOUNT = { id: "account-1", name: "Rising Group", ownerEmployeeId: "emp-1" }
+// `assignments` is part of the read include, so the fixture carries it too —
+// the payload now reports whether the viewer may write to the deal.
+const ACCOUNT = {
+  id: "account-1",
+  name: "Rising Group",
+  ownerEmployeeId: "emp-1",
+  assignments: [] as { employeeId: string }[],
+}
 const OWNER = {
   id: "emp-1", fullName: "Rahim", employmentStatus: "ACTIVE", lastWorkingDay: null,
   user: { salesRole: "SALES_USER", isActive: true },

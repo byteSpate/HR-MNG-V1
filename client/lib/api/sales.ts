@@ -266,7 +266,7 @@ export function reorderOpportunityLines(
 ): Promise<OpportunityLineSummary[]> {
   return apiFetch<OpportunityLineSummary[]>(
     `/api/sales/opportunities/${opportunityId}/lines/reorder`,
-    { method: "PATCH", accessToken, body: JSON.stringify({ lineIds }) }
+    { method: "PUT", accessToken, body: JSON.stringify({ lineIds }) }
   )
 }
 
