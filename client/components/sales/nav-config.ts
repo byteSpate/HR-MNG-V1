@@ -49,6 +49,10 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // both — which is the bug this arrangement removes rather than
         // special-cases.
         { label: "All Accounts", href: "/sales/accounts", icon: "RiApps2Line" },
+        // Every live deal. Sits beside the account lists rather than under
+        // one: a deal belongs to an account, but the funnel is read across
+        // all of them at once.
+        { label: "Opportunities", href: "/sales/opportunities", icon: "RiBriefcaseLine" },
       ],
     },
   ]
