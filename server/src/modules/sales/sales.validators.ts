@@ -193,3 +193,26 @@ export type OpportunitySuggestionQuery = z.infer<typeof opportunitySuggestionSch
 export type CreateSalesCommentBody = z.infer<typeof createSalesCommentSchema>
 export type ListSalesCommentQuery = z.infer<typeof listSalesCommentSchema>
 export type UpdateSalesCommentBody = z.infer<typeof updateSalesCommentSchema>
+
+export const getTargetYearSchema = z.object({
+  calendarYear: z.coerce.number().int().min(2000).max(2100),
+  employeeId: z.string().uuid().optional(),
+})
+export type GetTargetYearQueryInput = z.infer<typeof getTargetYearSchema>
+
+export const setSalesTargetSchema = z.object({
+  employeeId: z.string().uuid("Choose an employee"),
+  calendarYear: z.coerce.number().int().min(2000).max(2100),
+  quarter: z.coerce.number().int().min(1).max(4),
+  // At least one. A target of zero is indistinguishable on the page from no
+  // target at all, and "not set" already says that better.
+  targetDeals: z.coerce.number().int().min(1, "A target is at least one deal").max(1000),
+  note: z.string().trim().max(500).optional(),
+})
+export type SetSalesTargetInput = z.infer<typeof setSalesTargetSchema>
+
+export const salesDashboardSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  scope: z.enum(["me", "all"]).optional(),
+})
+export type SalesDashboardInput = z.infer<typeof salesDashboardSchema>

@@ -11,6 +11,8 @@ import {
 } from "./account.service"
 import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
+import { getTargetYear, setSalesTarget } from "./target.service"
+import { getSalesDashboard } from "./dashboard.service"
 import {
   changeOpportunityNextStep,
   changeOpportunityStage,
@@ -40,6 +42,9 @@ import {
   updateSalesAccountSchema,
   createSalesContactSchema,
   logCommunicationSchema,
+  getTargetYearSchema,
+  setSalesTargetSchema,
+  salesDashboardSchema,
   listOpportunitySchema,
   listSalesCommentSchema,
   opportunitySuggestionSchema,
@@ -284,4 +289,31 @@ export async function listSalesCommentsHandler(req: Request, res: Response, next
 export async function updateSalesCommentHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await updateSalesComment(req.params.id, updateSalesCommentSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
+}
+
+export async function getTargetYearHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const query = getTargetYearSchema.parse(req.query)
+    return res.status(200).json(await getTargetYear(query, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function setSalesTargetHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = setSalesTargetSchema.parse(req.body)
+    return res.status(200).json(await setSalesTarget(body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getSalesDashboardHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const query = salesDashboardSchema.parse(req.query)
+    return res.status(200).json(await getSalesDashboard(query, req.user!))
+  } catch (err) {
+    return next(err)
+  }
 }

@@ -15,6 +15,9 @@ import {
   listSalesEligibleEmployeesHandler,
   setContactStatusHandler,
   setPrimaryContactHandler,
+  getTargetYearHandler,
+  setSalesTargetHandler,
+  getSalesDashboardHandler,
   updateSalesAccountHandler,
   addOpportunityLineHandler,
   changeOpportunityNextStepHandler,
@@ -96,3 +99,11 @@ router.post("/comments", requireAuth, requireSales(), createSalesCommentHandler)
 router.patch("/comments/:id", requireAuth, requireSales(), updateSalesCommentHandler)
 
 export default router
+
+// Targets and the dashboard. Reads are open to any hub member and narrowed by
+// the service, which is where "your own, or anybody if you are an admin"
+// lives. Setting a target is a Sales Admin act: a target somebody sets for
+// themselves is not a target.
+router.get("/targets", requireAuth, requireSales(), getTargetYearHandler)
+router.put("/targets", requireAuth, requireSales(SalesRole.SALES_ADMIN), setSalesTargetHandler)
+router.get("/dashboard", requireAuth, requireSales(), getSalesDashboardHandler)

@@ -7,6 +7,7 @@ import type {
   SalesChannel,
   SalesContactStatus,
 } from "../../generated/prisma/client"
+import type { DashboardStat, Tone as DashboardTone } from "../dashboard/dashboard.types"
 
 export interface OpportunityLineSummary {
   id: string
@@ -211,4 +212,65 @@ export interface TimelineItem {
   /** The long-form note on a communication. Null for an event — those have
       no free-text body of their own. */
   detail: string | null
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
+// DashboardStat and Tone are imported rather than redeclared: the sales hub
+// renders through the same record kit as every role dashboard, so a second
+// definition here would be a second answer to what a stat looks like.
+
+/**
+ * One Band 2 row: something that needs doing, with the count and the link to
+ * the filtered list behind it.
+ */
+export interface SalesActionRow {
+  key: string
+  label: string
+  count: number
+  /** The sentence under the count. Never a bare number repeated. */
+  detail: string
+  tone: DashboardTone
+  /** Role-agnostic, as every sales href is. The client prefixes /sales. */
+  href: string
+}
+
+/** One person in the admin roll-up. Every row names who it is about. */
+export interface SalesTeamRow {
+  employeeId: string
+  employeeName: string
+  target: number | null
+  achievement: number
+  valueWon: string
+  ongoing: number
+}
+
+export interface SalesQuarterRow {
+  quarter: number
+  target: number | null
+  achievement: number
+  valueWon: string
+}
+
+export interface SalesDashboardPayload {
+  scope: "me" | "employee" | "all"
+  employeeId: string | null
+  employeeName: string
+  calendarYear: number
+  quarter: number
+  /** Band 1. Presentation-ready, tone chosen here and not in the client. */
+  stats: DashboardStat[]
+  /** The Q1 to Q4 table. A quarter with no target carries null, never zero. */
+  quarters: SalesQuarterRow[]
+  /** Band 2, only the rows that have a table behind them. */
+  actions: SalesActionRow[]
+  /** Present only for the admin roll-up. */
+  team?: SalesTeamRow[]
+  /** Keyed by href, counted once, so a card and its nav badge cannot drift. */
+  badges: Record<string, number>
+  /**
+   * What this page cannot show yet, so it can say so in words. An empty
+   * "Tasks due" row would read as "no tasks", which is a number nobody
+   * measured.
+   */
+  notBuilt: string[]
 }
