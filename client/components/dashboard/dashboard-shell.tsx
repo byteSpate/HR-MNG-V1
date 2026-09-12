@@ -13,6 +13,7 @@ export function DashboardShell({
   tone = "default",
   systemLabel,
   accessLabel,
+  badges,
   mainClassName = "max-w-[1220px] 2xl:max-w-[1600px]",
   profileHref: profileHrefOverride,
   children,
@@ -37,6 +38,9 @@ export function DashboardShell({
   /** A second permission axis worth naming on screen — the hub's "Sales
       Admin" / "Sales User". Nothing else passes it. */
   accessLabel?: string
+  /** Optional module-specific badge payload. When present, Sidebar does not
+      ask the HR dashboard endpoint for unrelated counts. */
+  badges?: Record<string, number>
   children: React.ReactNode
 }) {
   // Every role group has a `/profile` route under its own root, so this is
@@ -60,6 +64,7 @@ export function DashboardShell({
           tone={tone}
           systemLabel={systemLabel}
           accessLabel={accessLabel}
+          externalBadges={badges}
         />
         {/* Deliberately not SidebarInset: that renders its own <main>, and the
             content area below already is one. Nested <main> is invalid. */}

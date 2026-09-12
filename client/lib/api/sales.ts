@@ -13,6 +13,7 @@ import type {
   CreateSalesCommentBody,
   OpportunityLineBody,
   OpportunityLineSummary,
+  OpportunityHistory,
   OpportunityPage,
   OpportunityStage,
   OpportunityStatus,
@@ -30,15 +31,18 @@ import type {
 } from "./types"
 
 /** "My Accounts" — owner, assignee, or admin. */
-export function listSalesAccounts(accessToken: string): Promise<SalesAccountSummary[]> {
-  return apiFetch<SalesAccountSummary[]>("/api/sales/accounts", { accessToken })
+export function listSalesAccounts(accessToken: string, unverified = false): Promise<SalesAccountSummary[]> {
+  return apiFetch<SalesAccountSummary[]>(`/api/sales/accounts${unverified ? "?unverified=true" : ""}`, { accessToken })
 }
 
 /** "All Accounts" — the shared, read-only directory: every account, to every
     Sales Hub member, with `canManage` telling the client which ones the
     viewer can actually work rather than merely see. */
-export function listAllSalesAccounts(accessToken: string): Promise<SalesAccountSummary[]> {
-  return apiFetch<SalesAccountSummary[]>("/api/sales/accounts?scope=all", { accessToken })
+export function listAllSalesAccounts(accessToken: string, unverified = false, ownerEmployeeId?: string): Promise<SalesAccountSummary[]> {
+  const search = new URLSearchParams({ scope: "all" })
+  if (unverified) search.set("unverified", "true")
+  if (ownerEmployeeId) search.set("ownerEmployeeId", ownerEmployeeId)
+  return apiFetch<SalesAccountSummary[]>(`/api/sales/accounts?${search.toString()}`, { accessToken })
 }
 
 /** Sales Admin only — the same people the create-account form's owner and
@@ -143,6 +147,9 @@ export interface ListOpportunitiesQuery {
   salesAccountId?: string
   ownerEmployeeId?: string
   mine?: boolean
+  closing?: number
+  quiet?: number
+  stuck?: number
   cursor?: string
   limit?: number
 }
@@ -157,6 +164,12 @@ export function listOpportunities(
   }
   const qs = search.toString()
   return apiFetch<OpportunityPage>(`/api/sales/opportunities${qs ? `?${qs}` : ""}`, { accessToken })
+}
+
+export function listOpportunityOwners(
+  accessToken: string
+): Promise<{ id: string; fullName: string }[]> {
+  return apiFetch<{ id: string; fullName: string }[]>("/api/sales/opportunities/owners", { accessToken })
 }
 
 export function getOpportunity(accessToken: string, id: string): Promise<OpportunitySummary> {
@@ -229,6 +242,13 @@ export function getOpportunityTimeline(
   return apiFetch<{ items: TimelineItem[] }>(`/api/sales/opportunities/${id}/timeline`, {
     accessToken,
   })
+}
+
+export function getOpportunityHistory(
+  accessToken: string,
+  id: string
+): Promise<OpportunityHistory> {
+  return apiFetch<OpportunityHistory>(`/api/sales/opportunities/${id}/history`, { accessToken })
 }
 
 export function addOpportunityLine(

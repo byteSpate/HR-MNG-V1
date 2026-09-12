@@ -180,6 +180,7 @@ export function CommentPanel({
           ? salesKeys.accountTimeline(entityId)
           : salesKeys.opportunityTimeline(entityId),
     })
+    queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
   }
 
   const add = useMutation({

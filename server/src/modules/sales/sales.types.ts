@@ -197,6 +197,16 @@ export interface AccountHistory {
   limit: number
 }
 
+export interface OpportunityHistoryEntry extends Omit<AccountHistoryEntry, "entity"> {
+  entity: "OPPORTUNITY" | "OPPORTUNITY_LINE"
+}
+
+export interface OpportunityHistory {
+  items: OpportunityHistoryEntry[]
+  truncated: boolean
+  limit: number
+}
+
 /**
  * One line of an account's story, from either of the two tables that hold it.
  *

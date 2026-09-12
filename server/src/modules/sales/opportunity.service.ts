@@ -4,6 +4,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
+import { officeDateOf } from "../attendance/attendance.time"
 import { dec } from "../payroll/payroll.money"
 import {
   accountScopeFor,
@@ -15,11 +16,15 @@ import {
 import { employmentAllowsSales } from "./sales.eligibility"
 import { nextOpportunitySerial } from "./sales.serial"
 import { presentOpportunity } from "./opportunity.present"
+import { presentChanges, resolveNames } from "./history.present"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
 } from "./sales.validators"
-import type { TimelineItem } from "./sales.types"
+import type { OpportunityHistory, OpportunityHistoryEntry, TimelineItem } from "./sales.types"
+
+const MS_PER_DAY = 86_400_000
+const HISTORY_LIMIT = 100
 
 const INCLUDE = {
   owner: { select: { id: true, fullName: true } },
@@ -154,6 +159,8 @@ export async function createOpportunity(body: CreateOpportunityBody, actor: Acce
 export async function listOpportunities(query: ListOpportunityQuery, actor: AccessTokenPayload) {
   const employeeId = await employeeIdFor(actor)
   const limit = query.limit ?? 50
+  const now = new Date()
+  const today = officeDateOf(now)
   const where: Prisma.OpportunityWhereInput = {
     salesAccount: accountScopeFor(actor, employeeId),
     ...(query.status ? { status: query.status } : {}),
@@ -161,6 +168,12 @@ export async function listOpportunities(query: ListOpportunityQuery, actor: Acce
     ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
     ...(query.ownerEmployeeId ? { ownerEmployeeId: query.ownerEmployeeId } : {}),
     ...(query.mine ? { ownerEmployeeId: employeeId ?? "__none__" } : {}),
+    ...(query.closing ? { expectedCloseDate: { gte: today, lte: new Date(today.getTime() + query.closing * MS_PER_DAY) } } : {}),
+    ...(query.quiet ? { lastActivityAt: { lt: new Date(now.getTime() - query.quiet * MS_PER_DAY) } } : {}),
+    ...(query.stuck ? { stageChangedAt: { lt: new Date(now.getTime() - query.stuck * MS_PER_DAY) } } : {}),
+    ...(query.closing || query.quiet || query.stuck
+      ? query.status ? {} : { status: "ONGOING" }
+      : {}),
   }
   const rows = await prisma.opportunity.findMany({
     where, include: INCLUDE, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -172,6 +185,64 @@ export async function listOpportunities(query: ListOpportunityQuery, actor: Acce
     items: page.map((row) => presentOpportunity(row, canManageDeal(row, actor, employeeId))),
     nextCursor: hasMore ? page.at(-1)!.id : null,
   }
+}
+
+export async function listOpportunityOwners(actor: AccessTokenPayload) {
+  const employeeId = await employeeIdFor(actor)
+  const rows = await prisma.opportunity.findMany({
+    where: { salesAccount: accountScopeFor(actor, employeeId) },
+    distinct: ["ownerEmployeeId"],
+    select: { ownerEmployeeId: true, owner: { select: { id: true, fullName: true } } },
+    orderBy: { owner: { fullName: "asc" } },
+  })
+  return rows.map((row) => ({ id: row.owner.id, fullName: row.owner.fullName }))
+}
+
+export async function getOpportunityHistory(
+  id: string,
+  actor: AccessTokenPayload
+): Promise<OpportunityHistory> {
+  const visible = await getOpportunity(id, actor)
+  // Deleted lines are no longer in `visible.lines`, but their create/delete
+  // audit carries the parent id. Discover those anchors first so edits made
+  // before deletion remain part of the deal's history too.
+  const lineAnchors = await prisma.auditLog.findMany({
+    where: {
+      entity: "OPPORTUNITY_LINE",
+      OR: [
+        { before: { path: ["opportunityId"], equals: id } },
+        { after: { path: ["opportunityId"], equals: id } },
+      ],
+    },
+    select: { entityId: true },
+  })
+  const lineIds = [...new Set([...visible.lines.map((line) => line.id), ...lineAnchors.map((row) => row.entityId)])]
+  const rows = await prisma.auditLog.findMany({
+    where: {
+      OR: [
+        { entity: "OPPORTUNITY", entityId: id },
+        ...(lineIds.length > 0
+          ? [{ entity: "OPPORTUNITY_LINE" as const, entityId: { in: lineIds } }]
+          : []),
+      ],
+    },
+    orderBy: { changedAt: "desc" },
+    take: HISTORY_LIMIT + 1,
+  })
+  const truncated = rows.length > HISTORY_LIMIT
+  const page = truncated ? rows.slice(0, HISTORY_LIMIT) : rows
+  const names = await resolveNames(page)
+  const items: OpportunityHistoryEntry[] = page.map((row) => ({
+    id: row.id,
+    entity: row.entity as OpportunityHistoryEntry["entity"],
+    entityId: row.entityId,
+    action: row.action,
+    changedAt: row.changedAt.toISOString(),
+    changedByName: row.changedBy ? (names.get(row.changedBy) ?? null) : null,
+    changes: presentChanges(row.before, row.after, names),
+    note: row.note,
+  }))
+  return { items, truncated, limit: HISTORY_LIMIT }
 }
 
 export async function getOpportunity(id: string, actor: AccessTokenPayload) {

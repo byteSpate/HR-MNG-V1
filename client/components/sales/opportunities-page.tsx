@@ -1,10 +1,11 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { RiArrowRightLine, RiBriefcaseLine, RiFilterOffLine, RiLayoutColumnLine } from "@remixicon/react"
 
-import { listOpportunities, type ListOpportunitiesQuery } from "@/lib/api/sales"
+import { listOpportunities, listOpportunityOwners, type ListOpportunitiesQuery } from "@/lib/api/sales"
 import { salesKeys } from "@/lib/api/sales-keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunityStatus, OpportunitySummary } from "@/lib/api/types"
@@ -22,8 +23,8 @@ import {
 } from "@/components/sales/sales-shared"
 import type { TableCell } from "@/components/dashboard/types"
 
-const STAGGER_STEP_MS = 24
-const STAGGER_MAX_STEPS = 8
+const STAGGER_STEP_MS = 40
+const STAGGER_MAX_STEPS = 6
 
 /**
  * The column picker exists on this list and nowhere else (R11).
@@ -108,7 +109,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
       return {
         node: (
           <span
-            className="rise-in font-mono text-[11.5px] text-[#6B7789]"
+            className="rise-in font-mono text-[11.5px] text-[#6B7789] motion-reduce:animate-none"
             style={{ animationDelay: `${Math.min(index, STAGGER_MAX_STEPS) * STAGGER_STEP_MS}ms` }}
           >
             {deal.serial}
@@ -172,24 +173,31 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
   }
 }
 
-export function OpportunitiesPage() {
-  const { accessToken, status: sessionStatus } = useSession()
+export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { closing?: number; quiet?: number; stuck?: number; mine?: boolean; ownerEmployeeId?: string } }) {
+  const { accessToken, user, status: sessionStatus } = useSession()
+  const router = useRouter()
 
   const [status, setStatus] = useState<OpportunityStatus | "">("")
   const [stage, setStage] = useState<OpportunityStage | "">("")
-  const [mine, setMine] = useState(false)
+  const [mine, setMine] = useState(actionFilters.mine ?? false)
+  const [ownerEmployeeId, setOwnerEmployeeId] = useState(actionFilters.ownerEmployeeId ?? "")
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
+  const { closing, quiet, stuck } = actionFilters
 
   const filters: ListOpportunitiesQuery = useMemo(
     () => ({
       ...(status ? { status } : {}),
       ...(stage ? { stage } : {}),
       ...(mine ? { mine: true } : {}),
+      ...(ownerEmployeeId ? { ownerEmployeeId } : {}),
+      ...(closing ? { closing } : {}),
+      ...(quiet ? { quiet } : {}),
+      ...(stuck ? { stuck } : {}),
     }),
-    [status, stage, mine]
+    [status, stage, mine, ownerEmployeeId, closing, quiet, stuck]
   )
 
   const query = useQuery({
@@ -197,10 +205,24 @@ export function OpportunitiesPage() {
     queryFn: () => listOpportunities(accessToken!, filters),
     enabled: isAuthed,
   })
+  const ownersQuery = useQuery({
+    queryKey: ["sales", "opportunity-owners"],
+    queryFn: () => listOpportunityOwners(accessToken!),
+    enabled: isAuthed,
+  })
 
   const deals = useMemo(() => query.data?.items ?? [], [query.data])
+  const owners = ownersQuery.data ?? []
   const isLoading = sessionStatus === "loading" || query.isPending
-  const isFiltered = Boolean(status || stage || mine)
+  const isFiltered = Boolean(status || stage || mine || ownerEmployeeId || closing || quiet || stuck)
+  const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  const viewDescription = mine
+    ? "Only opportunities you own"
+    : ownerEmployeeId
+      ? `Opportunities owned by ${owners.find((owner) => owner.id === ownerEmployeeId)?.fullName ?? "the selected person"}`
+      : isSalesAdmin
+        ? "The shared team pipeline"
+        : "Opportunities across the accounts you can access"
 
   const rows = useMemo(
     () =>
@@ -209,7 +231,7 @@ export function OpportunitiesPage() {
         {
           node: (
             <RowActions
-              actions={[{ kind: "link", label: "Open", href: `/sales/opportunities/${deal.id}` }]}
+              actions={[{ kind: "link", label: deal.canManage ? "Work" : "View", href: `/sales/opportunities/${deal.id}` }]}
             />
           ),
         } as TableCell,
@@ -221,6 +243,8 @@ export function OpportunitiesPage() {
     setStatus("")
     setStage("")
     setMine(false)
+    setOwnerEmployeeId("")
+    if (closing || quiet || stuck) router.replace("/sales/opportunities")
   }
 
   // A filtered list and an unused system are empty for different reasons, and
@@ -236,15 +260,43 @@ export function OpportunitiesPage() {
       <PageHeader
         kicker="Sales"
         title="Opportunities"
-        sub="Every live deal, with the stage saying who it is waiting on. A deal is created from the account it belongs to."
+        sub={
+          isSalesAdmin
+            ? "The shared pipeline, with each stage saying who the deal is waiting on."
+            : "The deals across your accessible accounts, with each stage saying who is next."
+        }
       />
 
       {/* Hidden while the first page loads. A filter row beside a skeleton
           reads as an answer about a list nobody has counted yet. */}
       {!isLoading && !query.isError ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <section className="mb-3 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-heading text-[14px] font-bold tracking-tight">Refine the view</h2>
+              <p className={`mt-0.5 text-[12px] ${TONE.muted}`}>{viewDescription}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {closing || quiet || stuck ? (
+                <span className="rounded-md bg-[#F1F4F7] px-2.5 py-1.5 text-[11.5px] font-semibold text-[#5F6B7C]">
+                  {closing ? `Closing in ${closing} days` : quiet ? `Quiet for ${quiet}+ days` : `Stuck for ${stuck}+ days`}
+                </span>
+              ) : null}
+              <Button
+                type="button"
+                onClick={() => setPickerOpen((prev) => !prev)}
+                aria-expanded={pickerOpen}
+                className="h-8 gap-1.5 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              >
+                <RiLayoutColumnLine className="size-3.5" aria-hidden />
+                {columns.length} columns
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#EEF1F5] pt-3">
           <Select value={status} onValueChange={(v) => setStatus((v ?? "") as OpportunityStatus | "")}>
-            <SelectTrigger className="h-9 w-auto min-w-[9rem]">
+            <SelectTrigger aria-label="Opportunity status" className="h-9 w-auto min-w-[9rem]">
               <SelectValue>
                 {(v: string | null) =>
                   v ? OPPORTUNITY_STATUS_LABEL[v as OpportunityStatus] : "Any status"
@@ -261,7 +313,7 @@ export function OpportunitiesPage() {
           </Select>
 
           <Select value={stage} onValueChange={(v) => setStage((v ?? "") as OpportunityStage | "")}>
-            <SelectTrigger className="h-9 w-auto min-w-[11rem]">
+            <SelectTrigger aria-label="Opportunity stage" className="h-9 w-auto min-w-[11rem]">
               <SelectValue>
                 {(v: string | null) => (v ? STAGE_LABEL[v as OpportunityStage] : "Any stage")}
               </SelectValue>
@@ -288,6 +340,19 @@ export function OpportunitiesPage() {
             Mine only
           </Button>
 
+          <Select value={ownerEmployeeId} onValueChange={(v) => setOwnerEmployeeId(v ?? "")}>
+            <SelectTrigger aria-label="Opportunity owner" className="h-9 w-auto min-w-[10rem]">
+              <SelectValue>
+                {(v: string | null) => owners.find((owner) => owner.id === v)?.fullName ?? "Any owner"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {owners.map((owner) => (
+                <SelectItem key={owner.id} value={owner.id}>{owner.fullName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {isFiltered ? (
             <Button
               type="button"
@@ -300,20 +365,14 @@ export function OpportunitiesPage() {
             </Button>
           ) : null}
 
-          <div className="ml-auto">
-            <Button
-              type="button"
-              onClick={() => setPickerOpen((prev) => !prev)}
-              aria-expanded={pickerOpen}
-              className="h-9 gap-1.5 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
-            >
-              <RiLayoutColumnLine className="size-3.5" aria-hidden />
-              Columns
-            </Button>
           </div>
 
           {pickerOpen ? (
-            <div className="w-full rounded-md border border-[#E4E9EF] bg-white p-3">
+            <div className="mt-3 border-t border-[#EEF1F5] pt-3">
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <span className="text-[12.5px] font-bold">Visible columns</span>
+                <span className={`text-[11.5px] ${TONE.muted}`}>{columns.length} of {ALL_COLUMNS.length} shown</span>
+              </div>
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 {ALL_COLUMNS.map((column) => {
                   const checked = columns.includes(column)
@@ -355,7 +414,7 @@ export function OpportunitiesPage() {
               </Button>
             </div>
           ) : null}
-        </div>
+        </section>
       ) : null}
 
       <PanelTable

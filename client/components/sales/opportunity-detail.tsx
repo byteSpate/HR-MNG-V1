@@ -13,6 +13,9 @@ import {
   deleteOpportunityLine,
   getOpportunity,
   getOpportunityTimeline,
+  getOpportunityHistory,
+  reorderOpportunityLines,
+  updateOpportunityLine,
   updateOpportunity,
 } from "@/lib/api/sales"
 import { opportunityWriteKeys, salesKeys } from "@/lib/api/sales-keys"
@@ -83,10 +86,20 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
   const [product, setProduct] = useState("")
+  const [oemBrand, setOemBrand] = useState("")
+  const [model, setModel] = useState("")
   const [quantity, setQuantity] = useState("")
+  const [unitValue, setUnitValue] = useState("")
   const [lineValue, setLineValue] = useState("")
+  const [note, setNote] = useState("")
+  const [editing, setEditing] = useState<OpportunityLineSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<OpportunityLineSummary | null>(null)
+
+  const clearLineForm = () => {
+    setEditing(null); setProduct(""); setOemBrand(""); setModel("")
+    setQuantity(""); setUnitValue(""); setLineValue(""); setNote(""); setError(null)
+  }
 
   const invalidate = () => {
     for (const key of opportunityWriteKeys(deal.id)) {
@@ -94,23 +107,48 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
     }
   }
 
-  const add = useMutation({
+  const saveLine = useMutation({
     mutationFn: () =>
-      addOpportunityLine(accessToken!, deal.id, {
-        product: product.trim(),
-        quantity: quantity.trim() ? Number(quantity) : undefined,
-        lineValue: lineValue.trim() || undefined,
-      }),
+      editing
+        ? updateOpportunityLine(accessToken!, editing.id, {
+            product: product.trim(), oemBrand: oemBrand.trim() || null,
+            model: model.trim() || null, quantity: quantity.trim() ? Number(quantity) : null,
+            unitValue: unitValue.trim() || null, lineValue: lineValue.trim() || null,
+            note: note.trim() || null,
+          })
+        : addOpportunityLine(accessToken!, deal.id, {
+            product: product.trim(), oemBrand: oemBrand.trim() || undefined,
+            model: model.trim() || undefined, quantity: quantity.trim() ? Number(quantity) : undefined,
+            unitValue: unitValue.trim() || undefined, lineValue: lineValue.trim() || undefined,
+            note: note.trim() || undefined,
+          }),
     onSuccess: () => {
       setAdding(false)
-      setProduct("")
-      setQuantity("")
-      setLineValue("")
-      setError(null)
+      clearLineForm()
       invalidate()
     },
     onError: (err) => setError(toMessage(err)),
   })
+
+  const reorder = useMutation({
+    mutationFn: (lineIds: string[]) => reorderOpportunityLines(accessToken!, deal.id, lineIds),
+    onSuccess: invalidate,
+    onError: (err) => setError(toMessage(err)),
+  })
+
+  const beginEdit = (line: OpportunityLineSummary) => {
+    setEditing(line); setAdding(true); setProduct(line.product); setOemBrand(line.oemBrand ?? "")
+    setModel(line.model ?? ""); setQuantity(line.quantity?.toString() ?? "")
+    setUnitValue(line.unitValue ?? ""); setLineValue(line.lineValue ?? ""); setNote(line.note ?? "")
+  }
+
+  const move = (index: number, delta: -1 | 1) => {
+    const next = deal.lines.map((line) => line.id)
+    const destination = index + delta
+    if (destination < 0 || destination >= next.length) return
+    ;[next[index], next[destination]] = [next[destination], next[index]]
+    reorder.mutate(next)
+  }
 
   const remove = useMutation({
     mutationFn: (lineId: string) => deleteOpportunityLine(accessToken!, lineId),
@@ -138,7 +176,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
           canManage && !adding ? (
             <Button
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={() => { clearLineForm(); setAdding(true) }}
               className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
             >
               <RiAddLine className="size-3.5" aria-hidden />
@@ -181,7 +219,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
         </p>
       ) : (
         <ul>
-          {deal.lines.map((line) => (
+          {deal.lines.map((line, index) => (
             <li key={line.id} className="border-b border-[#EEF1F5] py-2.5 last:border-b-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -191,6 +229,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                       .filter(Boolean)
                       .join(" · ") || "No further detail"}
                   </div>
+                  {line.note ? <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>{line.note}</div> : null}
                 </div>
                 <div className="text-right">
                   {/* Unpriced, never ৳0 — a line nobody has costed is not a
@@ -201,9 +240,18 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                     {taka(line.lineValue)}
                   </div>
                   {canManage ? (
-                    <RowActions
-                      actions={[{ kind: "delete", label: "Remove", onClick: () => setRemoving(line) }]}
-                    />
+                    <>
+                      <RowActions
+                        actions={[
+                          { kind: "edit", label: "Edit", onClick: () => beginEdit(line) },
+                          { kind: "delete", label: "Remove", onClick: () => setRemoving(line) },
+                        ]}
+                      />
+                      <div className="mt-1 flex justify-end gap-1">
+                        <Button type="button" variant="link" disabled={index === 0 || reorder.isPending} onClick={() => move(index, -1)} className="h-auto p-0 text-[11px]">Up</Button>
+                        <Button type="button" variant="link" disabled={index === deal.lines.length - 1 || reorder.isPending} onClick={() => move(index, 1)} className="h-auto p-0 text-[11px]">Down</Button>
+                      </div>
+                    </>
                   ) : null}
                 </div>
               </div>
@@ -233,6 +281,14 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
             <Input id="line-product" value={product} onChange={(e) => setProduct(e.target.value)} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="OEM brand" htmlFor="line-brand" hint="Optional.">
+              <Input id="line-brand" value={oemBrand} onChange={(e) => setOemBrand(e.target.value)} />
+            </Field>
+            <Field label="Model" htmlFor="line-model" hint="Optional.">
+              <Input id="line-model" value={model} onChange={(e) => setModel(e.target.value)} />
+            </Field>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Quantity" htmlFor="line-qty" hint="Optional. Some lines are services.">
               <Input
                 id="line-qty"
@@ -240,6 +296,9 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
               />
+            </Field>
+            <Field label="Unit value" htmlFor="line-unit-value" hint="Optional.">
+              <Input id="line-unit-value" inputMode="decimal" value={unitValue} onChange={(e) => setUnitValue(e.target.value)} />
             </Field>
             <Field
               label="Line value"
@@ -254,21 +313,24 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
               />
             </Field>
           </div>
+          <Field label="Note" htmlFor="line-note" hint="Optional.">
+            <Input id="line-note" value={note} onChange={(e) => setNote(e.target.value)} />
+          </Field>
           <div className="flex gap-2">
             <Button
               type="button"
-              disabled={add.isPending || !product.trim()}
-              onClick={() => add.mutate()}
+              disabled={saveLine.isPending || !product.trim()}
+              onClick={() => saveLine.mutate()}
               className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
             >
-              {add.isPending ? "Adding…" : "Add line"}
+              {saveLine.isPending ? "Saving…" : editing ? "Save line" : "Add line"}
             </Button>
             <Button
               type="button"
               variant="link"
               onClick={() => {
                 setAdding(false)
-                setError(null)
+                clearLineForm()
               }}
               className="h-8 p-0 text-[12px] font-bold text-[#5F6B7C]"
             >
@@ -342,40 +404,23 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
       <PanelHeading title="Workflow" />
       {error ? <PanelAlert>{error}</PanelAlert> : null}
 
-      <Field
-        label="Stage"
-        hint={
-          isOpen
-            ? STAGE_WAITING_ON[deal.stage]
-            : // Disabled with the reason rather than hidden: the control is
-              // the obvious place to look for why it cannot be used.
-              `This deal is ${OPPORTUNITY_STATUS_LABEL[
-                deal.status
-              ].toLowerCase()}, so its stage is frozen where it ended. Reopen it to move the stage again.`
-        }
-      >
-        <Select
-          value={deal.stage}
-          onValueChange={(v) => v && stageMutation.mutate(v as OpportunityStage)}
-          disabled={!canManage || !isOpen || stageMutation.isPending}
+      {canManage ? (
+        <Field
+          label="Stage"
+          hint={isOpen ? STAGE_WAITING_ON[deal.stage] : `This deal is ${OPPORTUNITY_STATUS_LABEL[deal.status].toLowerCase()}, so its stage is frozen where it ended. Reopen it to move the stage again.`}
         >
-          <SelectTrigger className="w-full">
-            <SelectValue>
-              {(v: string | null) => STAGE_LABEL[(v ?? deal.stage) as OpportunityStage]}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {/* Every stage, in both directions. Deals genuinely go backwards
-                when a customer changes the requirement after a quote, and a
-                forward-only ladder makes people either lie or stop updating. */}
-            {STAGES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {STAGE_LABEL[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
+          <Select value={deal.stage} onValueChange={(v) => v && stageMutation.mutate(v as OpportunityStage)} disabled={!isOpen || stageMutation.isPending}>
+            <SelectTrigger className="w-full"><SelectValue>{(v: string | null) => STAGE_LABEL[(v ?? deal.stage) as OpportunityStage]}</SelectValue></SelectTrigger>
+            <SelectContent>{STAGES.map((s) => <SelectItem key={s} value={s}>{STAGE_LABEL[s]}</SelectItem>)}</SelectContent>
+          </Select>
+        </Field>
+      ) : (
+        <div>
+          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Stage</div>
+          <div className="mt-1 text-[13px] font-semibold">{STAGE_LABEL[deal.stage]}</div>
+          <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>{STAGE_WAITING_ON[deal.stage]}</div>
+        </div>
+      )}
 
       {isOpen ? (
         <div className="mt-1.5 text-[11.5px] text-[#6B7789]">
@@ -465,7 +510,7 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
         ) : null}
       </div>
 
-      <div className="mt-4 border-t border-[#E4E9EF] pt-4">
+      {canManage ? <div className="mt-4 border-t border-[#E4E9EF] pt-4">
         <Field
           label="Next step"
           htmlFor="next-step"
@@ -475,7 +520,6 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
             id="next-step"
             value={nextStep}
             onChange={(e) => setNextStep(e.target.value)}
-            disabled={!canManage}
           />
         </Field>
         <div className="mt-3">
@@ -485,12 +529,10 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
               type="date"
               value={nextStepDueOn}
               onChange={(e) => setNextStepDueOn(e.target.value)}
-              disabled={!canManage}
             />
           </Field>
         </div>
-        {canManage ? (
-          <Button
+        <Button
             type="button"
             disabled={nextStepMutation.isPending}
             onClick={() => nextStepMutation.mutate()}
@@ -498,8 +540,13 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
           >
             {nextStepMutation.isPending ? "Saving…" : "Save next step"}
           </Button>
-        ) : null}
-      </div>
+      </div> : (
+        <div className="mt-4 border-t border-[#E4E9EF] pt-4">
+          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Next step</div>
+          <p className="mt-1 text-[13px]">{deal.nextStep ?? "None set"}</p>
+          <div className={`mt-1 text-[11.5px] ${TONE.muted}`}>Due {onDate(deal.nextStepDueOn)}</div>
+        </div>
+      )}
     </Panel>
   )
 }
@@ -566,6 +613,57 @@ function TimelinePanel({ opportunityId }: { opportunityId: string }) {
             </li>
           ))}
         </ul>
+      )}
+    </Panel>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+
+function HistoryPanel({ opportunityId }: { opportunityId: string }) {
+  const { accessToken } = useSession()
+  const query = useQuery({
+    queryKey: salesKeys.opportunityHistory(opportunityId),
+    queryFn: () => getOpportunityHistory(accessToken!, opportunityId),
+    enabled: !!accessToken,
+  })
+
+  return (
+    <Panel>
+      <PanelHeading title="History" />
+      {query.isPending ? (
+        <div className="space-y-3"><Skeleton className="h-3.5 w-2/3" /><Skeleton className="h-3.5 w-1/2" /></div>
+      ) : query.isError ? (
+        <PanelAlert>
+          <span className="flex flex-wrap items-center gap-2">
+            <span>{toMessage(query.error)}</span>
+            <Button type="button" variant="link" onClick={() => query.refetch()} className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline">Try again</Button>
+          </span>
+        </PanelAlert>
+      ) : (query.data?.items.length ?? 0) === 0 ? (
+        <p className={`text-[12.5px] ${TONE.muted}`}>No field changes have been recorded yet.</p>
+      ) : (
+        <>
+          {query.data?.truncated ? <PanelNotice>Showing the newest {query.data.limit} changes.</PanelNotice> : null}
+          <ul>
+            {query.data!.items.map((entry) => (
+              <li key={entry.id} className="border-b border-[#EEF1F5] py-2.5 last:border-b-0">
+                <div className={`text-[11.5px] ${TONE.muted}`}>
+                  {[entry.changedByName, new Date(entry.changedAt).toLocaleString("en-GB")].filter(Boolean).join(" · ")}
+                </div>
+                <ul className="mt-1 space-y-1">
+                  {entry.changes.map((change) => (
+                    <li key={change.field} className="text-[12.5px]">
+                      <span className="font-semibold">{change.label}:</span>{" "}
+                      {change.before === null ? change.after : <>{change.before} → {change.after}</>}
+                    </li>
+                  ))}
+                </ul>
+                {entry.note ? <p className={`mt-1 text-[12px] ${TONE.muted}`}>{entry.note}</p> : null}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Panel>
   )
@@ -678,19 +776,7 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
                 canWrite={canManage}
               />
               <TimelinePanel opportunityId={deal.id} />
-              {/*
-                Said rather than shown. An account has a field-by-field History
-                panel; a deal does not, because no endpoint returns one yet.
-                Rendering an empty panel here would claim nothing had ever
-                changed, which is a different and false statement.
-              */}
-              <Panel>
-                <PanelHeading title="History" />
-                <p className={`text-[12.5px] ${TONE.muted}`}>
-                  A field-by-field record for a deal is not built yet. Every change is audited on
-                  the server, and stage changes, comments and closures appear on the Timeline above.
-                </p>
-              </Panel>
+              <HistoryPanel opportunityId={deal.id} />
             </div>
           </div>
         </>

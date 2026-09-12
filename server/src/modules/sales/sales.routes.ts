@@ -28,7 +28,9 @@ import {
   deleteOpportunityLineHandler,
   getOpportunityHandler,
   getOpportunityTimelineHandler,
+  getOpportunityHistoryHandler,
   listOpportunitiesHandler,
+  listOpportunityOwnersHandler,
   listSalesCommentsHandler,
   reorderOpportunityLinesHandler,
   suggestOpportunityLinesHandler,
@@ -81,12 +83,14 @@ router.post(
 
 router.get("/opportunities", requireAuth, requireSales(), listOpportunitiesHandler)
 router.post("/opportunities", requireAuth, requireSales(), createOpportunityHandler)
+router.get("/opportunities/owners", requireAuth, requireSales(), listOpportunityOwnersHandler)
 router.get("/opportunities/:id", requireAuth, requireSales(), getOpportunityHandler)
 router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunityHandler)
 router.patch("/opportunities/:id/stage", requireAuth, requireSales(), changeOpportunityStageHandler)
 router.patch("/opportunities/:id/status", requireAuth, requireSales(), changeOpportunityStatusHandler)
 router.patch("/opportunities/:id/next-step", requireAuth, requireSales(), changeOpportunityNextStepHandler)
 router.get("/opportunities/:id/timeline", requireAuth, requireSales(), getOpportunityTimelineHandler)
+router.get("/opportunities/:id/history", requireAuth, requireSales(), getOpportunityHistoryHandler)
 
 router.post("/opportunities/:id/lines", requireAuth, requireSales(), addOpportunityLineHandler)
 router.put("/opportunities/:id/lines/reorder", requireAuth, requireSales(), reorderOpportunityLinesHandler)

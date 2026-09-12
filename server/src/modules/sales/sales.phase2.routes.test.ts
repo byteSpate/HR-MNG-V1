@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
 vi.mock("./opportunity.service", () => ({
-  createOpportunity: vi.fn(), listOpportunities: vi.fn(), getOpportunity: vi.fn(),
+  createOpportunity: vi.fn(), listOpportunities: vi.fn(), listOpportunityOwners: vi.fn(), getOpportunity: vi.fn(),
   updateOpportunity: vi.fn(), changeOpportunityStage: vi.fn(),
   changeOpportunityStatus: vi.fn(), changeOpportunityNextStep: vi.fn(),
-  getOpportunityTimeline: vi.fn(),
+  getOpportunityTimeline: vi.fn(), getOpportunityHistory: vi.fn(),
 }))
 vi.mock("./opportunity.line.service", () => ({
   addOpportunityLine: vi.fn(), updateOpportunityLine: vi.fn(), deleteOpportunityLine: vi.fn(),
@@ -38,7 +38,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(opportunities.createOpportunity).mockResolvedValue({ id: "opp-1" } as any)
   vi.mocked(opportunities.listOpportunities).mockResolvedValue({ items: [], nextCursor: null } as any)
+  vi.mocked(opportunities.listOpportunityOwners).mockResolvedValue([] as any)
   vi.mocked(opportunities.getOpportunity).mockResolvedValue({ id: "opp-1" } as any)
+  vi.mocked(opportunities.getOpportunityHistory).mockResolvedValue({ items: [], truncated: false, limit: 100 } as any)
   vi.mocked(opportunities.changeOpportunityStage).mockResolvedValue({ id: "opp-1" } as any)
   vi.mocked(lines.addOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
   vi.mocked(lines.updateOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
@@ -68,6 +70,21 @@ describe("Phase 2 sales routes", () => {
       .set("Authorization", auth("SALES_USER")).expect(200)
     await request(app).get("/api/sales/opportunities/opp-1")
       .set("Authorization", auth("SALES_USER")).expect(200)
+  })
+
+  it("parses action filters and serves opportunity history", async () => {
+    await request(app).get("/api/sales/opportunities?closing=30&quiet=30&stuck=21")
+      .set("Authorization", auth("SALES_USER")).expect(200)
+    expect(opportunities.listOpportunities).toHaveBeenLastCalledWith(
+      expect.objectContaining({ closing: 30, quiet: 30, stuck: 21 }),
+      expect.objectContaining({ sub: "user-1" })
+    )
+
+    await request(app).get("/api/sales/opportunities/opp-1/history")
+      .set("Authorization", auth("SALES_USER")).expect(200)
+    expect(opportunities.getOpportunityHistory).toHaveBeenCalledWith(
+      "opp-1", expect.objectContaining({ sub: "user-1" })
+    )
   })
 
   it("rejects an invalid stage before calling the service", async () => {

@@ -201,6 +201,7 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["sales", "accounts", accountId, "contacts"] })
     queryClient.invalidateQueries({ queryKey: ["sales", "accounts", accountId, "history"] })
+    queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
   }
 
   const addMutation = useMutation({
@@ -457,6 +458,7 @@ function TimelinePanel({
     onSuccess: () => {
       setLogOpen(false)
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts", accountId, "timeline"] })
+      queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
     },
     onError: (err) => setFormError(toMessage(err)),
   })

@@ -12,7 +12,6 @@ import type { DashboardStat, SalesActionRow, SalesQuarterRow, SalesTeamRow } fro
 import type { Stat } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { StatCard } from "@/components/dashboard/stat-card"
-import { Tag } from "@/components/dashboard/tag"
 import {
   Field,
   FormError,
@@ -95,13 +94,19 @@ function QuarterTable({ quarters }: { quarters: SalesQuarterRow[] }) {
   )
 }
 
-function ActionRows({ rows }: { rows: SalesActionRow[] }) {
+function ActionRows({ rows, scope, employeeId }: { rows: SalesActionRow[]; scope: "me" | "employee" | "all"; employeeId: string | null }) {
   return (
     <div className="grid gap-2.5 sm:grid-cols-2">
       {rows.map((row, i) => (
         <Link
           key={row.key}
-          href={`/sales${row.href}`}
+          href={`/sales${
+            scope === "all"
+              ? row.href
+              : row.href.startsWith("/opportunities")
+                ? `${row.href}&${scope === "me" ? "mine=true" : `ownerEmployeeId=${employeeId}`}`
+                : `${row.href}&ownerEmployeeId=${employeeId}`
+          }`}
           style={stagger(i)}
           className="rise-in group flex items-center justify-between gap-3 rounded-md border border-[#E4E9EF] bg-white px-4 py-3 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-[#CBD5E1] hover:shadow-[0_2px_10px_rgba(16,24,40,0.06)] motion-reduce:animate-none motion-reduce:transition-none motion-reduce:hover:translate-y-0"
         >
@@ -122,7 +127,7 @@ function ActionRows({ rows }: { rows: SalesActionRow[] }) {
   )
 }
 
-function TeamTable({ team }: { team: SalesTeamRow[] }) {
+function TeamTable({ team, onReview }: { team: SalesTeamRow[]; onReview: (employeeId: string) => void }) {
   return (
     <div className="overflow-x-auto rounded-md border border-[#E4E9EF] bg-white">
       <table className="w-full min-w-[32rem] border-collapse text-[12.5px]">
@@ -133,6 +138,7 @@ function TeamTable({ team }: { team: SalesTeamRow[] }) {
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Won</th>
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Ongoing</th>
             <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Value</th>
+            <th className="px-4 py-2.5" aria-label="Review" />
           </tr>
         </thead>
         <tbody>
@@ -150,10 +156,82 @@ function TeamTable({ team }: { team: SalesTeamRow[] }) {
               <td className="px-4 py-2.5 tabular-nums">{row.achievement}</td>
               <td className="px-4 py-2.5 tabular-nums">{row.ongoing}</td>
               <td className="px-4 py-2.5 text-right tabular-nums">{taka(row.valueWon)}</td>
+              <td className="px-4 py-2.5 text-right">
+                <button
+                  type="button"
+                  onClick={() => onReview(row.employeeId)}
+                  className="rounded-md px-2 py-1 text-[12px] font-semibold text-[#5F6B7C] transition-colors hover:bg-[#F1F4F8] hover:text-[#1C2733] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                >
+                  Review
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function ScopeBar({
+  isSalesAdmin,
+  selectedEmployeeId,
+  team,
+  data,
+  onSelect,
+  onSetTarget,
+}: {
+  isSalesAdmin: boolean
+  selectedEmployeeId: string
+  team: SalesTeamRow[]
+  data: { scope: "me" | "employee" | "all"; employeeName: string | null }
+  onSelect: (employeeId: string) => void
+  onSetTarget: () => void
+}) {
+  const scopeDescription =
+    data.scope === "all"
+      ? "Team pipeline and shared priorities"
+      : data.scope === "employee"
+        ? `Individual pipeline for ${data.employeeName}`
+        : "Your accounts and shared priorities"
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 border-y border-[#E4E9EF] py-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {isSalesAdmin ? (
+            <Select value={selectedEmployeeId} onValueChange={(value) => onSelect(value ?? "all")}>
+              <SelectTrigger aria-label="Dashboard scope" className="h-8 min-w-[12.5rem] border-0 bg-[#F7F9FB] text-[12.5px] font-bold shadow-none hover:bg-[#F1F4F8]">
+                <SelectValue>
+                  {(value: string | null) =>
+                    value === "all"
+                      ? "Everyone"
+                      : team.find((person) => person.employeeId === value)?.employeeName ?? "Sales employee"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Everyone</SelectItem>
+                {team.map((person) => (
+                  <SelectItem key={person.employeeId} value={person.employeeId}>{person.employeeName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-[12.5px] font-bold">My sales view</span>
+          )}
+          <span className={`text-[12px] ${TONE.muted}`}>{scopeDescription}</span>
+        </div>
+      </div>
+      {isSalesAdmin && data.scope !== "all" && data.employeeName ? (
+        <Button
+          type="button"
+          onClick={onSetTarget}
+          className="h-8 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+        >
+          Set quarterly targets
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -275,10 +353,15 @@ export function SalesDashboard() {
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
 
   // An admin's default view is the team (§7). Everybody else only ever has one.
-  const [scope, setScope] = useState<"me" | "all">(isSalesAdmin ? "all" : "me")
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("all")
   const [targetsOpen, setTargetsOpen] = useState(false)
 
-  const employeeId = scope === "all" ? "all" : undefined
+  const employeeId = isSalesAdmin ? selectedEmployeeId : undefined
+  const teamQuery = useQuery({
+    queryKey: salesKeys.dashboard("all"),
+    queryFn: () => getSalesDashboard(accessToken!, "all"),
+    enabled: isAuthed && isSalesAdmin,
+  })
   const query = useQuery({
     queryKey: salesKeys.dashboard(employeeId),
     queryFn: () => getSalesDashboard(accessToken!, employeeId),
@@ -292,28 +375,12 @@ export function SalesDashboard() {
       <PageHeader
         kicker="Sales"
         title="Techno Sales Hub"
-        sub="Your quarter, and what needs doing across the accounts you work."
+        sub={
+          isSalesAdmin
+            ? "The team's quarter, with a direct path into each person's work."
+            : "Your quarter, and what needs doing across the accounts you work."
+        }
       />
-
-      {isSalesAdmin ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {(["all", "me"] as const).map((s) => (
-            <Button
-              key={s}
-              type="button"
-              onClick={() => setScope(s)}
-              aria-pressed={scope === s}
-              className={
-                scope === s
-                  ? "h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
-                  : "h-8 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
-              }
-            >
-              {s === "all" ? "Everyone" : "Mine"}
-            </Button>
-          ))}
-        </div>
-      ) : null}
 
       {sessionStatus === "loading" || query.isPending ? (
         <div className="mt-5 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -337,8 +404,16 @@ export function SalesDashboard() {
         </div>
       ) : data ? (
         <>
+          <ScopeBar
+            isSalesAdmin={isSalesAdmin}
+            selectedEmployeeId={selectedEmployeeId}
+            team={teamQuery.data?.team ?? []}
+            data={data}
+            onSelect={setSelectedEmployeeId}
+            onSetTarget={() => setTargetsOpen(true)}
+          />
           <Band
-            title={scope === "all" ? "The team this quarter" : "My quarter"}
+            title={data.scope === "all" ? "The team this quarter" : data.scope === "employee" ? `${data.employeeName}'s quarter` : "My quarter"}
             sub={`Q${data.quarter} ${data.calendarYear}`}
           >
             <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -368,19 +443,18 @@ export function SalesDashboard() {
               title="Everyone"
               sub="Each person's quarter, with the target somebody set for them."
             >
-              <TeamTable team={data.team} />
+              <TeamTable team={data.team} onReview={setSelectedEmployeeId} />
             </Band>
           ) : null}
 
           <Band title="What needs doing">
-            <ActionRows rows={data.actions} />
+            <ActionRows rows={data.actions} scope={data.scope} employeeId={data.employeeId} />
             {/* Named rather than rendered as empty rows. An empty "Tasks due"
                 row reads as "no tasks", which is a number nobody measured. */}
             {data.notBuilt.length > 0 ? (
               <div className="mt-2.5">
                 <PanelNotice>
-                  Meetings and tasks are not built yet, so this page cannot show what is due today
-                  or overdue. They arrive with Phase 3.
+                  {data.notBuilt.map((item) => item === "meetings" ? "Meetings" : item === "tasks" ? "Tasks" : item).join(" and ")} are not built yet, so this page cannot show what is due today or overdue. They arrive with Phase 3.
                 </PanelNotice>
               </div>
             ) : null}
@@ -389,19 +463,6 @@ export function SalesDashboard() {
           {/* Hidden from a Sales User rather than disabled: a target somebody
               sets for themselves is not a target, so the control is not theirs
               to see. */}
-          {isSalesAdmin && data.scope !== "all" && data.employeeId ? (
-            <div className="mt-4 flex items-center gap-2">
-              <Button
-                type="button"
-                onClick={() => setTargetsOpen(true)}
-                className="h-8 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
-              >
-                Set quarterly targets
-              </Button>
-              <Tag label="Sales Admin" tone="neutral" />
-            </div>
-          ) : null}
-
           {isSalesAdmin && data.employeeId ? (
             <TargetEditor
               employeeId={data.employeeId}

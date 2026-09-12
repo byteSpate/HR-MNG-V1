@@ -449,11 +449,15 @@ function toSummary(
  * for every admin who opened it.
  */
 export async function listSalesAccounts(
-  actor: AccessTokenPayload
+  actor: AccessTokenPayload,
+  unverified = false
 ): Promise<SalesAccountSummary[]> {
   const employeeId = await employeeIdFor(actor)
   const accounts = await prisma.salesAccount.findMany({
-    where: ownedScopeFor(employeeId),
+    where: {
+      ...ownedScopeFor(employeeId),
+      ...(unverified ? { contacts: { none: { status: "VERIFIED" as const } } } : {}),
+    },
     orderBy: { name: "asc" },
     include: SUMMARY_INCLUDE,
   })
@@ -467,14 +471,23 @@ export async function listSalesAccounts(
  * of the split `requireAccountVisible` documents in sales.access.ts.
  */
 export async function listAllSalesAccounts(
-  actor: AccessTokenPayload
+  actor: AccessTokenPayload,
+  unverified = false,
+  ownerEmployeeId?: string
 ): Promise<SalesAccountSummary[]> {
   // Independent: this list is deliberately unscoped, so the caller's employee
   // id is not part of the query — it is only needed afterwards, to decide
   // `canManage` per row. Issued together rather than one after the other.
+  const where = {
+    ...(unverified ? { contacts: { none: { status: "VERIFIED" as const } } } : {}),
+    ...(ownerEmployeeId ? { ownerEmployeeId } : {}),
+  }
   const [employeeId, accounts] = await Promise.all([
     employeeIdFor(actor),
-    prisma.salesAccount.findMany({ orderBy: { name: "asc" }, include: SUMMARY_INCLUDE }),
+    prisma.salesAccount.findMany({
+      ...(Object.keys(where).length > 0 ? { where } : {}),
+      orderBy: { name: "asc" }, include: SUMMARY_INCLUDE,
+    }),
   ])
   return accounts.map((a) => toSummary(a, actor, employeeId))
 }

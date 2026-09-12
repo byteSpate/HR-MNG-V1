@@ -116,7 +116,7 @@ async function accountsWorkedOn(
             ? { changedBy: subject.userIds[0] }
             : { changedBy: { in: subject.userIds } }
           : {}),
-        ...(window ? { createdAt: window } : {}),
+        ...(window ? { changedAt: window } : {}),
       },
       select: { entityId: true },
     }),

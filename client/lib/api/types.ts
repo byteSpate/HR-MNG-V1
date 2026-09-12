@@ -177,6 +177,16 @@ export interface AccountHistory {
   limit: number
 }
 
+export interface OpportunityHistoryEntry extends Omit<AccountHistoryEntry, "entity"> {
+  entity: "OPPORTUNITY" | "OPPORTUNITY_LINE"
+}
+
+export interface OpportunityHistory {
+  items: OpportunityHistoryEntry[]
+  truncated: boolean
+  limit: number
+}
+
 export interface LoginResponse {
   accessToken: string
   user: PublicUser

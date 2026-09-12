@@ -4,15 +4,15 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     idCounter: { upsert: vi.fn() },
-    user: { findUnique: vi.fn() },
-    employee: { findUnique: vi.fn() },
+    user: { findUnique: vi.fn(), findMany: vi.fn() },
+    employee: { findUnique: vi.fn(), findMany: vi.fn() },
     salesAccount: { findFirst: vi.fn(), findUnique: vi.fn() },
     salesAccountAssignment: { findUnique: vi.fn(), create: vi.fn() },
     opportunity: {
       create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(),
       update: vi.fn(), count: vi.fn(),
     },
-    auditLog: { create: vi.fn() },
+    auditLog: { create: vi.fn(), findMany: vi.fn() },
     event: { create: vi.fn(), findMany: vi.fn() },
     salesComment: { findMany: vi.fn() },
   },
@@ -27,7 +27,9 @@ import {
   changeOpportunityStatus,
   createOpportunity,
   getOpportunity,
+  getOpportunityHistory,
   listOpportunities,
+  listOpportunityOwners,
 } from "./opportunity.service"
 import { nextOpportunitySerial } from "./sales.serial"
 
@@ -78,6 +80,9 @@ beforeEach(() => {
   vi.mocked(prisma.opportunity.count).mockResolvedValue(0)
   vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity() as any)
   vi.mocked(prisma.opportunity.findUnique).mockResolvedValue(opportunity() as any)
+  vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as any)
+  vi.mocked(prisma.employee.findMany).mockResolvedValue([] as any)
+  vi.mocked(prisma.user.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.opportunity.update).mockImplementation((async (args: any) =>
     opportunity({ ...args.data }) as any) as any)
 })
@@ -179,6 +184,64 @@ describe("opportunity reads and plain edits", () => {
           { assignments: { some: { employeeId: "emp-1" } } },
         ] },
       }),
+    }))
+  })
+
+  it("lists every owner represented in the viewer's opportunity directory", async () => {
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([
+      { ownerEmployeeId: "emp-2", owner: { id: "emp-2", fullName: "Karim" } },
+      { ownerEmployeeId: "emp-1", owner: { id: "emp-1", fullName: "Rahim" } },
+    ] as any)
+    await expect(listOpportunityOwners(USER)).resolves.toEqual([
+      { id: "emp-2", fullName: "Karim" }, { id: "emp-1", fullName: "Rahim" },
+    ])
+    expect(prisma.opportunity.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      distinct: ["ownerEmployeeId"],
+      where: { salesAccount: expect.any(Object) },
+    }))
+  })
+
+  it("turns dashboard action filters into matching date predicates", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+
+    await listOpportunities({ closing: 30, quiet: 30, stuck: 21 } as any, USER)
+
+    expect(prisma.opportunity.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        status: "ONGOING",
+        expectedCloseDate: { gte: expect.any(Date), lte: expect.any(Date) },
+        lastActivityAt: { lt: expect.any(Date) },
+        stageChangedAt: { lt: expect.any(Date) },
+      }),
+    }))
+  })
+
+  it("returns opportunity and line audits as one capped history", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ lines: [] }) as any)
+    vi.mocked(prisma.auditLog.findMany)
+      // The line has been deleted, so only its create/delete audit anchors it
+      // to this Opportunity. Its earlier edits must still remain visible.
+      .mockResolvedValueOnce([{ entityId: "line-deleted" }] as any)
+      .mockResolvedValueOnce([{
+      id: "audit-1", entity: "OPPORTUNITY_LINE", entityId: "line-deleted", action: "UPDATE",
+      changedAt: NOW, changedBy: USER.sub, before: { product: "Old" }, after: { product: "Switch" }, note: null,
+      }] as any)
+    vi.mocked(prisma.user.findMany).mockResolvedValue([{
+      id: USER.sub, email: USER.email, displayName: "Rahim", employee: null,
+    }] as any)
+
+    await expect(getOpportunityHistory("opp-1", USER)).resolves.toMatchObject({
+      items: [{ entity: "OPPORTUNITY_LINE", changedByName: "Rahim", changes: [{ label: "Product" }] }],
+      truncated: false,
+      limit: 100,
+    })
+    expect(prisma.auditLog.findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: { OR: [
+        { entity: "OPPORTUNITY", entityId: "opp-1" },
+        { entity: "OPPORTUNITY_LINE", entityId: { in: ["line-deleted"] } },
+      ] },
+      take: 101,
     }))
   })
 

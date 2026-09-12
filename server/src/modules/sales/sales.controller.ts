@@ -19,8 +19,10 @@ import {
   changeOpportunityStatus,
   createOpportunity,
   getOpportunity,
+  getOpportunityHistory,
   getOpportunityTimeline,
   listOpportunities,
+  listOpportunityOwners,
   updateOpportunity,
 } from "./opportunity.service"
 import {
@@ -64,10 +66,15 @@ export async function listSalesAccountsHandler(
     // ?scope=all is "All Accounts" — the shared, read-only directory. Its
     // default (no query, or anything else) is "My Accounts" — owner,
     // assignee, or admin — the behaviour this route always had.
+    const unverified = req.query.unverified === "true"
     const items =
       req.query.scope === "all"
-        ? await listAllSalesAccounts(req.user!)
-        : await listSalesAccounts(req.user!)
+        ? await listAllSalesAccounts(
+            req.user!,
+            unverified,
+            typeof req.query.ownerEmployeeId === "string" ? req.query.ownerEmployeeId : undefined
+          )
+        : await listSalesAccounts(req.user!, unverified)
     return res.status(200).json(items)
   } catch (err) {
     return next(err)
@@ -221,6 +228,11 @@ export async function listOpportunitiesHandler(req: Request, res: Response, next
   catch (err) { return next(err) }
 }
 
+export async function listOpportunityOwnersHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listOpportunityOwners(req.user!)) }
+  catch (err) { return next(err) }
+}
+
 export async function getOpportunityHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await getOpportunity(req.params.id, req.user!)) }
   catch (err) { return next(err) }
@@ -248,6 +260,11 @@ export async function changeOpportunityNextStepHandler(req: Request<{ id: string
 
 export async function getOpportunityTimelineHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await getOpportunityTimeline(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function getOpportunityHistoryHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await getOpportunityHistory(req.params.id, req.user!)) }
   catch (err) { return next(err) }
 }
 

@@ -145,6 +145,7 @@ function EditAccountForm({
         queryKey: salesKeys.accountTimeline(account.id),
       });
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] });
     },
     // Verbatim: the refusal names the person and which rule they fail.
     onError: (err) => setError(toMessage(err)),
@@ -240,6 +241,7 @@ function EditAccountForm({
         <Select
           value={ownerEmployeeId}
           onValueChange={(v) => setOwnerEmployeeId(v ?? "")}
+          disabled={eligibleQuery.isPending || eligibleQuery.isError || employees.length === 0}
         >
           <SelectTrigger className="w-full">
             <SelectValue>

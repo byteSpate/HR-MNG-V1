@@ -116,6 +116,9 @@ export const listOpportunitySchema = z.object({
   salesAccountId: z.string().uuid().optional(),
   ownerEmployeeId: z.string().uuid().optional(),
   mine: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+  closing: z.coerce.number().int().min(1).max(365).optional(),
+  quiet: z.coerce.number().int().min(1).max(365).optional(),
+  stuck: z.coerce.number().int().min(1).max(365).optional(),
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 })

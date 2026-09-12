@@ -120,10 +120,12 @@ function toRows(accounts: SalesAccountSummary[], animate: boolean): TableCell[][
   ])
 }
 
-export function AccountsPage({ scope }: { scope: "mine" | "all" }) {
+export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; filters?: { unverified?: boolean; ownerEmployeeId?: string } }) {
   const { accessToken, user, status: sessionStatus } = useSession()
   const queryClient = useQueryClient()
   const router = useRouter()
+  const unverified = filters.unverified ?? false
+  const ownerEmployeeIdFilter = filters.ownerEmployeeId
 
   const [createOpen, setCreateOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -153,8 +155,8 @@ export function AccountsPage({ scope }: { scope: "mine" | "all" }) {
   }, [shouldRedirect, router])
 
   const accountsQuery = useQuery({
-    queryKey: ["sales", "accounts", scope],
-    queryFn: () => (scope === "all" ? listAllSalesAccounts(accessToken!) : listSalesAccounts(accessToken!)),
+    queryKey: ["sales", "accounts", scope, { unverified, ownerEmployeeId: ownerEmployeeIdFilter }],
+    queryFn: () => (scope === "all" ? listAllSalesAccounts(accessToken!, unverified, ownerEmployeeIdFilter) : listSalesAccounts(accessToken!, unverified)),
     enabled: isAuthed && !shouldRedirect,
   })
 
@@ -190,6 +192,7 @@ export function AccountsPage({ scope }: { scope: "mine" | "all" }) {
     onSuccess: () => {
       setCreateOpen(false)
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts"] })
+      queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
     },
     onError: (err) => {
       setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")

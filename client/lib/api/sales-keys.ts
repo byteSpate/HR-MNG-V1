@@ -34,6 +34,7 @@ export const salesKeys = {
     ["sales", "opportunities", filters] as const,
   opportunity: (id: string) => ["sales", "opportunities", id] as const,
   opportunityTimeline: (id: string) => ["sales", "opportunities", id, "timeline"] as const,
+  opportunityHistory: (id: string) => ["sales", "opportunities", id, "history"] as const,
 
   // ── comments ────────────────────────────────────────────────────────────
   comments: (entity: string, entityId: string) => ["sales", "comments", entity, entityId] as const,
@@ -52,11 +53,12 @@ export const salesKeys = {
  * the dashboard — the page furthest from the edit and the least likely to be
  * noticed going stale.
  */
-export function opportunityWriteKeys(id: string, employeeId?: string) {
+export function opportunityWriteKeys(id: string) {
   return [
     salesKeys.opportunity(id),
     salesKeys.opportunities(),
     salesKeys.opportunityTimeline(id),
-    salesKeys.dashboard(employeeId),
+    salesKeys.opportunityHistory(id),
+    ["sales", "dashboard"] as const,
   ]
 }

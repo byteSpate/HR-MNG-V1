@@ -193,6 +193,8 @@ describe("the sales dashboard, after review", () => {
         where: expect.objectContaining({ entity: "OPPORTUNITY", changedBy: "user-2" }),
       })
     )
+    const auditCall = vi.mocked(prisma.auditLog.findMany).mock.calls[0][0] as any
+    expect(auditCall.where.changedAt).toEqual({ gte: expect.any(Date), lt: expect.any(Date) })
   })
 
   it("reads activity from an immutable timestamp, not from lastActivityAt", async () => {

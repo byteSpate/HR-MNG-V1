@@ -142,6 +142,21 @@ describe("GET /api/sales/accounts", () => {
       expect.not.objectContaining({ where: expect.anything() })
     )
   })
+
+  it("filters the shared directory to one owner's accounts with no verified contact", async () => {
+    const ownerEmployeeId = "11111111-1111-4111-8111-111111111111"
+    await request(app)
+      .get(`/api/sales/accounts?scope=all&unverified=true&ownerEmployeeId=${ownerEmployeeId}`)
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        ownerEmployeeId,
+        contacts: { none: { status: "VERIFIED" } },
+      },
+    }))
+  })
 })
 
 describe("GET /api/sales/accounts/:id", () => {
