@@ -80,7 +80,10 @@ function findClash(client: typeof prisma, name: string) {
  * releases automatically on commit or rollback.
  */
 async function lockAccountNames(client: typeof prisma): Promise<void> {
-  await client.$queryRaw`SELECT pg_advisory_xact_lock(1935762243, 1)`
+  // `SELECT 1 FROM`, not `SELECT pg_advisory_xact_lock(...)`: the function
+  // returns `void`, a column type the pg driver adapter cannot deserialize, so
+  // the bare form takes the lock and then throws on reading the result.
+  await client.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(1935762243, 1)`
 }
 
 /** Lock one existing account before its authorization and before-values are read. */
