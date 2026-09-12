@@ -137,7 +137,39 @@ describe("sales comments", () => {
       ...COMMENT, kind: "MANAGEMENT_NOTE",
     } as any)
     await expect(updateSalesComment("comment-1", { body: "Changed" }, USER))
-      .rejects.toThrow(/management note.*Sales Admin/i)
+      .rejects.toThrow(/does not exist, or is not yours/i)
+    expect(prisma.salesComment.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("management notes are for Sales Admins only", () => {
+  const NOTE = { ...COMMENT, kind: "MANAGEMENT_NOTE", authorUserId: "user-9", authorEmployeeId: "emp-9" }
+
+  it("does not ask for management notes when a Sales User lists comments", async () => {
+    await listSalesComments({ entity: "SALES_ACCOUNT", entityId: "account-1" }, USER)
+
+    // Excluded in the query, not filtered afterwards: a Sales User must not
+    // cause the rows to be read at all.
+    expect(prisma.salesComment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ kind: { not: "MANAGEMENT_NOTE" } }),
+    }))
+  })
+
+  it.each([["a Sales Admin", ADMIN], ["a Super Admin", SUPER_ADMIN]])(
+    "lists management notes for %s", async (_label, actor) => {
+      await listSalesComments({ entity: "SALES_ACCOUNT", entityId: "account-1" }, actor)
+
+      const where = (vi.mocked(prisma.salesComment.findMany).mock.calls[0][0] as any).where
+      expect(where).not.toHaveProperty("kind")
+    }
+  )
+
+  it("answers a Sales User's edit of a management note as if it did not exist", async () => {
+    vi.mocked(prisma.salesComment.findUnique).mockResolvedValue(NOTE as any)
+
+    // A 403 naming the kind would confirm that a hidden note is there.
+    await expect(updateSalesComment("comment-1", { body: "Changed" }, USER))
+      .rejects.toMatchObject({ statusCode: 404, message: expect.stringMatching(/does not exist, or is not yours/i) })
     expect(prisma.salesComment.update).not.toHaveBeenCalled()
   })
 })

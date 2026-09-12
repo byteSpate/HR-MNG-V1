@@ -167,3 +167,20 @@ export async function requireOpportunityAccess(
 
 /** Reads use the same inherited account scope; opportunity ids reveal no wider directory. */
 export const requireOpportunityVisible = requireOpportunityAccess
+
+/** A Sales Admin, or a Super Admin, who holds every Sales Hub power. */
+export function isSalesAdmin(actor: AccessTokenPayload): boolean {
+  return actor.role === Role.SUPER_ADMIN || actor.salesRole === SalesRole.SALES_ADMIN
+}
+
+/**
+ * Which comments a caller may read. A management note is where a manager says
+ * something candid about an account or a deal, so it is written *and read* by
+ * Sales Admins only — the owner and collaborators never see one.
+ *
+ * A `where` fragment rather than a filter over fetched rows: a caller who may
+ * not read a note must not cause it to be read.
+ */
+export function commentKindScopeFor(actor: AccessTokenPayload): Prisma.SalesCommentWhereInput {
+  return isSalesAdmin(actor) ? {} : { kind: { not: "MANAGEMENT_NOTE" } }
+}

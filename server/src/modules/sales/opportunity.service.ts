@@ -9,6 +9,7 @@ import { dec } from "../payroll/payroll.money"
 import {
   accountScopeFor,
   canManageAccount,
+  commentKindScopeFor,
   employeeIdFor,
   OPPORTUNITY_NOT_VISIBLE,
   requireAccountAccess,
@@ -390,7 +391,7 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
   const visible = await getOpportunity(id, actor)
   const [comments, events] = await Promise.all([
     prisma.salesComment.findMany({
-      where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100,
+      where: { entity: "OPPORTUNITY", entityId: id, ...commentKindScopeFor(actor) }, orderBy: { createdAt: "desc" }, take: 100,
       include: {
         author: { select: { fullName: true } },
         authorUser: { select: { displayName: true, email: true } },

@@ -28,6 +28,7 @@ import {
   createOpportunity,
   getOpportunity,
   getOpportunityHistory,
+  getOpportunityTimeline,
   listOpportunities,
   listOpportunityOwners,
 } from "./opportunity.service"
@@ -375,5 +376,29 @@ describe("stage, status, and next step", () => {
     }))
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("the deal Timeline, management notes", () => {
+  const ADMIN = { ...USER, salesRole: "SALES_ADMIN" } as any
+
+  beforeEach(() => {
+    vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.event.findMany).mockResolvedValue([] as any)
+  })
+
+  it("leaves management notes out of a Sales User's deal Timeline", async () => {
+    await getOpportunityTimeline("opp-1", USER)
+
+    expect(prisma.salesComment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ kind: { not: "MANAGEMENT_NOTE" } }),
+    }))
+  })
+
+  it("keeps management notes in a Sales Admin's deal Timeline", async () => {
+    await getOpportunityTimeline("opp-1", ADMIN)
+
+    const where = (vi.mocked(prisma.salesComment.findMany).mock.calls[0][0] as any).where
+    expect(where).not.toHaveProperty("kind")
   })
 })

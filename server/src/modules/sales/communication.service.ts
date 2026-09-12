@@ -7,6 +7,7 @@ import type { SalesCommunicationSummary, TimelineItem } from "./sales.types"
 import type { LogCommunicationBody } from "./sales.validators"
 import {
   accountScopeFor,
+  commentKindScopeFor,
   employeeIdFor,
   requireAccountAccess,
   requireAccountVisible,
@@ -151,6 +152,7 @@ export async function getAccountTimeline(
   // account — owner, collaborator or admin — rather than everyone who can see
   // that it exists. Fetched conditionally and not filtered afterwards: a
   // caller with no claim on the account must not cause the rows to be read.
+  // Within that feed, management notes go to Sales Admins only.
   const employeeId = await employeeIdFor(actor)
   const worksThisAccount = await prisma.salesAccount.findFirst({
     where: { AND: [{ id: accountId }, accountScopeFor(actor, employeeId)] },
@@ -174,7 +176,7 @@ export async function getAccountTimeline(
     }),
     worksThisAccount
       ? prisma.salesComment.findMany({
-          where: { entity: "SALES_ACCOUNT", entityId: accountId },
+          where: { entity: "SALES_ACCOUNT", entityId: accountId, ...commentKindScopeFor(actor) },
           orderBy: { createdAt: "desc" },
           take: TIMELINE_LIMIT,
           include: {

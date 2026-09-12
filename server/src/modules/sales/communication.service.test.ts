@@ -270,3 +270,29 @@ describe("getAccountTimeline", () => {
     }))
   })
 })
+
+describe("getAccountTimeline, management notes", () => {
+  const ADMIN = { ...USER, salesRole: "SALES_ADMIN" } as any
+
+  beforeEach(() => {
+    vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.event.findMany).mockResolvedValue([] as any)
+  })
+
+  it("leaves management notes out of an owner's Timeline", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-2" } as any)
+
+    await getAccountTimeline("sa-1", USER)
+
+    expect(prisma.salesComment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ kind: { not: "MANAGEMENT_NOTE" } }),
+    }))
+  })
+
+  it("keeps management notes in a Sales Admin's Timeline", async () => {
+    await getAccountTimeline("sa-1", ADMIN)
+
+    const where = (vi.mocked(prisma.salesComment.findMany).mock.calls[0][0] as any).where
+    expect(where).not.toHaveProperty("kind")
+  })
+})

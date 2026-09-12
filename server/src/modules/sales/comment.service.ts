@@ -1,10 +1,15 @@
 import prisma from "../../config/prisma"
 import type { Prisma, SalesCommentKind } from "../../generated/prisma/client"
-import { Role, SalesRole } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { employeeIdFor, requireAccountAccess, requireOpportunityAccess } from "./sales.access"
+import {
+  commentKindScopeFor,
+  employeeIdFor,
+  isSalesAdmin,
+  requireAccountAccess,
+  requireOpportunityAccess,
+} from "./sales.access"
 import type { SalesCommentPage, SalesCommentSummary } from "./sales.types"
 import type { CreateSalesCommentBody, ListSalesCommentQuery, UpdateSalesCommentBody } from "./sales.validators"
 
@@ -30,21 +35,11 @@ async function authorize(
   return requireOpportunityAccess(entityId, actor, client)
 }
 
-/**
- * Checked on the way in *and* on every later edit, against the role the caller
- * holds right now rather than the one they held when they wrote it. Authorship
- * alone is not enough: somebody who wrote a management note as an admin and
- * was afterwards demoted to Sales User is still its author, and would
- * otherwise keep editing a note their current role forbids them to write.
- */
-function requireManagement(
-  actor: AccessTokenPayload,
-  kind: SalesCommentKind,
-  verb: "written" | "edited" = "written"
-) {
+/** Only a Sales Admin writes a management note, and only a Sales Admin reads one. */
+function requireManagement(actor: AccessTokenPayload, kind: SalesCommentKind) {
   if (kind !== "MANAGEMENT_NOTE") return
-  if (actor.role !== Role.SUPER_ADMIN && actor.salesRole !== SalesRole.SALES_ADMIN) {
-    throw new AppError(403, `A management note can only be ${verb} by a Sales Admin`)
+  if (!isSalesAdmin(actor)) {
+    throw new AppError(403, "A management note can only be written by a Sales Admin")
   }
 }
 
@@ -76,7 +71,7 @@ export async function listSalesComments(
 ): Promise<SalesCommentPage> {
   await authorize(query.entity, query.entityId, actor)
   const rows = await prisma.salesComment.findMany({
-    where: { entity: query.entity, entityId: query.entityId },
+    where: { entity: query.entity, entityId: query.entityId, ...commentKindScopeFor(actor) },
     orderBy: { createdAt: "desc" }, take: LIMIT + 1,
     include: {
       author: { select: { fullName: true } },
@@ -97,9 +92,14 @@ export async function updateSalesComment(
         authorUser: { select: { displayName: true, email: true } },
       },
     })
-    if (!current) throw new AppError(404, "That Sales comment does not exist, or is not yours")
+    // Hidden from anyone who is not a Sales Admin *now*, whatever they were
+    // when they wrote it: a demoted author can no longer read their old note,
+    // so cannot edit it either. Answered as not found rather than forbidden —
+    // a 403 naming the kind would confirm that the hidden note is there.
+    if (!current || (current.kind === "MANAGEMENT_NOTE" && !isSalesAdmin(actor))) {
+      throw new AppError(404, "That Sales comment does not exist, or is not yours")
+    }
     await authorize(current.entity as "SALES_ACCOUNT" | "OPPORTUNITY", current.entityId, actor, asClient(tx))
-    requireManagement(actor, current.kind, "edited")
     if (current.authorUserId !== actor.sub) {
       throw new AppError(403, "Only the author can edit this comment")
     }
