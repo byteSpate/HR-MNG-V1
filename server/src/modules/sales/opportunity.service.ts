@@ -17,6 +17,7 @@ import {
 import { employmentAllowsSales } from "./sales.eligibility"
 import { nextOpportunitySerial } from "./sales.serial"
 import { presentOpportunity } from "./opportunity.present"
+import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "./meeting.present"
 import { presentChanges, resolveNames } from "./history.present"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
@@ -389,7 +390,7 @@ export async function changeOpportunityNextStep(id: string, body: ChangeOpportun
 
 export async function getOpportunityTimeline(id: string, actor: AccessTokenPayload): Promise<{ items: TimelineItem[] }> {
   const visible = await getOpportunity(id, actor)
-  const [comments, events] = await Promise.all([
+  const [comments, events, meetings] = await Promise.all([
     prisma.salesComment.findMany({
       where: { entity: "OPPORTUNITY", entityId: id, ...commentKindScopeFor(actor) }, orderBy: { createdAt: "desc" }, take: 100,
       include: {
@@ -398,8 +399,17 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
       },
     }),
     prisma.event.findMany({ where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100 }),
+    // Meetings about this deal. Their story (scheduled, moved, cancelled) is
+    // on the account's Timeline; the deal shows the meetings themselves.
+    prisma.salesMeeting.findMany({
+      where: { opportunityId: id }, orderBy: { scheduledAt: "desc" }, take: 100,
+      select: { id: true, title: true, mode: true, status: true, scheduledAt: true },
+    }),
   ])
   const items: TimelineItem[] = [
+    ...meetings.map((row) => ({ id: `meeting:${row.id}`, kind: "meeting" as const,
+      at: row.scheduledAt.toISOString(), title: row.title,
+      meta: `${MEETING_MODE_LABEL[row.mode]} · ${MEETING_STATUS_LABEL[row.status]}`, by: null, detail: null })),
     ...comments.map((row) => ({ id: `comment:${row.id}`, kind: "comment" as const,
       at: row.createdAt.toISOString(), title: row.kind === "MANAGEMENT_NOTE" ? "Management note" : "Comment",
       meta: null, by: row.author?.fullName ?? row.authorUser.displayName ?? row.authorUser.email,

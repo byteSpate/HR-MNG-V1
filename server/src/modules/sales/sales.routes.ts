@@ -38,6 +38,11 @@ import {
   updateOpportunityHandler,
   updateOpportunityLineHandler,
   updateSalesCommentHandler,
+  changeMeetingStatusHandler,
+  createMeetingHandler,
+  getMeetingHandler,
+  listMeetingsHandler,
+  updateMeetingHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -105,6 +110,14 @@ router.get("/suggestions/oem", requireAuth, requireSales(), suggestOpportunityLi
 router.get("/comments", requireAuth, requireSales(), listSalesCommentsHandler)
 router.post("/comments", requireAuth, requireSales(), createSalesCommentHandler)
 router.patch("/comments/:id", requireAuth, requireSales(), updateSalesCommentHandler)
+
+// Meetings. Reads are open to the hub, like the account they belong to; the
+// service narrows every write to the people who work that account.
+router.get("/meetings", requireAuth, requireSales(), listMeetingsHandler)
+router.post("/meetings", requireAuth, requireSales(), createMeetingHandler)
+router.get("/meetings/:id", requireAuth, requireSales(), getMeetingHandler)
+router.patch("/meetings/:id", requireAuth, requireSales(), updateMeetingHandler)
+router.patch("/meetings/:id/status", requireAuth, requireSales(), changeMeetingStatusHandler)
 
 export default router
 

@@ -226,7 +226,7 @@ export interface OpportunityHistory {
 export interface TimelineItem {
   /** Prefixed by kind, because a communication and an event can share an id. */
   id: string
-  kind: "communication" | "event" | "comment"
+  kind: "communication" | "event" | "comment" | "meeting"
   at: string
   title: string
   meta: string | null
@@ -234,6 +234,40 @@ export interface TimelineItem {
   /** The long-form note on a communication. Null for an event — those have
       no free-text body of their own. */
   detail: string | null
+}
+
+// ── MEETINGS (phase 3) ─────────────────────────────────────────────────────
+
+export interface SalesMeetingAttendeeSummary {
+  id: string
+  side: "OURS" | "THEIRS"
+  employeeId: string | null
+  contactId: string | null
+  /** From the employee or contact record when there is one, else as typed. */
+  name: string
+  designation: string | null
+}
+
+export interface SalesMeetingSummary {
+  id: string
+  salesAccountId: string
+  salesAccountName: string
+  opportunityId: string | null
+  opportunitySerial: string | null
+  opportunityName: string | null
+  title: string
+  mode: "CUSTOMER_SITE" | "OUR_OFFICE" | "ONLINE"
+  scheduledAt: string
+  endsAt: string | null
+  location: string | null
+  notes: string | null
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED"
+  cancelReason: string | null
+  outcome: string | null
+  completedAt: string | null
+  attendees: SalesMeetingAttendeeSummary[]
+  /** Whether the viewer works the account, and so may change the meeting. */
+  canManage: boolean
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────

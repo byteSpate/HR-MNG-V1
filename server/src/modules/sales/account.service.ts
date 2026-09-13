@@ -47,7 +47,7 @@ function duplicateNameMessage(existingName: string, ownerName: string): string {
  * need. One place to assemble it, so a caller cannot select the columns and
  * then forget to pass one of them through.
  */
-function standingOf(employee: {
+export function standingOf(employee: {
   employmentStatus: EmploymentStatus
   lastWorkingDay: Date | null
   user: { salesRole: SalesRole | null; isActive: boolean } | null
