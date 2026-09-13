@@ -319,7 +319,7 @@ function TargetEditor({
           <Field
             label="Deals"
             htmlFor="target-deals"
-            hint="At least one. A target of zero is not a target."
+            help="At least one. A target of zero is not a target."
           >
             <Input
               id="target-deals"

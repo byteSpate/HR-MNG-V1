@@ -228,6 +228,7 @@ function EditAccountForm({
 
       <Field
         label="Owner"
+        help="Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
         hint={
           eligibleQuery.isPending
             ? "Loading the people who can own an account…"
@@ -235,7 +236,7 @@ function EditAccountForm({
               ? "This list could not be loaded, so the owner cannot be changed yet."
               : employees.length === 0
                 ? "No Sales User is available. Hub access is granted from an employee's record, and only Sales Users can own an account."
-                : "Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
+                : undefined
         }
       >
         <Select
@@ -278,7 +279,7 @@ function EditAccountForm({
         <Field
           label="Industry"
           htmlFor="sa-edit-industry"
-          hint="Optional. Clear it to remove it."
+          hint="Optional." help="Clear it to remove it."
         >
           <Input
             id="sa-edit-industry"
@@ -289,7 +290,7 @@ function EditAccountForm({
         <Field
           label="Website"
           htmlFor="sa-edit-website"
-          hint="Optional. Clear it to remove it."
+          hint="Optional." help="Clear it to remove it."
         >
           <Input
             id="sa-edit-website"
@@ -302,7 +303,7 @@ function EditAccountForm({
       <Field
         label="Address"
         htmlFor="sa-edit-address"
-        hint="Optional. Clear it to remove it."
+        hint="Optional." help="Clear it to remove it."
       >
         <Input
           id="sa-edit-address"
@@ -313,7 +314,7 @@ function EditAccountForm({
 
       <Field
         label="Status"
-        hint="Do not contact suppresses every reminder without deleting a word of the history."
+        help="Do not contact suppresses every reminder without deleting a word of the history."
       >
         <Select
           value={status}
@@ -345,7 +346,7 @@ function EditAccountForm({
         <Field
           label="Reason"
           htmlFor="sa-edit-reason"
-          hint="Shown beside the status, so whoever opens this next knows what happened."
+          help="Shown beside the status, so whoever opens this next knows what happened."
         >
           <Input
             id="sa-edit-reason"

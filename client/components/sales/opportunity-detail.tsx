@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { RiAddLine, RiErrorWarningLine, RiEyeLine, RiFlashlightLine } from "@remixicon/react"
@@ -15,6 +15,7 @@ import {
   getOpportunityTimeline,
   getOpportunityHistory,
   reorderOpportunityLines,
+  suggestOpportunityLineValues,
   updateOpportunityLine,
   updateOpportunity,
 } from "@/lib/api/sales"
@@ -37,6 +38,7 @@ import {
   toMessage,
 } from "@/components/dashboard/record-kit"
 import { CommentPanel } from "@/components/sales/comment-panel"
+import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
 import {
   OPPORTUNITY_STATUS_LABEL,
   OPPORTUNITY_STATUS_TONE,
@@ -80,6 +82,43 @@ function onDate(value: string | null): string {
 /* -------------------------------------------------------------------------- */
 /* Lines                                                                       */
 /* -------------------------------------------------------------------------- */
+
+/** Settles on a value once typing pauses, so a suggestion request is not sent per keystroke. */
+function useDebounced<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms)
+    return () => clearTimeout(timer)
+  }, [value, ms])
+  return settled
+}
+
+/**
+ * Values already used on deals this viewer can see, offered through the
+ * browser's own suggestion list. Free text stays allowed: a new product is
+ * typed once and suggested from then on.
+ *
+ * A failed request leaves the list empty and nothing else. Suggestions are an
+ * aid to typing, not a record, and the field works the same without them.
+ */
+function SuggestionList({ id, field, q }: { id: string; field: "product" | "brand" | "model"; q: string }) {
+  const { accessToken } = useSession()
+  const term = useDebounced(q.trim(), 250)
+  const query = useQuery({
+    queryKey: salesKeys.lineSuggestions(field, term),
+    queryFn: () => suggestOpportunityLineValues(accessToken!, field, term),
+    enabled: !!accessToken,
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
+  })
+  return (
+    <datalist id={id}>
+      {(query.data ?? []).map((value) => (
+        <option key={value} value={value} />
+      ))}
+    </datalist>
+  )
+}
 
 function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: boolean }) {
   const { accessToken } = useSession()
@@ -126,6 +165,8 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
       setAdding(false)
       clearLineForm()
       invalidate()
+      // A new product or brand is suggested from now on.
+      queryClient.invalidateQueries({ queryKey: ["sales", "suggestions"] })
     },
     onError: (err) => setError(toMessage(err)),
   })
@@ -171,7 +212,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
   return (
     <Panel>
       <PanelHeading
-        title="Line items"
+        title="Products"
         action={
           canManage && !adding ? (
             <Button
@@ -195,7 +236,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
         <PanelNotice>
           <span className="flex flex-wrap items-center gap-2">
             <span>
-              The deal value is {taka(deal.amount)} and the priced lines total {taka(deal.lineTotal)}.
+              The deal value is {taka(deal.amount)}, but the products add up to {taka(deal.lineTotal)}.
             </span>
             {canManage ? (
               <Button
@@ -205,7 +246,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                 onClick={() => reconcile.mutate()}
                 className="h-auto p-0 text-[12px] font-bold text-[#8A5E0C] underline"
               >
-                Set deal value to line total
+                Use products total as deal value
               </Button>
             ) : null}
           </span>
@@ -214,8 +255,8 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
 
       {deal.lines.length === 0 ? (
         <p className={`text-[12.5px] ${TONE.muted}`}>
-          No line items yet. A deal can carry several products, each with its own quantity and
-          value; the deal value stays the figure the funnel reads.
+          No products yet. A deal can carry several products, each with its own quantity and
+          price; the deal value stays the figure the funnel reads.
         </p>
       ) : (
         <ul>
@@ -232,8 +273,8 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                   {line.note ? <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>{line.note}</div> : null}
                 </div>
                 <div className="text-right">
-                  {/* Unpriced, never ৳0 — a line nobody has costed is not a
-                      line being given away. */}
+                  {/* No price yet, never ৳0 — a product nobody has priced is not a
+                      product being given away. */}
                   <div
                     className={line.lineValue === null ? `text-[12.5px] ${TONE.muted}` : "text-[13px]"}
                   >
@@ -263,12 +304,10 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
       {deal.lines.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 border-t border-[#E4E9EF] pt-3">
           <span className={`text-[12px] ${TONE.muted}`}>
-            Line total
+            Products total
             {/* The excluded count is stated rather than folded in as zero. */}
             {deal.unpricedLineCount > 0
-              ? `, excluding ${deal.unpricedLineCount} unpriced line${
-                  deal.unpricedLineCount === 1 ? "" : "s"
-                }`
+              ? `, not counting ${deal.unpricedLineCount} with no price yet`
               : ""}
           </span>
           <span className="text-[13.5px] font-bold">{taka(deal.lineTotal)}</span>
@@ -278,18 +317,21 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
       {adding ? (
         <div className="mt-3 space-y-3 border-t border-[#E4E9EF] pt-3">
           <Field label="Product" htmlFor="line-product">
-            <Input id="line-product" value={product} onChange={(e) => setProduct(e.target.value)} />
+            <Input id="line-product" list="line-product-suggestions" autoComplete="off" value={product} onChange={(e) => setProduct(e.target.value)} />
+            <SuggestionList id="line-product-suggestions" field="product" q={product} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="OEM brand" htmlFor="line-brand" hint="Optional.">
-              <Input id="line-brand" value={oemBrand} onChange={(e) => setOemBrand(e.target.value)} />
+            <Field label="OEM brand" htmlFor="line-brand" hint="Optional." help="The maker, like Cisco or Fortinet. Names you have used before are suggested.">
+              <Input id="line-brand" list="line-brand-suggestions" autoComplete="off" value={oemBrand} onChange={(e) => setOemBrand(e.target.value)} />
+              <SuggestionList id="line-brand-suggestions" field="brand" q={oemBrand} />
             </Field>
-            <Field label="Model" htmlFor="line-model" hint="Optional.">
-              <Input id="line-model" value={model} onChange={(e) => setModel(e.target.value)} />
+            <Field label="Model" htmlFor="line-model" hint="Optional." help="The exact model, like FortiGate 100F.">
+              <Input id="line-model" list="line-model-suggestions" autoComplete="off" value={model} onChange={(e) => setModel(e.target.value)} />
+              <SuggestionList id="line-model-suggestions" field="model" q={model} />
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Quantity" htmlFor="line-qty" hint="Optional. Some lines are services.">
+            <Field label="Quantity" htmlFor="line-qty" hint="Optional." help="Leave it empty for a service, like installation.">
               <Input
                 id="line-qty"
                 inputMode="numeric"
@@ -297,13 +339,13 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </Field>
-            <Field label="Unit value" htmlFor="line-unit-value" hint="Optional.">
+            <Field label="Price per unit" htmlFor="line-unit-value" hint="Optional." help="The price of one piece, kept for reference. It is not added up anywhere.">
               <Input id="line-unit-value" inputMode="decimal" value={unitValue} onChange={(e) => setUnitValue(e.target.value)} />
             </Field>
             <Field
-              label="Line value"
+              label="Total price"
               htmlFor="line-value"
-              hint="Optional. Leave it empty and the line reads as unpriced."
+              hint="Optional." help="The price for all of them together, typed by you — it is not worked out from the price per unit. Leave it empty if there is no price yet."
             >
               <Input
                 id="line-value"
@@ -313,7 +355,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
               />
             </Field>
           </div>
-          <Field label="Note" htmlFor="line-note" hint="Optional.">
+          <Field label="Note" htmlFor="line-note" hint="Optional." help="Anything else about this product.">
             <Input id="line-note" value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           <div className="flex gap-2">
@@ -323,7 +365,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
               onClick={() => saveLine.mutate()}
               className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
             >
-              {saveLine.isPending ? "Saving…" : editing ? "Save line" : "Add line"}
+              {saveLine.isPending ? "Saving…" : editing ? "Save product" : "Add product"}
             </Button>
             <Button
               type="button"
@@ -342,7 +384,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
 
       <ConfirmDeleteDialog
         open={!!removing}
-        what={removing ? `the "${removing.product}" line` : "this line"}
+        what={removing ? `the "${removing.product}" product` : "this product"}
         pending={remove.isPending}
         onCancel={() => setRemoving(null)}
         onConfirm={() => removing && remove.mutate(removing.id)}
@@ -474,7 +516,7 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
               <Field
                 label="Reason"
                 htmlFor="close-reason"
-                hint={
+                help={
                   closing === "LOST"
                     ? "A competitor won. Say who, or why, so the pattern is readable later."
                     : "Nobody won — shelved, cancelled, budget withdrawn."
@@ -514,7 +556,7 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
         <Field
           label="Next step"
           htmlFor="next-step"
-          hint="The one thing that happens next. A note on the deal, not a task with a reminder."
+          help="The one thing that happens next. A note on the deal, not a task with a reminder."
         >
           <Input
             id="next-step"
@@ -687,6 +729,7 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
   // on an account they do not work — the directory is shared — and only the
   // server knows which of the two this viewer is.
   const canManage = deal?.canManage ?? false
+  const [editOpen, setEditOpen] = useState(false)
 
   return (
     <>
@@ -723,6 +766,15 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
                 tone={OPPORTUNITY_STATUS_TONE[deal.status]}
               />
               {!canManage ? <Tag label="View only" tone="neutral" /> : null}
+              {canManage ? (
+                <Button
+                  type="button"
+                  onClick={() => setEditOpen(true)}
+                  className="ml-auto h-auto rounded-md border border-[#E4E9EF] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                >
+                  Edit
+                </Button>
+              ) : null}
             </div>
 
             <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[#5F6B7C]">
@@ -734,7 +786,7 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
               </Link>
               <span>Owner: {deal.ownerName}</span>
               <span>{stageSentence(deal.status, deal.stage)}</span>
-              {/* Unpriced, never ৳0. */}
+              {/* No price yet, never ৳0. */}
               <span className={deal.amount === null ? TONE.muted : undefined}>
                 {taka(deal.amount)}
               </span>
@@ -755,6 +807,15 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
               </p>
             ) : null}
           </div>
+
+          {canManage ? (
+            <OpportunityFormDialog
+              accountId={deal.salesAccountId}
+              deal={deal}
+              open={editOpen}
+              onOpenChange={setEditOpen}
+            />
+          ) : null}
 
           <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(280px,1fr)_minmax(0,1.6fr)]">
             <div className="grid gap-4">

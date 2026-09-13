@@ -24,10 +24,12 @@ import {
   getAccountTimeline,
   getSalesAccount,
   listContacts,
+  listOpportunities,
   logCommunication,
   setContactStatus,
   setPrimaryContact,
 } from "@/lib/api/sales"
+import { salesKeys } from "@/lib/api/sales-keys"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type {
@@ -35,6 +37,7 @@ import type {
   CreateSalesContactBody,
   HistoryChange,
   LogCommunicationBody,
+  SalesAccountSummary,
   SalesChannel,
   SalesContactSummary,
   TimelineItem,
@@ -51,10 +54,15 @@ import {
   CONTACT_STATUS_TONE,
   EVENT_ICON,
   HISTORY_ENTITY_ICON,
+  OPPORTUNITY_STATUS_LABEL,
+  OPPORTUNITY_STATUS_TONE,
+  stageSentence,
+  taka,
 } from "@/components/sales/sales-shared"
 import { Button } from "@/components/ui/button"
 import { AccountEditDialog } from "@/components/sales/account-edit-dialog"
 import { CommentPanel } from "@/components/sales/comment-panel"
+import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -342,7 +350,7 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
             <Field label="Name" htmlFor="contact-name">
               <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label="Designation" htmlFor="contact-designation" hint="Optional.">
+            <Field label="Designation" htmlFor="contact-designation" hint="Optional." help="Their job title, like Procurement Manager.">
               <Input id="contact-designation" value={designation} onChange={(e) => setDesignation(e.target.value)} />
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -578,7 +586,7 @@ function TimelinePanel({
             <Field label="What happened" htmlFor="log-summary">
               <Input id="log-summary" value={summary} onChange={(e) => setSummary(e.target.value)} />
             </Field>
-            <Field label="Detail" htmlFor="log-detail" hint="Optional.">
+            <Field label="Detail" htmlFor="log-detail" hint="Optional." help="Anything from the conversation worth keeping. It shows on the Timeline with the call.">
               <Textarea id="log-detail" value={detail} onChange={(e) => setDetail(e.target.value)} />
             </Field>
             {formError ? <FormError>{formError}</FormError> : null}
@@ -704,6 +712,100 @@ function HistoryPanel({ accountId }: { accountId: string }) {
           ) : null}
         </>
       )}
+    </Panel>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/* Opportunities                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The account's deals, and the one place a new deal is started from.
+ *
+ * Deals are open only to the people who work the account. Asking the server
+ * on behalf of anybody else returns an empty list, which would read as "this
+ * account has no deals" — a claim nobody checked — so the list is not
+ * requested for a read-only viewer at all, and the panel says why instead.
+ */
+function OpportunitiesPanel({ account }: { account: SalesAccountSummary }) {
+  const { accessToken } = useSession()
+  const [createOpen, setCreateOpen] = useState(false)
+
+  const dealsQuery = useQuery({
+    queryKey: salesKeys.opportunities({ salesAccountId: account.id }),
+    queryFn: () => listOpportunities(accessToken!, { salesAccountId: account.id }),
+    enabled: !!accessToken && account.canManage,
+  })
+
+  if (!account.canManage) {
+    return (
+      <Panel>
+        <PanelHeading title="Opportunities" />
+        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          Deals on this account are open only to its owner, its collaborators and Sales Admins.
+        </p>
+      </Panel>
+    )
+  }
+  if (dealsQuery.isPending) return <PanelSkeleton />
+  if (dealsQuery.isError) return <PanelError onRetry={() => dealsQuery.refetch()} />
+
+  const deals = dealsQuery.data.items
+
+  return (
+    <Panel>
+      <PanelHeading
+        title="Opportunities"
+        action={
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+          >
+            New opportunity
+          </Button>
+        }
+      />
+      {deals.length === 0 ? (
+        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          No deals on this account yet. A deal is one thing being sold here — a firewall upgrade, a
+          switching refresh — with its own stage, value and next step.
+        </p>
+      ) : (
+        <ul className="-mx-2 divide-y divide-[#EEF1F5]">
+          {deals.map((deal) => (
+            <li key={deal.id}>
+              <Link
+                href={`/sales/opportunities/${deal.id}`}
+                className="flex items-center justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-[#F7F9FB] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+              >
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0 font-mono text-[11.5px] text-[#5F6B7C]">{deal.serial}</span>
+                    <span className="truncate text-[13px] font-semibold">{deal.name}</span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[12px] text-[#5F6B7C]">
+                    {stageSentence(deal.status, deal.stage)} · {deal.ownerName}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2.5">
+                  {/* No price yet, never ৳0. */}
+                  <span className={deal.amount === null ? "text-[12.5px] text-[#5F6B7C]" : "text-[12.5px] font-semibold"}>
+                    {taka(deal.amount)}
+                  </span>
+                  <Tag label={OPPORTUNITY_STATUS_LABEL[deal.status]} tone={OPPORTUNITY_STATUS_TONE[deal.status]} />
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* The list is one page. Said rather than implied, so a long-running
+          account does not look like it has exactly fifty deals. */}
+      {dealsQuery.data.nextCursor ? (
+        <p className="mt-2 text-[11.5px] text-[#5F6B7C]">Showing the 50 newest deals on this account.</p>
+      ) : null}
+      <OpportunityFormDialog accountId={account.id} open={createOpen} onOpenChange={setCreateOpen} />
     </Panel>
   )
 }
@@ -860,6 +962,7 @@ export function AccountDetail({ accountId }: { accountId: string }) {
         <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(280px,1fr)_minmax(0,2fr)]">
           <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
           <div className="grid gap-4">
+            <OpportunitiesPanel account={accountQuery.data} />
             <TimelinePanel
               accountId={accountId}
               canManage={accountQuery.data.canManage}

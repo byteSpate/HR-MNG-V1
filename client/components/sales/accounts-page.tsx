@@ -324,6 +324,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
 
               <Field
                 label="Owner"
+                help="Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
                 hint={
                   eligibleQuery.isPending
                     ? "Loading the people who can own an account…"
@@ -331,7 +332,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                       ? "This list could not be loaded, so no owner can be chosen yet."
                       : employees.length === 0
                         ? "No Sales User is available yet. Techno Sales Hub access is granted from an employee's record, and only Sales Users can own an account."
-                        : "Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
+                        : undefined
                 }
               >
                 <Select value={ownerEmployeeId} onValueChange={(v) => setOwnerEmployeeId(v ?? "")}>
@@ -351,7 +352,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
               </Field>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Industry" htmlFor="sa-industry" hint="Optional.">
+                <Field label="Industry" htmlFor="sa-industry" hint="Optional." help="The customer's line of business, like Garments or Banking.">
                   <Input id="sa-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} />
                 </Field>
                 <Field label="Website" htmlFor="sa-website" hint="Optional.">
@@ -366,7 +367,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
               {employees.length > 0 ? (
                 <Field
                   label="Collaborators"
-                  hint="Optional. Extra people who can work this account besides the owner."
+                  hint="Optional." help="Extra people who can work this account besides the owner."
                 >
                   <div className="grid max-h-40 gap-0.5 overflow-y-auto rounded-md border border-[#E4E9EF] p-2">
                     {employees

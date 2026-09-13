@@ -137,7 +137,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
         tone: OPPORTUNITY_STATUS_TONE[deal.status],
       }
     case "value":
-      // `taka` returns the word "Unpriced" for a null amount. Never ৳0: a
+      // `taka` returns "No price yet" for a null amount. Never ৳0: a
       // deal nobody has costed is not a deal worth nothing.
       return {
         node: <span className={deal.amount === null ? TONE.muted : undefined}>{taka(deal.amount)}</span>,
@@ -253,7 +253,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
   const emptyTitle = isFiltered ? "Nothing matches these filters" : "No opportunities yet"
   const emptyBody = isFiltered
     ? "No deal matches every filter at once. Widening one of them is usually enough."
-    : "An opportunity is a live deal on a Sales Account — what is being sold, at what stage, and what happens next. Open an account and add the first one."
+    : "An opportunity is a live deal on a Sales Account — what is being sold, at what stage, and what happens next. Open an account and press New opportunity."
 
   return (
     <>

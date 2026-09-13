@@ -147,9 +147,9 @@ export function stageSentence(status: OpportunityStatus, stage: OpportunityStage
  * word and callers never fall back to a number.
  */
 export function taka(amount: string | null | undefined): string {
-  if (amount === null || amount === undefined || amount === "") return "Unpriced"
+  if (amount === null || amount === undefined || amount === "") return "No price yet"
   const value = Number(amount)
-  if (!Number.isFinite(value)) return "Unpriced"
+  if (!Number.isFinite(value)) return "No price yet"
   return `৳${value.toLocaleString("en-BD", { maximumFractionDigits: 0 })}`
 }
 

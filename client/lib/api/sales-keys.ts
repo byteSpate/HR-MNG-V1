@@ -35,6 +35,8 @@ export const salesKeys = {
   opportunity: (id: string) => ["sales", "opportunities", id] as const,
   opportunityTimeline: (id: string) => ["sales", "opportunities", id, "timeline"] as const,
   opportunityHistory: (id: string) => ["sales", "opportunities", id, "history"] as const,
+  /** Product, brand and model values already used on deals the viewer can see. */
+  lineSuggestions: (field: string, q: string) => ["sales", "suggestions", field, q] as const,
 
   // ── comments ────────────────────────────────────────────────────────────
   comments: (entity: string, entityId: string) => ["sales", "comments", entity, entityId] as const,
