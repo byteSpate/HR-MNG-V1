@@ -91,6 +91,12 @@ export const logCommunicationSchema = z.object({
 export type LogCommunicationBody = z.infer<typeof logCommunicationSchema>
 
 const money = z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, "Enter an amount with up to two decimal places")
+// The profit on a deal, as a percentage of its value. Negative is a deal sold
+// at a loss; beyond 100 either way is a typing mistake, not a margin.
+const marginPercent = z
+  .string()
+  .regex(/^-?\d{1,3}(\.\d{1,2})?$/, "Enter the margin as a percentage with up to two decimal places, like 12.5")
+  .refine((value) => Math.abs(Number(value)) <= 100, "A margin is between -100% and 100%")
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
 const opportunityStage = z.enum([
   "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING",
@@ -152,6 +158,7 @@ export const createOpportunityLineSchema = z.object({
   quantity: z.number().int().positive().optional(),
   unitValue: money.optional(),
   lineValue: money.optional(),
+  marginPercent: marginPercent.optional(),
   note: z.string().trim().max(500).optional(),
 })
 export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
@@ -163,6 +170,7 @@ export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
     quantity: z.number().int().positive().nullable().optional(),
     unitValue: money.nullable().optional(),
     lineValue: money.nullable().optional(),
+    marginPercent: marginPercent.nullable().optional(),
   })
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
 export const reorderOpportunityLinesSchema = z.object({
@@ -206,10 +214,13 @@ export type GetTargetYearQueryInput = z.infer<typeof getTargetYearSchema>
 export const setSalesTargetSchema = z.object({
   employeeId: z.string().uuid("Choose an employee"),
   calendarYear: z.coerce.number().int().min(2000).max(2100),
-  quarter: z.coerce.number().int().min(1).max(4),
-  // At least one. A target of zero is indistinguishable on the page from no
-  // target at all, and "not set" already says that better.
-  targetDeals: z.coerce.number().int().min(1, "A target is at least one deal").max(1000),
+  // Taka of deal value for the year. More than zero: a target of zero is
+  // indistinguishable on the page from no target at all, and "not set"
+  // already says that better.
+  amount: money.refine((value) => Number(value) > 0, "A yearly target is more than ৳0"),
+  // The amount is split over this quarter and the ones after it, so somebody
+  // who joins in July is not measured against January.
+  startQuarter: z.coerce.number().int().min(1).max(4).default(1),
   note: z.string().trim().max(500).optional(),
 })
 export type SetSalesTargetInput = z.infer<typeof setSalesTargetSchema>

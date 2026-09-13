@@ -39,6 +39,8 @@ export async function addOpportunityLine(
       unitValue: body.unitValue === undefined ? null : dec(body.unitValue),
       // Deliberately not quantity × unitValue. Only an explicitly submitted value is stored.
       lineValue: body.lineValue === undefined ? null : dec(body.lineValue),
+      // No margin typed is "no margin yet", not 0%.
+      marginPercent: body.marginPercent === undefined ? null : dec(body.marginPercent),
       note: nullable(body.note), order,
     } })
     await touch(tx, opportunityId)
@@ -88,6 +90,20 @@ export async function updateOpportunityLine(
         data[field] = next
         before[field] = stored
         after[field] = toMoneyString(next)
+      }
+    }
+    if (body.marginPercent !== undefined) {
+      const stored = current.marginPercent == null ? null : dec(current.marginPercent).toFixed(2)
+      if (body.marginPercent === null) {
+        // Taking a margin back off, which is not the same as setting it to 0%.
+        if (current.marginPercent != null) {
+          data.marginPercent = null; before.marginPercent = stored; after.marginPercent = null
+        }
+      } else {
+        const next = dec(body.marginPercent)
+        if (current.marginPercent == null || !next.equals(current.marginPercent)) {
+          data.marginPercent = next; before.marginPercent = stored; after.marginPercent = next.toFixed(2)
+        }
       }
     }
     if (Object.keys(data).length === 0) return presentLine(current)
@@ -145,7 +161,10 @@ export async function suggestOpportunityLineValues(query: OpportunitySuggestionQ
   const rows = await groupBy({
     by: [column],
     where: {
-      [column]: { not: null, contains: query.q, mode: "insensitive" },
+      // No `not: null`: `product` is a required column and Prisma rejects that
+      // check on it, which made every product suggestion answer 500. A
+      // `contains` match already skips null rows on the optional columns.
+      [column]: { contains: query.q, mode: "insensitive" },
       opportunity: { salesAccount: accountScopeFor(actor, employeeId) },
     },
     _count: { [column]: true }, orderBy: { _count: { [column]: "desc" } }, take: 20,

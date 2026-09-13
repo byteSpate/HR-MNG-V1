@@ -2295,6 +2295,11 @@ model OpportunityLine {
   /// without being asked for is the same defect as a faked one; the interface
   /// offers to fill it and a person presses the button.
   lineValue Decimal? @db.Decimal(14, 2)
+  /// The profit on this product, as a percentage of `lineValue`, typed by a
+  /// person: -100 to 100, negative for one sold at a loss. The taka figure is
+  /// worked out when read (sales.margin.ts), so it follows the Total price;
+  /// the deal's margin is these added up. Null is "no margin yet", never 0%.
+  marginPercent Decimal? @db.Decimal(5, 2)
   note      String?
   order     Int      @default(0)
 
@@ -2335,7 +2340,10 @@ model SalesComment {
   authorUserId     String
   authorUser       User      @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
   authorEmployeeId String?
-  author           Employee? @relation(fields: [authorEmployeeId], references: [id])
+  /// Restrict, as the table was created. Making the column optional
+  /// (20260909170000) left the key as it was, and without saying so here
+  /// Prisma assumes SET NULL and every later diff tries to change it.
+  author           Employee? @relation(fields: [authorEmployeeId], references: [id], onDelete: Restrict)
 
   /// Set when the comment was written during a Saturday review, which makes
   /// "what did management say about this deal last week" one query. Stays null
@@ -2362,19 +2370,21 @@ model SalesTarget {
   /// ledger does not; anything putting the two figures side by side has to say
   /// which year it means.
   calendarYear Int
-  /// 1-4, January-March first.
-  quarter      Int
 
-  /// A count of deals. Not money — the value of a deal is a separate fact and
-  /// is never what a target measures. A won deal counts as one whether or not
-  /// anybody typed a value against it.
-  targetDeals Int
-  note        String?
-  setBy       String?
+  /// Taka of deal value to win in the year. Split equally over the quarters
+  /// from `startQuarter` to Q4, with a quarter's shortfall carried into the
+  /// next — worked out in target.plan.ts and never stored per quarter, so a
+  /// correction to a past quarter's wins moves the later targets with it.
+  amount       Decimal @db.Decimal(14, 2)
+  /// 1-4. Somebody who joins in July starts in Q3 and is not measured
+  /// against the quarters before they arrived.
+  startQuarter Int     @default(1)
+  note         String?
+  setBy        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([employeeId, calendarYear, quarter])
-  @@index([calendarYear, quarter])
+  @@unique([employeeId, calendarYear])
+  @@index([calendarYear])
 }

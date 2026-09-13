@@ -21,6 +21,7 @@ import {
   stageSentence,
   taka,
 } from "@/components/sales/sales-shared"
+import { StageBar } from "@/components/sales/stage-bar"
 import type { TableCell } from "@/components/dashboard/types"
 
 const STAGGER_STEP_MS = 40
@@ -130,7 +131,14 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
     case "stage":
       // Past tense on a closed deal, and the stage is kept rather than
       // cleared — "Lost, at negotiation" is a different fact from "Lost".
-      return { node: <span className="block truncate">{stageSentence(deal.status, deal.stage)}</span> }
+      return {
+        node: (
+          <span className="block min-w-0">
+            <span className="block truncate">{stageSentence(deal.status, deal.stage)}</span>
+            <StageBar status={deal.status} stage={deal.stage} className="mt-1 max-w-[9rem]" />
+          </span>
+        ),
+      }
     case "status":
       return {
         tag: OPPORTUNITY_STATUS_LABEL[deal.status],

@@ -7,6 +7,7 @@ import {
   addContactHandler,
   createSalesAccountHandler,
   getAccountHistoryHandler,
+  getAccountMarginHandler,
   getAccountTimelineHandler,
   getSalesAccountHandler,
   logCommunicationHandler,
@@ -74,6 +75,9 @@ router.patch("/contacts/:id/status", requireAuth, requireSales(), setContactStat
 // one, like a contact.
 router.get("/accounts/:id/timeline", requireAuth, requireSales(), getAccountTimelineHandler)
 router.get("/accounts/:id/history", requireAuth, requireSales(), getAccountHistoryHandler)
+// What the company made on the account. Narrower than the two reads above:
+// the service shows it only to the people who work the account.
+router.get("/accounts/:id/margin", requireAuth, requireSales(), getAccountMarginHandler)
 router.post(
   "/accounts/:id/communications",
   requireAuth,

@@ -11,6 +11,7 @@ import {
   canManageAccount,
   employeeIdFor,
   ownedScopeFor,
+  requireAccountAccess,
   requireAccountVisible,
 } from "./sales.access"
 import {
@@ -20,6 +21,7 @@ import {
   type SalesStanding,
 } from "./sales.eligibility"
 import { presentChanges, resolveNames } from "./history.present"
+import { marginTotal, type MarginTotal } from "./sales.margin"
 
 /**
  * How many History rows one read returns.
@@ -514,6 +516,25 @@ export async function getSalesAccount(
     include: SUMMARY_INCLUDE,
   })
   return toSummary(account, actor, employeeId)
+}
+
+/**
+ * The margin won on one account: the product margins on its won deals,
+ * added up.
+ *
+ * Behind the strict gate — owner, collaborators and admins, the same people
+ * who see the account's deals. The All Accounts directory is shared; what the
+ * company made on an account is not. A product with no Total price or no
+ * margin, and a won deal with no products, are left out and counted, never
+ * summed as zero.
+ */
+export async function getAccountMargin(id: string, actor: AccessTokenPayload): Promise<MarginTotal> {
+  await requireAccountAccess(id, actor)
+  const won = await prisma.opportunity.findMany({
+    where: { salesAccountId: id, status: "WON" },
+    select: { lines: { select: { lineValue: true, marginPercent: true } } },
+  })
+  return marginTotal(won)
 }
 
 /** Status as a person says it, for event titles and refusal sentences. */

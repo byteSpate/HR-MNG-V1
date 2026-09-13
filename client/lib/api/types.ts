@@ -753,6 +753,10 @@ export interface DashboardStat {
   hotBar?: number
   href?: string
   failed?: boolean
+  /** What the stat is about, as a meaning ("target", "margin"); the card maps it to an icon. */
+  icon?: string
+  /** The labelled row the stat sits in, when a page groups its stats. */
+  group?: string
 }
 
 // `ChartBar` already exists at components/dashboard/types.ts:67 as
@@ -2188,6 +2192,10 @@ export interface OpportunityLineSummary {
   /** Null means nobody has costed this line. Never render it as zero. */
   unitValue: string | null
   lineValue: string | null
+  /** The profit as a percentage of `lineValue`, "-100.00" to "100.00". Null is "no margin yet". */
+  marginPercent: string | null
+  /** `lineValue` times `marginPercent`, worked out by the server. Null when either is missing — never "0.00". */
+  marginAmount: string | null
   note: string | null
   order: number
   createdAt: string
@@ -2204,6 +2212,10 @@ export interface OpportunitySummary {
   /** Null means unpriced. The deal value, and the only figure that counts. */
   amount: string | null
   currency: string
+  /** The deal's margin: its products' margins added up by the server. Null when no product carries one — never "0.00". */
+  marginAmount: string | null
+  /** Products whose margin cannot be worked out: no Total price, or no percentage. */
+  unmarginedLineCount: number
   expectedCloseDate: string | null
   oemAccountManager: string | null
   status: OpportunityStatus
@@ -2268,6 +2280,8 @@ export interface OpportunityLineBody {
   quantity?: number
   unitValue?: string
   lineValue?: string
+  /** A percentage of the Total price, -100 to 100. Negative is a product sold at a loss. */
+  marginPercent?: string
   note?: string
 }
 
@@ -2279,6 +2293,7 @@ export interface UpdateOpportunityLineBody {
   quantity?: number | null
   unitValue?: string | null
   lineValue?: string | null
+  marginPercent?: string | null
   note?: string | null
 }
 
@@ -2311,29 +2326,60 @@ export interface CreateSalesCommentBody {
   body: string
 }
 
+/** Where a quarter sits against today. Only an ended quarter's shortfall is carried. */
+export type SalesQuarterPhase = "ended" | "current" | "upcoming"
+
 export interface SalesTargetQuarter {
   quarter: number
-  /** Null means nobody set one. Render "Not set", never a target of zero. */
-  target: number | null
-  note: string | null
-  achievement: number
+  phase: SalesQuarterPhase
+  /** This quarter's equal part of the yearly target. */
+  share: string | null
+  /** Shortfall carried in from the quarter before; null when not known yet or not possible. */
+  carried: string | null
+  /** A carry may still arrive: the quarter before has not ended. */
+  carryPending: boolean
+  /** Share plus carried. Null means no target covers the quarter — a dash, never ৳0. */
+  target: string | null
   valueWon: string
+  dealsWon: number
+  /** Wins with no price, left out of `valueWon` and named instead. */
   unpricedWonCount: number
+  /** Target minus won: positive is short, negative is ahead. */
+  gap: string | null
 }
 
 export interface SalesTargetYear {
   employeeId: string
   employeeName: string
   calendarYear: number
+  /** Null means nobody set one. Render "Not set", never ৳0. */
+  yearlyTarget: string | null
+  startQuarter: number | null
+  note: string | null
+  valueWon: string
+  dealsWon: number
+  unpricedWonCount: number
   quarters: SalesTargetQuarter[]
 }
 
+/** A yearly amount of deal value in taka, split from `startQuarter` (1-4, Q1 when absent). */
 export interface SetSalesTargetBody {
   employeeId: string
   calendarYear: number
-  quarter: number
-  targetDeals: number
+  amount: string
+  startQuarter?: number
   note?: string
+}
+
+/** The margin won on one account, from the products on its won deals. */
+export interface SalesAccountMargin {
+  value: string
+  /** Products in the sum. */
+  counted: number
+  /** Products with no Total price or no percentage, left out and named. */
+  missing: number
+  /** Won deals with no products at all, whose margin cannot be known. */
+  dealsWithoutProducts: number
 }
 
 export interface SalesActionRow {
@@ -2349,17 +2395,11 @@ export interface SalesActionRow {
 export interface SalesTeamRow {
   employeeId: string
   employeeName: string
-  target: number | null
-  achievement: number
+  /** This quarter's target in taka, carry included. Null means none set. */
+  target: string | null
   valueWon: string
+  dealsWon: number
   ongoing: number
-}
-
-export interface SalesQuarterRow {
-  quarter: number
-  target: number | null
-  achievement: number
-  valueWon: string
 }
 
 export interface SalesDashboardPayload {
@@ -2369,7 +2409,7 @@ export interface SalesDashboardPayload {
   calendarYear: number
   quarter: number
   stats: DashboardStat[]
-  quarters: SalesQuarterRow[]
+  quarters: SalesTargetQuarter[]
   actions: SalesActionRow[]
   team?: SalesTeamRow[]
   badges: Record<string, number>

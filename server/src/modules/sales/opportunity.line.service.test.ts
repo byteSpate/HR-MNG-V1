@@ -51,6 +51,8 @@ describe("opportunity lines", () => {
     }, USER)
     expect(prisma.opportunityLine.create).toHaveBeenCalledWith({ data: expect.objectContaining({
       opportunityId: "opp-1", order: 2, unitValue: expect.anything(), lineValue: null,
+      // No margin typed is "no margin yet", not 0%.
+      marginPercent: null,
     }) })
     expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
       data: { lastActivityAt: expect.any(Date) },
@@ -77,6 +79,41 @@ describe("opportunity lines", () => {
     }))
   })
 
+  it("stores a product's margin percentage and answers with its margin in taka", async () => {
+    vi.mocked(prisma.opportunityLine.create).mockResolvedValue({
+      ...LINE, lineValue: dec("10000"), marginPercent: dec("12"), order: 2,
+    } as any)
+
+    const created = await addOpportunityLine("opp-1", {
+      product: "Switch", lineValue: "10000", marginPercent: "12",
+    }, USER)
+
+    const data = vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data as any
+    expect(data.marginPercent.toFixed(2)).toBe("12.00")
+    // 12% of the Total price, worked out when read.
+    expect(created).toMatchObject({ marginPercent: "12.00", marginAmount: "1200.00" })
+  })
+
+  it("audits a product's margin change, old beside new, and lets it be cleared", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, marginPercent: dec("10") } as any)
+
+    await updateOpportunityLine("line-1", { marginPercent: "15" } as any, USER)
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        entity: "OPPORTUNITY_LINE",
+        before: { marginPercent: "10.00" },
+        after: { marginPercent: "15.00" },
+      }),
+    }))
+
+    vi.mocked(prisma.opportunityLine.update).mockClear()
+    await updateOpportunityLine("line-1", { marginPercent: null } as any, USER)
+    expect(prisma.opportunityLine.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { marginPercent: null },
+    }))
+  })
+
   it("refuses reorder arrays that omit or introduce line ids", async () => {
     await expect(reorderOpportunityLines("opp-1", { lineIds: ["line-1", "line-2"] }, USER))
       .rejects.toThrow(/all.*lines/i)
@@ -94,6 +131,21 @@ describe("opportunity lines", () => {
 })
 
 describe("OEM suggestions", () => {
+  it("asks for product suggestions without a null check, which Prisma refuses on a required column", async () => {
+    vi.mocked(prisma.opportunityLine.groupBy).mockResolvedValue([
+      { product: "Firewall", _count: { product: 2 } },
+    ] as any)
+
+    const result = await suggestOpportunityLineValues({ field: "product", q: "fire" }, USER)
+
+    expect(result).toEqual(["Firewall"])
+    const args = vi.mocked(prisma.opportunityLine.groupBy).mock.calls[0][0] as any
+    // `product` is NOT NULL, and Prisma 7 rejects `not: null` on it ("Argument
+    // `not` must not be null"), so every product suggestion answered 500.
+    // `contains` already skips null rows, on every column, so no check is needed.
+    expect(args.where.product).toEqual({ contains: "fire", mode: "insensitive" })
+  })
+
   it("scopes prior values through visible accounts, orders by frequency, and caps at 20", async () => {
     vi.mocked(prisma.opportunityLine.groupBy).mockResolvedValue([
       { oemBrand: "Cisco", _count: { oemBrand: 4 } },
@@ -103,7 +155,7 @@ describe("OEM suggestions", () => {
     expect(prisma.opportunityLine.groupBy).toHaveBeenCalledWith(expect.objectContaining({
       by: ["oemBrand"], take: 20,
       where: expect.objectContaining({
-        oemBrand: { not: null, contains: "cis", mode: "insensitive" },
+        oemBrand: { contains: "cis", mode: "insensitive" },
         opportunity: { salesAccount: {
           OR: [
             { ownerEmployeeId: "emp-1" },

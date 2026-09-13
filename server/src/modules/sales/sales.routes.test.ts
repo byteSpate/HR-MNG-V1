@@ -64,6 +64,30 @@ beforeEach(() => {
   vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as never)
 })
 
+describe("GET /api/sales/accounts/:id/margin", () => {
+  it("answers the margin won to somebody who works the account", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-1" } as never)
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([] as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-1/margin")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(res.body).toEqual({ value: "0.00", counted: 0, missing: 0, dealsWithoutProducts: 0 })
+  })
+
+  it("answers 404 to somebody who can only see the account in the directory", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+
+    await request(app)
+      .get("/api/sales/accounts/sa-1/margin")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(404)
+    expect(prisma.opportunity.findMany).not.toHaveBeenCalled()
+  })
+})
+
 describe("GET /api/sales/accounts", () => {
   it("401s without a token", async () => {
     await request(app).get("/api/sales/accounts").expect(401)

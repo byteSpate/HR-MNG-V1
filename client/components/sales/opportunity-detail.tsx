@@ -48,6 +48,7 @@ import {
   stageSentence,
   taka,
 } from "@/components/sales/sales-shared"
+import { StageBar } from "@/components/sales/stage-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -120,6 +121,27 @@ function SuggestionList({ id, field, q }: { id: string; field: "product" | "bran
   )
 }
 
+/** A margin in taka as a person says it: a loss is named, not printed with a minus sign. */
+function marginWords(amount: string): string {
+  const value = Number(amount)
+  return value < 0 ? `a loss of ${taka(String(-value))}` : taka(amount)
+}
+
+/**
+ * What a typed margin comes to, while typing. Shown, never sent: the server
+ * works the margin out from the Total price it stores.
+ */
+function marginPreview(totalPrice: string, percent: string): string | null {
+  const rate = Number(percent.trim())
+  if (!percent.trim() || !Number.isFinite(rate) || Math.abs(rate) > 100) return null
+  const value = Number(totalPrice.replace(/[,\s]/g, ""))
+  // Total price is never worked out from quantity and price per unit, so a
+  // margin has nothing to be a percentage of until one is typed.
+  if (!totalPrice.trim() || !Number.isFinite(value)) return "Add the Total price to see it in taka."
+  const margin = Math.round(value * rate) / 100
+  return margin < 0 ? `A loss of ${taka(String(-margin))}.` : `${taka(String(margin))} on this product.`
+}
+
 function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: boolean }) {
   const { accessToken } = useSession()
   const queryClient = useQueryClient()
@@ -130,6 +152,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
   const [quantity, setQuantity] = useState("")
   const [unitValue, setUnitValue] = useState("")
   const [lineValue, setLineValue] = useState("")
+  const [marginPercent, setMarginPercent] = useState("")
   const [note, setNote] = useState("")
   const [editing, setEditing] = useState<OpportunityLineSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -137,7 +160,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
 
   const clearLineForm = () => {
     setEditing(null); setProduct(""); setOemBrand(""); setModel("")
-    setQuantity(""); setUnitValue(""); setLineValue(""); setNote(""); setError(null)
+    setQuantity(""); setUnitValue(""); setLineValue(""); setMarginPercent(""); setNote(""); setError(null)
   }
 
   const invalidate = () => {
@@ -153,12 +176,14 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
             product: product.trim(), oemBrand: oemBrand.trim() || null,
             model: model.trim() || null, quantity: quantity.trim() ? Number(quantity) : null,
             unitValue: unitValue.trim() || null, lineValue: lineValue.trim() || null,
+            marginPercent: marginPercent.trim() || null,
             note: note.trim() || null,
           })
         : addOpportunityLine(accessToken!, deal.id, {
             product: product.trim(), oemBrand: oemBrand.trim() || undefined,
             model: model.trim() || undefined, quantity: quantity.trim() ? Number(quantity) : undefined,
             unitValue: unitValue.trim() || undefined, lineValue: lineValue.trim() || undefined,
+            marginPercent: marginPercent.trim() || undefined,
             note: note.trim() || undefined,
           }),
     onSuccess: () => {
@@ -181,6 +206,8 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
     setEditing(line); setAdding(true); setProduct(line.product); setOemBrand(line.oemBrand ?? "")
     setModel(line.model ?? ""); setQuantity(line.quantity?.toString() ?? "")
     setUnitValue(line.unitValue ?? ""); setLineValue(line.lineValue ?? ""); setNote(line.note ?? "")
+    // "12.00" from the server reads as 12 in the field.
+    setMarginPercent(line.marginPercent ? String(Number(line.marginPercent)) : "")
   }
 
   const move = (index: number, delta: -1 | 1) => {
@@ -280,6 +307,12 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                   >
                     {taka(line.lineValue)}
                   </div>
+                  {line.marginPercent !== null ? (
+                    <div className={`text-[11.5px] ${TONE.muted}`}>
+                      Margin {Number(line.marginPercent)}%
+                      {line.marginAmount !== null ? ` · ${marginWords(line.marginAmount)}` : ", no total price yet"}
+                    </div>
+                  ) : null}
                   {canManage ? (
                     <>
                       <RowActions
@@ -311,6 +344,21 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
               : ""}
           </span>
           <span className="text-[13.5px] font-bold">{taka(deal.lineTotal)}</span>
+        </div>
+      ) : null}
+
+      {deal.lines.length > 0 ? (
+        <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
+          <span className={`text-[12px] ${TONE.muted}`}>
+            Margin total
+            {/* The excluded count is stated rather than folded in as zero. */}
+            {deal.unmarginedLineCount > 0
+              ? `, not counting ${deal.unmarginedLineCount} with no margin yet`
+              : ""}
+          </span>
+          <span className={deal.marginAmount === null ? `text-[13px] ${TONE.muted}` : "text-[13.5px] font-bold"}>
+            {deal.marginAmount === null ? "No margin yet" : marginWords(deal.marginAmount)}
+          </span>
         </div>
       ) : null}
 
@@ -352,6 +400,19 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                 inputMode="decimal"
                 value={lineValue}
                 onChange={(e) => setLineValue(e.target.value)}
+              />
+            </Field>
+            <Field
+              label="Margin (%)"
+              htmlFor="line-margin"
+              hint={["Optional.", marginPreview(lineValue, marginPercent)].filter(Boolean).join(" ")}
+              help="The profit on this product, as a percentage of its Total price. Type a minus sign for a product sold at a loss, like -5. The deal's margin is its products' margins added up."
+            >
+              <Input
+                id="line-margin"
+                inputMode="decimal"
+                value={marginPercent}
+                onChange={(e) => setMarginPercent(e.target.value)}
               />
             </Field>
           </div>
@@ -463,6 +524,8 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
           <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>{STAGE_WAITING_ON[deal.stage]}</div>
         </div>
       )}
+
+      <StageBar status={deal.status} stage={deal.stage} className="mt-2.5 max-w-[16rem]" />
 
       {isOpen ? (
         <div className="mt-1.5 text-[11.5px] text-[#6B7789]">
@@ -789,6 +852,11 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
               {/* No price yet, never ৳0. */}
               <span className={deal.amount === null ? TONE.muted : undefined}>
                 {taka(deal.amount)}
+              </span>
+              {/* The deal's margin is its products' margins, added up by the
+                  server. No margin yet, never ৳0. */}
+              <span className={deal.marginAmount === null ? TONE.muted : undefined}>
+                {deal.marginAmount === null ? "No margin yet" : `Margin ${marginWords(deal.marginAmount)}`}
               </span>
               <span>Expected close: {onDate(deal.expectedCloseDate)}</span>
             </div>

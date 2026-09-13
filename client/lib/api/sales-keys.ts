@@ -24,6 +24,12 @@ export const salesKeys = {
   accountContacts: (id: string) => ["sales", "accounts", id, "contacts"] as const,
   accountTimeline: (id: string) => ["sales", "accounts", id, "timeline"] as const,
   accountHistory: (id: string) => ["sales", "accounts", id, "history"] as const,
+  /**
+   * Under its own prefix rather than the account's: it moves when a deal on
+   * the account is won or its value or margin changes, so every deal write
+   * refreshes it through `opportunityWriteKeys`.
+   */
+  accountMargin: (id: string) => ["sales", "account-margin", id] as const,
 
   // ── opportunities ───────────────────────────────────────────────────────
   /**
@@ -62,5 +68,8 @@ export function opportunityWriteKeys(id: string) {
     salesKeys.opportunityTimeline(id),
     salesKeys.opportunityHistory(id),
     ["sales", "dashboard"] as const,
+    // Every account's margin, because this write does not know the account.
+    // One small read per open account page is cheaper than a stale total.
+    ["sales", "account-margin"] as const,
   ]
 }

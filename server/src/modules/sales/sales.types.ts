@@ -8,6 +8,7 @@ import type {
   SalesContactStatus,
 } from "../../generated/prisma/client"
 import type { DashboardStat, Tone as DashboardTone } from "../dashboard/dashboard.types"
+import type { SalesTargetQuarter } from "./target.service"
 
 export interface OpportunityLineSummary {
   id: string
@@ -18,6 +19,10 @@ export interface OpportunityLineSummary {
   quantity: number | null
   unitValue: string | null
   lineValue: string | null
+  /** The profit as a percentage of `lineValue`, "-100.00" to "100.00". Null is "no margin yet". */
+  marginPercent: string | null
+  /** `lineValue` times `marginPercent`, worked out when read. Null when either is missing — never "0.00". */
+  marginAmount: string | null
   note: string | null
   order: number
   createdAt: string
@@ -33,6 +38,10 @@ export interface OpportunitySummary {
   track: SalesTrack
   amount: string | null
   currency: string
+  /** The deal's margin: its products' margins added up. Null when no product carries one — never "0.00". */
+  marginAmount: string | null
+  /** Products whose margin cannot be worked out: no Total price, or no percentage. */
+  unmarginedLineCount: number
   expectedCloseDate: string | null
   oemAccountManager: string | null
   status: OpportunityStatus
@@ -251,17 +260,12 @@ export interface SalesActionRow {
 export interface SalesTeamRow {
   employeeId: string
   employeeName: string
-  target: number | null
-  achievement: number
+  /** This quarter's target in taka, carry included. Null means none set — never "0.00". */
+  target: string | null
+  /** Value of the deals this person won this quarter. */
   valueWon: string
+  dealsWon: number
   ongoing: number
-}
-
-export interface SalesQuarterRow {
-  quarter: number
-  target: number | null
-  achievement: number
-  valueWon: string
 }
 
 export interface SalesDashboardPayload {
@@ -273,7 +277,7 @@ export interface SalesDashboardPayload {
   /** Band 1. Presentation-ready, tone chosen here and not in the client. */
   stats: DashboardStat[]
   /** The Q1 to Q4 table. A quarter with no target carries null, never zero. */
-  quarters: SalesQuarterRow[]
+  quarters: SalesTargetQuarter[]
   /** Band 2, only the rows that have a table behind them. */
   actions: SalesActionRow[]
   /** Present only for the admin roll-up. */

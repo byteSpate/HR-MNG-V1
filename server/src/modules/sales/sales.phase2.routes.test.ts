@@ -140,10 +140,10 @@ describe("targets and the dashboard", () => {
       .set("Authorization", auth("SALES_USER")).expect(200)
   })
 
-  it("lets only a Sales Admin set a target", async () => {
+  it("lets only a Sales Admin set a yearly target", async () => {
     const body = {
       employeeId: "11111111-1111-4111-8111-111111111111",
-      calendarYear: 2026, quarter: 1, targetDeals: 10,
+      calendarYear: 2026, amount: "4000000.00", startQuarter: 1,
     }
     await request(app).put("/api/sales/targets")
       .set("Authorization", auth("SALES_USER")).send(body).expect(403)
@@ -151,15 +151,32 @@ describe("targets and the dashboard", () => {
 
     await request(app).put("/api/sales/targets")
       .set("Authorization", auth("SALES_ADMIN")).send(body).expect(200)
-    expect(targets.setSalesTarget).toHaveBeenCalled()
+    expect(targets.setSalesTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: "4000000.00", startQuarter: 1 }),
+      expect.objectContaining({ sub: "user-1" })
+    )
   })
 
-  it("rejects a quarter outside one to four before calling the service", async () => {
+  it("starts a yearly target in Q1 unless told otherwise", async () => {
     await request(app).put("/api/sales/targets")
       .set("Authorization", auth("SALES_ADMIN"))
       .send({
         employeeId: "11111111-1111-4111-8111-111111111111",
-        calendarYear: 2026, quarter: 5, targetDeals: 10,
+        calendarYear: 2026, amount: "4000000.00",
+      })
+      .expect(200)
+    expect(targets.setSalesTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ startQuarter: 1 }),
+      expect.anything()
+    )
+  })
+
+  it("rejects a start quarter outside one to four before calling the service", async () => {
+    await request(app).put("/api/sales/targets")
+      .set("Authorization", auth("SALES_ADMIN"))
+      .send({
+        employeeId: "11111111-1111-4111-8111-111111111111",
+        calendarYear: 2026, amount: "4000000.00", startQuarter: 5,
       })
       .expect(400)
     expect(targets.setSalesTarget).not.toHaveBeenCalled()
@@ -170,8 +187,45 @@ describe("targets and the dashboard", () => {
       .set("Authorization", auth("SALES_ADMIN"))
       .send({
         employeeId: "11111111-1111-4111-8111-111111111111",
-        calendarYear: 2026, quarter: 1, targetDeals: 0,
+        calendarYear: 2026, amount: "0", startQuarter: 1,
       })
       .expect(400)
+    expect(targets.setSalesTarget).not.toHaveBeenCalled()
+  })
+})
+
+describe("a product's margin", () => {
+  it("accepts a margin percentage on a new product, and a loss on an edit", async () => {
+    await request(app).post("/api/sales/opportunities/opp-1/lines")
+      .set("Authorization", auth("SALES_USER"))
+      .send({ product: "Switch", lineValue: "10000", marginPercent: "12.5" }).expect(201)
+    expect(lines.addOpportunityLine).toHaveBeenCalledWith(
+      "opp-1", expect.objectContaining({ marginPercent: "12.5" }), expect.anything()
+    )
+
+    await request(app).patch("/api/sales/lines/line-1")
+      .set("Authorization", auth("SALES_USER"))
+      .send({ marginPercent: "-5" }).expect(200)
+    expect(lines.updateOpportunityLine).toHaveBeenCalledWith(
+      "line-1", { marginPercent: "-5" }, expect.anything()
+    )
+  })
+
+  it("lets a product's margin be cleared", async () => {
+    await request(app).patch("/api/sales/lines/line-1")
+      .set("Authorization", auth("SALES_USER"))
+      .send({ marginPercent: null }).expect(200)
+    expect(lines.updateOpportunityLine).toHaveBeenCalledWith(
+      "line-1", { marginPercent: null }, expect.anything()
+    )
+  })
+
+  it("rejects a margin outside -100 to 100, or with more than two decimals", async () => {
+    for (const marginPercent of ["101", "-100.5", "12.345", "ten"]) {
+      await request(app).post("/api/sales/opportunities/opp-1/lines")
+        .set("Authorization", auth("SALES_USER"))
+        .send({ product: "Switch", marginPercent }).expect(400)
+    }
+    expect(lines.addOpportunityLine).not.toHaveBeenCalled()
   })
 })

@@ -4,6 +4,7 @@ import {
   createSalesAccount,
   updateSalesAccount,
   getAccountHistory,
+  getAccountMargin,
   getSalesAccount,
   listAllSalesAccounts,
   listSalesAccounts,
@@ -188,6 +189,18 @@ export async function getAccountHistoryHandler(
 ) {
   try {
     return res.status(200).json(await getAccountHistory(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getAccountMarginHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await getAccountMargin(req.params.id, req.user!))
   } catch (err) {
     return next(err)
   }

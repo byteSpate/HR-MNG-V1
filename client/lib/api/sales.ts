@@ -21,7 +21,7 @@ import type {
   SalesCommentPage,
   SalesCommentSummary,
   SalesDashboardPayload,
-  SalesTargetQuarter,
+  SalesAccountMargin,
   SalesTargetYear,
   SetSalesTargetBody,
   UpdateOpportunityBody,
@@ -53,6 +53,11 @@ export function listSalesEligibleEmployees(accessToken: string): Promise<SalesEl
 
 export function getSalesAccount(accessToken: string, id: string): Promise<SalesAccountSummary> {
   return apiFetch<SalesAccountSummary>(`/api/sales/accounts/${id}`, { accessToken })
+}
+
+/** The margin won on an account. Only for the people who work it; anybody else gets a 404. */
+export function getAccountMargin(accessToken: string, id: string): Promise<SalesAccountMargin> {
+  return apiFetch<SalesAccountMargin>(`/api/sales/accounts/${id}/margin`, { accessToken })
 }
 
 export function createSalesAccount(
@@ -345,8 +350,10 @@ export function getSalesTargetYear(
 export function setSalesTarget(
   accessToken: string,
   body: SetSalesTargetBody
-): Promise<SalesTargetQuarter> {
-  return apiFetch<SalesTargetQuarter>("/api/sales/targets", {
+): Promise<SalesTargetYear> {
+  // The whole year comes back: changing the amount or the start quarter moves
+  // every quarter's target at once.
+  return apiFetch<SalesTargetYear>("/api/sales/targets", {
     method: "PUT",
     accessToken,
     body: JSON.stringify(body),

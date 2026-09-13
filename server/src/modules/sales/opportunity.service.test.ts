@@ -31,6 +31,7 @@ import {
   getOpportunityTimeline,
   listOpportunities,
   listOpportunityOwners,
+  updateOpportunity,
 } from "./opportunity.service"
 import { nextOpportunitySerial } from "./sales.serial"
 
@@ -86,6 +87,53 @@ beforeEach(() => {
   vi.mocked(prisma.user.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.opportunity.update).mockImplementation((async (args: any) =>
     opportunity({ ...args.data }) as any) as any)
+})
+
+describe("a deal's margin, from its products", () => {
+  /** A product line on the deal, priced and with a margin unless a test says otherwise. */
+  const line = (overrides: Record<string, unknown> = {}) => ({
+    id: "l1", opportunityId: "opp-1", product: "Firewall", oemBrand: null, model: null, quantity: null,
+    unitValue: null, lineValue: dec("10000"), marginPercent: dec("12"), note: null, order: 0,
+    createdAt: NOW, updatedAt: NOW, ...overrides,
+  })
+
+  it("adds up its products' margins", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      lines: [line(), line({ id: "l2", product: "Switch", lineValue: dec("5000"), marginPercent: dec("10"), order: 1 })],
+    }) as any)
+
+    const deal = await getOpportunity("opp-1", USER)
+
+    // 12% of 10,000 plus 10% of 5,000.
+    expect(deal.marginAmount).toBe("1700.00")
+    expect(deal.unmarginedLineCount).toBe(0)
+    expect(deal.lines[0]).toMatchObject({ marginPercent: "12.00", marginAmount: "1200.00" })
+  })
+
+  it("has no margin rather than ৳0 when no product carries one, and counts the products without", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      // A margin with no Total price cannot be worked out: Total price is never calculated.
+      lines: [line({ lineValue: null })],
+    }) as any)
+
+    const deal = await getOpportunity("opp-1", USER)
+
+    expect(deal.marginAmount).toBeNull()
+    expect(deal.unmarginedLineCount).toBe(1)
+    expect(deal.lines[0].marginAmount).toBeNull()
+  })
+
+  it("no longer keeps a margin on the deal itself", async () => {
+    await createOpportunity(
+      { salesAccountId: ACCOUNT.id, name: "Core refresh", track: "NETWORKING", marginPercent: "12" } as any, USER
+    )
+    await updateOpportunity("opp-1", { name: "Core switch refresh", marginPercent: "15" } as any, USER)
+
+    const created = vi.mocked(prisma.opportunity.create).mock.calls[0][0].data as any
+    const updated = vi.mocked(prisma.opportunity.update).mock.calls[0][0].data as any
+    expect(created).not.toHaveProperty("marginPercent")
+    expect(updated).not.toHaveProperty("marginPercent")
+  })
 })
 
 describe("opportunity serials and creation", () => {

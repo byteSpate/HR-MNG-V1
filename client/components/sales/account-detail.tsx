@@ -21,6 +21,7 @@ import {
 import {
   addContact,
   getAccountHistory,
+  getAccountMargin,
   getAccountTimeline,
   getSalesAccount,
   listContacts,
@@ -721,6 +722,54 @@ function HistoryPanel({ accountId }: { accountId: string }) {
 /* -------------------------------------------------------------------------- */
 
 /**
+ * "Margin won": the profit on the account's won deals, added up by the
+ * server. Loading, broken and "nothing won yet" each get their own line, so a
+ * failed read never passes for an account that has made nothing.
+ */
+function MarginWon({ accountId }: { accountId: string }) {
+  const { accessToken } = useSession()
+  const marginQuery = useQuery({
+    queryKey: salesKeys.accountMargin(accountId),
+    queryFn: () => getAccountMargin(accessToken!, accountId),
+    enabled: !!accessToken,
+  })
+
+  if (marginQuery.isPending) return <Skeleton className="mb-3 h-4 w-48" />
+  if (marginQuery.isError) {
+    return (
+      <p className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-[#B03A3A]">
+        Margin won could not be loaded.
+        <button type="button" onClick={() => marginQuery.refetch()} className="font-bold underline">
+          Try again
+        </button>
+      </p>
+    )
+  }
+
+  const { value, counted, missing, dealsWithoutProducts } = marginQuery.data
+  const count = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
+  const amount = Number(value) < 0 ? `a loss of ${taka(String(-Number(value)))}` : taka(value)
+  // What could not be counted, named rather than folded in as zero.
+  const gaps = [
+    missing > 0 ? `${count(missing, "product")} with no margin yet` : null,
+    dealsWithoutProducts > 0 ? `${count(dealsWithoutProducts, "won deal")} with no products` : null,
+  ]
+    .filter(Boolean)
+    .join(", and ")
+  const nothingWon = counted === 0 && missing === 0 && dealsWithoutProducts === 0
+  return (
+    <p className="mb-3 text-[12.5px] leading-relaxed text-[#5F6B7C]">
+      <span className="font-semibold text-[#1C2733]">Margin won: </span>
+      {nothingWon
+        ? "no deals won on this account yet."
+        : counted === 0
+          ? `no margin yet — ${gaps}.`
+          : `${amount} from ${count(counted, "product")} on won deals${gaps ? `, not counting ${gaps}` : ""}.`}
+    </p>
+  )
+}
+
+/**
  * The account's deals, and the one place a new deal is started from.
  *
  * Deals are open only to the people who work the account. Asking the server
@@ -766,6 +815,7 @@ function OpportunitiesPanel({ account }: { account: SalesAccountSummary }) {
           </Button>
         }
       />
+      {deals.length > 0 ? <MarginWon accountId={account.id} /> : null}
       {deals.length === 0 ? (
         <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
           No deals on this account yet. A deal is one thing being sold here — a firewall upgrade, a
@@ -960,9 +1010,14 @@ export function AccountDetail({ accountId }: { accountId: string }) {
 
       {accountQuery.data ? (
         <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(280px,1fr)_minmax(0,2fr)]">
-          <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
+          {/* Contacts and deals together on the left: the two things somebody
+              opening an account comes to act on. The right column is the
+              record of what happened. */}
           <div className="grid gap-4">
+            <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
             <OpportunitiesPanel account={accountQuery.data} />
+          </div>
+          <div className="grid gap-4">
             <TimelinePanel
               accountId={accountId}
               canManage={accountQuery.data.canManage}

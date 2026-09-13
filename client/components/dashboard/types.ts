@@ -30,6 +30,12 @@ export type Stat = {
   href?: string
   /** This card's query failed. Its siblings still rendered. */
   failed?: boolean
+  /**
+   * What the stat is about, as a meaning the server sends ("target",
+   * "margin"). The card maps it to an icon; an unknown or absent one renders
+   * no icon, so the role dashboards that send none look as they did.
+   */
+  icon?: string
 }
 
 export type ActivityItem = {

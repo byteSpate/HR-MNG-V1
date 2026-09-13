@@ -13,6 +13,7 @@ vi.mock("../../config/prisma", () => ({
     },
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
     salesContact: { findMany: vi.fn() },
+    opportunity: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
     user: { findUnique: vi.fn(), findMany: vi.fn() },
     auditLog: { create: vi.fn(), findMany: vi.fn() },
@@ -22,9 +23,11 @@ vi.mock("../../config/prisma", () => ({
 
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
+import { dec } from "../payroll/payroll.money"
 import {
   createSalesAccount,
   getAccountHistory,
+  getAccountMargin,
   listSalesEligibleEmployees,
   updateSalesAccount,
 } from "./account.service"
@@ -71,6 +74,38 @@ beforeEach(() => {
       lastWorkingDay: null,
       user: { salesRole: "SALES_USER", isActive: true },
     }))) as never)
+})
+
+describe("getAccountMargin", () => {
+  it("adds up the product margins on the account's won deals, and names what it cannot", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-2" } as any)
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([
+      {
+        lines: [
+          { lineValue: dec("10000"), marginPercent: dec("12") },
+          // No Total price, so its margin cannot be worked out.
+          { lineValue: null, marginPercent: dec("12") },
+        ],
+      },
+      { lines: [] },
+    ] as any)
+
+    const margin = await getAccountMargin("sa-1", USER)
+
+    // Left out and counted, never summed as zero.
+    expect(margin).toEqual({ value: "1200.00", counted: 1, missing: 1, dealsWithoutProducts: 1 })
+    expect(prisma.opportunity.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { salesAccountId: "sa-1", status: "WON" } })
+    )
+  })
+
+  it("refuses somebody who does not work the account, before reading any deal", async () => {
+    // The directory is shared; its margin is not. Same gate as the deals list.
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+
+    await expect(getAccountMargin("sa-1", USER)).rejects.toMatchObject({ statusCode: 404 })
+    expect(prisma.opportunity.findMany).not.toHaveBeenCalled()
+  })
 })
 
 describe("createSalesAccount", () => {

@@ -1,5 +1,8 @@
-import { dec, sum, toMoneyString } from "../payroll/payroll.money"
+import { dec, sum, toMoneyString, type Money } from "../payroll/payroll.money"
+import { linesMargin, marginAmount } from "./sales.margin"
 import type { OpportunityLineSummary, OpportunitySummary } from "./sales.types"
+
+const moneyOrNull = (value: Money | null) => (value === null ? null : toMoneyString(value))
 
 export function presentLine(row: any): OpportunityLineSummary {
   return {
@@ -7,6 +10,10 @@ export function presentLine(row: any): OpportunityLineSummary {
     oemBrand: row.oemBrand ?? null, model: row.model ?? null, quantity: row.quantity ?? null,
     unitValue: row.unitValue == null ? null : toMoneyString(dec(row.unitValue)),
     lineValue: row.lineValue == null ? null : toMoneyString(dec(row.lineValue)),
+    marginPercent: row.marginPercent == null ? null : dec(row.marginPercent).toFixed(2),
+    // Worked out here, never stored, so it follows the Total price. Null when
+    // the price or the percentage is missing: "no margin yet", never ৳0.
+    marginAmount: moneyOrNull(marginAmount(row.lineValue, row.marginPercent)),
     note: row.note ?? null, order: row.order,
     createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
   }
@@ -17,10 +24,15 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
   const priced = rows.filter((line: any) => line.lineValue != null)
   const total = sum(priced.map((line: any) => dec(line.lineValue)))
   const amount = row.amount == null ? null : dec(row.amount)
+  const margin = linesMargin(rows)
   return {
     id: row.id, serial: row.serial, salesAccountId: row.salesAccountId,
     salesAccountName: row.salesAccount?.name ?? "", name: row.name, track: row.track,
     amount: amount ? toMoneyString(amount) : null, currency: row.currency,
+    // The deal's margin is its products' margins, worked out here and never
+    // stored. Null when no product carries one: "no margin yet", never ৳0.
+    marginAmount: margin.value,
+    unmarginedLineCount: margin.missing,
     expectedCloseDate: row.expectedCloseDate?.toISOString().slice(0, 10) ?? null,
     oemAccountManager: row.oemAccountManager ?? null, status: row.status,
     statusReason: row.statusReason ?? null, closedAt: row.closedAt?.toISOString() ?? null,
