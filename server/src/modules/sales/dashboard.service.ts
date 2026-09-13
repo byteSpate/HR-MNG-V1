@@ -244,7 +244,7 @@ function bandOne(
     {
       label: labels.achievement,
       value: String(figures.won.count),
-      sub: figures.won.unpriced > 0 ? `${figures.won.unpriced} unpriced` : "Deals won and closed",
+      sub: figures.won.unpriced > 0 ? `${figures.won.unpriced} with no price yet` : "Deals won and closed",
       tag: "Won",
       tone: toneFor.informational(),
     },
@@ -269,7 +269,7 @@ function bandOne(
       value: bdt(dec(figures.won.value)),
       sub:
         figures.won.unpriced > 0
-          ? `${figures.won.unpriced} won deal${figures.won.unpriced === 1 ? "" : "s"} unpriced`
+          ? `${figures.won.unpriced} won deal${figures.won.unpriced === 1 ? "" : "s"} with no price yet`
           : "This quarter",
       tag: "Value",
       tone: toneFor.informational(),
@@ -279,7 +279,7 @@ function bandOne(
       value: String(figures.ongoing.count),
       sub:
         figures.ongoing.unpriced > 0
-          ? `${bdt(dec(figures.ongoing.value))}, ${figures.ongoing.unpriced} unpriced`
+          ? `${bdt(dec(figures.ongoing.value))}, ${figures.ongoing.unpriced} with no price yet`
           : bdt(dec(figures.ongoing.value)),
       tag: "Open",
       tone: toneFor.informational(),

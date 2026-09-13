@@ -101,7 +101,7 @@ describe("the sales dashboard", () => {
     const ongoing = stat(payload, "Ongoing")
     expect(ongoing?.value).toBe("3")
     // The two unpriced deals are named, not folded in as zero.
-    expect(ongoing?.sub).toMatch(/2 unpriced/i)
+    expect(ongoing?.sub).toMatch(/2 with no price yet/i)
   })
 
   it("counts accounts worked on from activity, not from assignment", async () => {
