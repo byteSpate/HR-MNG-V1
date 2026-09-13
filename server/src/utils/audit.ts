@@ -41,6 +41,8 @@ export type AuditEntity =
   | "OPPORTUNITY_LINE"
   | "SALES_COMMENT"
   | "SALES_TARGET"
+  | "SALES_MEETING"
+  | "SALES_TASK"
   | "ASSET"
   | "ASSET_CATEGORY"
   | "ASSET_ASSIGNMENT"
