@@ -15,6 +15,7 @@ vi.mock("../../config/prisma", () => ({
     auditLog: { create: vi.fn(), findMany: vi.fn() },
     event: { create: vi.fn(), findMany: vi.fn() },
     salesComment: { findMany: vi.fn() },
+    salesMeeting: { findMany: vi.fn() },
   },
 }))
 
@@ -433,6 +434,24 @@ describe("the deal Timeline, management notes", () => {
   beforeEach(() => {
     vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as any)
     vi.mocked(prisma.event.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([] as any)
+  })
+
+  it("puts meetings about the deal on its Timeline", async () => {
+    vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([{
+      id: "meeting-1", title: "Firewall walkthrough", mode: "CUSTOMER_SITE", status: "SCHEDULED",
+      scheduledAt: new Date("2026-09-20T04:00:00.000Z"),
+    }] as any)
+
+    const { items } = await getOpportunityTimeline("opp-1", USER)
+
+    expect(prisma.salesMeeting.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { opportunityId: "opp-1" },
+    }))
+    expect(items).toContainEqual(expect.objectContaining({
+      id: "meeting:meeting-1", kind: "meeting", title: "Firewall walkthrough",
+      at: "2026-09-20T04:00:00.000Z",
+    }))
   })
 
   it("leaves management notes out of a Sales User's deal Timeline", async () => {
