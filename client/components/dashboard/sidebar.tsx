@@ -199,6 +199,7 @@ export function Sidebar({
   tone = "default",
   systemLabel = "HR & Payroll",
   accessLabel,
+  externalBadges,
 }: {
   navGroups: NavGroup[]
   rootHref: string
@@ -211,6 +212,7 @@ export function Sidebar({
       the role label does not cover — "Sales Admin" or "Sales User". Omitted
       everywhere else, where `role` already says it. */
   accessLabel?: string
+  externalBadges?: Record<string, number>
 }) {
   const pathname = usePathname()
   const { accessToken, status } = useSession()
@@ -227,9 +229,9 @@ export function Sidebar({
   const { data } = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => getDashboard(accessToken!),
-    enabled: status === "authenticated" && !!accessToken,
+    enabled: externalBadges === undefined && status === "authenticated" && !!accessToken,
   })
-  const badges = data?.badges ?? {}
+  const badges = externalBadges ?? data?.badges ?? {}
 
   return (
     <UiSidebar collapsible="offcanvas" className="border-r-0">

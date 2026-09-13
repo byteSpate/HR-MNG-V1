@@ -1,8 +1,89 @@
 import type {
+  OpportunityStage,
+  OpportunityStatus,
+  SalesCommentKind,
+  SalesTrack,
   SalesAccountStatus,
   SalesChannel,
   SalesContactStatus,
 } from "../../generated/prisma/client"
+import type { DashboardStat, Tone as DashboardTone } from "../dashboard/dashboard.types"
+import type { SalesTargetQuarter } from "./target.service"
+
+export interface OpportunityLineSummary {
+  id: string
+  opportunityId: string
+  product: string
+  oemBrand: string | null
+  model: string | null
+  quantity: number | null
+  unitValue: string | null
+  lineValue: string | null
+  /** The profit as a percentage of `lineValue`, "-100.00" to "100.00". Null is "no margin yet". */
+  marginPercent: string | null
+  /** `lineValue` times `marginPercent`, worked out when read. Null when either is missing — never "0.00". */
+  marginAmount: string | null
+  note: string | null
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OpportunitySummary {
+  id: string
+  serial: string
+  salesAccountId: string
+  salesAccountName: string
+  name: string
+  track: SalesTrack
+  amount: string | null
+  currency: string
+  /** The deal's margin: its products' margins added up. Null when no product carries one — never "0.00". */
+  marginAmount: string | null
+  /** Products whose margin cannot be worked out: no Total price, or no percentage. */
+  unmarginedLineCount: number
+  expectedCloseDate: string | null
+  oemAccountManager: string | null
+  status: OpportunityStatus
+  statusReason: string | null
+  closedAt: string | null
+  stage: OpportunityStage
+  stageChangedAt: string
+  nextStep: string | null
+  nextStepDueOn: string | null
+  ownerEmployeeId: string
+  ownerName: string
+  wonByEmployeeId: string | null
+  lastActivityAt: string
+  createdAt: string
+  updatedAt: string
+  lines: OpportunityLineSummary[]
+  lineTotal: string
+  unpricedLineCount: number
+  amountDiffersFromLines: boolean
+  /** Whether this viewer may change the deal. The directory is shared, so
+      seeing one and being able to work it are different questions. */
+  canManage: boolean
+}
+
+export interface SalesCommentSummary {
+  id: string
+  entity: "SALES_ACCOUNT" | "OPPORTUNITY"
+  entityId: string
+  kind: SalesCommentKind
+  body: string
+  authorUserId: string
+  authorEmployeeId: string | null
+  authorName: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SalesCommentPage {
+  items: SalesCommentSummary[]
+  truncated: boolean
+  limit: number
+}
 
 export interface SalesAccountSummary {
   id: string
@@ -11,6 +92,12 @@ export interface SalesAccountSummary {
   website: string | null
   address: string | null
   status: SalesAccountStatus
+  /**
+   * Why the account is Inactive or Do Not Contact. The service requires one
+   * whenever the status leaves ACTIVE and clears it on the way back, so a
+   * status badge is never rendered without the sentence explaining it.
+   */
+  statusReason: string | null
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number
@@ -119,6 +206,16 @@ export interface AccountHistory {
   limit: number
 }
 
+export interface OpportunityHistoryEntry extends Omit<AccountHistoryEntry, "entity"> {
+  entity: "OPPORTUNITY" | "OPPORTUNITY_LINE"
+}
+
+export interface OpportunityHistory {
+  items: OpportunityHistoryEntry[]
+  truncated: boolean
+  limit: number
+}
+
 /**
  * One line of an account's story, from either of the two tables that hold it.
  *
@@ -129,7 +226,7 @@ export interface AccountHistory {
 export interface TimelineItem {
   /** Prefixed by kind, because a communication and an event can share an id. */
   id: string
-  kind: "communication" | "event"
+  kind: "communication" | "event" | "comment"
   at: string
   title: string
   meta: string | null
@@ -137,4 +234,60 @@ export interface TimelineItem {
   /** The long-form note on a communication. Null for an event — those have
       no free-text body of their own. */
   detail: string | null
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
+// DashboardStat and Tone are imported rather than redeclared: the sales hub
+// renders through the same record kit as every role dashboard, so a second
+// definition here would be a second answer to what a stat looks like.
+
+/**
+ * One Band 2 row: something that needs doing, with the count and the link to
+ * the filtered list behind it.
+ */
+export interface SalesActionRow {
+  key: string
+  label: string
+  count: number
+  /** The sentence under the count. Never a bare number repeated. */
+  detail: string
+  tone: DashboardTone
+  /** Role-agnostic, as every sales href is. The client prefixes /sales. */
+  href: string
+}
+
+/** One person in the admin roll-up. Every row names who it is about. */
+export interface SalesTeamRow {
+  employeeId: string
+  employeeName: string
+  /** This quarter's target in taka, carry included. Null means none set — never "0.00". */
+  target: string | null
+  /** Value of the deals this person won this quarter. */
+  valueWon: string
+  dealsWon: number
+  ongoing: number
+}
+
+export interface SalesDashboardPayload {
+  scope: "me" | "employee" | "all"
+  employeeId: string | null
+  employeeName: string
+  calendarYear: number
+  quarter: number
+  /** Band 1. Presentation-ready, tone chosen here and not in the client. */
+  stats: DashboardStat[]
+  /** The Q1 to Q4 table. A quarter with no target carries null, never zero. */
+  quarters: SalesTargetQuarter[]
+  /** Band 2, only the rows that have a table behind them. */
+  actions: SalesActionRow[]
+  /** Present only for the admin roll-up. */
+  team?: SalesTeamRow[]
+  /** Keyed by href, counted once, so a card and its nav badge cannot drift. */
+  badges: Record<string, number>
+  /**
+   * What this page cannot show yet, so it can say so in words. An empty
+   * "Tasks due" row would read as "no tasks", which is a number nobody
+   * measured.
+   */
+  notBuilt: string[]
 }

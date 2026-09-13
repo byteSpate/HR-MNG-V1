@@ -9,7 +9,13 @@ import {
   type RemixiconComponentType,
 } from "@remixicon/react"
 
-import type { SalesAccountStatus, SalesChannel, SalesContactStatus } from "@/lib/api/types"
+import type {
+  OpportunityStage,
+  OpportunityStatus,
+  SalesAccountStatus,
+  SalesChannel,
+  SalesContactStatus,
+} from "@/lib/api/types"
 import type { Tone } from "@/components/dashboard/types"
 
 /** Shared between the accounts list and the account detail header, so the
@@ -83,4 +89,71 @@ export function channelForMeta(meta: string | null): SalesChannel {
   const label = meta.split(" · ")[0]
   const channel = (Object.keys(CHANNEL_LABEL) as SalesChannel[]).find((c) => CHANNEL_LABEL[c] === label)
   return channel ?? "OTHER"
+}
+
+/** Each stage is named for who the deal is waiting on. */
+export const STAGE_LABEL: Record<OpportunityStage, string> = {
+  REQUIREMENT_RECEIVED: "Requirement received",
+  SOLUTION_DESIGN: "Solution design",
+  OEM_PRICING: "OEM pricing",
+  QUOTATION_SUBMITTED: "Quotation submitted",
+  NEGOTIATION: "Negotiation",
+  AWAITING_DECISION: "Awaiting decision",
+}
+
+/** Who we are waiting on, which is what makes a stage worth acting on. */
+export const STAGE_WAITING_ON: Record<OpportunityStage, string> = {
+  REQUIREMENT_RECEIVED: "Waiting on us to start",
+  SOLUTION_DESIGN: "Waiting on us",
+  OEM_PRICING: "Waiting on the OEM",
+  QUOTATION_SUBMITTED: "Waiting on the customer",
+  NEGOTIATION: "Both sides",
+  AWAITING_DECISION: "Waiting on the customer",
+}
+
+export const OPPORTUNITY_STATUS_LABEL: Record<OpportunityStatus, string> = {
+  ONGOING: "Ongoing",
+  WON: "Won",
+  LOST: "Lost",
+  CANCELLED: "Cancelled",
+}
+
+export const OPPORTUNITY_STATUS_TONE: Record<OpportunityStatus, Tone> = {
+  ONGOING: "neutral",
+  WON: "green",
+  LOST: "red",
+  CANCELLED: "yellow",
+}
+
+/**
+ * How a stage reads once the deal is closed.
+ *
+ * Past tense, and the stage is kept rather than cleared: "Lost, at
+ * Negotiation" and "Lost, at OEM pricing" are different businesses, and the
+ * second is usually a pricing problem somebody can fix. Clearing the field
+ * would have thrown that away permanently.
+ */
+export function stageSentence(status: OpportunityStatus, stage: OpportunityStage): string {
+  if (status === "ONGOING") return STAGE_LABEL[stage]
+  return `${OPPORTUNITY_STATUS_LABEL[status]}, at ${STAGE_LABEL[stage].toLowerCase()}`
+}
+
+/**
+ * Money, or the word for its absence.
+ *
+ * `null` is not zero. An unpriced deal is one nobody has costed yet; a deal
+ * worth nothing is one being given away. Rendering the first as ৳0 states the
+ * second, which is the defect UI rule 1 exists to stop — so this returns a
+ * word and callers never fall back to a number.
+ */
+export function taka(amount: string | null | undefined): string {
+  if (amount === null || amount === undefined || amount === "") return "No price yet"
+  const value = Number(amount)
+  if (!Number.isFinite(value)) return "No price yet"
+  return `৳${value.toLocaleString("en-BD", { maximumFractionDigits: 0 })}`
+}
+
+/** Whole days between two instants, floored. */
+export function daysSince(iso: string, now: Date = new Date()): number {
+  return Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000))
 }

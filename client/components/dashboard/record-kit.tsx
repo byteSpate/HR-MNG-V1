@@ -11,6 +11,7 @@ import {
   RiInboxLine,
   RiLockLine,
   RiPencilLine,
+  RiQuestionLine,
   RiRefreshLine,
 } from "@remixicon/react"
 
@@ -29,7 +30,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ApiError } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
 
@@ -443,23 +446,76 @@ export function Field({
   label,
   htmlFor,
   hint,
+  help,
   children,
 }: {
   label: string
   htmlFor?: string
+  /** Shown under the field, always. For what changes with the form — loading,
+      a list that failed, a warning — because a hidden warning is a missed one. */
   hint?: ReactNode
+  /** A fixed explanation of the field, behind a "?" beside the label. */
+  help?: ReactNode
   children: ReactNode
 }) {
+  const labelEl = (
+    <Label htmlFor={htmlFor} className="text-[12px] font-bold text-[#1C2733]">
+      {label}
+    </Label>
+  )
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={htmlFor} className="text-[12px] font-bold text-[#1C2733]">
-        {label}
-      </Label>
+      {/* Without `help` the label renders exactly as it always has, so no
+          existing form changes shape. */}
+      {help ? (
+        <div className="flex items-center gap-1">
+          {labelEl}
+          <FieldHelp label={label}>{help}</FieldHelp>
+        </div>
+      ) : (
+        labelEl
+      )}
       {children}
       {hint ? (
         <p className={cn("text-[11.5px] leading-relaxed", TONE.muted)}>{hint}</p>
       ) : null}
     </div>
+  )
+}
+
+/**
+ * The "?" beside a field's label. Hovering shows the explanation; clicking or
+ * tapping keeps it open, so a touch screen and a keyboard reach it too — the
+ * same two paths the help `Term` uses. A real button, `type="button"`, so it
+ * never submits the form it sits in.
+ */
+export function FieldHelp({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={`About ${label}`}
+                  className="inline-flex size-4 shrink-0 cursor-help items-center justify-center rounded-full text-[#5F6B7C] transition-colors hover:text-[#1C2733] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                >
+                  <RiQuestionLine className="size-3.5" aria-hidden />
+                </button>
+              }
+            />
+          }
+        />
+        <PopoverContent className="w-64">
+          <p className="text-[12.5px] leading-[1.6] text-[#3B4757]">{children}</p>
+        </PopoverContent>
+      </Popover>
+      <TooltipContent>
+        <span className="text-[11.5px]">{children}</span>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

@@ -9,6 +9,7 @@ import {
   RiBarChartLine,
   RiBillLine,
   RiBookOpenLine,
+  RiBriefcaseLine,
   RiBuilding2Line,
   RiCalendarCheckLine,
   RiCalendarEventLine,
@@ -42,6 +43,8 @@ import {
 
 export const icons = {
   RiApps2Line,
+  /** The funnel: every live deal, read across all accounts at once. */
+  RiBriefcaseLine,
   RiDashboardLine,
   RiTimeLine,
   RiCalendarEventLine,

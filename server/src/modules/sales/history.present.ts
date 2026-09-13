@@ -20,6 +20,7 @@ import type { HistoryChange } from "./sales.types"
 const FIELD_LABEL: Record<string, string> = {
   name: "Name",
   status: "Status",
+  statusReason: "Reason",
   ownerEmployeeId: "Owner",
   industry: "Industry",
   website: "Website",
@@ -32,6 +33,21 @@ const FIELD_LABEL: Record<string, string> = {
   email: "Email",
   note: "Note",
   salesRole: "Techno Sales Hub access",
+  product: "Product",
+  oemBrand: "OEM brand",
+  model: "Model",
+  quantity: "Quantity",
+  unitValue: "Price per unit",
+  lineValue: "Total price",
+  order: "Position",
+  track: "Track",
+  amount: "Deal value",
+  marginPercent: "Margin (%)",
+  expectedCloseDate: "Expected close date",
+  oemAccountManager: "OEM account manager",
+  stage: "Stage",
+  nextStep: "Next step",
+  nextStepDueOn: "Next step due",
 }
 
 /**
@@ -65,7 +81,7 @@ const isIdField = (field: string) => EMPLOYEE_ID_FIELDS.has(field) || USER_ID_FI
  * NGO as "Ngo". Whether a value is an enum is a fact about the column, never
  * about how the text happens to be capitalised.
  */
-const ENUM_FIELDS = new Set(["status", "salesRole", "employmentStatus", "exitReason", "channel"])
+const ENUM_FIELDS = new Set(["status", "salesRole", "employmentStatus", "exitReason", "channel", "stage", "track"])
 
 /** ACTIVE → Active, DO_NOT_CONTACT → Do not contact. */
 function humaniseEnum(value: string): string {

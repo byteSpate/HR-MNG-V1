@@ -2,11 +2,14 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { navGroups } from "@/components/sales/nav-config"
 import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { useSession } from "@/lib/auth/session-context"
+import { getSalesDashboard } from "@/lib/api/sales"
+import { salesKeys } from "@/lib/api/sales-keys"
 
 /**
  * Turns the signed-in session into the hub's nav tree.
@@ -31,7 +34,7 @@ import { useSession } from "@/lib/auth/session-context"
  * anyone reaches by anything other than a typo.
  */
 export function SalesShell({ children }: { children: React.ReactNode }) {
-  const { user, status } = useSession()
+  const { accessToken, user, status } = useSession()
   const router = useRouter()
   const canEnter = !!user && (user.role === "SUPER_ADMIN" || !!user.salesRole)
 
@@ -43,6 +46,15 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
   // panel then failed to load.
   const wrongRole = status === "authenticated" && !!user && !canEnter
   const signedOut = status === "unauthenticated"
+  const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  const dashboard = useQuery({
+    queryKey: salesKeys.dashboard(isSalesAdmin ? "all" : undefined),
+    queryFn: () => getSalesDashboard(accessToken!, isSalesAdmin ? "all" : undefined),
+    enabled: status === "authenticated" && !!accessToken && canEnter,
+  })
+  const opportunityBadge = Object.entries(dashboard.data?.badges ?? {})
+    .filter(([href]) => href.startsWith("/opportunities"))
+    .reduce((sum, [, count]) => sum + count, 0)
 
   useEffect(() => {
     if (wrongRole && user) router.replace(ROLE_ROUTES[user.role])
@@ -74,6 +86,7 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
             ? "Sales User"
             : undefined
       }
+      badges={{ "/sales/opportunities": opportunityBadge }}
       // Wider than a role dashboard's 1220/1600px cap: the accounts table
       // (Day 5) and, later, the Opportunities pipeline want more columns
       // than a role dashboard's panels ever did.

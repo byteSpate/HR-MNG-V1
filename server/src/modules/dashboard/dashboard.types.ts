@@ -68,6 +68,17 @@ export interface DashboardStat {
    * normally.
    */
   failed?: boolean
+  /**
+   * What the stat is about, as a meaning ("target", "margin"), never an icon
+   * component name. The client's card maps it to an icon; an unknown meaning
+   * renders none. Absent on the role dashboards, which keep their old look.
+   */
+  icon?: string
+  /**
+   * The labelled row the stat sits in, when a page groups its stats
+   * ("This quarter"). Consecutive stats sharing one are drawn together.
+   */
+  group?: string
 }
 
 export interface TimeClockState {

@@ -5,7 +5,13 @@ import type { SalesChannel } from "../../generated/prisma/client"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { SalesCommunicationSummary, TimelineItem } from "./sales.types"
 import type { LogCommunicationBody } from "./sales.validators"
-import { requireAccountAccess, requireAccountVisible } from "./sales.access"
+import {
+  accountScopeFor,
+  commentKindScopeFor,
+  employeeIdFor,
+  requireAccountAccess,
+  requireAccountVisible,
+} from "./sales.access"
 
 /**
  * How many rows of each source the Timeline reads.
@@ -136,7 +142,24 @@ export async function getAccountTimeline(
   // entry stays owner/assignee/admin only, via logCommunication above.
   await requireAccountVisible(accountId, actor)
 
-  const [communications, events] = await Promise.all([
+  // Remarks are the exception to that openness, and MANAGEMENT_NOTE is the
+  // reason. It is admin-only to *write* precisely because it is where a
+  // manager says something candid about a deal — and the shared directory
+  // means "can open this page" is every hub member. Reading the account's own
+  // story is fine; reading what management wrote about it is not.
+  //
+  // So the comment feed is fetched only for people who actually work the
+  // account — owner, collaborator or admin — rather than everyone who can see
+  // that it exists. Fetched conditionally and not filtered afterwards: a
+  // caller with no claim on the account must not cause the rows to be read.
+  // Within that feed, management notes go to Sales Admins only.
+  const employeeId = await employeeIdFor(actor)
+  const worksThisAccount = await prisma.salesAccount.findFirst({
+    where: { AND: [{ id: accountId }, accountScopeFor(actor, employeeId)] },
+    select: { id: true },
+  })
+
+  const [communications, events, comments] = await Promise.all([
     prisma.salesCommunication.findMany({
       where: { salesAccountId: accountId },
       orderBy: { occurredAt: "desc" },
@@ -151,6 +174,17 @@ export async function getAccountTimeline(
       orderBy: { createdAt: "desc" },
       take: TIMELINE_LIMIT,
     }),
+    worksThisAccount
+      ? prisma.salesComment.findMany({
+          where: { entity: "SALES_ACCOUNT", entityId: accountId, ...commentKindScopeFor(actor) },
+          orderBy: { createdAt: "desc" },
+          take: TIMELINE_LIMIT,
+          include: {
+            author: { select: { fullName: true } },
+            authorUser: { select: { displayName: true, email: true } },
+          },
+        })
+      : [],
   ])
 
   const items: TimelineItem[] = [
@@ -181,6 +215,15 @@ export async function getAccountTimeline(
       by: null,
       // No free-text body of its own — the title already is the sentence.
       detail: null,
+    })),
+    ...comments.map((row) => ({
+      id: `comment:${row.id}`,
+      kind: "comment" as const,
+      at: row.createdAt.toISOString(),
+      title: row.kind === "MANAGEMENT_NOTE" ? "Management note" : "Remark",
+      meta: row.kind === "CUSTOMER_FEEDBACK" ? "Customer feedback" : null,
+      by: row.author?.fullName ?? row.authorUser.displayName ?? row.authorUser.email,
+      detail: row.body,
     })),
   ]
 

@@ -4,15 +4,21 @@ import request from "supertest"
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
     salesAccount: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
-    salesAccountAssignment: { createMany: vi.fn() },
+    salesAccountAssignment: { createMany: vi.fn(), deleteMany: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
+    salesComment: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    opportunity: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    opportunityLine: { aggregate: vi.fn(), create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), delete: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
+    idCounter: { upsert: vi.fn() },
     salesContact: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -55,6 +61,31 @@ beforeEach(() => {
     (fn as unknown as (c: typeof prisma) => unknown)(prisma)) as never)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as never)
   vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as never)
+  vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as never)
+})
+
+describe("GET /api/sales/accounts/:id/margin", () => {
+  it("answers the margin won to somebody who works the account", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "sa-1", ownerEmployeeId: "emp-1" } as never)
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([] as never)
+
+    const res = await request(app)
+      .get("/api/sales/accounts/sa-1/margin")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(res.body).toEqual({ value: "0.00", counted: 0, missing: 0, dealsWithoutProducts: 0 })
+  })
+
+  it("answers 404 to somebody who can only see the account in the directory", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null as never)
+
+    await request(app)
+      .get("/api/sales/accounts/sa-1/margin")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(404)
+    expect(prisma.opportunity.findMany).not.toHaveBeenCalled()
+  })
 })
 
 describe("GET /api/sales/accounts", () => {
@@ -134,6 +165,21 @@ describe("GET /api/sales/accounts", () => {
     expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(
       expect.not.objectContaining({ where: expect.anything() })
     )
+  })
+
+  it("filters the shared directory to one owner's accounts with no verified contact", async () => {
+    const ownerEmployeeId = "11111111-1111-4111-8111-111111111111"
+    await request(app)
+      .get(`/api/sales/accounts?scope=all&unverified=true&ownerEmployeeId=${ownerEmployeeId}`)
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .expect(200)
+
+    expect(prisma.salesAccount.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        ownerEmployeeId,
+        contacts: { none: { status: "VERIFIED" } },
+      },
+    }))
   })
 })
 
@@ -441,5 +487,97 @@ describe("communication routes", () => {
       .expect(400)
 
     expect(prisma.salesCommunication.create).not.toHaveBeenCalled()
+  })
+})
+
+describe("PATCH /api/sales/accounts/:id", () => {
+  const CURRENT = {
+    id: "sa-1",
+    name: "Rising Group",
+    industry: "Textiles",
+    website: null,
+    address: null,
+    status: "ACTIVE",
+    statusReason: null,
+    ownerEmployeeId: "emp-1",
+    createdAt: new Date("2026-09-05"),
+    owner: {
+      fullName: "Karim",
+      employmentStatus: "ACTIVE",
+      lastWorkingDay: null,
+      user: { salesRole: "SALES_USER", isActive: true },
+    },
+    assignments: [],
+  }
+
+  beforeEach(() => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({
+      id: "sa-1",
+      ownerEmployeeId: "emp-1",
+    } as never)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue(CURRENT as never)
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(CURRENT as never)
+    vi.mocked(prisma.salesAccount.update).mockImplementation((async (args: never) => ({
+      ...CURRENT,
+      ...(args as { data: object }).data,
+    })) as never)
+  })
+
+  it("401s without a token", async () => {
+    await request(app).patch("/api/sales/accounts/sa-1").send({ industry: "X" }).expect(401)
+  })
+
+  it("403s an authenticated employee with no salesRole", async () => {
+    await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: null }))
+      .send({ industry: "X" })
+      .expect(403)
+
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+
+  it("200s for the owner, who is a Sales User and not an admin", async () => {
+    const res = await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ industry: "Garments" })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ industry: "Garments" })
+  })
+
+  it("403s a hub member who can see but does not work the account", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+      ...CURRENT,
+      ownerEmployeeId: "emp-9",
+      assignments: [],
+    } as never)
+
+    await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ industry: "Garments" })
+      .expect(403)
+
+    expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+
+  it("404s when the account genuinely does not exist", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null as never)
+
+    await request(app)
+      .patch("/api/sales/accounts/missing")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_USER" }))
+      .send({ industry: "Garments" })
+      .expect(404)
+  })
+
+  it("400s an empty body rather than reporting a save that changed nothing", async () => {
+    await request(app)
+      .patch("/api/sales/accounts/sa-1")
+      .set("Authorization", auth({ role: "EMPLOYEE", salesRole: "SALES_ADMIN" }))
+      .send({})
+      .expect(400)
   })
 })

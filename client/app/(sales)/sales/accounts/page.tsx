@@ -1,5 +1,9 @@
 import { AccountsPage } from "@/components/sales/accounts-page"
 
-export default function Page() {
-  return <AccountsPage scope="all" />
+export default async function Page({ searchParams }: PageProps<"/sales/accounts">) {
+  const query = await searchParams
+  return <AccountsPage scope="all" filters={{
+    unverified: query.unverified === "true",
+    ownerEmployeeId: typeof query.ownerEmployeeId === "string" ? query.ownerEmployeeId : undefined,
+  }} />
 }

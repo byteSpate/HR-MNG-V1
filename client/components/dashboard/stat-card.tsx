@@ -1,9 +1,41 @@
 import Link from "next/link"
+import {
+  RiBuilding2Line,
+  RiCheckboxCircleLine,
+  RiCloseCircleLine,
+  RiFocus3Line,
+  RiForbidLine,
+  RiLineChartLine,
+  RiPercentLine,
+  RiStackLine,
+  RiTimeLine,
+  RiTrophyLine,
+  type RemixiconComponentType,
+} from "@remixicon/react"
 
 import { HERO_OVERLAP_PX } from "@/components/dashboard/hero-banner"
 import { Tag } from "@/components/dashboard/tag"
-import type { Stat } from "@/components/dashboard/types"
+import { tones, type Stat } from "@/components/dashboard/types"
 import { cn } from "@/lib/utils"
+
+/**
+ * What a stat is about, as a picture. Keyed by a meaning the server sends
+ * (`icon: "target"`), not by component name, so the payload stays free of
+ * any icon library. Partial on purpose, like the DataTable icon map: an
+ * unknown name renders no icon rather than a question mark.
+ */
+const STAT_ICON: Record<string, RemixiconComponentType> = {
+  target: RiFocus3Line,
+  won: RiTrophyLine,
+  deals: RiCheckboxCircleLine,
+  progress: RiLineChartLine,
+  margin: RiPercentLine,
+  open: RiTimeLine,
+  lost: RiCloseCircleLine,
+  cancelled: RiForbidLine,
+  total: RiStackLine,
+  accounts: RiBuilding2Line,
+}
 
 /**
  * A stat card renders full-bleed on a phone, ~215px in a four-up desktop grid
@@ -17,11 +49,28 @@ const SURFACE =
   "@container flex flex-col gap-2.5 rounded-md border border-[#E4E9EF] bg-white p-4 shadow-[0_8px_24px_-12px_rgba(28,39,51,0.20)] @[260px]:p-5"
 
 function CardBody({ stat }: { stat: Stat }) {
+  const Icon = stat.icon ? STAT_ICON[stat.icon] : undefined
+  // Colour means something or it is not used: a stat whose tone says
+  // something (on track, behind) tints its icon; the rest stay grey.
+  const tinted = stat.tone !== "neutral"
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">
-          {stat.label}
+        <span className="flex min-w-0 items-center gap-2">
+          {Icon ? (
+            <span
+              className="flex size-6 shrink-0 items-center justify-center rounded-md"
+              style={{
+                background: tinted ? tones[stat.tone].bg : "#F1F4F8",
+                color: tinted ? tones[stat.tone].color : "#33373D",
+              }}
+            >
+              <Icon className="size-3.5" aria-hidden />
+            </span>
+          ) : null}
+          <span className="truncate text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+            {stat.label}
+          </span>
         </span>
         <Tag label={stat.tag} tone={stat.tone} />
       </div>

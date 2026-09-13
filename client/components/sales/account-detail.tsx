@@ -21,13 +21,16 @@ import {
 import {
   addContact,
   getAccountHistory,
+  getAccountMargin,
   getAccountTimeline,
   getSalesAccount,
   listContacts,
+  listOpportunities,
   logCommunication,
   setContactStatus,
   setPrimaryContact,
 } from "@/lib/api/sales"
+import { salesKeys } from "@/lib/api/sales-keys"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type {
@@ -35,6 +38,7 @@ import type {
   CreateSalesContactBody,
   HistoryChange,
   LogCommunicationBody,
+  SalesAccountSummary,
   SalesChannel,
   SalesContactSummary,
   TimelineItem,
@@ -51,8 +55,15 @@ import {
   CONTACT_STATUS_TONE,
   EVENT_ICON,
   HISTORY_ENTITY_ICON,
+  OPPORTUNITY_STATUS_LABEL,
+  OPPORTUNITY_STATUS_TONE,
+  stageSentence,
+  taka,
 } from "@/components/sales/sales-shared"
 import { Button } from "@/components/ui/button"
+import { AccountEditDialog } from "@/components/sales/account-edit-dialog"
+import { CommentPanel } from "@/components/sales/comment-panel"
+import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -199,6 +210,7 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["sales", "accounts", accountId, "contacts"] })
     queryClient.invalidateQueries({ queryKey: ["sales", "accounts", accountId, "history"] })
+    queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
   }
 
   const addMutation = useMutation({
@@ -339,7 +351,7 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
             <Field label="Name" htmlFor="contact-name">
               <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label="Designation" htmlFor="contact-designation" hint="Optional.">
+            <Field label="Designation" htmlFor="contact-designation" hint="Optional." help="Their job title, like Procurement Manager.">
               <Input id="contact-designation" value={designation} onChange={(e) => setDesignation(e.target.value)} />
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -455,6 +467,7 @@ function TimelinePanel({
     onSuccess: () => {
       setLogOpen(false)
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts", accountId, "timeline"] })
+      queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
     },
     onError: (err) => setFormError(toMessage(err)),
   })
@@ -574,7 +587,7 @@ function TimelinePanel({
             <Field label="What happened" htmlFor="log-summary">
               <Input id="log-summary" value={summary} onChange={(e) => setSummary(e.target.value)} />
             </Field>
-            <Field label="Detail" htmlFor="log-detail" hint="Optional.">
+            <Field label="Detail" htmlFor="log-detail" hint="Optional." help="Anything from the conversation worth keeping. It shows on the Timeline with the call.">
               <Textarea id="log-detail" value={detail} onChange={(e) => setDetail(e.target.value)} />
             </Field>
             {formError ? <FormError>{formError}</FormError> : null}
@@ -705,18 +718,175 @@ function HistoryPanel({ accountId }: { accountId: string }) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Opportunities                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * "Margin won": the profit on the account's won deals, added up by the
+ * server. Loading, broken and "nothing won yet" each get their own line, so a
+ * failed read never passes for an account that has made nothing.
+ */
+function MarginWon({ accountId }: { accountId: string }) {
+  const { accessToken } = useSession()
+  const marginQuery = useQuery({
+    queryKey: salesKeys.accountMargin(accountId),
+    queryFn: () => getAccountMargin(accessToken!, accountId),
+    enabled: !!accessToken,
+  })
+
+  if (marginQuery.isPending) return <Skeleton className="mb-3 h-4 w-48" />
+  if (marginQuery.isError) {
+    return (
+      <p className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-[#B03A3A]">
+        Margin won could not be loaded.
+        <button type="button" onClick={() => marginQuery.refetch()} className="font-bold underline">
+          Try again
+        </button>
+      </p>
+    )
+  }
+
+  const { value, counted, missing, dealsWithoutProducts } = marginQuery.data
+  const count = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
+  const amount = Number(value) < 0 ? `a loss of ${taka(String(-Number(value)))}` : taka(value)
+  // What could not be counted, named rather than folded in as zero.
+  const gaps = [
+    missing > 0 ? `${count(missing, "product")} with no margin yet` : null,
+    dealsWithoutProducts > 0 ? `${count(dealsWithoutProducts, "won deal")} with no products` : null,
+  ]
+    .filter(Boolean)
+    .join(", and ")
+  const nothingWon = counted === 0 && missing === 0 && dealsWithoutProducts === 0
+  return (
+    <p className="mb-3 text-[12.5px] leading-relaxed text-[#5F6B7C]">
+      <span className="font-semibold text-[#1C2733]">Margin won: </span>
+      {nothingWon
+        ? "no deals won on this account yet."
+        : counted === 0
+          ? `no margin yet — ${gaps}.`
+          : `${amount} from ${count(counted, "product")} on won deals${gaps ? `, not counting ${gaps}` : ""}.`}
+    </p>
+  )
+}
+
+/**
+ * The account's deals, and the one place a new deal is started from.
+ *
+ * Deals are open only to the people who work the account. Asking the server
+ * on behalf of anybody else returns an empty list, which would read as "this
+ * account has no deals" — a claim nobody checked — so the list is not
+ * requested for a read-only viewer at all, and the panel says why instead.
+ */
+function OpportunitiesPanel({ account }: { account: SalesAccountSummary }) {
+  const { accessToken } = useSession()
+  const [createOpen, setCreateOpen] = useState(false)
+
+  const dealsQuery = useQuery({
+    queryKey: salesKeys.opportunities({ salesAccountId: account.id }),
+    queryFn: () => listOpportunities(accessToken!, { salesAccountId: account.id }),
+    enabled: !!accessToken && account.canManage,
+  })
+
+  if (!account.canManage) {
+    return (
+      <Panel>
+        <PanelHeading title="Opportunities" />
+        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          Deals on this account are open only to its owner, its collaborators and Sales Admins.
+        </p>
+      </Panel>
+    )
+  }
+  if (dealsQuery.isPending) return <PanelSkeleton />
+  if (dealsQuery.isError) return <PanelError onRetry={() => dealsQuery.refetch()} />
+
+  const deals = dealsQuery.data.items
+
+  return (
+    <Panel>
+      <PanelHeading
+        title="Opportunities"
+        action={
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+          >
+            New opportunity
+          </Button>
+        }
+      />
+      {deals.length > 0 ? <MarginWon accountId={account.id} /> : null}
+      {deals.length === 0 ? (
+        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          No deals on this account yet. A deal is one thing being sold here — a firewall upgrade, a
+          switching refresh — with its own stage, value and next step.
+        </p>
+      ) : (
+        <ul className="-mx-2 divide-y divide-[#EEF1F5]">
+          {deals.map((deal) => (
+            <li key={deal.id}>
+              <Link
+                href={`/sales/opportunities/${deal.id}`}
+                className="flex items-center justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-[#F7F9FB] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+              >
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0 font-mono text-[11.5px] text-[#5F6B7C]">{deal.serial}</span>
+                    <span className="truncate text-[13px] font-semibold">{deal.name}</span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[12px] text-[#5F6B7C]">
+                    {stageSentence(deal.status, deal.stage)} · {deal.ownerName}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2.5">
+                  {/* No price yet, never ৳0. */}
+                  <span className={deal.amount === null ? "text-[12.5px] text-[#5F6B7C]" : "text-[12.5px] font-semibold"}>
+                    {taka(deal.amount)}
+                  </span>
+                  <Tag label={OPPORTUNITY_STATUS_LABEL[deal.status]} tone={OPPORTUNITY_STATUS_TONE[deal.status]} />
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* The list is one page. Said rather than implied, so a long-running
+          account does not look like it has exactly fifty deals. */}
+      {dealsQuery.data.nextCursor ? (
+        <p className="mt-2 text-[11.5px] text-[#5F6B7C]">Showing the 50 newest deals on this account.</p>
+      ) : null}
+      <OpportunityFormDialog accountId={account.id} open={createOpen} onOpenChange={setCreateOpen} />
+    </Panel>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
 /* Page                                                                        */
 /* -------------------------------------------------------------------------- */
 
 export function AccountDetail({ accountId }: { accountId: string }) {
-  const { accessToken, status: sessionStatus } = useSession()
+  const { accessToken, user, status: sessionStatus } = useSession()
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
+
+  const [editOpen, setEditOpen] = useState(false)
+  // Opening from the flag rather than the Edit button changes the dialog's
+  // title and leads with the owner, because the reason is already known.
+  const [editFocusOwner, setEditFocusOwner] = useState(false)
+
+  // Management notes are admin-only to write. The server refuses either way;
+  // hiding the option keeps a control that cannot act off the screen.
+  const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
 
   const accountQuery = useQuery({
     queryKey: ["sales", "accounts", accountId],
     queryFn: () => getSalesAccount(accessToken!, accountId),
     enabled: isAuthed,
   })
+
+  function openEdit(focusOwner: boolean) {
+    setEditFocusOwner(focusOwner)
+    setEditOpen(true)
+  }
 
   return (
     <>
@@ -758,7 +928,22 @@ export function AccountDetail({ accountId }: { accountId: string }) {
               tone={ACCOUNT_STATUS_TONE[accountQuery.data.status]}
             />
             {!accountQuery.data.canManage ? <Tag label="View only" tone="neutral" /> : null}
+            {accountQuery.data.canManage ? (
+              <Button
+                type="button"
+                onClick={() => openEdit(false)}
+                className="ml-auto h-8 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              >
+                Edit
+              </Button>
+            ) : null}
           </div>
+
+          {/* The reason lives beside the status it explains. Without it a
+              Do Not Contact badge is a decision with no record of why. */}
+          {accountQuery.data.statusReason ? (
+            <p className="mt-2 text-[12.5px] text-[#5F6B7C]">{accountQuery.data.statusReason}</p>
+          ) : null}
 
           <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[#5F6B7C]">
             <span>Owner: {accountQuery.data.ownerName}</span>
@@ -794,8 +979,22 @@ export function AccountDetail({ accountId }: { accountId: string }) {
           {!accountQuery.data.ownerActive ? (
             <p className="mt-3 flex items-start gap-1.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2 text-[12px] leading-relaxed text-[#8A5E0C]">
               <RiAlertLine className="mt-px size-3.5 shrink-0" aria-hidden />
-              {accountQuery.data.ownerName} can no longer work this account — their Techno Sales
-              Hub access has been removed or they have left. It needs a new owner.
+              <span>
+                {accountQuery.data.ownerName} can no longer work this account — their Techno Sales
+                Hub access has been removed or they have left. It needs a new owner.
+                {/* The flag used to state a problem the interface could not
+                    solve. It now leads to the one action that clears it. */}
+                {accountQuery.data.canManage ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => openEdit(true)}
+                    className="ml-1.5 h-auto p-0 text-[12px] font-bold text-[#8A5E0C] underline"
+                  >
+                    Choose a new owner
+                  </Button>
+                ) : null}
+              </span>
             </p>
           ) : null}
 
@@ -811,16 +1010,44 @@ export function AccountDetail({ accountId }: { accountId: string }) {
 
       {accountQuery.data ? (
         <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(280px,1fr)_minmax(0,2fr)]">
-          <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
+          {/* Contacts and deals together on the left: the two things somebody
+              opening an account comes to act on. The right column is the
+              record of what happened. */}
+          <div className="grid gap-4">
+            <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
+            <OpportunitiesPanel account={accountQuery.data} />
+          </div>
           <div className="grid gap-4">
             <TimelinePanel
               accountId={accountId}
               canManage={accountQuery.data.canManage}
               canLog={accountQuery.data.canLogActivity}
             />
+            {/* "Remarks" here and "Comments" on a deal, from one component.
+                That is the business's own vocabulary and the two must not be
+                made consistent with each other. */}
+            <CommentPanel
+              entity="SALES_ACCOUNT"
+              entityId={accountId}
+              label="Remarks"
+              // Customer feedback is offered on a deal only: feedback is
+              // always about a specific deal, and the server no longer
+              // refuses the row, so the restriction lives here.
+              kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
+              canWrite={accountQuery.data.canManage}
+            />
             <HistoryPanel accountId={accountId} />
           </div>
         </div>
+      ) : null}
+
+      {accountQuery.data && accountQuery.data.canManage ? (
+        <AccountEditDialog
+          account={accountQuery.data}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          focusOwner={editFocusOwner}
+        />
       ) : null}
     </>
   )
