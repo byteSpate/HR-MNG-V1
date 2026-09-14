@@ -16,6 +16,7 @@ vi.mock("../../config/prisma", () => ({
     event: { create: vi.fn(), findMany: vi.fn() },
     salesComment: { findMany: vi.fn() },
     salesMeeting: { findMany: vi.fn() },
+    salesTask: { create: vi.fn() },
   },
 }))
 
@@ -425,6 +426,34 @@ describe("stage, status, and next step", () => {
     }))
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("also makes a task for whoever ticked the box, with the step's text and date", async () => {
+    vi.mocked(prisma.salesTask.create).mockResolvedValue({ id: "task-1" } as any)
+
+    await changeOpportunityNextStep("opp-1", {
+      nextStep: "Send revised BOM", nextStepDueOn: "2026-09-12", alsoCreateTask: true,
+    }, USER)
+
+    expect(prisma.salesTask.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        title: "Send revised BOM", dueOn: new Date("2026-09-12T00:00:00.000Z"),
+        assignedToEmployeeId: "emp-1", origin: "SELF",
+        salesAccountId: "account-1", opportunityId: "opp-1",
+      }),
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ entity: "SALES_TASK", action: "CREATE" }),
+    }))
+  })
+
+  it("refuses the box without a step and a date, and changes nothing", async () => {
+    await expect(changeOpportunityNextStep("opp-1", {
+      nextStep: "Send revised BOM", nextStepDueOn: null, alsoCreateTask: true,
+    }, USER)).rejects.toThrow(/date/i)
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
   })
 })
 
