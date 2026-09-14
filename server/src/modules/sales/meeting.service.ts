@@ -8,19 +8,23 @@
  *
  * Moving a meeting is editing `scheduledAt`. There is no RESCHEDULED status:
  * a moved meeting is a fact for the Timeline, not a state of the meeting.
+ *
+ * Our-side attendees are told straight away when they are added, when the
+ * time moves, and when it is cancelled or back on (§24.17): a bell row inside
+ * the transaction, and an email once it has committed.
  */
 
 import prisma from "../../config/prisma"
-import { env } from "../../config/env"
 import type { Prisma } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
 import { standingOf } from "./account.service"
-import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL, presentMeeting } from "./meeting.present"
+import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL, presentMeeting, whenLabel } from "./meeting.present"
 import { canManageAccount, employeeIdFor, requireAccountAccess } from "./sales.access"
 import { canWorkAccounts } from "./sales.eligibility"
+import { sendMeetingChanged, type MeetingChange } from "./sales.mailer"
 import type { SalesMeetingSummary } from "./sales.types"
 import type {
   ChangeMeetingStatusBody,
@@ -43,18 +47,91 @@ const INCLUDE = {
   },
 } satisfies Prisma.SalesMeetingInclude
 
+type MeetingRow = Prisma.SalesMeetingGetPayload<{ include: typeof INCLUDE }>
 type AttendeeInput = CreateMeetingBody["attendees"][number]
 
-/** "Sun 20 Sep, 10:00" in office time, for event titles. */
-function whenLabel(at: Date): string {
-  return at.toLocaleString("en-GB", {
-    timeZone: env.APP_TIMEZONE,
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
+/** Who hears about a change. Worked out inside the transaction, emailed after it commits. */
+interface Notice {
+  change: MeetingChange
+  employeeIds: string[]
+  previousAt?: Date
+  reason?: string
+}
+
+const CHANGE_EVENT = {
+  added: "sales.meeting.scheduled",
+  moved: "sales.meeting.rescheduled",
+  cancelled: "sales.meeting.cancelled",
+  back_on: "sales.meeting.scheduled",
+} as const
+
+const CHANGE_TITLE: Record<MeetingChange, string> = {
+  added: "Added to a meeting",
+  moved: "Meeting moved",
+  cancelled: "Meeting cancelled",
+  back_on: "Meeting back on",
+}
+
+/** Our side, by employee, once each. */
+function oursOf(attendees: { side: string; employeeId?: string | null }[]): string[] {
+  return [...new Set(attendees.flatMap((a) => (a.side === "OURS" && a.employeeId ? [a.employeeId] : [])))]
+}
+
+/**
+ * The bell half: one row per person, because an event has one subject. Keyed
+ * to the meeting and not the account, so the account's Timeline, which has
+ * its own row for the change, does not show it once per attendee.
+ */
+async function ringBells(tx: Prisma.TransactionClient, meeting: MeetingRow, notice: Notice, actor: AccessTokenPayload) {
+  for (const employeeId of notice.employeeIds) {
+    await emitEvent(tx, {
+      type: CHANGE_EVENT[notice.change],
+      entity: "SALES_MEETING",
+      entityId: meeting.id,
+      actorUserId: actor.sub,
+      subjectEmployeeId: employeeId,
+      managerEmployeeId: null,
+      title: `${CHANGE_TITLE[notice.change]}: ${meeting.title}`,
+      meta: notice.change === "cancelled" ? (notice.reason ?? null) : whenLabel(meeting.scheduledAt),
+      href: "/meetings",
+    })
+  }
+}
+
+/**
+ * The email half, after the transaction has committed: a change that rolled
+ * back must never be announced. `sendMeetingChanged` swallows a mail failure
+ * into the dispatch log, so a refused email cannot undo the change either.
+ */
+async function emailAttendees(meeting: MeetingRow, notices: Notice[]) {
+  const ids = [...new Set(notices.flatMap((notice) => notice.employeeIds))]
+  if (ids.length === 0) return
+  const people = await prisma.employee.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, fullName: true, user: { select: { email: true } } },
   })
+  const byId = new Map(people.map((person) => [person.id, person]))
+  for (const notice of notices) {
+    for (const employeeId of notice.employeeIds) {
+      const person = byId.get(employeeId)
+      if (!person?.user?.email) continue
+      await sendMeetingChanged({
+        to: person.user.email,
+        fullName: person.fullName,
+        change: notice.change,
+        meeting: {
+          id: meeting.id,
+          title: meeting.title,
+          scheduledAt: meeting.scheduledAt,
+          mode: meeting.mode,
+          location: meeting.location,
+          salesAccountName: meeting.salesAccount.name,
+        },
+        previousAt: notice.previousAt,
+        reason: notice.reason,
+      })
+    }
+  }
 }
 
 /**
@@ -134,12 +211,12 @@ async function requireDealOnAccount(tx: Prisma.TransactionClient, opportunityId:
   if (!deal) throw new AppError(400, "That deal is not on this account")
 }
 
-/** The meeting, after the same write gate as its account. */
+/** The meeting, after the same write gate as its account, and who the caller is. */
 async function meetingForWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {
   const meeting = await tx.salesMeeting.findFirst({ where: { id }, include: INCLUDE })
   if (!meeting) throw new AppError(404, MEETING_NOT_VISIBLE)
-  await requireAccountAccess(meeting.salesAccountId, actor, asClient(tx))
-  return meeting
+  const { employeeId } = await requireAccountAccess(meeting.salesAccountId, actor, asClient(tx))
+  return { meeting, employeeId }
 }
 
 function canManageMeeting(
@@ -159,7 +236,7 @@ export async function createMeeting(
   body: CreateMeetingBody,
   actor: AccessTokenPayload
 ): Promise<SalesMeetingSummary> {
-  return prisma.$transaction(async (tx) => {
+  const { created, notices } = await prisma.$transaction(async (tx) => {
     const access = await requireAccountAccess(body.salesAccountId, actor, asClient(tx))
     if (body.opportunityId) await requireDealOnAccount(tx, body.opportunityId, access.accountId)
     const attendees = await attendeeRows(tx, access.accountId, body.attendees ?? [], access.employeeId)
@@ -203,15 +280,23 @@ export async function createMeeting(
       entityId: access.accountId,
       actorUserId: actor.sub,
       // The account owner is the audience, as the deal owner is for deal
-      // events. Telling each attendee arrives with the reminder emails.
+      // events. Each attendee is told separately below.
       subjectEmployeeId: access.ownerEmployeeId,
       managerEmployeeId: null,
       title: `Meeting scheduled: ${body.title}`,
       meta: `${whenLabel(scheduledAt)} · ${MEETING_MODE_LABEL[mode]}`,
       href: `/accounts/${access.accountId}`,
     })
-    return presentMeeting(created)
+
+    // From the rows written, not the row read back: the scheduler is not told
+    // about their own meeting.
+    const added = oursOf(attendees).filter((id) => id !== access.employeeId)
+    const notices: Notice[] = added.length > 0 ? [{ change: "added", employeeIds: added }] : []
+    for (const notice of notices) await ringBells(tx, created, notice, actor)
+    return { created, notices }
   })
+  await emailAttendees(created, notices)
+  return presentMeeting(created)
 }
 
 export async function updateMeeting(
@@ -219,8 +304,8 @@ export async function updateMeeting(
   body: UpdateMeetingBody,
   actor: AccessTokenPayload
 ): Promise<SalesMeetingSummary> {
-  return prisma.$transaction(async (tx) => {
-    const current = await meetingForWrite(tx, id, actor)
+  const { updated, notices } = await prisma.$transaction(async (tx) => {
+    const { meeting: current, employeeId } = await meetingForWrite(tx, id, actor)
     const moving =
       body.scheduledAt !== undefined && new Date(body.scheduledAt).getTime() !== current.scheduledAt.getTime()
     if ((moving || body.endsAt !== undefined) && current.status !== "SCHEDULED") {
@@ -260,16 +345,17 @@ export async function updateMeeting(
       before.opportunityId = current.opportunityId
       after.opportunityId = body.opportunityId
     }
+    let rows: Awaited<ReturnType<typeof attendeeRows>> | null = null
     if (body.attendees !== undefined) {
       // The list replaces the old one as given; the scheduler is not re-added.
-      const rows = await attendeeRows(tx, current.salesAccountId, body.attendees, null)
+      rows = await attendeeRows(tx, current.salesAccountId, body.attendees, null)
       await tx.salesMeetingAttendee.deleteMany({ where: { meetingId: id } })
       data.attendees = { create: rows }
       before.attendees = current.attendees.length
       after.attendees = rows.length
     }
 
-    if (Object.keys(data).length === 0) return presentMeeting(current)
+    if (Object.keys(data).length === 0) return { updated: current, notices: [] as Notice[] }
 
     const updated = await tx.salesMeeting.update({ where: { id }, data, include: INCLUDE })
     await writeAudit(tx, {
@@ -293,8 +379,26 @@ export async function updateMeeting(
         href: `/accounts/${current.salesAccountId}`,
       })
     }
-    return presentMeeting(updated)
+
+    // Somebody new hears they were added, with the new time in it. Everyone
+    // who was already on it hears that it moved. Nobody hears about their own
+    // change.
+    const wasOn = oursOf(current.attendees)
+    const nowOn = rows ? oursOf(rows) : wasOn
+    const others = (ids: string[]) => ids.filter((employee) => employee !== employeeId)
+    const added = others(nowOn.filter((employee) => !wasOn.includes(employee)))
+    const stayed = others(nowOn.filter((employee) => wasOn.includes(employee)))
+    const notices: Notice[] = [
+      ...(added.length > 0 ? [{ change: "added" as const, employeeIds: added }] : []),
+      ...(moving && stayed.length > 0
+        ? [{ change: "moved" as const, employeeIds: stayed, previousAt: current.scheduledAt }]
+        : []),
+    ]
+    for (const notice of notices) await ringBells(tx, updated, notice, actor)
+    return { updated, notices }
   })
+  await emailAttendees(updated, notices)
+  return presentMeeting(updated)
 }
 
 /**
@@ -310,8 +414,8 @@ export async function changeMeetingStatus(
   body: ChangeMeetingStatusBody,
   actor: AccessTokenPayload
 ): Promise<SalesMeetingSummary> {
-  return prisma.$transaction(async (tx) => {
-    const current = await meetingForWrite(tx, id, actor)
+  const { updated, notices } = await prisma.$transaction(async (tx) => {
+    const { meeting: current, employeeId } = await meetingForWrite(tx, id, actor)
     if (current.status === body.status) {
       throw new AppError(400, `This meeting is already ${MEETING_STATUS_LABEL[body.status].toLowerCase()}`)
     }
@@ -373,8 +477,22 @@ export async function changeMeetingStatus(
             : whenLabel(updated.scheduledAt),
       href: `/accounts/${current.salesAccountId}`,
     })
-    return presentMeeting(updated)
+
+    // Cancelling, and putting it back, are what attendees must hear: nobody
+    // should come in for a meeting that is off, or miss one that is on again.
+    // Completing tells nobody; they were there.
+    const others = oursOf(current.attendees).filter((employee) => employee !== employeeId)
+    const notices: Notice[] =
+      others.length === 0 || body.status === "COMPLETED"
+        ? []
+        : body.status === "CANCELLED"
+          ? [{ change: "cancelled", employeeIds: others, reason: body.reason }]
+          : [{ change: "back_on", employeeIds: others }]
+    for (const notice of notices) await ringBells(tx, updated, notice, actor)
+    return { updated, notices }
   })
+  await emailAttendees(updated, notices)
+  return presentMeeting(updated)
 }
 
 /** Any hub member may read a meeting, as they may read its account. */

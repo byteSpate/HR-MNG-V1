@@ -1,4 +1,17 @@
+import { env } from "../../config/env"
 import type { SalesMeetingSummary } from "./sales.types"
+
+/** "Sun 20 Sep, 10:00" in office time, for event titles and emails. */
+export function whenLabel(at: Date): string {
+  return at.toLocaleString("en-GB", {
+    timeZone: env.APP_TIMEZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
 
 /** How a person says where a meeting happens. A visit is "at the customer". */
 export const MEETING_MODE_LABEL: Record<string, string> = {
