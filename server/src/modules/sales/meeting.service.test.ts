@@ -17,7 +17,9 @@ vi.mock("../../config/prisma", () => ({
 vi.mock("./sales.mailer", () => ({ sendMeetingChanged: vi.fn(), sendSalesDailyEmail: vi.fn() }))
 
 import prisma from "../../config/prisma"
-import { changeMeetingStatus, createMeeting, listMeetings, updateMeeting } from "./meeting.service"
+import {
+  changeMeetingStatus, createMeeting, listMeetingAttendeeOptions, listMeetings, updateMeeting,
+} from "./meeting.service"
 import { sendMeetingChanged } from "./sales.mailer"
 
 const USER = {
@@ -321,6 +323,58 @@ describe("telling attendees about a change", () => {
     await updateMeeting("meeting-1", { notes: "Bring the rack diagram" } as any, USER)
 
     expect(sendMeetingChanged).not.toHaveBeenCalled()
+  })
+})
+
+describe("a linked deal keeps the meeting's story", () => {
+  const accountEvent = (type: string) => vi.mocked(prisma.event.create).mock.calls
+    .map(([args]: any[]) => args.data)
+    .find((data) => data.entity === "SALES_ACCOUNT" && data.type === type)
+
+  it("keys the account's meeting event to the deal it is about", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ id: "opp-1" } as any)
+    vi.mocked(prisma.salesMeeting.create).mockResolvedValue(meeting({ opportunityId: "opp-1" }) as any)
+
+    await createMeeting({ ...BASE, opportunityId: "opp-1" } as any, USER)
+
+    expect(accountEvent("sales.meeting.scheduled")?.payload).toEqual({ meetingId: "meeting-1", opportunityId: "opp-1" })
+  })
+
+  it("does the same when a linked meeting moves, or is cancelled", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(meeting({ opportunityId: "opp-1" }) as any)
+    vi.mocked(prisma.salesMeeting.update).mockImplementation((async (args: any) =>
+      meeting({ opportunityId: "opp-1", ...args.data })) as never)
+
+    await updateMeeting("meeting-1", { scheduledAt: "2026-09-21T10:00:00+06:00" } as any, USER)
+    expect(accountEvent("sales.meeting.rescheduled")?.payload).toEqual({ meetingId: "meeting-1", opportunityId: "opp-1" })
+
+    await changeMeetingStatus("meeting-1", { status: "CANCELLED", reason: "Customer travelling" } as any, USER)
+    expect(accountEvent("sales.meeting.cancelled")?.payload).toEqual({ meetingId: "meeting-1", opportunityId: "opp-1" })
+  })
+})
+
+describe("who can attend on our side", () => {
+  const person = (id: string, fullName: string, salesRole: string, extra: Record<string, unknown> = {}) => ({
+    id, fullName, designation: "Sales", employmentStatus: "ACTIVE", lastWorkingDay: null,
+    user: { salesRole, isActive: true }, ...extra,
+  })
+
+  it("offers everyone with Sales Hub access, not only the account's team, and nobody who has left", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      person("emp-2", "Karim", "SALES_USER"),
+      person("emp-5", "Nadia", "SALES_ADMIN"),
+      person("emp-7", "Salam", "SALES_USER", { employmentStatus: "RESIGNED", lastWorkingDay: new Date("2026-01-31") }),
+    ] as any)
+
+    const people = await listMeetingAttendeeOptions()
+
+    expect(people).toEqual([
+      { id: "emp-2", fullName: "Karim", designation: "Sales" },
+      { id: "emp-5", fullName: "Nadia", designation: "Sales" },
+    ])
+    const args = vi.mocked(prisma.employee.findMany).mock.calls[0][0] as any
+    expect(args.where).toEqual({ user: { salesRole: { not: null }, isActive: true } })
+    expect(args.orderBy).toEqual({ fullName: "asc" })
   })
 })
 

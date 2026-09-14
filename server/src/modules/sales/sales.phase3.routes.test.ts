@@ -3,7 +3,7 @@ import request from "supertest"
 
 vi.mock("./meeting.service", () => ({
   createMeeting: vi.fn(), listMeetings: vi.fn(), getMeeting: vi.fn(),
-  updateMeeting: vi.fn(), changeMeetingStatus: vi.fn(),
+  updateMeeting: vi.fn(), changeMeetingStatus: vi.fn(), listMeetingAttendeeOptions: vi.fn(),
 }))
 vi.mock("./task.service", () => ({
   createTask: vi.fn(), listTasks: vi.fn(), getTask: vi.fn(),
@@ -99,6 +99,17 @@ describe("meeting routes", () => {
     await request(app).get("/api/sales/meetings/meeting-1")
       .set("Authorization", auth("SALES_USER")).expect(200)
     expect(meetings.getMeeting).toHaveBeenCalledWith("meeting-1", expect.anything())
+  })
+
+  it("lists who can attend to any hub member, without reading the path as a meeting id", async () => {
+    vi.mocked(meetings.listMeetingAttendeeOptions).mockResolvedValue([] as any)
+
+    await request(app).get("/api/sales/meetings/attendee-options")
+      .set("Authorization", auth("SALES_USER")).expect(200)
+    expect(meetings.listMeetingAttendeeOptions).toHaveBeenCalled()
+    expect(meetings.getMeeting).not.toHaveBeenCalled()
+
+    await request(app).get("/api/sales/meetings/attendee-options").set("Authorization", auth(null)).expect(403)
   })
 })
 

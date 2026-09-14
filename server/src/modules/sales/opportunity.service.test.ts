@@ -483,6 +483,26 @@ describe("the deal Timeline, management notes", () => {
     }))
   })
 
+  it("keeps each linked meeting's story on the deal Timeline, not only its current state", async () => {
+    vi.mocked(prisma.event.findMany).mockResolvedValue([{
+      id: "ev-9", type: "sales.meeting.rescheduled", createdAt: new Date("2026-09-15T06:00:00.000Z"),
+      title: "Meeting moved: Firewall walkthrough", meta: "Sun 20 Sep, 10:00 to Mon 21 Sep, 10:00",
+    }] as any)
+
+    const { items } = await getOpportunityTimeline("opp-1", USER)
+
+    // The deal's own events, and the account's meeting events keyed to this deal.
+    const where = (vi.mocked(prisma.event.findMany).mock.calls[0][0] as any).where
+    expect(where.OR).toContainEqual({ entity: "OPPORTUNITY", entityId: "opp-1" })
+    expect(where.OR).toContainEqual({
+      entity: "SALES_ACCOUNT", entityId: "account-1", type: { startsWith: "sales.meeting." },
+      payload: { path: ["opportunityId"], equals: "opp-1" },
+    })
+    expect(items).toContainEqual(expect.objectContaining({
+      id: "event:ev-9", kind: "event", title: "Meeting moved: Firewall walkthrough",
+    }))
+  })
+
   it("leaves management notes out of a Sales User's deal Timeline", async () => {
     await getOpportunityTimeline("opp-1", USER)
 
