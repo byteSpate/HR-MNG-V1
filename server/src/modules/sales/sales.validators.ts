@@ -262,7 +262,8 @@ export const changeTaskStatusSchema = z.discriminatedUnion("status", [
 
 export const listTaskSchema = z.object({
   status: z.enum(["PENDING", "DONE", "CANCELLED"]).optional(),
-  due: z.enum(["overdue", "today", "week"]).optional(),
+  // "now" is due today or overdue: the overview's "Tasks due or overdue" row.
+  due: z.enum(["overdue", "today", "now", "week"]).optional(),
   origin: z.enum(["SELF", "FUNNEL_MEETING"]).optional(),
   salesAccountId: z.string().uuid().optional(),
   opportunityId: z.string().uuid().optional(),

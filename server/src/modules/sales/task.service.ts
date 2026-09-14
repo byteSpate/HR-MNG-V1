@@ -62,6 +62,7 @@ export function taskScopeFor(actor: AccessTokenPayload, employeeId: string | nul
 function dueFilter(due: ListTaskQuery["due"], today: Date): Prisma.SalesTaskWhereInput {
   if (due === "overdue") return { status: "PENDING", dueOn: { lt: today } }
   if (due === "today") return { dueOn: today }
+  if (due === "now") return { status: "PENDING", dueOn: { lte: today } }
   if (due === "week") return { dueOn: { gte: today, lt: addDays(today, WEEK_DAYS) } }
   return {}
 }
