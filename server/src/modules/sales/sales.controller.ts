@@ -38,6 +38,7 @@ import {
   changeMeetingStatus,
   createMeeting,
   getMeeting,
+  listMeetingAttendeeOptions,
   listMeetings,
   updateMeeting,
 } from "./meeting.service"
@@ -316,6 +317,11 @@ export async function updateMeetingHandler(req: Request<{ id: string }>, res: Re
 
 export async function changeMeetingStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await changeMeetingStatus(req.params.id, changeMeetingStatusSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function listMeetingAttendeeOptionsHandler(_req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listMeetingAttendeeOptions()) }
   catch (err) { return next(err) }
 }
 

@@ -286,6 +286,9 @@ export async function createMeeting(
       title: `Meeting scheduled: ${body.title}`,
       meta: `${whenLabel(scheduledAt)} · ${MEETING_MODE_LABEL[mode]}`,
       href: `/accounts/${access.accountId}`,
+      // Names the meeting and its deal, so a linked deal's Timeline can tell
+      // the meeting's story too without a second event for the same change.
+      payload: { meetingId: created.id, opportunityId: created.opportunityId },
     })
 
     // From the rows written, not the row read back: the scheduler is not told
@@ -377,6 +380,7 @@ export async function updateMeeting(
         title: `Meeting moved: ${updated.title}`,
         meta: `${whenLabel(current.scheduledAt)} to ${whenLabel(updated.scheduledAt)}`,
         href: `/accounts/${current.salesAccountId}`,
+        payload: { meetingId: id, opportunityId: updated.opportunityId },
       })
     }
 
@@ -476,6 +480,7 @@ export async function changeMeetingStatus(
             ? (body.outcome ?? whenLabel(updated.scheduledAt))
             : whenLabel(updated.scheduledAt),
       href: `/accounts/${current.salesAccountId}`,
+      payload: { meetingId: id, opportunityId: updated.opportunityId },
     })
 
     // Cancelling, and putting it back, are what attendees must hear: nobody
@@ -537,4 +542,30 @@ export async function listMeetings(
     take: 500,
   })
   return { items: rows.map((row) => presentMeeting(row, canManageMeeting(row, actor, employeeId))) }
+}
+
+/**
+ * Everyone who may be put on our side of a meeting (§24.3): any employee who
+ * can work in the hub, Sales Admins included, and not only the account's own
+ * team. The same rule `attendeeRows` enforces when the meeting is saved, so
+ * the picker never offers somebody the save would refuse.
+ */
+export async function listMeetingAttendeeOptions(): Promise<{ id: string; fullName: string; designation: string }[]> {
+  const people = await prisma.employee.findMany({
+    where: { user: { salesRole: { not: null }, isActive: true } },
+    select: {
+      id: true,
+      fullName: true,
+      designation: true,
+      employmentStatus: true,
+      lastWorkingDay: true,
+      user: { select: { salesRole: true, isActive: true } },
+    },
+    orderBy: { fullName: "asc" },
+  })
+  // A leaver serving notice keeps access until their last working day, a
+  // comparison with today that the `where` cannot make.
+  return people
+    .filter((person) => canWorkAccounts(standingOf(person)))
+    .map(({ id, fullName, designation }) => ({ id, fullName, designation }))
 }

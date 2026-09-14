@@ -409,9 +409,23 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
         authorUser: { select: { displayName: true, email: true } },
       },
     }),
-    prisma.event.findMany({ where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100 }),
-    // Meetings about this deal. Their story (scheduled, moved, cancelled) is
-    // on the account's Timeline; the deal shows the meetings themselves.
+    prisma.event.findMany({
+      where: {
+        OR: [
+          { entity: "OPPORTUNITY", entityId: id },
+          // A linked meeting's story. Its scheduled, moved, completed and
+          // cancelled events are written against the account and name this
+          // deal in their payload, so the deal shows them without a second
+          // event for the same change.
+          {
+            entity: "SALES_ACCOUNT", entityId: visible.salesAccountId, type: { startsWith: "sales.meeting." },
+            payload: { path: ["opportunityId"], equals: id },
+          },
+        ],
+      },
+      orderBy: { createdAt: "desc" }, take: 100,
+    }),
+    // The meetings about this deal as they stand now, beside their story above.
     prisma.salesMeeting.findMany({
       where: { opportunityId: id }, orderBy: { scheduledAt: "desc" }, take: 100,
       select: { id: true, title: true, mode: true, status: true, scheduledAt: true },
@@ -429,6 +443,5 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
       at: row.createdAt.toISOString(), title: row.title, meta: row.meta, by: null, detail: null })),
   ]
   items.sort((a, b) => b.at.localeCompare(a.at))
-  void visible
   return { items: items.slice(0, 100) }
 }
