@@ -53,6 +53,10 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // one: a deal belongs to an account, but the funnel is read across
         // all of them at once.
         { label: "Opportunities", href: "/sales/opportunities", icon: "RiBriefcaseLine" },
+        // Meetings and follow-up tasks across every account (revision §24.21).
+        // Each carries a count badge from the overview's own figures.
+        { label: "Meetings", href: "/sales/meetings", icon: "RiCalendar2Line" },
+        { label: "Tasks", href: "/sales/tasks", icon: "RiTaskLine" },
       ],
     },
   ]

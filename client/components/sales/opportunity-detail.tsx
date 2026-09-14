@@ -19,7 +19,7 @@ import {
   updateOpportunityLine,
   updateOpportunity,
 } from "@/lib/api/sales"
-import { opportunityWriteKeys, salesKeys } from "@/lib/api/sales-keys"
+import { opportunityWriteKeys, planWriteKeys, salesKeys } from "@/lib/api/sales-keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   OpportunityLineSummary,
@@ -29,6 +29,7 @@ import type {
 } from "@/lib/api/types"
 import { Tag } from "@/components/dashboard/tag"
 import {
+  CheckboxField,
   ConfirmDeleteDialog,
   Field,
   PanelAlert,
@@ -40,14 +41,17 @@ import {
 import { CommentPanel } from "@/components/sales/comment-panel"
 import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
 import {
+  MEETING_ICON,
   OPPORTUNITY_STATUS_LABEL,
   OPPORTUNITY_STATUS_TONE,
   STAGE_LABEL,
   STAGE_WAITING_ON,
+  TASK_ICON,
   daysSince,
   stageSentence,
   taka,
 } from "@/components/sales/sales-shared"
+import { MeetingsPanel, TasksPanel } from "@/components/sales/plan-panels"
 import { StageBar } from "@/components/sales/stage-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -466,6 +470,8 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
   const [reason, setReason] = useState("")
   const [nextStep, setNextStep] = useState(deal.nextStep ?? "")
   const [nextStepDueOn, setNextStepDueOn] = useState(deal.nextStepDueOn ?? "")
+  // Unticked every time (revision §24.11): making a task is a choice, not a default.
+  const [alsoTask, setAlsoTask] = useState(false)
 
   const isOpen = deal.status === "ONGOING"
   const invalidate = () => {
@@ -497,8 +503,15 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
       changeOpportunityNextStep(accessToken!, deal.id, {
         nextStep: nextStep.trim() || null,
         nextStepDueOn: nextStepDueOn || null,
+        ...(alsoTask ? { alsoCreateTask: true } : {}),
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      if (alsoTask) {
+        for (const key of planWriteKeys()) queryClient.invalidateQueries({ queryKey: key })
+        setAlsoTask(false)
+      }
+    },
     onError: (err) => setError(toMessage(err)),
   })
 
@@ -619,7 +632,7 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
         <Field
           label="Next step"
           htmlFor="next-step"
-          help="The one thing that happens next. A note on the deal, not a task with a reminder."
+          help="The one thing that happens next, as a note on the deal. Tick the box below to also make it a task with a reminder."
         >
           <Input
             id="next-step"
@@ -636,6 +649,9 @@ function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManag
               onChange={(e) => setNextStepDueOn(e.target.value)}
             />
           </Field>
+        </div>
+        <div className="mt-2">
+          <CheckboxField label="Also make it a task for me" checked={alsoTask} onChange={setAlsoTask} />
         </div>
         <Button
             type="button"
@@ -696,12 +712,14 @@ function TimelinePanel({ opportunityId }: { opportunityId: string }) {
         </p>
       ) : (
         <ul>
-          {query.data!.items.map((item) => (
+          {query.data!.items.map((item) => {
+            const Icon = item.kind === "meeting" ? MEETING_ICON : item.kind === "task" ? TASK_ICON : RiFlashlightLine
+            return (
             <li
               key={item.id}
               className="flex gap-2.5 border-b border-[#EEF1F5] py-2.5 last:border-b-0"
             >
-              <RiFlashlightLine className="mt-0.5 size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+              <Icon className="mt-0.5 size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
               <div className="min-w-0">
                 <div className="text-[12.5px] font-semibold">{item.title}</div>
                 {item.detail ? (
@@ -716,7 +734,8 @@ function TimelinePanel({ opportunityId }: { opportunityId: string }) {
                 </div>
               </div>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
     </Panel>
@@ -889,6 +908,8 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
             <div className="grid gap-4">
               <WorkflowPanel deal={deal} canManage={canManage} />
               <LinesPanel deal={deal} canManage={canManage} />
+              <MeetingsPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} />
+              <TasksPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} />
             </div>
             <div className="grid gap-4">
               <CommentPanel

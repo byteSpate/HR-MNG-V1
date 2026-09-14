@@ -1,10 +1,12 @@
 import {
   RiBuilding2Line,
+  RiCalendar2Line,
   RiContactsLine,
   RiFlashlightLine,
   RiMailLine,
   RiPhoneLine,
   RiQuestionLine,
+  RiTaskLine,
   RiWhatsappLine,
   type RemixiconComponentType,
 } from "@remixicon/react"
@@ -15,6 +17,11 @@ import type {
   SalesAccountStatus,
   SalesChannel,
   SalesContactStatus,
+  SalesMeetingMode,
+  SalesMeetingStatus,
+  SalesTaskOrigin,
+  SalesTaskPriority,
+  SalesTaskStatus,
 } from "@/lib/api/types"
 import type { Tone } from "@/components/dashboard/types"
 
@@ -156,4 +163,91 @@ export function taka(amount: string | null | undefined): string {
 /** Whole days between two instants, floored. */
 export function daysSince(iso: string, now: Date = new Date()): number {
   return Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000))
+}
+
+// ── meetings and tasks (phase 3) ─────────────────────────────────────────────
+
+/** How a person says where a meeting happens. The server's own words, kept in step. */
+export const MEETING_MODE_LABEL: Record<SalesMeetingMode, string> = {
+  CUSTOMER_SITE: "At the customer",
+  OUR_OFFICE: "At our office",
+  ONLINE: "Online",
+}
+
+export const MEETING_STATUS_LABEL: Record<SalesMeetingStatus, string> = {
+  SCHEDULED: "Scheduled",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+}
+
+/** Completed is done (green); cancelled needs a look (yellow), as a cancelled deal does. */
+export const MEETING_STATUS_TONE: Record<SalesMeetingStatus, Tone> = {
+  SCHEDULED: "neutral",
+  COMPLETED: "green",
+  CANCELLED: "yellow",
+}
+
+export const TASK_STATUS_LABEL: Record<SalesTaskStatus, string> = {
+  PENDING: "Pending",
+  DONE: "Done",
+  CANCELLED: "Cancelled",
+}
+
+export const TASK_STATUS_TONE: Record<SalesTaskStatus, Tone> = {
+  PENDING: "neutral",
+  DONE: "green",
+  CANCELLED: "yellow",
+}
+
+export const TASK_PRIORITY_LABEL: Record<SalesTaskPriority, string> = {
+  LOW: "Low",
+  NORMAL: "Normal",
+  HIGH: "High",
+}
+
+/** Only High carries a colour: it is the one priority that asks for a look. */
+export const TASK_PRIORITY_TONE: Record<SalesTaskPriority, Tone> = {
+  LOW: "neutral",
+  NORMAL: "neutral",
+  HIGH: "yellow",
+}
+
+export const TASK_ORIGIN_LABEL: Record<SalesTaskOrigin, string> = {
+  SELF: "My own",
+  FUNNEL_MEETING: "Funnel meeting",
+}
+
+/** One glyph each, used on the Timeline, the panels and the overview. */
+export const MEETING_ICON: RemixiconComponentType = RiCalendar2Line
+export const TASK_ICON: RemixiconComponentType = RiTaskLine
+
+/** "Sun 20 Sep, 10:00": a meeting's time as a person reads it. */
+export function meetingWhen(iso: string): string {
+  return new Date(iso).toLocaleString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+/** A date-only value, read as written: "20/09/2026". */
+export function onDay(value: string | null): string {
+  if (!value) return "—"
+  const [year, month, day] = value.slice(0, 10).split("-")
+  return `${day}/${month}/${year}`
+}
+
+/** A day as YYYY-MM-DD in the browser's own calendar, for a date input. */
+export function dateOnlyOf(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 10)
+}
+
+/** An instant as a `datetime-local` value, in the browser's own time. */
+export function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso)
+  d.setSeconds(0, 0)
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 }

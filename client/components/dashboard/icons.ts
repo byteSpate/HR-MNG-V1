@@ -11,6 +11,7 @@ import {
   RiBookOpenLine,
   RiBriefcaseLine,
   RiBuilding2Line,
+  RiCalendar2Line,
   RiCalendarCheckLine,
   RiCalendarEventLine,
   RiCalculatorLine,
@@ -34,6 +35,7 @@ import {
   RiReceiptLine,
   RiScales3Line,
   RiSettingsLine,
+  RiTaskLine,
   RiTeamLine,
   RiTimeLine,
   RiUser3Line,
@@ -77,6 +79,10 @@ export const icons = {
   RiCalculatorLine,
   RiPieChartLine,
   RiPulseLine,
+  /** A meeting with a customer, in the Sales Hub. */
+  RiCalendar2Line,
+  /** A follow-up task, in the Sales Hub. */
+  RiTaskLine,
 } satisfies Record<string, RemixiconComponentType>
 
 export type IconName = keyof typeof icons

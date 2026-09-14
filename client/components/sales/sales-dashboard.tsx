@@ -40,7 +40,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { taka } from "@/components/sales/sales-shared"
+import { MEETING_ICON, TASK_ICON, taka } from "@/components/sales/sales-shared"
 
 /** The server's own rule, checked here too so the answer arrives before a round trip. */
 const MONEY = /^\d{1,12}(\.\d{1,2})?$/
@@ -80,10 +80,30 @@ function groupStats(stats: DashboardStat[]): { title: string | null; stats: Dash
 
 /** One picture per action row, keyed by the row's own `key`. Unknown keys get none. */
 const ACTION_ICON: Record<string, RemixiconComponentType> = {
+  meetings: MEETING_ICON,
+  tasks: TASK_ICON,
   closing: RiCalendarEventLine,
   unverified: RiUserSearchLine,
   quiet: RiZzzLine,
   stuck: RiHourglassLine,
+}
+
+/**
+ * Where a row leads, narrowed to whoever the page is about. The row's own
+ * link may or may not carry a query already, so the join is worked out
+ * rather than assumed. Meetings and tasks have no per-person filter, so an
+ * admin looking at one person reaches the whole list.
+ */
+function actionHref(row: SalesActionRow, scope: "me" | "employee" | "all", employeeId: string | null): string {
+  const join = row.href.includes("?") ? "&" : "?"
+  if (scope === "all") return `/sales${row.href}`
+  if (row.key === "meetings" || row.key === "tasks") {
+    return scope === "me" ? `/sales${row.href}${join}mine=true` : `/sales${row.href}`
+  }
+  if (row.href.startsWith("/opportunities")) {
+    return `/sales${row.href}${join}${scope === "me" ? "mine=true" : `ownerEmployeeId=${employeeId}`}`
+  }
+  return `/sales${row.href}${join}ownerEmployeeId=${employeeId}`
 }
 
 /** Capped at six, as the house motion rule requires: row forty must not wait. */
@@ -200,13 +220,7 @@ function ActionRows({ rows, scope, employeeId }: { rows: SalesActionRow[]; scope
       {rows.map((row, i) => (
         <Link
           key={row.key}
-          href={`/sales${
-            scope === "all"
-              ? row.href
-              : row.href.startsWith("/opportunities")
-                ? `${row.href}&${scope === "me" ? "mine=true" : `ownerEmployeeId=${employeeId}`}`
-                : `${row.href}&ownerEmployeeId=${employeeId}`
-          }`}
+          href={actionHref(row, scope, employeeId)}
           style={stagger(i)}
           className="rise-in group flex items-center justify-between gap-3 rounded-md border border-[#E4E9EF] bg-white px-4 py-3 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-[#CBD5E1] hover:shadow-[0_2px_10px_rgba(16,24,40,0.06)] motion-reduce:animate-none motion-reduce:transition-none motion-reduce:hover:translate-y-0"
         >
