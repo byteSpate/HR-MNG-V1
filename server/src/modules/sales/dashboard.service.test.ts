@@ -7,6 +7,8 @@ vi.mock("../../config/prisma", () => ({
     opportunity: { findMany: vi.fn(), count: vi.fn() },
     salesAccount: { count: vi.fn(), findMany: vi.fn() },
     salesCommunication: { findMany: vi.fn() },
+    salesMeeting: { count: vi.fn(), findMany: vi.fn() },
+    salesTask: { count: vi.fn() },
     auditLog: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
     user: { findUnique: vi.fn() },
@@ -92,6 +94,9 @@ beforeEach(() => {
   vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.employee.findMany).mockResolvedValue([] as never)
+  vi.mocked(prisma.salesMeeting.count).mockResolvedValue(0 as never)
+  vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([] as never)
+  vi.mocked(prisma.salesTask.count).mockResolvedValue(0 as never)
 })
 
 const stat = (payload: SalesDashboardPayload, label: string) =>
@@ -307,20 +312,75 @@ describe("the rest of the sales dashboard", () => {
     }
   })
 
-  it("ships the four action rows that have tables behind them", async () => {
+  it("ships all six action rows, today's meetings and tasks first", async () => {
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
-    expect(payload.actions.map((row) => row.key)).toEqual(["closing", "unverified", "quiet", "stuck"])
+    expect(payload.actions.map((row) => row.key))
+      .toEqual(["meetings", "tasks", "closing", "unverified", "quiet", "stuck"])
   })
 
-  it("names what is not built instead of rendering it as zero", async () => {
+  it("has nothing left that is not built, so the notice goes away", async () => {
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
-    // Meetings and tasks arrive in phase 3. An empty "Tasks due" row would
-    // read as "no tasks", which is a number nobody measured.
-    expect(payload.notBuilt).toEqual(["meetings", "tasks"])
-    expect(payload.actions.map((row) => row.key)).not.toContain("tasks")
-    expect(payload.actions.map((row) => row.key)).not.toContain("meetings")
+    expect(payload.notBuilt).toEqual([])
+  })
+
+  it("counts the meetings I attend today and this week, in office time", async () => {
+    // NOW is noon on 15 Aug in Dhaka. The day starts at 18:00 UTC on the 14th.
+    const DAY_END = "2026-08-15T18:00:00.000Z"
+    vi.mocked(prisma.salesMeeting.count).mockImplementation((async (args: any) =>
+      args.where.scheduledAt.lt.toISOString() === DAY_END ? 1 : 3) as never)
+
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    const row = payload.actions.find((r) => r.key === "meetings")!
+    expect(row).toMatchObject({ label: "Meetings today and this week", count: 3, detail: "1 today", href: "/meetings" })
+    const where = (vi.mocked(prisma.salesMeeting.count).mock.calls[0][0] as any).where
+    expect(where).toMatchObject({
+      status: "SCHEDULED",
+      attendees: { some: { side: "OURS", employeeId: { in: ["emp-2"] } } },
+    })
+    expect(where.scheduledAt.gte.toISOString()).toBe("2026-08-14T18:00:00.000Z")
+    const weekEnds = vi.mocked(prisma.salesMeeting.count).mock.calls
+      .map(([args]: any[]) => args.where.scheduledAt.lt.toISOString())
+    expect(weekEnds).toContain("2026-08-21T18:00:00.000Z")
+  })
+
+  it("counts my pending tasks due today or overdue, and says how many are late", async () => {
+    vi.mocked(prisma.salesTask.count).mockImplementation((async (args: any) =>
+      args.where.dueOn.lte ? 4 : 1) as never)
+
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    const row = payload.actions.find((r) => r.key === "tasks")!
+    expect(row).toMatchObject({
+      label: "Tasks due or overdue", count: 4, detail: "1 overdue", tone: "yellow", href: "/tasks?due=now",
+    })
+    const due = vi.mocked(prisma.salesTask.count).mock.calls
+      .map(([args]: any[]) => args.where).find((where) => where.dueOn.lte)
+    expect(due).toEqual({
+      status: "PENDING", assignedToEmployeeId: { in: ["emp-2"] }, dueOn: { lte: new Date("2026-08-15T00:00:00.000Z") },
+    })
+  })
+
+  it("says so in words when there are no meetings or tasks", async () => {
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    expect(payload.actions.find((r) => r.key === "meetings")?.detail).toBe("Nothing in the next 7 days")
+    expect(payload.actions.find((r) => r.key === "tasks")?.detail).toBe("Nothing due today")
+  })
+
+  it("counts an account a completed meeting was on as worked on", async () => {
+    vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([{ salesAccountId: "sa-9" }] as never)
+
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    expect(stat(payload, "Accounts Worked On")?.value).toBe("1")
+    expect(prisma.salesMeeting.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        status: "COMPLETED", attendees: { some: { side: "OURS", employeeId: { in: ["emp-2"] } } },
+      }),
+    }))
   })
 
   it("keys every badge to the row it came from, counted once", async () => {
@@ -426,8 +486,9 @@ describe("the team roll-up", () => {
     const payload = await getSalesDashboard({ now: NOW, employeeId: "all" }, ADMIN)
 
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
-    expect(payload.actions.map((row) => row.key)).toEqual(["closing", "unverified", "quiet", "stuck"])
-    expect(Object.keys(payload.badges)).toHaveLength(4)
+    expect(payload.actions.map((row) => row.key))
+      .toEqual(["meetings", "tasks", "closing", "unverified", "quiet", "stuck"])
+    expect(Object.keys(payload.badges)).toHaveLength(6)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {

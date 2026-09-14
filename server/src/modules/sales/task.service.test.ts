@@ -203,6 +203,11 @@ describe("who sees tasks", () => {
     await listTasks({ due: "today" } as any, USER, NOW)
     expect(listWhere()).toMatchObject({ dueOn: new Date("2026-09-15T00:00:00.000Z") })
 
+    // What the overview's "Tasks due or overdue" row links to.
+    vi.mocked(prisma.salesTask.findMany).mockClear()
+    await listTasks({ due: "now" } as any, USER, NOW)
+    expect(listWhere()).toMatchObject({ status: "PENDING", dueOn: { lte: new Date("2026-09-15T00:00:00.000Z") } })
+
     vi.mocked(prisma.salesTask.findMany).mockClear()
     await listTasks({ due: "week" } as any, USER, NOW)
     expect(listWhere()).toMatchObject({

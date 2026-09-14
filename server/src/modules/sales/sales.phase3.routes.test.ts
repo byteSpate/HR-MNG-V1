@@ -155,6 +155,8 @@ describe("task routes", () => {
     )
 
     await request(app).get("/api/sales/tasks?due=soon").set("Authorization", auth("SALES_USER")).expect(400)
+    // "Due today or overdue", the overview row's link.
+    await request(app).get("/api/sales/tasks?due=now").set("Authorization", auth("SALES_USER")).expect(200)
   })
 
   it("edits a task, and refuses an edit that changes nothing", async () => {
