@@ -32,4 +32,14 @@ describe("the one Prisma client", () => {
     // pg waits for ever by default; a stuck connect should fail and say so.
     expect(options.connectionTimeoutMillis).toBeGreaterThan(0)
   })
+
+  it("takes at most 5 connections, so a second process still fits in Supabase's 15", () => {
+    const options = vi.mocked(PrismaPg).mock.calls[0][0] as any
+
+    // Supabase's session pooler allows 15 clients in all. pg's default of 10
+    // per process, now kept for 300 s, left no room: running the daily email
+    // by hand beside the dev server failed with EMAXCONNSESSION.
+    expect(options.max).toBeGreaterThan(0)
+    expect(options.max).toBeLessThanOrEqual(5)
+  })
 })
