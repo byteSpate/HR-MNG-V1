@@ -19,6 +19,7 @@ import { nextOpportunitySerial } from "./sales.serial"
 import { presentOpportunity } from "./opportunity.present"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "./meeting.present"
 import { presentChanges, resolveNames } from "./history.present"
+import { createTaskIn } from "./task.service"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
@@ -370,6 +371,10 @@ export async function changeOpportunityNextStep(id: string, body: ChangeOpportun
     const current = await loadForWrite(tx, id, actor)
     const nextStep = body.nextStep === undefined ? current.nextStep : body.nextStep || null
     const nextStepDueOn = body.nextStepDueOn === undefined ? current.nextStepDueOn : day(body.nextStepDueOn)
+    // Checked before anything is written, so a refused task leaves the step as it was.
+    if (body.alsoCreateTask && (!nextStep || !nextStepDueOn)) {
+      throw new AppError(400, "To also make it a task, give the next step some text and a date")
+    }
     const now = new Date()
     const updated = await tx.opportunity.update({
       where: { id }, data: { nextStep, nextStepDueOn, lastActivityAt: now }, include: INCLUDE,
@@ -384,6 +389,12 @@ export async function changeOpportunityNextStep(id: string, body: ChangeOpportun
       actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
       title: `${current.serial} next step changed`, meta: nextStep, href: `/opportunities/${id}`,
     })
+    // The task goes to whoever ticked the box, not the deal's owner (§24.11).
+    if (body.alsoCreateTask) {
+      await createTaskIn(tx, {
+        salesAccountId: current.salesAccountId, opportunityId: id, title: nextStep!, dueOn: nextStepDueOn!,
+      }, actor)
+    }
     return presentOpportunity(updated)
   })
 }

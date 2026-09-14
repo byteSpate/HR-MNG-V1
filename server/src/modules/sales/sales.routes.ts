@@ -43,6 +43,11 @@ import {
   getMeetingHandler,
   listMeetingsHandler,
   updateMeetingHandler,
+  changeTaskStatusHandler,
+  createTaskHandler,
+  getTaskHandler,
+  listTasksHandler,
+  updateTaskHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -118,6 +123,14 @@ router.post("/meetings", requireAuth, requireSales(), createMeetingHandler)
 router.get("/meetings/:id", requireAuth, requireSales(), getMeetingHandler)
 router.patch("/meetings/:id", requireAuth, requireSales(), updateMeetingHandler)
 router.patch("/meetings/:id/status", requireAuth, requireSales(), changeMeetingStatusHandler)
+
+// Tasks. Everyone makes tasks for themselves in this phase; the service
+// decides who may read one and keeps changing it to its owner.
+router.get("/tasks", requireAuth, requireSales(), listTasksHandler)
+router.post("/tasks", requireAuth, requireSales(), createTaskHandler)
+router.get("/tasks/:id", requireAuth, requireSales(), getTaskHandler)
+router.patch("/tasks/:id", requireAuth, requireSales(), updateTaskHandler)
+router.patch("/tasks/:id/status", requireAuth, requireSales(), changeTaskStatusHandler)
 
 export default router
 

@@ -1,7 +1,9 @@
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
+import { formatShortDate } from "../../utils/dates"
 import type { SalesChannel } from "../../generated/prisma/client"
+import { TASK_STATUS_LABEL } from "./task.present"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { SalesCommunicationSummary, TimelineItem } from "./sales.types"
 import type { LogCommunicationBody } from "./sales.validators"
@@ -159,7 +161,7 @@ export async function getAccountTimeline(
     select: { id: true },
   })
 
-  const [communications, events, comments] = await Promise.all([
+  const [communications, events, comments, tasks] = await Promise.all([
     prisma.salesCommunication.findMany({
       where: { salesAccountId: accountId },
       orderBy: { occurredAt: "desc" },
@@ -182,6 +184,27 @@ export async function getAccountTimeline(
           include: {
             author: { select: { fullName: true } },
             authorUser: { select: { displayName: true, email: true } },
+          },
+        })
+      : [],
+    // Tasks follow the same rule as remarks (§24.20): the people who work the
+    // account read them, and somebody who only sees it does not cause them to
+    // be read.
+    worksThisAccount
+      ? prisma.salesTask.findMany({
+          where: { salesAccountId: accountId },
+          orderBy: { createdAt: "desc" },
+          take: TIMELINE_LIMIT,
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            outcome: true,
+            detail: true,
+            dueOn: true,
+            completedAt: true,
+            createdAt: true,
+            assignedTo: { select: { fullName: true } },
           },
         })
       : [],
@@ -224,6 +247,16 @@ export async function getAccountTimeline(
       meta: row.kind === "CUSTOMER_FEEDBACK" ? "Customer feedback" : null,
       by: row.author?.fullName ?? row.authorUser.displayName ?? row.authorUser.email,
       detail: row.body,
+    })),
+    ...tasks.map((row) => ({
+      id: `task:${row.id}`,
+      kind: "task" as const,
+      // A done task sits where it was done; an open one where it was made.
+      at: (row.completedAt ?? row.createdAt).toISOString(),
+      title: row.title,
+      meta: `${TASK_STATUS_LABEL[row.status]} · due ${formatShortDate(row.dueOn)}`,
+      by: row.assignedTo.fullName,
+      detail: row.outcome ?? row.detail,
     })),
   ]
 

@@ -226,7 +226,7 @@ export interface OpportunityHistory {
 export interface TimelineItem {
   /** Prefixed by kind, because a communication and an event can share an id. */
   id: string
-  kind: "communication" | "event" | "comment" | "meeting"
+  kind: "communication" | "event" | "comment" | "meeting" | "task"
   at: string
   title: string
   meta: string | null
@@ -268,6 +268,42 @@ export interface SalesMeetingSummary {
   attendees: SalesMeetingAttendeeSummary[]
   /** Whether the viewer works the account, and so may change the meeting. */
   canManage: boolean
+}
+
+// ── TASKS (phase 3) ────────────────────────────────────────────────────────
+
+export interface SalesTaskSummary {
+  id: string
+  origin: "SELF" | "FUNNEL_MEETING"
+  /** Always set in phase 3; nullable because a phase 5 project task may have no account. */
+  salesAccountId: string | null
+  salesAccountName: string | null
+  opportunityId: string | null
+  opportunitySerial: string | null
+  opportunityName: string | null
+  meetingId: string | null
+  meetingTitle: string | null
+  title: string
+  detail: string | null
+  /** YYYY-MM-DD. */
+  dueOn: string
+  priority: "LOW" | "NORMAL" | "HIGH"
+  assignedToEmployeeId: string
+  assignedToName: string
+  status: "PENDING" | "DONE" | "CANCELLED"
+  outcome: string | null
+  cancelReason: string | null
+  completedAt: string | null
+  /** Pending and due before today in office time. Worked out when read, never stored. */
+  overdue: boolean
+  /** Only the owner changes a task, a Sales Admin included. */
+  canManage: boolean
+  createdAt: string
+}
+
+export interface SalesTaskStatusResult extends SalesTaskSummary {
+  /** After Done, the date to offer for the next follow-up: today plus 15 days. Null otherwise. */
+  nextFollowUpOn: string | null
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
