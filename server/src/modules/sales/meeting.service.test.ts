@@ -14,9 +14,11 @@ vi.mock("../../config/prisma", () => ({
     event: { create: vi.fn() },
   },
 }))
+vi.mock("./sales.mailer", () => ({ sendMeetingChanged: vi.fn(), sendSalesDailyEmail: vi.fn() }))
 
 import prisma from "../../config/prisma"
 import { changeMeetingStatus, createMeeting, listMeetings, updateMeeting } from "./meeting.service"
+import { sendMeetingChanged } from "./sales.mailer"
 
 const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "rahim@demo.com",
@@ -26,8 +28,15 @@ const USER = {
 /** An employee with Sales Hub access unless a test says otherwise. */
 const hubPerson = (id: string, fullName: string, salesRole: string | null = "SALES_USER") => ({
   id, fullName, employmentStatus: "ACTIVE", lastWorkingDay: null,
-  user: { salesRole, isActive: true },
+  user: { salesRole, isActive: true, email: `${id}@demo.com` },
 })
+
+const ours = (employeeId: string, fullName: string) => ({
+  id: `att-${employeeId}`, side: "OURS", employeeId, contactId: null, name: null, designation: null,
+  employee: { fullName }, contact: null,
+})
+/** The scheduler, emp-1, and one colleague. */
+const TWO = [ours("emp-1", "Rahim"), ours("emp-2", "Karim")]
 
 const meeting = (overrides: Record<string, unknown> = {}) => ({
   id: "meeting-1", salesAccountId: "account-1", opportunityId: null, title: "Firewall walkthrough",
@@ -244,6 +253,74 @@ describe("ending a meeting", () => {
 
     await expect(changeMeetingStatus("meeting-1", { status: "COMPLETED" } as any, USER))
       .rejects.toThrow(/back/i)
+  })
+})
+
+describe("telling attendees about a change", () => {
+  const told = () => vi.mocked(sendMeetingChanged).mock.calls.map(([input]: any[]) => [input.to, input.change])
+  const bellFor = (employeeId: string) => vi.mocked(prisma.event.create).mock.calls
+    .map(([args]: any[]) => args.data)
+    .filter((data) => data.entity === "SALES_MEETING" && data.subjectEmployeeId === employeeId)
+
+  it("emails and notifies the people added, not the person who scheduled it", async () => {
+    await createMeeting({ ...BASE, attendees: [{ side: "OURS", employeeId: "emp-2" }] } as any, USER)
+
+    expect(told()).toEqual([["emp-2@demo.com", "added"]])
+    expect(bellFor("emp-2")).toEqual([expect.objectContaining({ type: "sales.meeting.scheduled", entityId: "meeting-1" })])
+    expect(bellFor("emp-1")).toEqual([])
+  })
+
+  it("tells everyone else on our side when the time moves, with the old time", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(meeting({ attendees: TWO }) as any)
+
+    await updateMeeting("meeting-1", { scheduledAt: "2026-09-21T10:00:00+06:00" } as any, USER)
+
+    expect(told()).toEqual([["emp-2@demo.com", "moved"]])
+    expect(vi.mocked(sendMeetingChanged).mock.calls[0][0]).toMatchObject({
+      previousAt: new Date("2026-09-20T04:00:00.000Z"),
+    })
+    expect(bellFor("emp-2")).toEqual([expect.objectContaining({ type: "sales.meeting.rescheduled" })])
+  })
+
+  it("tells only the newly added person when the attendee list changes", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(meeting({ attendees: TWO }) as any)
+    vi.mocked(prisma.salesMeeting.update).mockResolvedValue(
+      meeting({ attendees: [...TWO, ours("emp-3", "Salma")] }) as any
+    )
+
+    await updateMeeting("meeting-1", {
+      attendees: [
+        { side: "OURS", employeeId: "emp-1" }, { side: "OURS", employeeId: "emp-2" },
+        { side: "OURS", employeeId: "emp-3" },
+      ],
+    } as any, USER)
+
+    expect(told()).toEqual([["emp-3@demo.com", "added"]])
+  })
+
+  it("tells our side when it is cancelled, with the reason, and again when it is back on", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(meeting({ attendees: TWO }) as any)
+    await changeMeetingStatus("meeting-1", { status: "CANCELLED", reason: "Customer travelling" } as any, USER)
+
+    expect(told()).toEqual([["emp-2@demo.com", "cancelled"]])
+    expect(vi.mocked(sendMeetingChanged).mock.calls[0][0]).toMatchObject({ reason: "Customer travelling" })
+    expect(bellFor("emp-2")).toEqual([expect.objectContaining({ type: "sales.meeting.cancelled" })])
+
+    vi.mocked(sendMeetingChanged).mockClear()
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(
+      meeting({ attendees: TWO, status: "CANCELLED", cancelReason: "Customer travelling" }) as any
+    )
+    await changeMeetingStatus("meeting-1", { status: "SCHEDULED" } as any, USER)
+    expect(told()).toEqual([["emp-2@demo.com", "back_on"]])
+  })
+
+  it("sends nothing when a meeting is completed, or when only its notes change", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(meeting({ attendees: TWO }) as any)
+
+    await changeMeetingStatus("meeting-1", { status: "COMPLETED" } as any, USER)
+    await updateMeeting("meeting-1", { notes: "Bring the rack diagram" } as any, USER)
+
+    expect(sendMeetingChanged).not.toHaveBeenCalled()
   })
 })
 
