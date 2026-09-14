@@ -12,9 +12,16 @@ import { PrismaClient } from "../generated/prisma/client"
  * pause the next request paid for a fresh connection. 300 s is what Prisma 6
  * did. `pg` also waits for ever for a connection by default; 10 s fails
  * loudly instead of hanging.
+ *
+ * At most 5 connections per process. Supabase's session pooler allows 15
+ * clients in all, and pg's default of 10, kept open for 300 s, left no room
+ * for anything else: running the daily email by hand beside the dev server
+ * failed with EMAXCONNSESSION. Five leaves room for a second process, such as
+ * that job, Prisma Studio, or an old and a new dyno during a deploy.
  */
 const adapter = new PrismaPg({
   connectionString: env.DATABASE_URL,
+  max: 5,
   idleTimeoutMillis: 300_000,
   connectionTimeoutMillis: 10_000,
 })
