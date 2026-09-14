@@ -17,6 +17,7 @@ import {
   getSalesAccount,
   listAllSalesAccounts,
   listContacts,
+  listMeetingAttendeeOptions,
   listOpportunities,
   updateMeeting,
 } from "@/lib/api/sales"
@@ -29,7 +30,7 @@ import type {
   SalesMeetingSummary,
   UpdateMeetingBody,
 } from "@/lib/api/types"
-import { CheckboxField, DialogActions, Field, FormError, toMessage } from "@/components/dashboard/record-kit"
+import { CheckboxField, DialogActions, Field, FormError, PanelAlert, toMessage } from "@/components/dashboard/record-kit"
 import { MEETING_MODE_LABEL, toDatetimeLocal } from "@/components/sales/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -72,9 +73,35 @@ export function AccountPicker({ id, value, onChange }: { id: string; value: stri
     queryFn: () => listAllSalesAccounts(accessToken!),
     enabled: !!accessToken,
   })
+  // Loading, empty and broken are three different answers (the UI rules), so a
+  // list that failed to load is never shown as a picker with nothing in it.
+  if (query.isError) {
+    return (
+      <PanelAlert>
+        <span className="flex flex-wrap items-center gap-2">
+          <span>Your accounts could not be loaded.</span>
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => query.refetch()}
+            className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+          >
+            Try again
+          </Button>
+        </span>
+      </PanelAlert>
+    )
+  }
   const accounts = (query.data ?? []).filter((account) => account.canManage)
+  if (query.isSuccess && accounts.length === 0) {
+    return (
+      <p className="text-[12px] leading-relaxed text-[#5F6B7C]">
+        You do not work any account yet. A meeting or a task always sits on an account you own or collaborate on.
+      </p>
+    )
+  }
   return (
-    <Select value={value} onValueChange={(next) => onChange(next ?? "")}>
+    <Select value={value} onValueChange={(next) => onChange(next ?? "")} disabled={query.isPending}>
       <SelectTrigger id={id} className="w-full">
         <SelectValue>
           {(v: string | null) =>
@@ -205,15 +232,25 @@ function MeetingForm({
     enabled,
   })
 
+  const attendeeQuery = useQuery({
+    queryKey: salesKeys.meetingAttendees(),
+    queryFn: () => listMeetingAttendeeOptions(accessToken!),
+    enabled: !!accessToken,
+  })
+
   const account = accountQuery.data
-  // The account's own team, and anybody already on the meeting who is not in
-  // it any more, so editing never silently drops a person.
-  const team = [
-    ...(account ? [{ id: account.ownerEmployeeId, fullName: account.ownerName }, ...account.assignees] : []),
+  // Anyone with Sales Hub access may attend on our side (§24.3), not only the
+  // account's team. The team comes first, then everyone else by name; anybody
+  // already on the meeting stays listed, so editing never silently drops them.
+  const teamIds = new Set(account ? [account.ownerEmployeeId, ...account.assignees.map((a) => a.id)] : [])
+  const people = [
     ...(meeting?.attendees.flatMap((a) =>
       a.side === "OURS" && a.employeeId ? [{ id: a.employeeId, fullName: a.name }] : []
     ) ?? []),
-  ].filter((person, index, all) => all.findIndex((p) => p.id === person.id) === index)
+    ...(attendeeQuery.data ?? []).map(({ id, fullName }) => ({ id, fullName })),
+  ]
+    .filter((person, index, all) => all.findIndex((p) => p.id === person.id) === index)
+    .sort((a, b) => Number(teamIds.has(b.id)) - Number(teamIds.has(a.id)) || a.fullName.localeCompare(b.fullName))
   const contacts = (contactsQuery.data ?? []).filter((contact) => contact.status !== "INVALID")
   const deals = dealsQuery.data?.items ?? []
   // A completed or cancelled meeting keeps its time; the server refuses a move.
@@ -382,13 +419,27 @@ function MeetingForm({
           label="From our side"
           hint={meeting ? undefined : "You are added yourself. Everyone ticked gets an email and a notification."}
         >
-          {accountQuery.isPending ? (
-            <p className="text-[12px] text-[#5F6B7C]">Loading the people on this account…</p>
-          ) : team.length === 0 ? (
-            <p className="text-[12px] text-[#5F6B7C]">Nobody else works this account.</p>
+          {attendeeQuery.isError ? (
+            <PanelAlert>
+              <span className="flex flex-wrap items-center gap-2">
+                <span>The people who can attend could not be loaded.</span>
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => attendeeQuery.refetch()}
+                  className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+                >
+                  Try again
+                </Button>
+              </span>
+            </PanelAlert>
+          ) : attendeeQuery.isPending ? (
+            <p className="text-[12px] text-[#5F6B7C]">Loading the people who can attend…</p>
+          ) : people.length === 0 ? (
+            <p className="text-[12px] text-[#5F6B7C]">Nobody else has Sales Hub access yet.</p>
           ) : (
-            <div className="grid gap-0.5 sm:grid-cols-2">
-              {team.map((person) => (
+            <div className="grid max-h-56 gap-0.5 overflow-y-auto sm:grid-cols-2">
+              {people.map((person) => (
                 <CheckboxField
                   key={person.id}
                   label={person.fullName}

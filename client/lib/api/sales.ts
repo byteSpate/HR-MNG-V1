@@ -433,6 +433,11 @@ export function changeMeetingStatus(
   })
 }
 
+/** Everyone who may attend on our side: anyone with Sales Hub access, not only the account's team. */
+export function listMeetingAttendeeOptions(accessToken: string): Promise<SalesEligibleEmployee[]> {
+  return apiFetch<SalesEligibleEmployee[]>("/api/sales/meetings/attendee-options", { accessToken })
+}
+
 // ── tasks ─────────────────────────────────────────────────────────────────
 
 export function listTasks(accessToken: string, query: ListTasksQuery = {}): Promise<{ items: SalesTaskSummary[] }> {

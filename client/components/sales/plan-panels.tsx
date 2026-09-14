@@ -453,8 +453,10 @@ export function TasksPanel({
           ))}
         </ul>
       )}
+      {/* Scoped to the viewer's own tasks, so "All my tasks" stays true for a
+          Sales Admin, whose /sales/tasks opens on the whole team. */}
       <Link
-        href="/sales/tasks"
+        href="/sales/tasks?mine=true"
         className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold text-[#5F6B7C] hover:underline"
       >
         {tasks.length > shown.length ? `Showing ${shown.length} of ${tasks.length}. All my tasks` : "All my tasks"}

@@ -55,6 +55,8 @@ export const salesKeys = {
   // ── meetings and tasks ──────────────────────────────────────────────────
   meetings: (filters: Record<string, unknown> = {}) => ["sales", "meetings", filters] as const,
   tasks: (filters: Record<string, unknown> = {}) => ["sales", "tasks", filters] as const,
+  /** Who may attend a meeting on our side. Outside "meetings", so a meeting write does not refetch it. */
+  meetingAttendees: () => ["sales", "meeting-attendees"] as const,
 } as const
 
 /**
