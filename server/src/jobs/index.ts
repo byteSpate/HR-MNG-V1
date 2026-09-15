@@ -8,6 +8,7 @@ import cron from "node-cron"
 import { env } from "../config/env"
 import { runAutoCloseOpenDays } from "./attendance-autoclose.job"
 import { runApprovalsDigest, runMissingCheckOutNudge } from "./attendance-digest.job"
+import { runSalesDailyEmail } from "./sales-daily-email.job"
 
 /** Runs `job`, logging rather than throwing — an unhandled rejection inside
  *  a scheduled task takes the process down with it. */
@@ -37,6 +38,12 @@ export function startJobs(): void {
   })
 
   cron.schedule("30 9 * * *", () => guard("missing check-out nudge", runMissingCheckOutNudge), {
+    timezone: env.APP_TIMEZONE,
+  })
+
+  // 00:01, so the email is waiting when people wake and they can prepare for
+  // a meeting before coming in (revision §24.14).
+  cron.schedule("1 0 * * *", () => guard("sales daily email", () => runSalesDailyEmail()), {
     timezone: env.APP_TIMEZONE,
   })
 

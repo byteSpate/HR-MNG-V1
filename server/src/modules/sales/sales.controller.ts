@@ -35,6 +35,19 @@ import {
 } from "./opportunity.line.service"
 import { createSalesComment, listSalesComments, updateSalesComment } from "./comment.service"
 import {
+  changeMeetingStatus,
+  createMeeting,
+  getMeeting,
+  listMeetingAttendeeOptions,
+  listMeetings,
+  updateMeeting,
+} from "./meeting.service"
+import { changeTaskStatus, createTask, getTask, listTasks, updateTask } from "./task.service"
+import {
+  changeTaskStatusSchema,
+  createTaskSchema,
+  listTaskSchema,
+  updateTaskSchema,
   changeOpportunityNextStepSchema,
   changeOpportunityStageSchema,
   changeOpportunityStatusSchema,
@@ -56,6 +69,10 @@ import {
   updateOpportunityLineSchema,
   updateOpportunitySchema,
   updateSalesCommentSchema,
+  changeMeetingStatusSchema,
+  createMeetingSchema,
+  listMeetingSchema,
+  updateMeetingSchema,
 } from "./sales.validators"
 
 export async function listSalesAccountsHandler(
@@ -273,6 +290,65 @@ export async function changeOpportunityNextStepHandler(req: Request<{ id: string
 
 export async function getOpportunityTimelineHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await getOpportunityTimeline(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+// ── meetings ────────────────────────────────────────────────────────────────
+
+export async function listMeetingsHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listMeetings(listMeetingSchema.parse(req.query), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function createMeetingHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(201).json(await createMeeting(createMeetingSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function getMeetingHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await getMeeting(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function updateMeetingHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await updateMeeting(req.params.id, updateMeetingSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function changeMeetingStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await changeMeetingStatus(req.params.id, changeMeetingStatusSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function listMeetingAttendeeOptionsHandler(_req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listMeetingAttendeeOptions()) }
+  catch (err) { return next(err) }
+}
+
+// ── tasks ───────────────────────────────────────────────────────────────────
+
+export async function listTasksHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listTasks(listTaskSchema.parse(req.query), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function createTaskHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(201).json(await createTask(createTaskSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function getTaskHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await getTask(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function updateTaskHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await updateTask(req.params.id, updateTaskSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function changeTaskStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await changeTaskStatus(req.params.id, changeTaskStatusSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
 }
 

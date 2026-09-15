@@ -38,6 +38,17 @@ import {
   updateOpportunityHandler,
   updateOpportunityLineHandler,
   updateSalesCommentHandler,
+  changeMeetingStatusHandler,
+  createMeetingHandler,
+  getMeetingHandler,
+  listMeetingAttendeeOptionsHandler,
+  listMeetingsHandler,
+  updateMeetingHandler,
+  changeTaskStatusHandler,
+  createTaskHandler,
+  getTaskHandler,
+  listTasksHandler,
+  updateTaskHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -105,6 +116,26 @@ router.get("/suggestions/oem", requireAuth, requireSales(), suggestOpportunityLi
 router.get("/comments", requireAuth, requireSales(), listSalesCommentsHandler)
 router.post("/comments", requireAuth, requireSales(), createSalesCommentHandler)
 router.patch("/comments/:id", requireAuth, requireSales(), updateSalesCommentHandler)
+
+// Meetings. Reads are open to the hub, like the account they belong to; the
+// service narrows every write to the people who work that account.
+router.get("/meetings", requireAuth, requireSales(), listMeetingsHandler)
+router.post("/meetings", requireAuth, requireSales(), createMeetingHandler)
+// Who may attend on our side: anyone with Sales Hub access (§24.3). Open to
+// every hub member, unlike /employees, because anyone who works an account
+// schedules its meetings. Before /meetings/:id, or the path is read as an id.
+router.get("/meetings/attendee-options", requireAuth, requireSales(), listMeetingAttendeeOptionsHandler)
+router.get("/meetings/:id", requireAuth, requireSales(), getMeetingHandler)
+router.patch("/meetings/:id", requireAuth, requireSales(), updateMeetingHandler)
+router.patch("/meetings/:id/status", requireAuth, requireSales(), changeMeetingStatusHandler)
+
+// Tasks. Everyone makes tasks for themselves in this phase; the service
+// decides who may read one and keeps changing it to its owner.
+router.get("/tasks", requireAuth, requireSales(), listTasksHandler)
+router.post("/tasks", requireAuth, requireSales(), createTaskHandler)
+router.get("/tasks/:id", requireAuth, requireSales(), getTaskHandler)
+router.patch("/tasks/:id", requireAuth, requireSales(), updateTaskHandler)
+router.patch("/tasks/:id/status", requireAuth, requireSales(), changeTaskStatusHandler)
 
 export default router
 

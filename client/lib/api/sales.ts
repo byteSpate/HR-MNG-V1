@@ -28,6 +28,17 @@ import type {
   UpdateOpportunityLineBody,
   UpdateSalesAccountBody,
   TimelineItem,
+  ChangeMeetingStatusBody,
+  ChangeTaskStatusBody,
+  CreateMeetingBody,
+  CreateTaskBody,
+  ListMeetingsQuery,
+  ListTasksQuery,
+  SalesMeetingSummary,
+  SalesTaskStatusResult,
+  SalesTaskSummary,
+  UpdateMeetingBody,
+  UpdateTaskBody,
 } from "./types"
 
 /** "My Accounts" — owner, assignee, or admin. */
@@ -231,7 +242,8 @@ export function changeOpportunityStatus(
 export function changeOpportunityNextStep(
   accessToken: string,
   id: string,
-  body: { nextStep?: string | null; nextStepDueOn?: string | null }
+  /** `alsoCreateTask` makes the step a task for whoever ticked the box too. */
+  body: { nextStep?: string | null; nextStepDueOn?: string | null; alsoCreateTask?: boolean }
 ): Promise<OpportunitySummary> {
   return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/next-step`, {
     method: "PATCH",
@@ -370,5 +382,93 @@ export function getSalesDashboard(
   const qs = search.toString()
   return apiFetch<SalesDashboardPayload>(`/api/sales/dashboard${qs ? `?${qs}` : ""}`, {
     accessToken,
+  })
+}
+
+/** Only the filters that are set, so an absent one never reaches the server as "undefined". */
+function searchOf(query: object): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "" || value === false) continue
+    search.set(key, String(value))
+  }
+  const qs = search.toString()
+  return qs ? `?${qs}` : ""
+}
+
+// ── meetings ──────────────────────────────────────────────────────────────
+
+export function listMeetings(
+  accessToken: string,
+  query: ListMeetingsQuery = {}
+): Promise<{ items: SalesMeetingSummary[] }> {
+  return apiFetch<{ items: SalesMeetingSummary[] }>(`/api/sales/meetings${searchOf(query)}`, { accessToken })
+}
+
+export function createMeeting(accessToken: string, body: CreateMeetingBody): Promise<SalesMeetingSummary> {
+  return apiFetch<SalesMeetingSummary>("/api/sales/meetings", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateMeeting(accessToken: string, id: string, body: UpdateMeetingBody): Promise<SalesMeetingSummary> {
+  return apiFetch<SalesMeetingSummary>(`/api/sales/meetings/${id}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function changeMeetingStatus(
+  accessToken: string,
+  id: string,
+  body: ChangeMeetingStatusBody
+): Promise<SalesMeetingSummary> {
+  return apiFetch<SalesMeetingSummary>(`/api/sales/meetings/${id}/status`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+/** Everyone who may attend on our side: anyone with Sales Hub access, not only the account's team. */
+export function listMeetingAttendeeOptions(accessToken: string): Promise<SalesEligibleEmployee[]> {
+  return apiFetch<SalesEligibleEmployee[]>("/api/sales/meetings/attendee-options", { accessToken })
+}
+
+// ── tasks ─────────────────────────────────────────────────────────────────
+
+export function listTasks(accessToken: string, query: ListTasksQuery = {}): Promise<{ items: SalesTaskSummary[] }> {
+  return apiFetch<{ items: SalesTaskSummary[] }>(`/api/sales/tasks${searchOf(query)}`, { accessToken })
+}
+
+export function createTask(accessToken: string, body: CreateTaskBody): Promise<SalesTaskSummary> {
+  return apiFetch<SalesTaskSummary>("/api/sales/tasks", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateTask(accessToken: string, id: string, body: UpdateTaskBody): Promise<SalesTaskSummary> {
+  return apiFetch<SalesTaskSummary>(`/api/sales/tasks/${id}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+/** Done comes back with `nextFollowUpOn`, the date to offer for the next follow-up. */
+export function changeTaskStatus(
+  accessToken: string,
+  id: string,
+  body: ChangeTaskStatusBody
+): Promise<SalesTaskStatusResult> {
+  return apiFetch<SalesTaskStatusResult>(`/api/sales/tasks/${id}/status`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
   })
 }

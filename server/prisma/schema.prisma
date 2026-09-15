@@ -234,6 +234,9 @@ model Employee {
   opportunitiesWon        Opportunity[]            @relation("OpportunityWonBy")
   salesComments           SalesComment[]
   salesTargets            SalesTarget[]
+  salesMeetingAttendances SalesMeetingAttendee[]
+  salesTasksAssigned      SalesTask[]              @relation("SalesTaskAssignee")
+  salesTasksGiven         SalesTask[]              @relation("SalesTaskAssigner")
 }
 
 enum EmployeeChangeField {
@@ -2035,6 +2038,8 @@ model SalesAccount {
   contacts       SalesContact[]
   communications SalesCommunication[]
   opportunities  Opportunity[]
+  meetings       SalesMeeting[]
+  tasks          SalesTask[]
 
   @@index([ownerEmployeeId, status])
   @@index([status])
@@ -2095,7 +2100,8 @@ model SalesContact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  communications SalesCommunication[]
+  communications     SalesCommunication[]
+  meetingAttendances SalesMeetingAttendee[]
 
   @@index([salesAccountId, status])
 }
@@ -2195,10 +2201,11 @@ model Opportunity {
   salesAccountId String
   salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
 
-  /// The meeting it came out of. The relation arrives with SalesMeeting in
-  /// phase 3; the column exists now so that is a relation change and not a
-  /// backfill.
+  /// The meeting it came out of. The column waited for phase 3, so adding the
+  /// relation needed no backfill. SetNull: deleting a meeting must not delete
+  /// the deal that came out of it.
   meetingId String?
+  meeting   SalesMeeting? @relation("OpportunityOrigin", fields: [meetingId], references: [id], onDelete: SetNull)
 
   track SalesTrack @default(NETWORKING)
 
@@ -2264,7 +2271,10 @@ model Opportunity {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  lines OpportunityLine[]
+  lines    OpportunityLine[]
+  /// Meetings about this deal (SalesMeeting.opportunityId).
+  meetings SalesMeeting[]    @relation("MeetingOpportunity")
+  tasks    SalesTask[]
 
   @@index([salesAccountId])
   @@index([status, expectedCloseDate])
@@ -2387,4 +2397,150 @@ model SalesTarget {
 
   @@unique([employeeId, calendarYear])
   @@index([calendarYear])
+}
+
+/// Where a meeting happens. A visit is a meeting at the customer's site, not a
+/// SalesCommunication (revision M10).
+enum SalesMeetingMode {
+  CUSTOMER_SITE
+  OUR_OFFICE
+  ONLINE
+}
+
+enum SalesMeetingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum SalesMeetingSide {
+  OURS
+  THEIRS
+}
+
+/// A meeting with a customer: a visit, a meeting at our office, or one online.
+/// Rescheduling is editing `scheduledAt`; there is no RESCHEDULED status,
+/// because a moved meeting is a fact for the Timeline, not a state.
+model SalesMeeting {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  /// The deal it is about. Optional: a first meeting often comes before any deal.
+  opportunityId  String?
+  opportunity    Opportunity? @relation("MeetingOpportunity", fields: [opportunityId], references: [id], onDelete: SetNull)
+
+  title       String
+  mode        SalesMeetingMode @default(CUSTOMER_SITE)
+  scheduledAt DateTime
+  endsAt      DateTime?
+  /// An address or a room, or for an ONLINE meeting the link.
+  location    String?
+  notes       String?
+
+  status       SalesMeetingStatus @default(SCHEDULED)
+  /// Required to cancel.
+  cancelReason String?
+  /// A short note on how it went. Full minutes arrive in phase 4.
+  outcome      String?
+  completedAt  DateTime?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendees  SalesMeetingAttendee[]
+  /// Deals that came out of this meeting (Opportunity.meetingId).
+  originated Opportunity[]          @relation("OpportunityOrigin")
+  tasks      SalesTask[]
+
+  @@index([salesAccountId, scheduledAt])
+  /// The 00:01 daily email reads this.
+  @@index([status, scheduledAt])
+  @@index([opportunityId])
+}
+
+/// Who attends. Our side is an employee; their side is a saved contact of the
+/// account or, when they are not saved, a typed name.
+model SalesMeetingAttendee {
+  id          String           @id @default(uuid())
+  meetingId   String
+  meeting     SalesMeeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  side        SalesMeetingSide
+  employeeId  String?
+  employee    Employee?        @relation(fields: [employeeId], references: [id])
+  contactId   String?
+  contact     SalesContact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  name        String?
+  designation String?
+
+  @@index([meetingId])
+  @@index([employeeId])
+}
+
+enum SalesTaskOrigin {
+  /// The employee planned it: the first plan's follow-up.
+  SELF
+  /// Management gave it at a Saturday funnel meeting (phase 6).
+  FUNNEL_MEETING
+}
+
+enum SalesTaskPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum SalesTaskStatus {
+  PENDING
+  DONE
+  CANCELLED
+}
+
+/// Something one person must do by a date, with a reminder. One table for both
+/// an employee's own follow-ups and, from phase 6, the funnel meeting's action
+/// items (revision M3): two task systems is the mistake §41 warns about.
+model SalesTask {
+  id     String          @id @default(uuid())
+  origin SalesTaskOrigin @default(SELF)
+
+  /// Required by the service in phase 3, so every task is on an account's
+  /// Timeline. Nullable in the table because a phase 5 project task may not
+  /// belong to an account.
+  salesAccountId String?
+  salesAccount   SalesAccount? @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  opportunityId  String?
+  opportunity    Opportunity?  @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  meetingId      String?
+  meeting        SalesMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  /// Phases 5 and 6 add these relations. The columns exist now, so that will
+  /// be a relation change and not a backfill.
+  projectId       String?
+  funnelMeetingId String?
+
+  title    String
+  detail   String?
+  /// Date only, UTC midnight: the house convention.
+  dueOn    DateTime
+  priority SalesTaskPriority @default(NORMAL)
+
+  assignedToEmployeeId String
+  assignedTo           Employee  @relation("SalesTaskAssignee", fields: [assignedToEmployeeId], references: [id])
+  /// Null for a task the person made for themselves.
+  assignedByEmployeeId String?
+  assignedBy           Employee? @relation("SalesTaskAssigner", fields: [assignedByEmployeeId], references: [id])
+
+  status       SalesTaskStatus @default(PENDING)
+  outcome      String?
+  /// Required to cancel.
+  cancelReason String?
+  completedAt  DateTime?
+  completedBy  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, dueOn])
+  @@index([assignedToEmployeeId, status, dueOn])
+  @@index([funnelMeetingId])
+  @@index([salesAccountId, status])
 }

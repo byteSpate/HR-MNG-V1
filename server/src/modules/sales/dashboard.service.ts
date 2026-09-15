@@ -17,17 +17,17 @@
  * five components that agreed once. The client renders what it is given and
  * decides nothing.
  *
- * Two rows of Band 2 are missing on purpose. *Meetings today* and *Tasks due*
- * read `SalesMeeting` and `SalesTask`, which arrive in phase 3. They are
- * **absent**, not empty: an empty "Tasks due" row reads as "no tasks", which
- * is a number nobody measured. `notBuilt` names them so the page can say so.
+ * Band 2 has all six rows since phase 3 brought meetings and tasks (revision
+ * §24.22), so `notBuilt` is empty. It stays in the payload for the next thing
+ * that is not built: an absent row must be named, never shown as zero.
  */
 
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { Role, SalesRole } from "../../generated/prisma/client"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { officeDateOf } from "../attendance/attendance.time"
+import { addDays } from "../../utils/dates"
+import { officeDateOf, officeInstantOf } from "../attendance/attendance.time"
 import { bdt } from "../dashboard/dashboard.format"
 import { toneFor } from "../dashboard/dashboard.tone"
 import type { DashboardStat } from "../dashboard/dashboard.types"
@@ -47,6 +47,8 @@ const QUIET_DAYS = 30
 const STUCK_DAYS = 21
 /** How far ahead the closing-soon row looks. */
 const CLOSING_DAYS = 30
+/** "This week" for meetings: today and the six days after it. */
+const WEEK_DAYS = 7
 
 /** The documented spelling for the team roll-up: `?employeeId=all`. */
 export const ALL_EMPLOYEES = "all"
@@ -77,6 +79,13 @@ function isSalesAdmin(actor: AccessTokenPayload): boolean {
 /** `null` means every account, used by the team roll-up. */
 function ownerFilter(employeeIds: string[] | null) {
   return employeeIds ? { ownerEmployeeId: { in: employeeIds } } : {}
+}
+
+/** Meetings these people attend on our side. `null` means everybody's. */
+function attendingFor(subject: Subject) {
+  return subject.employeeIds
+    ? { attendees: { some: { side: "OURS" as const, employeeId: { in: subject.employeeIds } } } }
+    : {}
 }
 
 /** Count and value of a set of deals, with the unpriced ones named rather than zeroed. */
@@ -114,13 +123,14 @@ const moneyOrNull = (value: Money | null) => (value === null ? null : toMoneyStr
  *   later edit silently rewriting an earlier quarter. An audit row is written
  *   once, attributed to the actor, and never moves.
  *
- * Meetings are the third source C4 names. They arrive in phase 3.
+ * - **Completed meetings** are the third source C4 names: a meeting that
+ *   happened, attended on our side, counted in the window it was held.
  */
 async function accountsWorkedOn(
   subject: Subject,
   window?: { gte: Date; lt: Date }
 ): Promise<number> {
-  const [communications, audits] = await Promise.all([
+  const [communications, audits, meetings] = await Promise.all([
     prisma.salesCommunication.findMany({
       where: {
         ...(subject.employeeIds ? { employeeId: { in: subject.employeeIds } } : {}),
@@ -140,10 +150,19 @@ async function accountsWorkedOn(
       },
       select: { entityId: true },
     }),
+    prisma.salesMeeting.findMany({
+      where: {
+        status: "COMPLETED",
+        ...attendingFor(subject),
+        ...(window ? { scheduledAt: window } : {}),
+      },
+      select: { salesAccountId: true },
+    }),
   ])
 
   const ids = new Set<string>()
   for (const row of communications) ids.add(row.salesAccountId)
+  for (const row of meetings) ids.add(row.salesAccountId)
 
   // The audit row knows which opportunity moved, not which account it hangs
   // off. One extra query rather than one per row.
@@ -209,16 +228,51 @@ async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]
   const owned = ownerFilter(subject.employeeIds)
   const open = { ...owned, status: "ONGOING" as const }
 
-  const [closing, unverified, quiet, stuck] = await Promise.all([
+  // Meetings run on instants, so "today" is the office day's own start and end.
+  const dayStart = officeInstantOf(today, "00:00")
+  const meetingsBefore = (end: Date) =>
+    prisma.salesMeeting.count({
+      where: { status: "SCHEDULED", ...attendingFor(subject), scheduledAt: { gte: dayStart, lt: end } },
+    })
+  const assigned = subject.employeeIds ? { assignedToEmployeeId: { in: subject.employeeIds } } : {}
+
+  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue] = await Promise.all([
     prisma.opportunity.count({
       where: { ...open, expectedCloseDate: { gte: today, lte: closingBy } },
     }),
     prisma.salesAccount.count({ where: { ...owned, contacts: { none: { status: "VERIFIED" } } } }),
     prisma.opportunity.count({ where: { ...open, lastActivityAt: { lt: quietBefore } } }),
     prisma.opportunity.count({ where: { ...open, stageChangedAt: { lt: stuckBefore } } }),
+    meetingsBefore(officeInstantOf(addDays(today, 1), "00:00")),
+    meetingsBefore(officeInstantOf(addDays(today, WEEK_DAYS), "00:00")),
+    prisma.salesTask.count({ where: { status: "PENDING", ...assigned, dueOn: { lte: today } } }),
+    prisma.salesTask.count({ where: { status: "PENDING", ...assigned, dueOn: { lt: today } } }),
   ])
 
   return [
+    {
+      key: "meetings",
+      label: "Meetings today and this week",
+      count: meetingsWeek,
+      detail:
+        meetingsWeek === 0
+          ? "Nothing in the next 7 days"
+          : meetingsToday === 0
+            ? "None today"
+            : `${meetingsToday} today`,
+      // Work booked, not work behind: a full diary is not a warning.
+      tone: toneFor.informational(),
+      href: "/meetings",
+    },
+    {
+      key: "tasks",
+      label: "Tasks due or overdue",
+      count: tasksDue,
+      detail:
+        tasksDue === 0 ? "Nothing due today" : tasksOverdue > 0 ? `${tasksOverdue} overdue` : "All due today",
+      tone: toneFor.queue(tasksDue),
+      href: "/tasks?due=now",
+    },
     {
       key: "closing",
       label: `Closing in ${CLOSING_DAYS} days`,
@@ -594,7 +648,7 @@ export async function getSalesDashboard(
       actions,
       team,
       badges: Object.fromEntries(actions.map((row) => [row.href, row.count])),
-      notBuilt: ["meetings", "tasks"],
+      notBuilt: [],
     }
   }
 
@@ -662,6 +716,6 @@ export async function getSalesDashboard(
     // Counted once, here, and keyed by the row's own href. Two sources drift,
     // and the one that drifts is always the one nobody is looking at.
     badges: Object.fromEntries(actions.map((row) => [row.href, row.count])),
-    notBuilt: ["meetings", "tasks"],
+    notBuilt: [],
   }
 }

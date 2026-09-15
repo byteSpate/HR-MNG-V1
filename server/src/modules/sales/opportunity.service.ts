@@ -17,7 +17,9 @@ import {
 import { employmentAllowsSales } from "./sales.eligibility"
 import { nextOpportunitySerial } from "./sales.serial"
 import { presentOpportunity } from "./opportunity.present"
+import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "./meeting.present"
 import { presentChanges, resolveNames } from "./history.present"
+import { createTaskIn } from "./task.service"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
@@ -369,6 +371,10 @@ export async function changeOpportunityNextStep(id: string, body: ChangeOpportun
     const current = await loadForWrite(tx, id, actor)
     const nextStep = body.nextStep === undefined ? current.nextStep : body.nextStep || null
     const nextStepDueOn = body.nextStepDueOn === undefined ? current.nextStepDueOn : day(body.nextStepDueOn)
+    // Checked before anything is written, so a refused task leaves the step as it was.
+    if (body.alsoCreateTask && (!nextStep || !nextStepDueOn)) {
+      throw new AppError(400, "To also make it a task, give the next step some text and a date")
+    }
     const now = new Date()
     const updated = await tx.opportunity.update({
       where: { id }, data: { nextStep, nextStepDueOn, lastActivityAt: now }, include: INCLUDE,
@@ -383,13 +389,19 @@ export async function changeOpportunityNextStep(id: string, body: ChangeOpportun
       actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
       title: `${current.serial} next step changed`, meta: nextStep, href: `/opportunities/${id}`,
     })
+    // The task goes to whoever ticked the box, not the deal's owner (§24.11).
+    if (body.alsoCreateTask) {
+      await createTaskIn(tx, {
+        salesAccountId: current.salesAccountId, opportunityId: id, title: nextStep!, dueOn: nextStepDueOn!,
+      }, actor)
+    }
     return presentOpportunity(updated)
   })
 }
 
 export async function getOpportunityTimeline(id: string, actor: AccessTokenPayload): Promise<{ items: TimelineItem[] }> {
   const visible = await getOpportunity(id, actor)
-  const [comments, events] = await Promise.all([
+  const [comments, events, meetings] = await Promise.all([
     prisma.salesComment.findMany({
       where: { entity: "OPPORTUNITY", entityId: id, ...commentKindScopeFor(actor) }, orderBy: { createdAt: "desc" }, take: 100,
       include: {
@@ -397,9 +409,32 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
         authorUser: { select: { displayName: true, email: true } },
       },
     }),
-    prisma.event.findMany({ where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { createdAt: "desc" }, take: 100 }),
+    prisma.event.findMany({
+      where: {
+        OR: [
+          { entity: "OPPORTUNITY", entityId: id },
+          // A linked meeting's story. Its scheduled, moved, completed and
+          // cancelled events are written against the account and name this
+          // deal in their payload, so the deal shows them without a second
+          // event for the same change.
+          {
+            entity: "SALES_ACCOUNT", entityId: visible.salesAccountId, type: { startsWith: "sales.meeting." },
+            payload: { path: ["opportunityId"], equals: id },
+          },
+        ],
+      },
+      orderBy: { createdAt: "desc" }, take: 100,
+    }),
+    // The meetings about this deal as they stand now, beside their story above.
+    prisma.salesMeeting.findMany({
+      where: { opportunityId: id }, orderBy: { scheduledAt: "desc" }, take: 100,
+      select: { id: true, title: true, mode: true, status: true, scheduledAt: true },
+    }),
   ])
   const items: TimelineItem[] = [
+    ...meetings.map((row) => ({ id: `meeting:${row.id}`, kind: "meeting" as const,
+      at: row.scheduledAt.toISOString(), title: row.title,
+      meta: `${MEETING_MODE_LABEL[row.mode]} · ${MEETING_STATUS_LABEL[row.status]}`, by: null, detail: null })),
     ...comments.map((row) => ({ id: `comment:${row.id}`, kind: "comment" as const,
       at: row.createdAt.toISOString(), title: row.kind === "MANAGEMENT_NOTE" ? "Management note" : "Comment",
       meta: null, by: row.author?.fullName ?? row.authorUser.displayName ?? row.authorUser.email,
@@ -408,6 +443,5 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
       at: row.createdAt.toISOString(), title: row.title, meta: row.meta, by: null, detail: null })),
   ]
   items.sort((a, b) => b.at.localeCompare(a.at))
-  void visible
   return { items: items.slice(0, 100) }
 }

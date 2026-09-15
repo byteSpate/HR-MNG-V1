@@ -7,6 +7,7 @@ vi.mock("../../config/prisma", () => ({
     salesContact: { findFirst: vi.fn() },
     salesCommunication: { create: vi.fn(), findMany: vi.fn() },
     salesComment: { findMany: vi.fn() },
+    salesTask: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
     employee: { findUnique: vi.fn() },
     event: { findMany: vi.fn(), create: vi.fn() },
@@ -56,6 +57,7 @@ beforeEach(() => {
     createdAt: new Date("2026-09-07"),
   } as any)
   vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as any)
+  vi.mocked(prisma.salesTask.findMany).mockResolvedValue([] as any)
 })
 
 describe("logCommunication", () => {
@@ -268,6 +270,41 @@ describe("getAccountTimeline", () => {
     expect(items).toContainEqual(expect.objectContaining({
       kind: "comment", title: "Remark", detail: "Send revision", by: "Rahim",
     }))
+  })
+})
+
+describe("getAccountTimeline, tasks", () => {
+  const TASK = {
+    id: "task-1", title: "Call back about the quote", status: "PENDING", outcome: null, detail: null,
+    dueOn: new Date("2026-09-20T00:00:00.000Z"), completedAt: null,
+    createdAt: new Date("2026-09-04T06:00:00.000Z"), assignedTo: { fullName: "Rahim" },
+  }
+
+  beforeEach(() => {
+    vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.event.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.salesTask.findMany).mockResolvedValue([TASK] as any)
+  })
+
+  it("shows the account's tasks to the people who work it, with who and when", async () => {
+    const { items } = await getAccountTimeline("sa-1", USER)
+
+    expect(prisma.salesTask.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { salesAccountId: "sa-1" },
+    }))
+    expect(items).toContainEqual(expect.objectContaining({
+      id: "task:task-1", kind: "task", title: "Call back about the quote", by: "Rahim",
+      meta: "Pending · due Sep 20",
+    }))
+  })
+
+  it("does not read tasks for somebody who only sees the account", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+
+    const { items } = await getAccountTimeline("sa-1", USER)
+
+    expect(prisma.salesTask.findMany).not.toHaveBeenCalled()
+    expect(items.some((item) => item.kind === "task")).toBe(false)
   })
 })
 

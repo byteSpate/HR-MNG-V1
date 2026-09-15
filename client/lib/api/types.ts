@@ -137,7 +137,7 @@ export interface LogCommunicationBody {
     already a label and the author already a name. */
 export interface TimelineItem {
   id: string
-  kind: "communication" | "event"
+  kind: "communication" | "event" | "comment" | "meeting" | "task"
   at: string
   title: string
   meta: string | null
@@ -2418,6 +2418,162 @@ export interface SalesDashboardPayload {
    * "Tasks due" row would read as "no tasks" — a number nobody measured.
    */
   notBuilt: string[]
+}
+
+// ── Meetings and tasks (phase 3, revision §24) ──────────────────────────────
+
+export type SalesMeetingMode = "CUSTOMER_SITE" | "OUR_OFFICE" | "ONLINE"
+export type SalesMeetingStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED"
+
+export interface SalesMeetingAttendeeSummary {
+  id: string
+  side: "OURS" | "THEIRS"
+  employeeId: string | null
+  contactId: string | null
+  /** From the employee or contact record when there is one, else as typed. */
+  name: string
+  designation: string | null
+}
+
+export interface SalesMeetingSummary {
+  id: string
+  salesAccountId: string
+  salesAccountName: string
+  opportunityId: string | null
+  opportunitySerial: string | null
+  opportunityName: string | null
+  title: string
+  mode: SalesMeetingMode
+  scheduledAt: string
+  endsAt: string | null
+  location: string | null
+  notes: string | null
+  status: SalesMeetingStatus
+  cancelReason: string | null
+  outcome: string | null
+  completedAt: string | null
+  attendees: SalesMeetingAttendeeSummary[]
+  /** Whether the viewer works the account, and so may change the meeting. */
+  canManage: boolean
+}
+
+export interface MeetingAttendeeBody {
+  side: "OURS" | "THEIRS"
+  employeeId?: string
+  contactId?: string
+  name?: string
+  designation?: string
+}
+
+export interface CreateMeetingBody {
+  salesAccountId: string
+  opportunityId?: string
+  title: string
+  mode?: SalesMeetingMode
+  scheduledAt: string
+  endsAt?: string
+  location?: string
+  notes?: string
+  attendees?: MeetingAttendeeBody[]
+}
+
+/** Absent leaves a field alone; null clears it. The attendee list, when sent, replaces the old one. */
+export interface UpdateMeetingBody {
+  opportunityId?: string | null
+  title?: string
+  mode?: SalesMeetingMode
+  scheduledAt?: string
+  endsAt?: string | null
+  location?: string | null
+  notes?: string | null
+  attendees?: MeetingAttendeeBody[]
+}
+
+export type ChangeMeetingStatusBody =
+  | { status: "COMPLETED"; outcome?: string }
+  | { status: "CANCELLED"; reason: string }
+  | { status: "SCHEDULED" }
+
+export interface ListMeetingsQuery {
+  salesAccountId?: string
+  opportunityId?: string
+  status?: SalesMeetingStatus
+  mine?: boolean
+  from?: string
+  to?: string
+}
+
+export type SalesTaskStatus = "PENDING" | "DONE" | "CANCELLED"
+export type SalesTaskPriority = "LOW" | "NORMAL" | "HIGH"
+export type SalesTaskOrigin = "SELF" | "FUNNEL_MEETING"
+/** overdue: before today. today. now: today or overdue. week: today and the six days after. */
+export type TaskDueFilter = "overdue" | "today" | "now" | "week"
+
+export interface SalesTaskSummary {
+  id: string
+  origin: SalesTaskOrigin
+  salesAccountId: string | null
+  salesAccountName: string | null
+  opportunityId: string | null
+  opportunitySerial: string | null
+  opportunityName: string | null
+  meetingId: string | null
+  meetingTitle: string | null
+  title: string
+  detail: string | null
+  /** YYYY-MM-DD. */
+  dueOn: string
+  priority: SalesTaskPriority
+  assignedToEmployeeId: string
+  assignedToName: string
+  status: SalesTaskStatus
+  outcome: string | null
+  cancelReason: string | null
+  completedAt: string | null
+  /** Pending and due before today. Worked out by the server. */
+  overdue: boolean
+  /** Only the owner changes a task, a Sales Admin included. */
+  canManage: boolean
+  createdAt: string
+}
+
+export interface SalesTaskStatusResult extends SalesTaskSummary {
+  /** After Done, the date to offer for the next follow-up. Null otherwise. */
+  nextFollowUpOn: string | null
+}
+
+export interface CreateTaskBody {
+  salesAccountId: string
+  opportunityId?: string
+  meetingId?: string
+  title: string
+  detail?: string
+  dueOn: string
+  priority?: SalesTaskPriority
+}
+
+export interface UpdateTaskBody {
+  opportunityId?: string | null
+  meetingId?: string | null
+  title?: string
+  detail?: string | null
+  dueOn?: string
+  priority?: SalesTaskPriority
+}
+
+export type ChangeTaskStatusBody =
+  | { status: "DONE"; outcome?: string }
+  | { status: "CANCELLED"; reason: string }
+  | { status: "PENDING" }
+
+export interface ListTasksQuery {
+  status?: SalesTaskStatus
+  due?: TaskDueFilter
+  origin?: SalesTaskOrigin
+  salesAccountId?: string
+  opportunityId?: string
+  meetingId?: string
+  mine?: boolean
 }
 
 /**

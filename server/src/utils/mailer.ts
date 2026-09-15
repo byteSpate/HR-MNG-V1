@@ -44,6 +44,10 @@ export type DispatchKind =
   | "ASSET_REQUEST_DECIDED"
   | "NATIONAL_ID_CHANGE_DECIDED"
   | "SETTLEMENT_STATEMENT"
+  // One email per person per day at 00:01, meetings and tasks together, and
+  // one straight away when a meeting they attend is added, moved or cancelled.
+  | "SALES_DAILY_EMAIL"
+  | "SALES_MEETING_CHANGED"
 
 export interface MailAttachment {
   filename: string

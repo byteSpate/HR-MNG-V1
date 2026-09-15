@@ -15,6 +15,8 @@ vi.mock("../../config/prisma", () => ({
     auditLog: { create: vi.fn(), findMany: vi.fn() },
     event: { create: vi.fn(), findMany: vi.fn() },
     salesComment: { findMany: vi.fn() },
+    salesMeeting: { findMany: vi.fn() },
+    salesTask: { create: vi.fn() },
   },
 }))
 
@@ -424,6 +426,34 @@ describe("stage, status, and next step", () => {
     }))
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("also makes a task for whoever ticked the box, with the step's text and date", async () => {
+    vi.mocked(prisma.salesTask.create).mockResolvedValue({ id: "task-1" } as any)
+
+    await changeOpportunityNextStep("opp-1", {
+      nextStep: "Send revised BOM", nextStepDueOn: "2026-09-12", alsoCreateTask: true,
+    }, USER)
+
+    expect(prisma.salesTask.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        title: "Send revised BOM", dueOn: new Date("2026-09-12T00:00:00.000Z"),
+        assignedToEmployeeId: "emp-1", origin: "SELF",
+        salesAccountId: "account-1", opportunityId: "opp-1",
+      }),
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ entity: "SALES_TASK", action: "CREATE" }),
+    }))
+  })
+
+  it("refuses the box without a step and a date, and changes nothing", async () => {
+    await expect(changeOpportunityNextStep("opp-1", {
+      nextStep: "Send revised BOM", nextStepDueOn: null, alsoCreateTask: true,
+    }, USER)).rejects.toThrow(/date/i)
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
   })
 })
 
@@ -433,6 +463,44 @@ describe("the deal Timeline, management notes", () => {
   beforeEach(() => {
     vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as any)
     vi.mocked(prisma.event.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([] as any)
+  })
+
+  it("puts meetings about the deal on its Timeline", async () => {
+    vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([{
+      id: "meeting-1", title: "Firewall walkthrough", mode: "CUSTOMER_SITE", status: "SCHEDULED",
+      scheduledAt: new Date("2026-09-20T04:00:00.000Z"),
+    }] as any)
+
+    const { items } = await getOpportunityTimeline("opp-1", USER)
+
+    expect(prisma.salesMeeting.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { opportunityId: "opp-1" },
+    }))
+    expect(items).toContainEqual(expect.objectContaining({
+      id: "meeting:meeting-1", kind: "meeting", title: "Firewall walkthrough",
+      at: "2026-09-20T04:00:00.000Z",
+    }))
+  })
+
+  it("keeps each linked meeting's story on the deal Timeline, not only its current state", async () => {
+    vi.mocked(prisma.event.findMany).mockResolvedValue([{
+      id: "ev-9", type: "sales.meeting.rescheduled", createdAt: new Date("2026-09-15T06:00:00.000Z"),
+      title: "Meeting moved: Firewall walkthrough", meta: "Sun 20 Sep, 10:00 to Mon 21 Sep, 10:00",
+    }] as any)
+
+    const { items } = await getOpportunityTimeline("opp-1", USER)
+
+    // The deal's own events, and the account's meeting events keyed to this deal.
+    const where = (vi.mocked(prisma.event.findMany).mock.calls[0][0] as any).where
+    expect(where.OR).toContainEqual({ entity: "OPPORTUNITY", entityId: "opp-1" })
+    expect(where.OR).toContainEqual({
+      entity: "SALES_ACCOUNT", entityId: "account-1", type: { startsWith: "sales.meeting." },
+      payload: { path: ["opportunityId"], equals: "opp-1" },
+    })
+    expect(items).toContainEqual(expect.objectContaining({
+      id: "event:ev-9", kind: "event", title: "Meeting moved: Firewall walkthrough",
+    }))
   })
 
   it("leaves management notes out of a Sales User's deal Timeline", async () => {

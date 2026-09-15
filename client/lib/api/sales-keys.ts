@@ -51,7 +51,29 @@ export const salesKeys = {
   targets: (calendarYear: number, employeeId?: string) =>
     ["sales", "targets", calendarYear, employeeId ?? "me"] as const,
   dashboard: (employeeId?: string) => ["sales", "dashboard", employeeId ?? "me"] as const,
+
+  // ── meetings and tasks ──────────────────────────────────────────────────
+  meetings: (filters: Record<string, unknown> = {}) => ["sales", "meetings", filters] as const,
+  tasks: (filters: Record<string, unknown> = {}) => ["sales", "tasks", filters] as const,
+  /** Who may attend a meeting on our side. Outside "meetings", so a meeting write does not refetch it. */
+  meetingAttendees: () => ["sales", "meeting-attendees"] as const,
 } as const
+
+/**
+ * Everything a meeting or task write can make stale: both lists, the overview
+ * and its nav badges, and the Timelines of the account and the deal it sits
+ * on. The account and deal prefixes are wide on purpose; the write does not
+ * always know which account's Timeline it touched.
+ */
+export function planWriteKeys() {
+  return [
+    ["sales", "meetings"] as const,
+    ["sales", "tasks"] as const,
+    ["sales", "dashboard"] as const,
+    ["sales", "accounts"] as const,
+    ["sales", "opportunities"] as const,
+  ]
+}
 
 /**
  * Everything a write to one opportunity can make stale.

@@ -55,11 +55,14 @@ import {
   CONTACT_STATUS_TONE,
   EVENT_ICON,
   HISTORY_ENTITY_ICON,
+  MEETING_ICON,
   OPPORTUNITY_STATUS_LABEL,
   OPPORTUNITY_STATUS_TONE,
+  TASK_ICON,
   stageSentence,
   taka,
 } from "@/components/sales/sales-shared"
+import { MeetingsPanel, TasksPanel } from "@/components/sales/plan-panels"
 import { Button } from "@/components/ui/button"
 import { AccountEditDialog } from "@/components/sales/account-edit-dialog"
 import { CommentPanel } from "@/components/sales/comment-panel"
@@ -405,7 +408,14 @@ function nowForDatetimeLocal(): string {
 }
 
 function TimelineRow({ item, delayMs }: { item: TimelineItem; delayMs: number }) {
-  const Icon = item.kind === "communication" ? CHANNEL_ICON[channelForMeta(item.meta)] : EVENT_ICON
+  const Icon =
+    item.kind === "communication"
+      ? CHANNEL_ICON[channelForMeta(item.meta)]
+      : item.kind === "meeting"
+        ? MEETING_ICON
+        : item.kind === "task"
+          ? TASK_ICON
+          : EVENT_ICON
   return (
     <li className="rise-in border-b border-[#EEF1F5] py-3 last:border-b-0" style={{ animationDelay: `${delayMs}ms` }}>
       <div className="flex items-start gap-2">
@@ -1016,6 +1026,10 @@ export function AccountDetail({ accountId }: { accountId: string }) {
           <div className="grid gap-4">
             <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
             <OpportunitiesPanel account={accountQuery.data} />
+            {/* Meetings and tasks are things you act on too, so they join the
+                left column (revision §23, page layout). */}
+            <MeetingsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
+            <TasksPanel accountId={accountId} canManage={accountQuery.data.canManage} />
           </div>
           <div className="grid gap-4">
             <TimelinePanel

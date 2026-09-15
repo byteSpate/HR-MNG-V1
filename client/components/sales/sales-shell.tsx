@@ -52,9 +52,13 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
     queryFn: () => getSalesDashboard(accessToken!, isSalesAdmin ? "all" : undefined),
     enabled: status === "authenticated" && !!accessToken && canEnter,
   })
-  const opportunityBadge = Object.entries(dashboard.data?.badges ?? {})
-    .filter(([href]) => href.startsWith("/opportunities"))
-    .reduce((sum, [, count]) => sum + count, 0)
+  // Summed by prefix from the overview's badges, which are keyed by each row's
+  // own link, so a nav badge and the row it came from cannot disagree.
+  const badgeFor = (prefix: string) =>
+    Object.entries(dashboard.data?.badges ?? {})
+      .filter(([href]) => href.startsWith(prefix))
+      .reduce((sum, [, count]) => sum + count, 0)
+  const opportunityBadge = badgeFor("/opportunities")
 
   useEffect(() => {
     if (wrongRole && user) router.replace(ROLE_ROUTES[user.role])
@@ -86,7 +90,11 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
             ? "Sales User"
             : undefined
       }
-      badges={{ "/sales/opportunities": opportunityBadge }}
+      badges={{
+        "/sales/opportunities": opportunityBadge,
+        "/sales/meetings": badgeFor("/meetings"),
+        "/sales/tasks": badgeFor("/tasks"),
+      }}
       // Wider than a role dashboard's 1220/1600px cap: the accounts table
       // (Day 5) and, later, the Opportunities pipeline want more columns
       // than a role dashboard's panels ever did.
