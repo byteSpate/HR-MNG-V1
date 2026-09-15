@@ -51,6 +51,13 @@ import {
   updateTaskHandler,
   getMinutesTemplateHandler,
   saveMinutesTemplateHandler,
+  answerRequirementHandler,
+  deleteMinutesHandler,
+  getMinutesHandler,
+  listMinutesHandler,
+  listWaitingForMinutesHandler,
+  saveMinutesHandler,
+  startMinutesHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -138,6 +145,18 @@ router.post("/tasks", requireAuth, requireSales(), createTaskHandler)
 router.get("/tasks/:id", requireAuth, requireSales(), getTaskHandler)
 router.patch("/tasks/:id", requireAuth, requireSales(), updateTaskHandler)
 router.patch("/tasks/:id/status", requireAuth, requireSales(), changeTaskStatusHandler)
+
+// Meeting minutes (revision §25). Open to the hub at the route; the service
+// narrows every read and write to the people who work the meeting's account
+// and Sales Admins (§25.27).
+router.post("/meetings/:id/minutes", requireAuth, requireSales(), startMinutesHandler)
+router.get("/minutes", requireAuth, requireSales(), listMinutesHandler)
+// Before /minutes/:id, or the path is read as an id.
+router.get("/minutes/waiting", requireAuth, requireSales(), listWaitingForMinutesHandler)
+router.get("/minutes/:id", requireAuth, requireSales(), getMinutesHandler)
+router.put("/minutes/:id", requireAuth, requireSales(), saveMinutesHandler)
+router.patch("/minutes/:id/requirement", requireAuth, requireSales(), answerRequirementHandler)
+router.delete("/minutes/:id", requireAuth, requireSales(), deleteMinutesHandler)
 
 // Sales Settings (revision §25.30): Sales Admins only. The minutes template is
 // its first section; later hub settings join it under the same prefix.
