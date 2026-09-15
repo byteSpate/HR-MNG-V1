@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   DEFAULT_TEMPLATE,
+  RICH_HIGHLIGHTS,
   cleanContent,
+  hasContent,
   inlineHtml,
   sectionInputSchema,
   sectionsFromTemplate,
@@ -145,5 +147,86 @@ describe("bold, and only bold", () => {
 
   it("leaves a lone pair of stars as typed", () => {
     expect(inlineHtml("5 ** 2")).toBe("5 ** 2")
+  })
+})
+
+describe("formatted text (owner's change, 2026-09-15)", () => {
+  const text = (value: string, marks?: unknown[]) => ({ type: "text", text: value, ...(marks ? { marks } : {}) })
+  const paragraph = (...content: unknown[]) => ({ type: "paragraph", content })
+  /** One of everything the toolbar makes, in the shape the editor saves. */
+  const EVERYTHING = {
+    type: "doc",
+    content: [
+      { type: "heading", attrs: { level: 3, textAlign: "left" }, content: [text("Network")] },
+      {
+        type: "paragraph",
+        attrs: { textAlign: "center" },
+        content: [
+          text("Bold", [{ type: "bold" }]),
+          text(" italic", [{ type: "italic" }]),
+          text(" under", [{ type: "underline" }]),
+          text(" struck", [{ type: "strike" }]),
+          text(" marked", [{ type: "highlight", attrs: { color: RICH_HIGHLIGHTS.yellow } }]),
+          text(" portal", [{ type: "link", attrs: { href: "https://example.com", target: "_blank", rel: null, class: null } }]),
+          { type: "hardBreak" },
+        ],
+      },
+      {
+        type: "bulletList",
+        content: [
+          {
+            type: "listItem",
+            content: [
+              paragraph(text("ERP")),
+              { type: "bulletList", content: [{ type: "listItem", content: [paragraph(text("Payment"))] }] },
+            ],
+          },
+        ],
+      },
+      { type: "orderedList", attrs: { start: 1, type: null }, content: [{ type: "listItem", content: [paragraph(text("First"))] }] },
+      { type: "horizontalRule" },
+      {
+        type: "table",
+        content: [
+          { type: "tableRow", content: [{ type: "tableHeader", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [paragraph(text("Site"))] }] },
+          { type: "tableRow", content: [{ type: "tableCell", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [paragraph(text("Uttara"))] }] },
+        ],
+      },
+    ],
+  }
+  const rich = (doc: unknown) => sectionInputSchema.safeParse({ heading: "Notes", kind: "RICH", content: doc })
+
+  it("accepts every tool the toolbar has", () => {
+    expect(rich(EVERYTHING).success).toBe(true)
+  })
+
+  it("refuses anything that is not on the list", () => {
+    expect(rich({ type: "doc", content: [{ type: "image", attrs: { src: "x.png" } }] }).success).toBe(false)
+    expect(rich({ type: "doc", content: [paragraph(text("x", [{ type: "code" }]))] }).success).toBe(false)
+    expect(rich({ type: "doc", content: [{ type: "heading", attrs: { level: 1 }, content: [text("Big")] }] }).success).toBe(false)
+    expect(rich({ type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "diagonal" } }] }).success).toBe(false)
+  })
+
+  it("refuses a link that is not a web or mail address, and a highlight that is not on the palette", () => {
+    const link = (href: string) => ({ type: "doc", content: [paragraph(text("x", [{ type: "link", attrs: { href } }]))] })
+    expect(rich(link("javascript:alert(1)")).success).toBe(false)
+    expect(rich(link("mailto:salim@example.com")).success).toBe(true)
+    const highlight = (color: string) => ({ type: "doc", content: [paragraph(text("x", [{ type: "highlight", attrs: { color } }]))] })
+    expect(rich(highlight("red")).success).toBe(false)
+  })
+
+  it("says whether there is anything to print", () => {
+    expect(hasContent("RICH", { type: "doc", content: [{ type: "paragraph" }] } as never)).toBe(false)
+    expect(hasContent("RICH", EVERYTHING as never)).toBe(true)
+  })
+
+  it("can start with the outcome note, and the template may mark it for that", () => {
+    const [section] = sectionsFromTemplate([{ heading: "Outcome", kind: "RICH", startsWithOutcome: true }] as never, "Productive.")
+    expect(section.content).toEqual({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Productive." }] }] })
+    expect(sectionsFromTemplate([{ heading: "Outcome", kind: "RICH" }] as never, null)[0].content).toEqual({
+      type: "doc",
+      content: [{ type: "paragraph" }],
+    })
+    expect(templateSchema.safeParse({ sections: [{ heading: "Outcome", kind: "RICH", startsWithOutcome: true }] }).success).toBe(true)
   })
 })

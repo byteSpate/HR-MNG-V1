@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { RICH_HIGHLIGHTS } from "./minutes.content"
 import { contentDisposition, minutesFileName, renderMinutesHtml, type MinutesDocument } from "./minutes.pdf"
 
 const COMPANY = "Bytespate Limited"
@@ -184,6 +185,83 @@ describe("prepared by, the draft mark, and escaping", () => {
     const html = renderMinutesHtml(doc({ accountName: "<img src=x>", purpose: "<script>" }), OPTIONS)
     expect(html).not.toContain("<img src=x>")
     expect(html).not.toContain("<script>")
+  })
+})
+
+describe("formatted text in the PDF (owner's change, 2026-09-15)", () => {
+  const text = (value: string, marks?: unknown[]) => ({ type: "text", text: value, ...(marks ? { marks } : {}) })
+  const paragraph = (...content: unknown[]) => ({ type: "paragraph", content })
+  const withRich = (content: unknown) =>
+    renderMinutesHtml(doc({ sections: [{ heading: "Notes", kind: "RICH" as never, content }] }), OPTIONS)
+
+  it("prints each tool the way the editor shows it", () => {
+    const html = withRich({
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 3, textAlign: null }, content: [text("Network")] },
+        {
+          type: "paragraph",
+          attrs: { textAlign: "center" },
+          content: [
+            text("Bold", [{ type: "bold" }]),
+            text(" italic", [{ type: "italic" }]),
+            text(" under", [{ type: "underline" }]),
+            text(" struck", [{ type: "strike" }]),
+            text(" marked", [{ type: "highlight", attrs: { color: RICH_HIGHLIGHTS.yellow } }]),
+            text(" portal", [{ type: "link", attrs: { href: "https://example.com" } }]),
+          ],
+        },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                paragraph(text("ERP")),
+                { type: "bulletList", content: [{ type: "listItem", content: [paragraph(text("Payment"))] }] },
+              ],
+            },
+          ],
+        },
+        { type: "orderedList", attrs: { start: 1 }, content: [{ type: "listItem", content: [paragraph(text("First"))] }] },
+        { type: "horizontalRule" },
+        {
+          type: "table",
+          content: [
+            { type: "tableRow", content: [{ type: "tableHeader", attrs: { colspan: 1, rowspan: 1 }, content: [paragraph(text("Site"))] }] },
+            { type: "tableRow", content: [{ type: "tableCell", attrs: { colspan: 2, rowspan: 1 }, content: [paragraph(text("Uttara"))] }] },
+          ],
+        },
+      ],
+    })
+
+    expect(html).toContain("1. Notes")
+    expect(html).toContain("<h3>Network</h3>")
+    expect(html).toContain(
+      `<p style="text-align:center"><strong>Bold</strong><em> italic</em><u> under</u><s> struck</s>` +
+        `<mark style="background-color:${RICH_HIGHLIGHTS.yellow}"> marked</mark><a href="https://example.com"> portal</a></p>`
+    )
+    expect(html).toContain("<ul><li><p>ERP</p><ul><li><p>Payment</p></li></ul></li></ul>")
+    expect(html).toContain("<ol><li><p>First</p></li></ol>")
+    expect(html).toContain("<hr>")
+    expect(html).toContain(
+      '<table class="rich"><tbody><tr><th><p>Site</p></th></tr><tr><td colspan="2"><p>Uttara</p></td></tr></tbody></table>'
+    )
+  })
+
+  it("escapes what was typed, and prints an unsafe link as plain text", () => {
+    const html = withRich({
+      type: "doc",
+      content: [paragraph(text("<script>alert(1)</script>"), text(" bad", [{ type: "link", attrs: { href: "javascript:alert(1)" } }]))],
+    })
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;")
+    expect(html).not.toContain("<script>")
+    expect(html).not.toContain("javascript:")
+    expect(html).toContain(" bad")
+  })
+
+  it("leaves out a formatted section with nothing in it", () => {
+    expect(withRich({ type: "doc", content: [{ type: "paragraph" }] })).not.toContain("Notes")
   })
 })
 
