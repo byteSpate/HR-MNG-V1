@@ -348,6 +348,16 @@ describe("the requirement question", () => {
     await expect(answerRequirement("minutes-1", { found: false }, USER)).rejects.toThrow(/sent/)
     expect(prisma.salesMeetingMinutes.update).not.toHaveBeenCalled()
   })
+
+  it("records nothing when the same answer is given again, so History gets no second line", async () => {
+    vi.mocked(prisma.salesMeetingMinutes.findFirst).mockResolvedValue(minutesRow({ requirementFound: false }) as any)
+
+    const minutes = await answerRequirement("minutes-1", { found: false }, USER)
+
+    expect(prisma.salesMeetingMinutes.update).not.toHaveBeenCalled()
+    expect(prisma.auditLog.create).not.toHaveBeenCalled()
+    expect(minutes.requirementFound).toBe(false)
+  })
 })
 
 describe("deleting minutes", () => {
