@@ -189,7 +189,9 @@ function richBlock(node: LooseNode): string {
   const inline = () => (node.content ?? []).map(richInline).join("")
   switch (node.type) {
     case "paragraph":
-      return `<p${alignStyle(node.attrs)}>${inline()}</p>`
+      // A blank line the writer typed, or an empty table cell, keeps one line
+      // of height, as the editor shows it; an empty <p> collapses in print.
+      return `<p${alignStyle(node.attrs)}>${inline() || "&nbsp;"}</p>`
     case "heading": {
       const level = node.attrs?.level === 4 ? 4 : 3
       return `<h${level}${alignStyle(node.attrs)}>${inline()}</h${level}>`
