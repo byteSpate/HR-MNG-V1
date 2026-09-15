@@ -167,10 +167,12 @@ router.get("/minutes/:id/preview", requireAuth, requireSales(), previewMinutesHa
 router.post("/minutes/:id/send", requireAuth, requireSales(), sendMinutesHandler)
 router.get("/minutes/sends/:sendId/file", requireAuth, requireSales(), sentCopyHandler)
 
-// Sales Settings (revision §25.30): Sales Admins only. The minutes template is
-// its first section; later hub settings join it under the same prefix.
-router.get("/settings/minutes-template", requireAuth, requireSales(SalesRole.SALES_ADMIN), getMinutesTemplateHandler)
-router.put("/settings/minutes-template", requireAuth, requireSales(SalesRole.SALES_ADMIN), saveMinutesTemplateHandler)
+// Sales Settings (revision §25.30). The minutes template is its first section,
+// open to everyone in the hub since 2026-09-15 (§25.20): the format changes
+// often, and waiting for an admin slowed people down. Later settings join it
+// under the same prefix, each with its own guard.
+router.get("/settings/minutes-template", requireAuth, requireSales(), getMinutesTemplateHandler)
+router.put("/settings/minutes-template", requireAuth, requireSales(), saveMinutesTemplateHandler)
 
 export default router
 

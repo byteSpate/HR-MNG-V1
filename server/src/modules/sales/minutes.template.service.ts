@@ -1,9 +1,10 @@
 /**
  * The minutes template on Sales Settings (revision §25.20, §25.21, §25.30).
  *
- * One template for everyone, changed by Sales Admins only. It is read when a
- * document is started and never again, so a change reaches new minutes only:
- * minutes already written keep the sections they started with.
+ * One template for everyone, changed by anyone in the hub (the owner opened it
+ * to Sales Users on 2026-09-15; the audit row says who changed what). It is
+ * read when a document is started and never again, so a change reaches new
+ * minutes only: minutes already written keep the sections they started with.
  *
  * One row, id 1. No row means nobody has changed the template, and the
  * default from the four real documents applies.
