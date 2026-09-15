@@ -453,6 +453,9 @@ export async function answerRequirement(
     if (current.lastSentAt) {
       throw new AppError(400, "The answer is fixed once the minutes have been sent")
     }
+    // The same answer again (a second press, a second tab) changes nothing,
+    // so it saves nothing and History gets no second line.
+    if (current.requirementFound === body.found) return
     await tx.salesMeetingMinutes.update({ where: { id }, data: { requirementFound: body.found, updatedBy: actor.sub } })
     await writeAudit(tx, {
       entity: "SALES_MINUTES",

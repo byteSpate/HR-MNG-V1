@@ -389,9 +389,13 @@ function MinutesDocument({ detail }: { detail: SalesMinutesDetail }) {
               detail={detail}
               pending={answer.isPending}
               error={answer.error ? toMessage(answer.error) : null}
-              onAnswer={(found) => answer.mutate(found)}
-              onMakeDeal={() => setDealOpen(true)}
-              onMakeTask={() => setTaskOpen(true)}
+              onAnswer={(found) => {
+                // The answer already given only opens its form again: nothing
+                // is saved twice, and History gets no second line.
+                if (found !== detail.requirementFound) answer.mutate(found)
+                else if (found) setDealOpen(true)
+                else setTaskOpen(true)
+              }}
             />
           ) : null}
           <SectionsCard sections={draft.sections} setSections={setSections} />
@@ -660,17 +664,16 @@ function RequirementCard({
   pending,
   error,
   onAnswer,
-  onMakeDeal,
-  onMakeTask,
 }: {
   detail: SalesMinutesDetail
   pending: boolean
   error: string | null
+  /** Pressing the answer already given opens its form again (the deal or the task). */
   onAnswer: (found: boolean) => void
-  onMakeDeal: () => void
-  onMakeTask: () => void
 }) {
   const found = detail.requirementFound
+  // A deal already came out of this meeting: a second press must not make another.
+  const dealMade = detail.originatedDeals.length > 0
   const choice = (value: boolean) =>
     found === value
       ? "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
@@ -686,24 +689,37 @@ function RequirementCard({
           {found ? "Yes, a requirement was found." : "No requirement was found."}
         </p>
       ) : (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button type="button" aria-pressed={found === true} disabled={pending} onClick={() => onAnswer(true)} className={choice(true)}>
-            Yes, a requirement
-          </Button>
-          <Button type="button" aria-pressed={found === false} disabled={pending} onClick={() => onAnswer(false)} className={choice(false)}>
-            No requirement
-          </Button>
-          {found === true && detail.originatedDeals.length === 0 ? (
-            <Button type="button" variant="ghost" onClick={onMakeDeal} className={ADD}>
-              Make the deal
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              aria-pressed={found === true}
+              disabled={pending || (found === true && dealMade)}
+              onClick={() => onAnswer(true)}
+              className={choice(true)}
+            >
+              Yes, a requirement
             </Button>
-          ) : null}
+            <Button
+              type="button"
+              aria-pressed={found === false}
+              disabled={pending}
+              onClick={() => onAnswer(false)}
+              className={choice(false)}
+            >
+              No requirement
+            </Button>
+          </div>
           {found === false ? (
-            <Button type="button" variant="ghost" onClick={onMakeTask} className={ADD}>
-              Make the follow-up task
-            </Button>
+            <p className={`mt-2 text-[12px] ${TONE.muted}`}>
+              Answered: no requirement. Press No requirement again to open the follow-up task form.
+            </p>
+          ) : found === true && !dealMade ? (
+            <p className={`mt-2 text-[12px] ${TONE.muted}`}>
+              Answered: a requirement was found. Press Yes, a requirement again to open the deal form.
+            </p>
           ) : null}
-        </div>
+        </>
       )}
       {detail.originatedDeals.length > 0 ? (
         <p className="mt-3 text-[12.5px]">
