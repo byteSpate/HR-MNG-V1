@@ -54,6 +54,8 @@ import {
 import { changeTaskStatus, createTask, getTask, listTasks, updateTask } from "./task.service"
 import { getMinutesTemplate, saveMinutesTemplate } from "./minutes.template.service"
 import { templateSchema } from "./minutes.content"
+import { contentDisposition } from "./minutes.pdf"
+import { getSentCopy, previewMinutes, sendMinutes, type MinutesFile } from "./minutes.send"
 import {
   changeTaskStatusSchema,
   createTaskSchema,
@@ -87,6 +89,7 @@ import {
   answerRequirementSchema,
   listMinutesSchema,
   saveMinutesSchema,
+  sendMinutesSchema,
   waitingForMinutesSchema,
 } from "./sales.validators"
 
@@ -418,6 +421,32 @@ export async function answerRequirementHandler(req: Request<{ id: string }>, res
 
 export async function deleteMinutesHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { await deleteMinutes(req.params.id, req.user!); return res.status(204).send() }
+  catch (err) { return next(err) }
+}
+
+/**
+ * A minutes PDF. Never cached: a preview is a draft of something still being
+ * written, and a browser that kept one could show it in place of a later copy.
+ */
+function sendMinutesFile(res: Response, kind: "inline" | "attachment", file: MinutesFile) {
+  res.setHeader("Content-Type", "application/pdf")
+  res.setHeader("Content-Disposition", contentDisposition(kind, file.fileName))
+  res.setHeader("Cache-Control", "no-store")
+  return res.status(200).send(file.pdf)
+}
+
+export async function previewMinutesHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return sendMinutesFile(res, "inline", await previewMinutes(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function sendMinutesHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return sendMinutesFile(res, "attachment", await sendMinutes(req.params.id, sendMinutesSchema.parse(req.body ?? {}), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function sentCopyHandler(req: Request<{ sendId: string }>, res: Response, next: NextFunction) {
+  try { return sendMinutesFile(res, "attachment", await getSentCopy(req.params.sendId, req.user!)) }
   catch (err) { return next(err) }
 }
 

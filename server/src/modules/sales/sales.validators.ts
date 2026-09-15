@@ -402,5 +402,10 @@ export const listMinutesSchema = z.object({
 
 export const waitingForMinutesSchema = z.object({ mine: trueOnly })
 
+/** Who the copy went to, typed and optional: "Md. Salim Reza, by email" (§25.24). */
+export const sendMinutesSchema = z.object({
+  sentTo: z.string().trim().max(200).nullable().optional(),
+})
+
 export type SaveMinutesBody = z.infer<typeof saveMinutesSchema>
 export type ListMinutesQuery = z.infer<typeof listMinutesSchema>

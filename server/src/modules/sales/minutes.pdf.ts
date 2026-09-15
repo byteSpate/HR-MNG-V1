@@ -87,6 +87,21 @@ export function minutesFileName(accountName: string, scheduledAt: Date, timeZone
   return `Meeting Minutes – ${safe} – ${dayLabel(scheduledAt, timeZone)}.pdf`
 }
 
+/**
+ * The Content-Disposition value for a minutes file. The name has an en dash,
+ * which a header cannot carry as it is (Node refuses anything outside
+ * Latin-1), so it travels as RFC 5987's `filename*`, with a plain fallback for
+ * anything that does not read that.
+ */
+export function contentDisposition(kind: "inline" | "attachment", fileName: string): string {
+  const plain = fileName.replace(/[^\x20-\x7E]/g, "-").replace(/["\\]/g, "")
+  const encoded = encodeURIComponent(fileName).replace(
+    /['()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+  )
+  return `${kind}; filename="${plain}"; filename*=UTF-8''${encoded}`
+}
+
 const text = (value: string) => escapeHtml(value)
 /** Typed text with its line breaks, and bold. */
 const prose = (value: string) => inlineHtml(value).replace(/\r?\n/g, "<br>")

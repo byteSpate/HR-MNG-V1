@@ -58,6 +58,9 @@ import {
   listWaitingForMinutesHandler,
   saveMinutesHandler,
   startMinutesHandler,
+  previewMinutesHandler,
+  sendMinutesHandler,
+  sentCopyHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -157,6 +160,12 @@ router.get("/minutes/:id", requireAuth, requireSales(), getMinutesHandler)
 router.put("/minutes/:id", requireAuth, requireSales(), saveMinutesHandler)
 router.patch("/minutes/:id/requirement", requireAuth, requireSales(), answerRequirementHandler)
 router.delete("/minutes/:id", requireAuth, requireSales(), deleteMinutesHandler)
+// PDFs. The preview is DRAFT and keeps nothing. Sending is record-only
+// (§25.22): it keeps the copy, marks the minutes sent, and answers with that
+// same file. A kept copy downloads again, exactly as it went out.
+router.get("/minutes/:id/preview", requireAuth, requireSales(), previewMinutesHandler)
+router.post("/minutes/:id/send", requireAuth, requireSales(), sendMinutesHandler)
+router.get("/minutes/sends/:sendId/file", requireAuth, requireSales(), sentCopyHandler)
 
 // Sales Settings (revision §25.30): Sales Admins only. The minutes template is
 // its first section; later hub settings join it under the same prefix.
