@@ -13,6 +13,9 @@
 import { env } from "../../config/env"
 import { escapeHtml, renderPdf } from "../../utils/pdf"
 import {
+  RICH_ALIGNMENTS,
+  RICH_HIGHLIGHTS,
+  SAFE_LINK,
   hasContent,
   inlineHtml,
   type Bullet,
@@ -119,6 +122,103 @@ function bulletList(bullets: Bullet[]): string {
 
 const paragraphs = (list: string[]) => list.map((p) => `<p>${prose(p)}</p>`).join("")
 
+// ── formatted text ───────────────────────────────────────────────────────────
+//
+// Built here from the checked JSON, never from HTML the browser made: every
+// piece of text is escaped, a link prints only when it is a web or mail
+// address, and a colour only when it is on the palette. The same guards the
+// schema applies, applied again, because the renderer should not trust that
+// it was only ever handed checked content.
+
+type LooseNode = {
+  type?: string
+  text?: string
+  attrs?: Record<string, unknown>
+  marks?: { type?: string; attrs?: Record<string, unknown> }[]
+  content?: LooseNode[]
+}
+
+const ALIGNS = new Set<string>(RICH_ALIGNMENTS)
+const HIGHLIGHTS = new Set<string>(Object.values(RICH_HIGHLIGHTS))
+
+/** Left is the page's own alignment, so only the others are written out. */
+function alignStyle(attrs: LooseNode["attrs"]): string {
+  const align = attrs?.textAlign
+  return typeof align === "string" && ALIGNS.has(align) && align !== "left" ? ` style="text-align:${align}"` : ""
+}
+
+function wrapMark(mark: NonNullable<LooseNode["marks"]>[number], inner: string): string {
+  switch (mark.type) {
+    case "bold":
+      return `<strong>${inner}</strong>`
+    case "italic":
+      return `<em>${inner}</em>`
+    case "underline":
+      return `<u>${inner}</u>`
+    case "strike":
+      return `<s>${inner}</s>`
+    case "highlight": {
+      const color = mark.attrs?.color
+      return typeof color === "string" && HIGHLIGHTS.has(color)
+        ? `<mark style="background-color:${color}">${inner}</mark>`
+        : inner
+    }
+    case "link": {
+      const href = mark.attrs?.href
+      return typeof href === "string" && SAFE_LINK.test(href) ? `<a href="${escapeHtml(href)}">${inner}</a>` : inner
+    }
+    default:
+      return inner
+  }
+}
+
+function richInline(node: LooseNode): string {
+  if (node.type === "hardBreak") return "<br>"
+  if (node.type !== "text") return ""
+  return (node.marks ?? []).reduce((html, mark) => wrapMark(mark, html), escapeHtml(node.text ?? ""))
+}
+
+const span = (name: string, value: unknown) =>
+  typeof value === "number" && Number.isInteger(value) && value > 1 && value <= 20 ? ` ${name}="${value}"` : ""
+
+function richBlocks(nodes: LooseNode[] | undefined): string {
+  return (nodes ?? []).map(richBlock).join("")
+}
+
+function richBlock(node: LooseNode): string {
+  const inline = () => (node.content ?? []).map(richInline).join("")
+  switch (node.type) {
+    case "paragraph":
+      return `<p${alignStyle(node.attrs)}>${inline()}</p>`
+    case "heading": {
+      const level = node.attrs?.level === 4 ? 4 : 3
+      return `<h${level}${alignStyle(node.attrs)}>${inline()}</h${level}>`
+    }
+    case "bulletList":
+      return `<ul>${richBlocks(node.content)}</ul>`
+    case "orderedList": {
+      const start = node.attrs?.start
+      const from = typeof start === "number" && Number.isInteger(start) && start > 1 ? ` start="${start}"` : ""
+      return `<ol${from}>${richBlocks(node.content)}</ol>`
+    }
+    case "listItem":
+      return `<li>${richBlocks(node.content)}</li>`
+    case "horizontalRule":
+      return "<hr>"
+    case "table":
+      return `<table class="rich"><tbody>${richBlocks(node.content)}</tbody></table>`
+    case "tableRow":
+      return `<tr>${richBlocks(node.content)}</tr>`
+    case "tableHeader":
+    case "tableCell": {
+      const tag = node.type === "tableHeader" ? "th" : "td"
+      return `<${tag}${span("colspan", node.attrs?.colspan)}${span("rowspan", node.attrs?.rowspan)}>${richBlocks(node.content)}</${tag}>`
+    }
+    default:
+      return ""
+  }
+}
+
 function sectionBody(kind: MinutesKind, content: SectionContent, number: number): string {
   switch (kind) {
     case "PARAGRAPHS":
@@ -132,15 +232,17 @@ function sectionBody(kind: MinutesKind, content: SectionContent, number: number)
             `<h3>${number}.${i + 1} ${prose(topic.title)}</h3>${topic.text ? paragraphs([topic.text]) : ""}${bulletList(topic.bullets)}`
         )
         .join("")
-    default: {
+    case "TABLE": {
       const rows = (content as TableContent).rows
         .map(
           (row, i) =>
             `<tr><td>${i + 1}</td><td>${prose(row.actionItem)}</td><td>${prose(row.responsible)}</td><td>${prose(row.status)}</td></tr>`
         )
         .join("")
-      return `<table><colgroup><col style="width:8%"><col style="width:46%"><col style="width:28%"><col style="width:18%"></colgroup><thead><tr><th>SL</th><th>Action Item</th><th>Responsible Person/Team</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`
+      return `<table class="actions"><colgroup><col style="width:8%"><col style="width:46%"><col style="width:28%"><col style="width:18%"></colgroup><thead><tr><th>SL</th><th>Action Item</th><th>Responsible Person/Team</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`
     }
+    default:
+      return richBlocks((content as { content?: LooseNode[] }).content)
   }
 }
 
@@ -223,7 +325,17 @@ const STYLES = `
   table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
   th, td { border: 0.75pt solid #444; padding: 4px 6px; text-align: left; vertical-align: top; }
   th { font-weight: 700; background: #F2F2F2; }
-  td:first-child, th:first-child { text-align: center; }
+  table.actions td:first-child, table.actions th:first-child { text-align: center; }
+  h4 { margin: 8px 0 3px; font-size: 10.5pt; font-weight: 700; page-break-after: avoid; }
+  li > p { margin: 0; }
+  ol { padding-left: 24px; }
+  ol ol { list-style-type: lower-alpha; }
+  ol ol ol { list-style-type: lower-roman; }
+  ul ul { list-style-type: circle; }
+  mark { padding: 0 1px; color: inherit; }
+  a { color: #1F4D8F; }
+  hr { border: none; border-top: 0.75pt solid #999; margin: 8px 0; }
+  table.rich th, table.rich td p { margin: 0; }
   tr { page-break-inside: avoid; }
   .prepared .person { margin: 4px 0 8px; }
   .draft {

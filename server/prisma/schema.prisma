@@ -2568,6 +2568,10 @@ enum SalesMinutesSectionKind {
   /// The Next Steps table. Its columns are fixed: SL, Action Item,
   /// Responsible Person/Team, Status (§25.19, §25.21).
   TABLE
+  /// Formatted text: the Word-style toolbar's document (the owner's change,
+  /// 2026-09-15). Stored as Tiptap JSON, checked against a fixed list of
+  /// nodes and marks by minutes.content.ts.
+  RICH
 }
 
 /// The written record of a completed meeting, sent to the customer (§25).
