@@ -15,7 +15,7 @@ vi.mock("../../config/prisma", () => ({
     auditLog: { create: vi.fn(), findMany: vi.fn() },
     event: { create: vi.fn(), findMany: vi.fn() },
     salesComment: { findMany: vi.fn() },
-    salesMeeting: { findMany: vi.fn() },
+    salesMeeting: { findMany: vi.fn(), findFirst: vi.fn() },
     salesTask: { create: vi.fn() },
   },
 }))
@@ -220,6 +220,31 @@ describe("opportunity serials and creation", () => {
       salesAccountId: ACCOUNT.id, name: "Core refresh", track: "NETWORKING",
       ownerEmployeeId: "emp-2",
     }, USER)).rejects.toThrow(/Sales Hub access/i)
+    expect(prisma.opportunity.create).not.toHaveBeenCalled()
+  })
+
+  it("records the meeting a deal came out of, when it was made from that meeting's minutes", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue({ id: "meeting-1" } as any)
+
+    await createOpportunity({
+      salesAccountId: ACCOUNT.id, name: "Firewall", track: "NETWORKING", meetingId: "meeting-1",
+    } as any, USER)
+
+    expect(prisma.salesMeeting.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "meeting-1", salesAccountId: ACCOUNT.id },
+    }))
+    expect((vi.mocked(prisma.opportunity.create).mock.calls[0][0] as any).data.meetingId).toBe("meeting-1")
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ after: expect.objectContaining({ meetingId: "meeting-1" }) }),
+    }))
+  })
+
+  it("refuses a meeting from another account as a deal's origin", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(null)
+
+    await expect(createOpportunity({
+      salesAccountId: ACCOUNT.id, name: "Firewall", track: "NETWORKING", meetingId: "meeting-9",
+    } as any, USER)).rejects.toThrow(/That meeting is not on this account/)
     expect(prisma.opportunity.create).not.toHaveBeenCalled()
   })
 })
@@ -501,6 +526,16 @@ describe("the deal Timeline, management notes", () => {
     expect(items).toContainEqual(expect.objectContaining({
       id: "event:ev-9", kind: "event", title: "Meeting moved: Firewall walkthrough",
     }))
+  })
+
+  it("shows when a linked meeting's minutes were written and sent", async () => {
+    await getOpportunityTimeline("opp-1", USER)
+
+    const where = (vi.mocked(prisma.event.findMany).mock.calls[0][0] as any).where
+    expect(where.OR).toContainEqual({
+      entity: "SALES_ACCOUNT", entityId: "account-1", type: { startsWith: "sales.minutes." },
+      payload: { path: ["opportunityId"], equals: "opp-1" },
+    })
   })
 
   it("leaves management notes out of a Sales User's deal Timeline", async () => {

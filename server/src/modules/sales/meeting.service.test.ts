@@ -18,8 +18,10 @@ vi.mock("./sales.mailer", () => ({ sendMeetingChanged: vi.fn(), sendSalesDailyEm
 
 import prisma from "../../config/prisma"
 import {
-  changeMeetingStatus, createMeeting, listMeetingAttendeeOptions, listMeetings, updateMeeting,
+  changeMeetingStatus, createMeeting, listMeetingAttendeeOptions, listMeetings, listMeetingsWaitingForMinutes,
+  updateMeeting,
 } from "./meeting.service"
+import { waitingForMinutesWhere } from "./minutes.waiting"
 import { sendMeetingChanged } from "./sales.mailer"
 
 const USER = {
@@ -396,5 +398,42 @@ describe("listing meetings", () => {
 
     const args = vi.mocked(prisma.salesMeeting.findMany).mock.calls[0][0] as any
     expect(args.where.attendees).toEqual({ some: { side: "OURS", employeeId: "emp-1" } })
+  })
+
+  it("says on each row whether the meeting has minutes, for everyone who can see it", async () => {
+    vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([
+      meeting({
+        status: "COMPLETED",
+        minutes: { id: "minutes-1", status: "SENT", lastSentAt: new Date("2026-09-14T08:00:00.000Z") },
+      }),
+      meeting({ id: "meeting-2" }),
+    ] as any)
+
+    const { items } = await listMeetings({} as any, USER)
+
+    expect(items[0].minutes).toEqual({ id: "minutes-1", status: "SENT", lastSentAt: "2026-09-14T08:00:00.000Z" })
+    expect(items[1].minutes).toBeNull()
+  })
+})
+
+describe("meetings waiting for minutes", () => {
+  const NOW = new Date("2026-09-15T04:00:00.000Z")
+  const ADMIN = { ...USER, salesRole: "SALES_ADMIN" }
+
+  it("are the caller's own, newest first", async () => {
+    await listMeetingsWaitingForMinutes({ mine: true }, USER, NOW)
+
+    const args = vi.mocked(prisma.salesMeeting.findMany).mock.calls[0][0] as any
+    expect(args.where).toEqual(waitingForMinutesWhere(["emp-1"], NOW))
+    expect(args.orderBy).toEqual({ scheduledAt: "desc" })
+  })
+
+  it("are everybody's for a Sales Admin who asks, and still only their own for a Sales User", async () => {
+    await listMeetingsWaitingForMinutes({}, ADMIN, NOW)
+    await listMeetingsWaitingForMinutes({}, USER, NOW)
+
+    const calls = vi.mocked(prisma.salesMeeting.findMany).mock.calls as any[]
+    expect(calls[0][0].where).toEqual(waitingForMinutesWhere(null, NOW))
+    expect(calls[1][0].where).toEqual(waitingForMinutesWhere(["emp-1"], NOW))
   })
 })
