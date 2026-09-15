@@ -220,6 +220,8 @@ function useLeaveGuard(active: boolean) {
   const activeRef = useRef(active)
   /** The copy of this page's entry is on top of the history, and the browser is on it. */
   const armed = useRef(false)
+  /** Captured before the guard adds its own duplicate history entry. */
+  const openedDirectly = useRef(false)
 
   useEffect(() => {
     activeRef.current = active
@@ -229,6 +231,10 @@ function useLeaveGuard(active: boolean) {
       return
     }
     if (armed.current) return
+    // `pushState` increases history.length, so this must be read before the
+    // duplicate is added. A page opened in a new tab otherwise looks as if it
+    // had somewhere for Back to go when the writer chooses Leave.
+    openedDirectly.current = window.history.length === 1
     // Next's own state goes with the copy, so its router takes it as one of its entries.
     window.history.pushState(window.history.state, "", window.location.href)
     armed.current = true
@@ -236,8 +242,6 @@ function useLeaveGuard(active: boolean) {
 
   useEffect(() => {
     const pageUrl = window.location.href
-    // Opened straight into this page: Back has no earlier page to go to.
-    const firstEntry = window.history.length === 1
 
     const ask = (leave: () => void) =>
       toast("You have changes that are not saved", {
@@ -292,7 +296,7 @@ function useLeaveGuard(active: boolean) {
         armed.current = false
         // Back past the copy and this page's own entry; with no earlier page,
         // to the list, in the copy's place.
-        if (firstEntry) router.replace("/sales/meetings/minutes")
+        if (openedDirectly.current) router.replace("/sales/meetings/minutes")
         else window.history.go(-2)
       })
     }
