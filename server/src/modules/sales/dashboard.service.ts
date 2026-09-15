@@ -17,9 +17,10 @@
  * five components that agreed once. The client renders what it is given and
  * decides nothing.
  *
- * Band 2 has all six rows since phase 3 brought meetings and tasks (revision
- * §24.22), so `notBuilt` is empty. It stays in the payload for the next thing
- * that is not built: an absent row must be named, never shown as zero.
+ * Band 2 has seven rows: phase 3 brought meetings and tasks (revision §24.22)
+ * and phase 4 meetings with no minutes (§25.29), so `notBuilt` is empty. It
+ * stays in the payload for the next thing that is not built: an absent row
+ * must be named, never shown as zero.
  */
 
 import prisma from "../../config/prisma"
@@ -34,6 +35,7 @@ import type { DashboardStat } from "../dashboard/dashboard.types"
 import { dec, sum, toMoneyString, type Money } from "../payroll/payroll.money"
 import { employeeIdFor } from "./sales.access"
 import { marginTotal, type MarginTotal } from "./sales.margin"
+import { WAITING_DAYS, waitingForMinutesWhere } from "./minutes.waiting"
 import { currentQuarter, quarterOf, quarterRange } from "./sales.quarters"
 import { planQuarters, sumPlans, type PlannedQuarter } from "./target.plan"
 import { phasesOf, presentQuarter, winsByQuarter, yearRange } from "./target.service"
@@ -236,7 +238,7 @@ async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]
     })
   const assigned = subject.employeeIds ? { assignedToEmployeeId: { in: subject.employeeIds } } : {}
 
-  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue] = await Promise.all([
+  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue, minutesWaiting] = await Promise.all([
     prisma.opportunity.count({
       where: { ...open, expectedCloseDate: { gte: today, lte: closingBy } },
     }),
@@ -247,6 +249,9 @@ async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]
     meetingsBefore(officeInstantOf(addDays(today, WEEK_DAYS), "00:00")),
     prisma.salesTask.count({ where: { status: "PENDING", ...assigned, dueOn: { lte: today } } }),
     prisma.salesTask.count({ where: { status: "PENDING", ...assigned, dueOn: { lt: today } } }),
+    // The Meeting Minutes page's own rule, so this row, its badge and that
+    // page's "Waiting for minutes" can never disagree.
+    prisma.salesMeeting.count({ where: waitingForMinutesWhere(subject.employeeIds, now) }),
   ])
 
   return [
@@ -272,6 +277,17 @@ async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]
         tasksDue === 0 ? "Nothing due today" : tasksOverdue > 0 ? `${tasksOverdue} overdue` : "All due today",
       tone: toneFor.queue(tasksDue),
       href: "/tasks?due=now",
+    },
+    {
+      key: "minutes",
+      label: "Meetings with no minutes",
+      count: minutesWaiting,
+      detail:
+        minutesWaiting === 0
+          ? `Every meeting from the last ${WAITING_DAYS} days has minutes`
+          : `Completed in the last ${WAITING_DAYS} days`,
+      tone: toneFor.queue(minutesWaiting),
+      href: "/meetings/minutes",
     },
     {
       key: "closing",

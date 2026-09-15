@@ -400,7 +400,8 @@ describe("the rest of the sales dashboard", () => {
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
     expect(payload.actions.find((r) => r.key === "minutes")).toMatchObject({
-      count: 0, detail: "Every meeting from the last 7 days has minutes", tone: "neutral",
+      // The queue rule: nothing waiting is the healthy state.
+      count: 0, detail: "Every meeting from the last 7 days has minutes", tone: "green",
     })
   })
 
@@ -521,8 +522,8 @@ describe("the team roll-up", () => {
 
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "closing", "unverified", "quiet", "stuck"])
-    expect(Object.keys(payload.badges)).toHaveLength(6)
+      .toEqual(["meetings", "tasks", "minutes", "closing", "unverified", "quiet", "stuck"])
+    expect(Object.keys(payload.badges)).toHaveLength(7)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {
