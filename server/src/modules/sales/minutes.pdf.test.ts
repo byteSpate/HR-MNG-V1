@@ -263,6 +263,24 @@ describe("formatted text in the PDF (owner's change, 2026-09-15)", () => {
   it("leaves out a formatted section with nothing in it", () => {
     expect(withRich({ type: "doc", content: [{ type: "paragraph" }] })).not.toContain("Notes")
   })
+
+  it("keeps a blank line, and an empty table cell, one line tall, as the editor shows them", () => {
+    const html = withRich({
+      type: "doc",
+      content: [
+        paragraph(text("Above")),
+        { type: "paragraph" },
+        paragraph(text("Below")),
+        {
+          type: "table",
+          content: [{ type: "tableRow", content: [{ type: "tableCell", attrs: { colspan: 1, rowspan: 1 }, content: [{ type: "paragraph" }] }] }],
+        },
+      ],
+    })
+
+    expect(html).toContain("<p>Above</p><p>&nbsp;</p><p>Below</p>")
+    expect(html).toContain("<td><p>&nbsp;</p></td>")
+  })
 })
 
 describe("the file name", () => {
