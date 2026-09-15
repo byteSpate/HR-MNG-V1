@@ -76,7 +76,7 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
       // staff, absent for the three administrative roles, which have no
       // Employee row at all. Accounts are owned by employees, so its absence
       // means this person can never own one.
-      navGroups={navGroups(user?.salesRole ?? null, !!user?.employeeCode, isSalesAdmin)}
+      navGroups={navGroups(user?.salesRole ?? null, !!user?.employeeCode)}
       rootHref="/sales"
       tone="sales"
       systemLabel="Techno Sales Hub"

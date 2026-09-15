@@ -2467,7 +2467,25 @@ export interface SalesMeetingSummary {
 
 export type SalesMinutesStatus = "DRAFT" | "SENT" | "EDITED_AFTER_SENDING"
 /** What a section holds (§25.18). The Next Steps table's columns are fixed. */
-export type MinutesKind = "PARAGRAPHS" | "BULLETS" | "SUBTOPICS" | "TABLE"
+export type MinutesKind = "PARAGRAPHS" | "BULLETS" | "SUBTOPICS" | "TABLE" | "RICH"
+
+/**
+ * Formatted text (the owner's change, 2026-09-15): the Word-style toolbar's
+ * document, as Tiptap saves it. The server checks every node and mark against
+ * a fixed list; the client only needs its shape.
+ */
+export interface RichNode {
+  type: string
+  attrs?: Record<string, unknown>
+  content?: RichNode[]
+  text?: string
+  marks?: { type: string; attrs?: Record<string, unknown> }[]
+}
+
+export interface RichDoc {
+  type: "doc"
+  content: RichNode[]
+}
 
 /** A bullet and the second level under it; the documents go no deeper. */
 export interface MinutesBullet {
@@ -2494,6 +2512,7 @@ export type MinutesSection =
   | { heading: string; kind: "BULLETS"; content: { bullets: MinutesBullet[] } }
   | { heading: string; kind: "SUBTOPICS"; content: { topics: MinutesTopic[] } }
   | { heading: string; kind: "TABLE"; content: { rows: MinutesTableRow[] } }
+  | { heading: string; kind: "RICH"; content: RichDoc }
 
 export interface SalesMinutesDetail {
   id: string

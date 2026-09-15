@@ -64,6 +64,13 @@ import { downloadBlob } from "@/components/payroll/payroll-shared"
 import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
 import { TaskFormDialog } from "@/components/sales/task-dialogs"
 import {
+  EMPTY_RICH,
+  RichTextEditor,
+  bulletsToRich,
+  paragraphsToRich,
+  topicsToRich,
+} from "@/components/sales/rich-text-editor"
+import {
   MINUTES_KIND_LABEL,
   MINUTES_STATUS_LABEL,
   MINUTES_STATUS_TONE,
@@ -119,6 +126,8 @@ function emptyContent(kind: MinutesKind): MinutesSectionBody {
       return { heading: "", kind, content: { bullets: [] } }
     case "SUBTOPICS":
       return { heading: "", kind, content: { topics: [] } }
+    case "RICH":
+      return { heading: "", kind, content: structuredClone(EMPTY_RICH) }
     default:
       return { heading: "", kind: "TABLE", content: { rows: [] } }
   }
@@ -763,7 +772,8 @@ function SectionsCard({
     <Card title="Sections">
       <p className={`-mt-1 mb-3 text-[12px] leading-relaxed ${TONE.muted}`}>
         Numbered in the PDF by their order; an empty section is left out. To make words bold, put two stars on each
-        side: **like this**. Nothing else changes how the text looks.
+        side: **like this**. For more, like italics, lists or a table, switch a section to formatted text and use its
+        toolbar.
       </p>
       <div className="grid gap-3">
         {sections.map((section, index) => (
@@ -825,6 +835,31 @@ function SectionCard({
   onMove: (delta: number) => void
   onRemove: () => void
 }) {
+  /**
+   * Paragraphs, bullets and sub-topics can become formatted text, keeping what
+   * was typed (the owner's change, 2026-09-15). One way only: turning a
+   * formatted document back into plain paragraphs would drop what cannot be
+   * said in them. The Next Steps table stays a table; its task tick reads it.
+   */
+  function switchToRich() {
+    if (section.kind === "TABLE" || section.kind === "RICH") return
+    const name = section.heading.trim() || `section ${number}`
+    if (
+      !window.confirm(
+        `Switch “${name}” to formatted text? What is typed carries over and the toolbar appears. It cannot be switched back.`
+      )
+    ) {
+      return
+    }
+    const content =
+      section.kind === "PARAGRAPHS"
+        ? paragraphsToRich(section.content.paragraphs)
+        : section.kind === "BULLETS"
+          ? bulletsToRich(section.content.bullets)
+          : topicsToRich(section.content.topics, number)
+    onChange({ key: section.key, heading: section.heading, kind: "RICH", content })
+  }
+
   return (
     <div className="rounded-md border border-[#EEF1F5] px-3 py-3 sm:px-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -836,6 +871,11 @@ function SectionCard({
           className="h-9 min-w-[10rem] flex-1 font-semibold"
         />
         <span className={`text-[11.5px] ${TONE.muted}`}>{MINUTES_KIND_LABEL[section.kind]}</span>
+        {section.kind === "PARAGRAPHS" || section.kind === "BULLETS" || section.kind === "SUBTOPICS" ? (
+          <Button type="button" variant="ghost" onClick={switchToRich} className={ADD}>
+            Switch to formatted text
+          </Button>
+        ) : null}
         <div className="flex items-center">
           <IconButton label="Move up" disabled={first} onClick={() => onMove(-1)}>
             <RiArrowUpLine className="size-4" aria-hidden />
@@ -861,6 +901,12 @@ function SectionCard({
             number={number}
             topics={section.content.topics}
             onChange={(topics) => onChange({ ...section, content: { topics } })}
+          />
+        ) : section.kind === "RICH" ? (
+          <RichTextEditor
+            label={`Text of section ${number}`}
+            value={section.content}
+            onChange={(content) => onChange({ ...section, content })}
           />
         ) : (
           <TableEditor rows={section.content.rows} onChange={(rows) => onChange({ ...section, content: { rows } })} />

@@ -1,12 +1,12 @@
 "use client"
 
 /**
- * `/sales/settings`: Sales Settings, for Sales Admins only (revision §25.30).
+ * `/sales/settings`: Sales Settings (revision §25.30), for everyone in the hub.
  *
- * The minutes template is its first section; later hub settings join it here.
- * The server refuses anybody else, and the menu does not offer the page to
- * them, but somebody who types the address is told plainly rather than shown
- * a form that cannot save.
+ * The minutes template is its first section, open to Sales Users as well as
+ * Sales Admins since 2026-09-15: the format changes often, and waiting for an
+ * admin slowed people down. The server records who made each change. Later
+ * hub settings join this page, each saying who may change it.
  */
 
 import { useState } from "react"
@@ -25,7 +25,7 @@ import { salesKeys } from "@/lib/api/sales-keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { MinutesKind, MinutesTemplate, MinutesTemplateSection } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
-import { CheckboxField, FormError, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
+import { CheckboxField, FormError, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { MINUTES_KIND_LABEL, shortDay } from "@/components/sales/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,23 +39,16 @@ const QUIET =
   "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
 
 export function SalesSettingsPage() {
-  const { user, status } = useSession()
-  const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  const { status } = useSession()
 
   return (
     <>
       <PageHeader
         kicker="Sales"
         title="Sales Settings"
-        sub="How the Sales Hub works for everyone. Only Sales Admins can change these."
+        sub="How the Sales Hub works for everyone. Anyone in the hub can change these, and each change is recorded with who made it."
       />
-      {status === "loading" ? (
-        <PanelLoading />
-      ) : isSalesAdmin ? (
-        <MinutesTemplatePanel />
-      ) : (
-        <PanelAlert>Sales Settings are for Sales Admins. Ask one if something here needs changing.</PanelAlert>
-      )}
+      {status === "loading" ? <PanelLoading /> : <MinutesTemplatePanel />}
     </>
   )
 }
@@ -160,7 +153,7 @@ function TemplateEditor({
         sections.map((s) => ({
           heading: s.heading.trim(),
           kind: s.kind,
-          ...(s.startsWithOutcome && s.kind === "PARAGRAPHS" ? { startsWithOutcome: true } : {}),
+          ...(s.startsWithOutcome && (s.kind === "PARAGRAPHS" || s.kind === "RICH") ? { startsWithOutcome: true } : {}),
         }))
       ),
     onSuccess: (next) => {
@@ -231,8 +224,8 @@ function TemplateEditor({
                   v &&
                   update(index, {
                     kind: v as MinutesKind,
-                    // Only a section of paragraphs can hold the outcome note.
-                    ...(v === "PARAGRAPHS" ? {} : { startsWithOutcome: false }),
+                    // Only paragraphs or formatted text can hold the outcome note.
+                    ...(v === "PARAGRAPHS" || v === "RICH" ? {} : { startsWithOutcome: false }),
                   })
                 }
               >
@@ -267,7 +260,7 @@ function TemplateEditor({
                 </IconButton>
               </div>
             </div>
-            {section.kind === "PARAGRAPHS" ? (
+            {section.kind === "PARAGRAPHS" || section.kind === "RICH" ? (
               <div className="mt-1 pl-7">
                 <CheckboxField
                   label="Starts with the outcome note from Mark completed"

@@ -21,12 +21,11 @@ import type { SalesRole } from "@/lib/api/types"
  * both "Dashboard" would read as two different destinations for one word,
  * on screen at the same time.
  */
-export function navGroups(
-  salesRole: SalesRole | null,
-  canOwnAccounts: boolean,
-  /** Passed by the shell, because a Super Admin holds no salesRole yet is a Sales Admin here. */
-  isSalesAdmin: boolean = salesRole === "SALES_ADMIN"
-): NavGroup[] {
+export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean): NavGroup[] {
+  // Not branched on today: Sales Settings opened to everyone in the hub on
+  // 2026-09-15. An admin-only item would branch here.
+  void salesRole
+
   return [
     {
       label: "Sales",
@@ -62,12 +61,10 @@ export function navGroups(
         // The menu stays flat: §22's tree is not adopted in this phase.
         { label: "Meeting Minutes", href: "/sales/meetings/minutes", icon: "RiFileList3Line" },
         { label: "Tasks", href: "/sales/tasks", icon: "RiTaskLine" },
-        // The hub's settings, the minutes template first (§25.30). Sales Admins
-        // only: the server refuses anybody else, and a menu item onto a page
-        // somebody cannot use is the defect the comment above describes.
-        ...(isSalesAdmin
-          ? [{ label: "Sales Settings", href: "/sales/settings", icon: "RiSettingsLine" } as const]
-          : []),
+        // The hub's settings, the minutes template first (§25.30). Everyone in
+        // the hub since 2026-09-15: the template's format changes often, and
+        // waiting for an admin slowed people down.
+        { label: "Sales Settings", href: "/sales/settings", icon: "RiSettingsLine" },
       ],
     },
   ]

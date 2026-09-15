@@ -270,6 +270,7 @@ export const MINUTES_KIND_LABEL: Record<MinutesKind, string> = {
   BULLETS: "Bullet points",
   SUBTOPICS: "Numbered sub-topics",
   TABLE: "Next Steps table",
+  RICH: "Formatted text",
 }
 
 export const MINUTES_ICON: RemixiconComponentType = RiFileList3Line
