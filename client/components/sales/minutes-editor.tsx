@@ -17,6 +17,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import {
   RiAddLine,
   RiArrowDownLine,
@@ -178,6 +179,15 @@ function move<T>(list: T[], index: number, delta: number): T[] {
   return next
 }
 
+/** A text section as formatted text, keeping what was typed. Other kinds are returned as they are. */
+function toRichSection(section: SectionDraft, number: number): SectionDraft {
+  const base = { key: section.key, heading: section.heading, kind: "RICH" as const }
+  if (section.kind === "PARAGRAPHS") return { ...base, content: paragraphsToRich(section.content.paragraphs) }
+  if (section.kind === "BULLETS") return { ...base, content: bulletsToRich(section.content.bullets) }
+  if (section.kind === "SUBTOPICS") return { ...base, content: topicsToRich(section.content.topics, number) }
+  return section
+}
+
 /** "13 Sep 2026, 11:05", in the viewer's time. */
 function stamp(iso: string): string {
   const date = new Date(iso)
@@ -186,11 +196,16 @@ function stamp(iso: string): string {
 }
 
 /**
- * Asks before leaving with unsaved changes (§25.8). The browser asks on a
- * reload or a closed tab; in-app links are caught before Next's own handler,
- * so saying no leaves the page exactly as it was.
+ * Asks before leaving with unsaved changes (§25.8). On a reload or a closed
+ * tab the browser asks, in its own box, because it allows no other there. An
+ * in-app link is held before Next's own handler, and the question is asked in
+ * a toast (the owner asked for Sonner rather than the browser's box): Stay
+ * leaves the page exactly as it was, Leave without saving goes on.
  */
+const UNSAVED_TOAST = "minutes-unsaved-changes"
+
 function useLeaveGuard(active: boolean) {
+  const router = useRouter()
   useEffect(() => {
     if (!active) return
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -203,18 +218,27 @@ function useLeaveGuard(active: boolean) {
       const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null
       if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return
       if (anchor.origin !== window.location.origin || anchor.pathname === window.location.pathname) return
-      if (!window.confirm("You have changes that are not saved. Leave this page without saving them?")) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
+      event.preventDefault()
+      event.stopPropagation()
+      // Leaving is a push, which this listener never sees, so it cannot ask twice.
+      const to = `${anchor.pathname}${anchor.search}${anchor.hash}`
+      toast("You have changes that are not saved", {
+        id: UNSAVED_TOAST,
+        description: "Leave this page and lose them, or stay and press Save.",
+        duration: Infinity,
+        action: { label: "Leave without saving", onClick: () => router.push(to) },
+        cancel: { label: "Stay", onClick: () => undefined },
+      })
     }
     window.addEventListener("beforeunload", beforeUnload)
     document.addEventListener("click", click, true)
     return () => {
       window.removeEventListener("beforeunload", beforeUnload)
       document.removeEventListener("click", click, true)
+      // Saved, or gone: the question no longer applies.
+      toast.dismiss(UNSAVED_TOAST)
     }
-  }, [active])
+  }, [active, router])
 }
 
 // ── the page ─────────────────────────────────────────────────────────────────
@@ -786,6 +810,9 @@ function SectionsCard({
             onChange={(next) => setSections((list) => list.map((s) => (s.key === section.key ? next : s)))}
             onMove={(delta) => setSections((list) => move(list, index, delta))}
             onRemove={() => setSections((list) => list.filter((s) => s.key !== section.key))}
+            onSwitch={() =>
+              setSections((list) => list.map((s, i) => (s.key === section.key ? toRichSection(s, i + 1) : s)))
+            }
           />
         ))}
       </div>
@@ -826,6 +853,7 @@ function SectionCard({
   onChange,
   onMove,
   onRemove,
+  onSwitch,
 }: {
   section: SectionDraft
   number: number
@@ -834,6 +862,8 @@ function SectionCard({
   onChange: (next: SectionDraft) => void
   onMove: (delta: number) => void
   onRemove: () => void
+  /** Turns this section into formatted text, as it stands when pressed. */
+  onSwitch: () => void
 }) {
   /**
    * Paragraphs, bullets and sub-topics can become formatted text, keeping what
@@ -844,20 +874,16 @@ function SectionCard({
   function switchToRich() {
     if (section.kind === "TABLE" || section.kind === "RICH") return
     const name = section.heading.trim() || `section ${number}`
-    if (
-      !window.confirm(
-        `Switch “${name}” to formatted text? What is typed carries over and the toolbar appears. It cannot be switched back.`
-      )
-    ) {
-      return
-    }
-    const content =
-      section.kind === "PARAGRAPHS"
-        ? paragraphsToRich(section.content.paragraphs)
-        : section.kind === "BULLETS"
-          ? bulletsToRich(section.content.bullets)
-          : topicsToRich(section.content.topics, number)
-    onChange({ key: section.key, heading: section.heading, kind: "RICH", content })
+    // Asked in a toast (the owner asked for Sonner rather than the browser's
+    // box). Nothing changes until Switch is pressed, and the switch converts
+    // the section as it is then, not as it was when the toast opened.
+    toast(`Switch “${name}” to formatted text?`, {
+      id: `switch-${section.key}`,
+      description: "What is typed carries over and the toolbar appears. It cannot be switched back.",
+      duration: Infinity,
+      action: { label: "Switch", onClick: onSwitch },
+      cancel: { label: "Cancel", onClick: () => undefined },
+    })
   }
 
   return (
