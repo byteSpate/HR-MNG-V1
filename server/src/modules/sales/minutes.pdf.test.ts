@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { minutesFileName, renderMinutesHtml, type MinutesDocument } from "./minutes.pdf"
+import { contentDisposition, minutesFileName, renderMinutesHtml, type MinutesDocument } from "./minutes.pdf"
 
 const COMPANY = "Bytespate Limited"
 const OPTIONS = { draft: false, companyName: COMPANY, timeZone: "Asia/Dhaka" }
@@ -191,6 +191,13 @@ describe("the file name", () => {
   it("is Meeting Minutes – account – date, as the team names them", () => {
     expect(minutesFileName("APS Group", new Date("2026-08-24T05:00:00.000Z"), "Asia/Dhaka")).toBe(
       "Meeting Minutes – APS Group – 24 Aug 2026.pdf"
+    )
+  })
+
+  it("travels in the download header as typed, with a plain fallback, because a header cannot hold the dash", () => {
+    expect(contentDisposition("attachment", "Meeting Minutes – APS Group – 24 Aug 2026.pdf")).toBe(
+      "attachment; filename=\"Meeting Minutes - APS Group - 24 Aug 2026.pdf\"; " +
+        "filename*=UTF-8''Meeting%20Minutes%20%E2%80%93%20APS%20Group%20%E2%80%93%2024%20Aug%202026.pdf"
     )
   })
 

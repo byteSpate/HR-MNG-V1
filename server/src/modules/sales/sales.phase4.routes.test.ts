@@ -8,6 +8,7 @@ vi.mock("./minutes.service", () => ({
   startMinutes: vi.fn(), getMinutes: vi.fn(), saveMinutes: vi.fn(), answerRequirement: vi.fn(),
   deleteMinutes: vi.fn(), listMinutes: vi.fn(),
 }))
+vi.mock("./minutes.send", () => ({ previewMinutes: vi.fn(), sendMinutes: vi.fn(), getSentCopy: vi.fn() }))
 vi.mock("./meeting.service", async (original) => ({
   ...(await original<typeof import("./meeting.service")>()),
   listMeetingsWaitingForMinutes: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock("./meeting.service", async (original) => ({
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as meetings from "./meeting.service"
+import * as sending from "./minutes.send"
 import * as minutes from "./minutes.service"
 import * as template from "./minutes.template.service"
 
@@ -130,5 +132,43 @@ describe("minutes", () => {
   it("deletes a document", async () => {
     await request(app).delete("/api/sales/minutes/minutes-1").set("Authorization", auth("SALES_USER")).expect(204)
     expect(minutes.deleteMinutes).toHaveBeenCalledWith("minutes-1", expect.anything())
+  })
+})
+
+describe("minutes as PDFs", () => {
+  const FILE = { pdf: Buffer.from("%PDF-1"), fileName: "Meeting Minutes – APS Group – 13 Sep 2026.pdf" }
+  const ENCODED = "filename*=UTF-8''Meeting%20Minutes%20%E2%80%93%20APS%20Group%20%E2%80%93%2013%20Sep%202026.pdf"
+
+  beforeEach(() => {
+    vi.mocked(sending.previewMinutes).mockResolvedValue(FILE)
+    vi.mocked(sending.sendMinutes).mockResolvedValue(FILE)
+    vi.mocked(sending.getSentCopy).mockResolvedValue(FILE)
+  })
+
+  it("shows a preview in the browser", async () => {
+    const res = await request(app).get("/api/sales/minutes/minutes-1/preview")
+      .set("Authorization", auth("SALES_USER")).expect(200)
+
+    expect(res.headers["content-type"]).toContain("application/pdf")
+    expect(res.headers["content-disposition"]).toMatch(/^inline;/)
+    expect(res.headers["content-disposition"]).toContain(ENCODED)
+    expect(sending.previewMinutes).toHaveBeenCalledWith("minutes-1", expect.anything())
+  })
+
+  it("downloads the copy for sending, with the Sent to note", async () => {
+    const res = await request(app).post("/api/sales/minutes/minutes-1/send")
+      .set("Authorization", auth("SALES_USER")).send({ sentTo: "Md. Salim Reza, by email" }).expect(200)
+
+    expect(res.headers["content-type"]).toContain("application/pdf")
+    expect(res.headers["content-disposition"]).toMatch(/^attachment;/)
+    expect(sending.sendMinutes).toHaveBeenCalledWith("minutes-1", { sentTo: "Md. Salim Reza, by email" }, expect.anything())
+  })
+
+  it("downloads a kept copy again", async () => {
+    const res = await request(app).get("/api/sales/minutes/sends/send-1/file")
+      .set("Authorization", auth("SALES_USER")).expect(200)
+
+    expect(res.headers["content-type"]).toContain("application/pdf")
+    expect(sending.getSentCopy).toHaveBeenCalledWith("send-1", expect.anything())
   })
 })
