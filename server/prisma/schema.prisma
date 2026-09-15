@@ -237,6 +237,7 @@ model Employee {
   salesMeetingAttendances SalesMeetingAttendee[]
   salesTasksAssigned      SalesTask[]              @relation("SalesTaskAssignee")
   salesTasksGiven         SalesTask[]              @relation("SalesTaskAssigner")
+  salesMinutesPrepared    SalesMinutesPreparer[]
 }
 
 enum EmployeeChangeField {
@@ -2452,6 +2453,8 @@ model SalesMeeting {
   /// Deals that came out of this meeting (Opportunity.meetingId).
   originated Opportunity[]          @relation("OpportunityOrigin")
   tasks      SalesTask[]
+  /// The meeting minutes, once somebody starts them (phase 4).
+  minutes    SalesMeetingMinutes?
 
   @@index([salesAccountId, scheduledAt])
   /// The 00:01 daily email reads this.
@@ -2543,4 +2546,116 @@ model SalesTask {
   @@index([assignedToEmployeeId, status, dueOn])
   @@index([funnelMeetingId])
   @@index([salesAccountId, status])
+}
+
+/// Where a minutes document stands. Stored rather than worked out, because
+/// it moves in only two places: a save and a send (revision §25.28).
+enum SalesMinutesStatus {
+  DRAFT
+  SENT
+  /// Saved since it was last sent, so it may need sending again.
+  EDITED_AFTER_SENDING
+}
+
+/// What a section of the minutes holds (§25.18). Only these, because the
+/// real documents use only these and the PDF knows how to print each.
+enum SalesMinutesSectionKind {
+  PARAGRAPHS
+  /// Two levels deep, • and o.
+  BULLETS
+  /// Numbered sub-topics (2.1, 2.2), each with a line of text and bullets.
+  SUBTOPICS
+  /// The Next Steps table. Its columns are fixed: SL, Action Item,
+  /// Responsible Person/Team, Status (§25.19, §25.21).
+  TABLE
+}
+
+/// The written record of a completed meeting, sent to the customer (§25).
+/// The header is read live from the meeting, so none of it is copied here;
+/// each sent PDF is the frozen copy.
+model SalesMeetingMinutes {
+  id        String       @id @default(uuid())
+  meetingId String       @unique
+  meeting   SalesMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  /// Typed: the meeting has nothing to read it from.
+  purpose          String?
+  /// An extra line after the account under Meeting With, like "IT Department".
+  meetingWithNote  String?
+  /// The requirement fork (§25.6), asked only when the meeting has no deal.
+  /// Null until answered; fixed once the minutes are first sent.
+  requirementFound Boolean?
+
+  status     SalesMinutesStatus @default(DRAFT)
+  lastSentAt DateTime?
+
+  /// User ids, so a Super Admin, who has no employee record, can write them.
+  createdBy String
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sections  SalesMinutesSection[]
+  preparers SalesMinutesPreparer[]
+  sends     SalesMinutesSend[]
+
+  @@index([status])
+}
+
+/// One numbered section. The number is its position, worked out when printed,
+/// so two sections can never both be "3." (the first plan's R6).
+model SalesMinutesSection {
+  id        String                  @id @default(uuid())
+  minutesId String
+  minutes   SalesMeetingMinutes     @relation(fields: [minutesId], references: [id], onDelete: Cascade)
+  order     Int
+  heading   String
+  kind      SalesMinutesSectionKind
+  /// Shaped by `kind`, and checked by minutes.content.ts on every save.
+  content   Json
+
+  @@index([minutesId, order])
+}
+
+/// Who is named under Prepared by. Their HR job title is read live; the
+/// extra line ("Cloud & Cybersecurity") belongs to this document only.
+model SalesMinutesPreparer {
+  id         String              @id @default(uuid())
+  minutesId  String
+  minutes    SalesMeetingMinutes @relation(fields: [minutesId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee            @relation(fields: [employeeId], references: [id])
+  titleExtra String?
+  order      Int                 @default(0)
+
+  @@unique([minutesId, employeeId])
+}
+
+/// One press of "Download for sending": the exact file that went out, kept in
+/// the file store. A document can be sent again after edits, so there is one
+/// row per send and every copy stays (§25.25).
+model SalesMinutesSend {
+  id        String              @id @default(uuid())
+  minutesId String
+  minutes   SalesMeetingMinutes @relation(fields: [minutesId], references: [id], onDelete: Cascade)
+  sentAt    DateTime            @default(now())
+  /// The user who pressed the button.
+  sentBy    String
+  /// Typed and optional: "Md. Salim Reza, by email".
+  sentTo    String?
+  /// The file store's id for the kept copy.
+  fileId    String
+  fileName  String
+
+  @@index([minutesId, sentAt])
+}
+
+/// The minutes template, on Sales Settings (§25.20, §25.30). One row, id 1,
+/// and no row means the default template. Changes reach new minutes only.
+model SalesMinutesTemplate {
+  id        Int      @id @default(1)
+  /// [{ heading, kind, startsWithOutcome? }], checked by minutes.content.ts.
+  sections  Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
 }
