@@ -141,7 +141,15 @@ function attendeeBlock(doc: MinutesDocument, companyName: string): string {
   return body ? `<h2>Attendees</h2>${body}` : ""
 }
 
-function headerFacts(doc: MinutesDocument, options: MinutesRenderOptions): string {
+/**
+ * The header's labelled lines, in the documents' order (§25.12), leaving out
+ * any the meeting has nothing for. Exported so the editor shows exactly the
+ * lines the PDF will print.
+ */
+export function headerLines(
+  doc: Omit<MinutesDocument, "attendees" | "sections" | "preparers">,
+  options: Pick<MinutesRenderOptions, "timeZone" | "companyName">
+): { label: string; value: string }[] {
   const { timeZone, companyName } = options
   const time = doc.endsAt
     ? `${clockLabel(doc.scheduledAt, timeZone)} – ${clockLabel(doc.endsAt, timeZone)}`
@@ -157,9 +165,12 @@ function headerFacts(doc: MinutesDocument, options: MinutesRenderOptions): strin
     ["Arranged by", doc.arrangedBy],
     ["Purpose", doc.purpose],
   ]
-  return lines
-    .filter(([, value]) => value !== null && value.trim() !== "")
-    .map(([label, value]) => `<div><b>${label}:</b> ${text(value!)}</div>`)
+  return lines.flatMap(([label, value]) => (value !== null && value.trim() !== "" ? [{ label, value }] : []))
+}
+
+function headerFacts(doc: MinutesDocument, options: MinutesRenderOptions): string {
+  return headerLines(doc, options)
+    .map(({ label, value }) => `<div><b>${label}:</b> ${text(value)}</div>`)
     .join("")
 }
 

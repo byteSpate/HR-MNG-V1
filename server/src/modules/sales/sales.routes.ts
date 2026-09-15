@@ -49,6 +49,8 @@ import {
   getTaskHandler,
   listTasksHandler,
   updateTaskHandler,
+  getMinutesTemplateHandler,
+  saveMinutesTemplateHandler,
 } from "./sales.controller"
 
 const router = Router()
@@ -136,6 +138,11 @@ router.post("/tasks", requireAuth, requireSales(), createTaskHandler)
 router.get("/tasks/:id", requireAuth, requireSales(), getTaskHandler)
 router.patch("/tasks/:id", requireAuth, requireSales(), updateTaskHandler)
 router.patch("/tasks/:id/status", requireAuth, requireSales(), changeTaskStatusHandler)
+
+// Sales Settings (revision §25.30): Sales Admins only. The minutes template is
+// its first section; later hub settings join it under the same prefix.
+router.get("/settings/minutes-template", requireAuth, requireSales(SalesRole.SALES_ADMIN), getMinutesTemplateHandler)
+router.put("/settings/minutes-template", requireAuth, requireSales(SalesRole.SALES_ADMIN), saveMinutesTemplateHandler)
 
 export default router
 

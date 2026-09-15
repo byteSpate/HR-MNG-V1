@@ -43,6 +43,8 @@ import {
   updateMeeting,
 } from "./meeting.service"
 import { changeTaskStatus, createTask, getTask, listTasks, updateTask } from "./task.service"
+import { getMinutesTemplate, saveMinutesTemplate } from "./minutes.template.service"
+import { templateSchema } from "./minutes.content"
 import {
   changeTaskStatusSchema,
   createTaskSchema,
@@ -349,6 +351,18 @@ export async function updateTaskHandler(req: Request<{ id: string }>, res: Respo
 
 export async function changeTaskStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await changeTaskStatus(req.params.id, changeTaskStatusSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+// ── Sales Settings ──────────────────────────────────────────────────────────
+
+export async function getMinutesTemplateHandler(_req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await getMinutesTemplate()) }
+  catch (err) { return next(err) }
+}
+
+export async function saveMinutesTemplateHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await saveMinutesTemplate(templateSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
 }
 
