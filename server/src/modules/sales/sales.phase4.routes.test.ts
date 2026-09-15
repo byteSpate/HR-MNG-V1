@@ -46,13 +46,17 @@ describe("the minutes template on Sales Settings", () => {
   const PATH = "/api/sales/settings/minutes-template"
   const BODY = { sections: [{ heading: "Summary", kind: "PARAGRAPHS" }] }
 
-  it("is for Sales Admins only", async () => {
+  it("is open to everyone in the hub, Sales Users included, and to nobody outside it", async () => {
     await request(app).get(PATH).expect(401)
-    await request(app).get(PATH).set("Authorization", auth("SALES_USER")).expect(403)
-    await request(app).put(PATH).set("Authorization", auth("SALES_USER")).send(BODY).expect(403)
+    await request(app).get(PATH).set("Authorization", auth(null)).expect(403)
+    await request(app).put(PATH).set("Authorization", auth(null)).send(BODY).expect(403)
     expect(template.saveMinutesTemplate).not.toHaveBeenCalled()
 
-    await request(app).get(PATH).set("Authorization", auth("SALES_ADMIN")).expect(200)
+    // Changed by the owner on 2026-09-15: the format changes often, and
+    // waiting for an admin slowed people down.
+    await request(app).get(PATH).set("Authorization", auth("SALES_USER")).expect(200)
+    await request(app).put(PATH).set("Authorization", auth("SALES_USER")).send(BODY).expect(200)
+    expect(template.saveMinutesTemplate).toHaveBeenCalledWith(BODY, expect.anything())
   })
 
   it("refuses a template with no sections before calling the service", async () => {
