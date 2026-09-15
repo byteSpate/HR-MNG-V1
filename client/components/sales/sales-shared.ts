@@ -2,6 +2,7 @@ import {
   RiBuilding2Line,
   RiCalendar2Line,
   RiContactsLine,
+  RiFileList3Line,
   RiFlashlightLine,
   RiMailLine,
   RiPhoneLine,
@@ -17,8 +18,11 @@ import type {
   SalesAccountStatus,
   SalesChannel,
   SalesContactStatus,
+  MinutesKind,
   SalesMeetingMode,
   SalesMeetingStatus,
+  SalesMeetingSummary,
+  SalesMinutesStatus,
   SalesTaskOrigin,
   SalesTaskPriority,
   SalesTaskStatus,
@@ -243,6 +247,50 @@ export function onDay(value: string | null): string {
 export function dateOnlyOf(date: Date): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
   return local.toISOString().slice(0, 10)
+}
+
+// ── meeting minutes (phase 4) ────────────────────────────────────────────────
+
+export const MINUTES_STATUS_LABEL: Record<SalesMinutesStatus, string> = {
+  DRAFT: "Draft",
+  SENT: "Sent",
+  EDITED_AFTER_SENDING: "Edited after sending",
+}
+
+/** Sent is done (green). Edited after sending may need sending again (yellow). A draft is work in hand. */
+export const MINUTES_STATUS_TONE: Record<SalesMinutesStatus, Tone> = {
+  DRAFT: "neutral",
+  SENT: "green",
+  EDITED_AFTER_SENDING: "yellow",
+}
+
+/** What a section holds, as a person would say it. */
+export const MINUTES_KIND_LABEL: Record<MinutesKind, string> = {
+  PARAGRAPHS: "Paragraphs",
+  BULLETS: "Bullet points",
+  SUBTOPICS: "Numbered sub-topics",
+  TABLE: "Next Steps table",
+}
+
+export const MINUTES_ICON: RemixiconComponentType = RiFileList3Line
+
+/**
+ * Written out rather than asked of the locale, which spells September "Sept"
+ * in en-GB; the PDF and its file name say "Sep".
+ */
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+/** "24 Aug", in the viewer's calendar. */
+export function shortDay(iso: string): string {
+  const date = new Date(iso)
+  return `${date.getDate()} ${SHORT_MONTHS[date.getMonth()]}`
+}
+
+/** What a meeting row says about its minutes (§25.26): "Minutes · Draft", "Minutes · Sent 24 Aug". */
+export function minutesLine(minutes: NonNullable<SalesMeetingSummary["minutes"]>): string {
+  if (minutes.status === "EDITED_AFTER_SENDING") return "Minutes · Edited after sending"
+  if (minutes.status === "SENT" && minutes.lastSentAt) return `Minutes · Sent ${shortDay(minutes.lastSentAt)}`
+  return "Minutes · Draft"
 }
 
 /** An instant as a `datetime-local` value, in the browser's own time. */

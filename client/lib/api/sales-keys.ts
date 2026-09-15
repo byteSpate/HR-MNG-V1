@@ -57,6 +57,18 @@ export const salesKeys = {
   tasks: (filters: Record<string, unknown> = {}) => ["sales", "tasks", filters] as const,
   /** Who may attend a meeting on our side. Outside "meetings", so a meeting write does not refetch it. */
   meetingAttendees: () => ["sales", "meeting-attendees"] as const,
+
+  // ── meeting minutes (phase 4) ───────────────────────────────────────────
+  minutesList: (filters: Record<string, unknown> = {}) => ["sales", "minutes", "list", filters] as const,
+  minutesWaiting: (mine: boolean) => ["sales", "minutes", "waiting", mine] as const,
+  /**
+   * One document. Under "doc" and not beside "list" and "waiting", so a write
+   * refreshes the lists without refetching the document under its writer:
+   * the editor takes what the server sends back instead.
+   */
+  minutes: (id: string) => ["sales", "minutes", "doc", id] as const,
+  /** Sales Settings. Outside "minutes", so writing a document does not refetch it. */
+  minutesTemplate: () => ["sales", "settings", "minutes-template"] as const,
 } as const
 
 /**
@@ -72,6 +84,10 @@ export function planWriteKeys() {
     ["sales", "dashboard"] as const,
     ["sales", "accounts"] as const,
     ["sales", "opportunities"] as const,
+    // Completing a meeting puts it on "Waiting for minutes"; starting, saving
+    // or sending minutes moves them on the list. Never the open document.
+    ["sales", "minutes", "waiting"] as const,
+    ["sales", "minutes", "list"] as const,
   ]
 }
 

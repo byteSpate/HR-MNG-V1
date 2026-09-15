@@ -21,11 +21,12 @@ import type { SalesRole } from "@/lib/api/types"
  * both "Dashboard" would read as two different destinations for one word,
  * on screen at the same time.
  */
-export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean): NavGroup[] {
-  // Not yet branched on: an admin-only Setup group belongs here once
-  // /sales/settings/access exists, but not before — see the comment above.
-  void salesRole
-
+export function navGroups(
+  salesRole: SalesRole | null,
+  canOwnAccounts: boolean,
+  /** Passed by the shell, because a Super Admin holds no salesRole yet is a Sales Admin here. */
+  isSalesAdmin: boolean = salesRole === "SALES_ADMIN"
+): NavGroup[] {
   return [
     {
       label: "Sales",
@@ -56,7 +57,17 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // Meetings and follow-up tasks across every account (revision §24.21).
         // Each carries a count badge from the overview's own figures.
         { label: "Meetings", href: "/sales/meetings", icon: "RiCalendar2Line" },
+        // The written record of each meeting (revision §25.32), right after
+        // Meetings, with a badge for meetings still waiting for their minutes.
+        // The menu stays flat: §22's tree is not adopted in this phase.
+        { label: "Meeting Minutes", href: "/sales/meetings/minutes", icon: "RiFileList3Line" },
         { label: "Tasks", href: "/sales/tasks", icon: "RiTaskLine" },
+        // The hub's settings, the minutes template first (§25.30). Sales Admins
+        // only: the server refuses anybody else, and a menu item onto a page
+        // somebody cannot use is the defect the comment above describes.
+        ...(isSalesAdmin
+          ? [{ label: "Sales Settings", href: "/sales/settings", icon: "RiSettingsLine" } as const]
+          : []),
       ],
     },
   ]

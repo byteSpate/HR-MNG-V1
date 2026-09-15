@@ -50,6 +50,7 @@ export function TaskFormDialog({
   opportunityId,
   meetingId,
   task,
+  start,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -59,6 +60,8 @@ export function TaskFormDialog({
   meetingId?: string
   /** Present when editing. */
   task?: SalesTaskSummary
+  /** What a new task starts with, like the follow-up the minutes offer. */
+  start?: { title?: string; dueOn?: string }
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,7 +73,7 @@ export function TaskFormDialog({
           <TaskForm
             fixedAccountId={task?.salesAccountId ?? accountId}
             task={task}
-            start={{ opportunityId, meetingId }}
+            start={{ opportunityId, meetingId, ...start }}
             submitLabel={task ? "Save" : "Make the task"}
             onDone={() => onOpenChange(false)}
           />

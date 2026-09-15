@@ -192,6 +192,26 @@ function NavParent({
   )
 }
 
+/**
+ * The one leaf the page belongs to: the longest link the path sits at or
+ * under. A plain prefix test lit two items at once as soon as one route
+ * nested under another, as Meeting Minutes (/sales/meetings/minutes) does
+ * under Meetings. The rail's own root is active on itself only, or it would
+ * sit over every page.
+ */
+function activeLeafHref(groups: NavGroup[], pathname: string, rootHref: string): string | null {
+  let best: string | null = null
+  for (const item of groups.flatMap((group) => group.items)) {
+    if (item.children?.length) continue
+    const inside =
+      item.href === rootHref
+        ? pathname === item.href
+        : pathname === item.href || pathname.startsWith(`${item.href}/`)
+    if (inside && (best === null || item.href.length > best.length)) best = item.href
+  }
+  return best
+}
+
 export function Sidebar({
   navGroups,
   rootHref,
@@ -215,6 +235,7 @@ export function Sidebar({
   externalBadges?: Record<string, number>
 }) {
   const pathname = usePathname()
+  const activeHref = activeLeafHref(navGroups, pathname, rootHref)
   const { accessToken, status } = useSession()
   const { name, avatarUrl, subtitle, loading } = useIdentity()
   const { signOut, signingOut } = useSignOut()
@@ -278,11 +299,7 @@ export function Sidebar({
                       <NavLeaf
                         key={item.href}
                         item={item}
-                        active={
-                          item.href === rootHref
-                            ? pathname === item.href
-                            : pathname.startsWith(item.href)
-                        }
+                        active={item.href === activeHref}
                         badge={badges[item.href]}
                         onNavigate={() => setOpenMobile(false)}
                       />

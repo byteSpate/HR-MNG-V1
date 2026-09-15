@@ -59,6 +59,8 @@ export function OpportunityFormDialog({
   deal,
   open,
   onOpenChange,
+  fromMeeting,
+  onCreated,
 }: {
   /** The deal's account. Its owner pre-fills the form and its collaborators
       decide whether the chosen owner needs adding. */
@@ -67,6 +69,12 @@ export function OpportunityFormDialog({
   deal?: OpportunitySummary
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** A new deal made from a meeting's minutes (revision §25.6): the name
+      starts as the meeting's title, and the meeting is its origin. */
+  fromMeeting?: { id: string; title: string }
+  /** Called with the new deal instead of going to it, so an editor with its
+      own unsaved work is not left behind. */
+  onCreated?: (deal: OpportunitySummary) => void
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,6 +89,8 @@ export function OpportunityFormDialog({
             key={deal?.id ?? accountId}
             accountId={accountId}
             deal={deal}
+            fromMeeting={fromMeeting}
+            onCreated={onCreated}
             onDone={() => onOpenChange(false)}
           />
         ) : null}
@@ -93,10 +103,14 @@ export function OpportunityFormDialog({
 function OpportunityForm({
   accountId,
   deal,
+  fromMeeting,
+  onCreated,
   onDone,
 }: {
   accountId: string
   deal?: OpportunitySummary
+  fromMeeting?: { id: string; title: string }
+  onCreated?: (deal: OpportunitySummary) => void
   onDone: () => void
 }) {
   const { accessToken, user, status: sessionStatus } = useSession()
@@ -156,6 +170,8 @@ function OpportunityForm({
       employees={isSalesAdmin ? (eligibleQuery.data ?? []) : peopleOnAccount(accountQuery.data)}
       eligibleError={isSalesAdmin && eligibleQuery.isError ? toMessage(eligibleQuery.error) : null}
       onRetryEligible={() => eligibleQuery.refetch()}
+      fromMeeting={fromMeeting}
+      onCreated={onCreated}
       onDone={onDone}
     />
   )
@@ -184,6 +200,8 @@ function OpportunityFields({
   employees,
   eligibleError,
   onRetryEligible,
+  fromMeeting,
+  onCreated,
   onDone,
 }: {
   account: SalesAccountSummary
@@ -193,6 +211,8 @@ function OpportunityFields({
   employees: SalesEligibleEmployee[]
   eligibleError: string | null
   onRetryEligible: () => void
+  fromMeeting?: { id: string; title: string }
+  onCreated?: (deal: OpportunitySummary) => void
   onDone: () => void
 }) {
   const { accessToken } = useSession()
@@ -205,7 +225,7 @@ function OpportunityFields({
   // are still in the list.
   const accountOwnerCanRun = employees.some((e) => e.id === account.ownerEmployeeId)
 
-  const [name, setName] = useState(deal?.name ?? "")
+  const [name, setName] = useState(deal?.name ?? fromMeeting?.title ?? "")
   const [amount, setAmount] = useState(deal?.amount ?? "")
   const [closeDate, setCloseDate] = useState(deal?.expectedCloseDate?.slice(0, 10) ?? "")
   const [oemContact, setOemContact] = useState(deal?.oemAccountManager ?? "")
@@ -248,8 +268,11 @@ function OpportunityFields({
     onSuccess: (created) => {
       invalidate()
       onDone()
-      // Straight to the deal: its lines, stage and next step are what anybody does next.
-      router.push(`/sales/opportunities/${created.id}`)
+      // Straight to the deal: its lines, stage and next step are what anybody
+      // does next. Unless the caller asked to be told instead: the minutes
+      // editor may be holding unsaved work.
+      if (onCreated) onCreated(created)
+      else router.push(`/sales/opportunities/${created.id}`)
     },
     // Verbatim: the refusal names the person and which rule they fail.
     onError: (err) => setError(toMessage(err)),
@@ -309,6 +332,7 @@ function OpportunityFields({
         ...(oemContact.trim() ? { oemAccountManager: oemContact.trim() } : {}),
         ...(ownerId ? { ownerEmployeeId: ownerId } : {}),
         ...(needsAssignment ? { addAssignment: true } : {}),
+        ...(fromMeeting ? { meetingId: fromMeeting.id } : {}),
       })
       return
     }
@@ -345,6 +369,7 @@ function OpportunityFields({
         <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
           A deal on {account.name}. It starts at Requirement received and Ongoing — stage, products and
           next step are set on the deal itself.
+          {fromMeeting ? ` It comes out of the meeting “${fromMeeting.title}”.` : ""}
         </p>
       ) : null}
 

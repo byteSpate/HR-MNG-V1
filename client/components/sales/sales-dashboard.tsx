@@ -40,7 +40,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MEETING_ICON, TASK_ICON, taka } from "@/components/sales/sales-shared"
+import { MEETING_ICON, MINUTES_ICON, TASK_ICON, taka } from "@/components/sales/sales-shared"
 
 /** The server's own rule, checked here too so the answer arrives before a round trip. */
 const MONEY = /^\d{1,12}(\.\d{1,2})?$/
@@ -82,6 +82,7 @@ function groupStats(stats: DashboardStat[]): { title: string | null; stats: Dash
 const ACTION_ICON: Record<string, RemixiconComponentType> = {
   meetings: MEETING_ICON,
   tasks: TASK_ICON,
+  minutes: MINUTES_ICON,
   closing: RiCalendarEventLine,
   unverified: RiUserSearchLine,
   quiet: RiZzzLine,
@@ -97,7 +98,7 @@ const ACTION_ICON: Record<string, RemixiconComponentType> = {
 function actionHref(row: SalesActionRow, scope: "me" | "employee" | "all", employeeId: string | null): string {
   const join = row.href.includes("?") ? "&" : "?"
   if (scope === "all") return `/sales${row.href}`
-  if (row.key === "meetings" || row.key === "tasks") {
+  if (row.key === "meetings" || row.key === "tasks" || row.key === "minutes") {
     return scope === "me" ? `/sales${row.href}${join}mine=true` : `/sales${row.href}`
   }
   if (row.href.startsWith("/opportunities")) {
