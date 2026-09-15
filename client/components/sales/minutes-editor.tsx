@@ -13,7 +13,7 @@
  * page shows would be a preview of the wrong document.
  */
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -196,23 +196,74 @@ function stamp(iso: string): string {
 }
 
 /**
- * Asks before leaving with unsaved changes (§25.8). On a reload or a closed
- * tab the browser asks, in its own box, because it allows no other there. An
- * in-app link is held before Next's own handler, and the question is asked in
- * a toast (the owner asked for Sonner rather than the browser's box): Stay
- * leaves the page exactly as it was, Leave without saving goes on.
+ * Asks before leaving with unsaved changes (§25.8), in a toast (the owner
+ * asked for Sonner rather than the browser's box): Stay, or Leave without
+ * saving. The ways out:
+ *
+ * 1. An in-app link is held before Next's own handler.
+ * 2. Back: the first change pushes a copy of this page's history entry, so
+ *    Back lands on the page's own entry, which is still this page, and the
+ *    question is asked there. The copy goes back on at once, so a toast
+ *    closed with its × still guards the next Back. Forward needs nothing:
+ *    pushing the copy drops the entries ahead.
+ * 3. A reload or a closed tab: the browser's own box, the only one allowed.
+ *
+ * Once nothing is unsaved the copy is spent quietly: Back steps over it and a
+ * link takes its place, so the history never holds the page twice. Picking a
+ * page several steps back from the Back button's list cannot be held; the
+ * page has gone before it hears of it.
  */
 const UNSAVED_TOAST = "minutes-unsaved-changes"
 
 function useLeaveGuard(active: boolean) {
   const router = useRouter()
+  const activeRef = useRef(active)
+  /** The copy of this page's entry is on top of the history, and the browser is on it. */
+  const armed = useRef(false)
+
   useEffect(() => {
-    if (!active) return
+    activeRef.current = active
+    if (!active) {
+      // Saved or discarded: the question no longer applies.
+      toast.dismiss(UNSAVED_TOAST)
+      return
+    }
+    if (armed.current) return
+    // Next's own state goes with the copy, so its router takes it as one of its entries.
+    window.history.pushState(window.history.state, "", window.location.href)
+    armed.current = true
+  }, [active])
+
+  useEffect(() => {
+    const pageUrl = window.location.href
+    // Opened straight into this page: Back has no earlier page to go to.
+    const firstEntry = window.history.length === 1
+
+    const ask = (leave: () => void) =>
+      toast("You have changes that are not saved", {
+        id: UNSAVED_TOAST,
+        description: "Leave this page and lose them, or stay and press Save.",
+        duration: Infinity,
+        action: { label: "Leave without saving", onClick: leave },
+        cancel: { label: "Stay", onClick: () => undefined },
+      })
+
+    /** Goes to a link's page. With the copy on top, the new page takes its place. */
+    const go = (to: string) => {
+      const replace = armed.current
+      armed.current = false
+      if (replace) router.replace(to)
+      else router.push(to)
+    }
+
     const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!activeRef.current) return
       event.preventDefault()
       event.returnValue = ""
     }
+
     const click = (event: MouseEvent) => {
+      if (!activeRef.current && !armed.current) return
       if (event.defaultPrevented || event.button !== 0) return
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
       const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null
@@ -220,25 +271,42 @@ function useLeaveGuard(active: boolean) {
       if (anchor.origin !== window.location.origin || anchor.pathname === window.location.pathname) return
       event.preventDefault()
       event.stopPropagation()
-      // Leaving is a push, which this listener never sees, so it cannot ask twice.
       const to = `${anchor.pathname}${anchor.search}${anchor.hash}`
-      toast("You have changes that are not saved", {
-        id: UNSAVED_TOAST,
-        description: "Leave this page and lose them, or stay and press Save.",
-        duration: Infinity,
-        action: { label: "Leave without saving", onClick: () => router.push(to) },
-        cancel: { label: "Stay", onClick: () => undefined },
+      if (activeRef.current) ask(() => go(to))
+      else go(to)
+    }
+
+    const popState = () => {
+      if (!armed.current) return
+      armed.current = false
+      // Several steps back at once: already gone, nothing to hold.
+      if (window.location.href !== pageUrl) return
+      if (!activeRef.current) {
+        // Nothing unsaved: step over the spent copy to where Back was going.
+        window.history.back()
+        return
+      }
+      window.history.pushState(window.history.state, "", pageUrl)
+      armed.current = true
+      ask(() => {
+        armed.current = false
+        // Back past the copy and this page's own entry; with no earlier page,
+        // to the list, in the copy's place.
+        if (firstEntry) router.replace("/sales/meetings/minutes")
+        else window.history.go(-2)
       })
     }
+
     window.addEventListener("beforeunload", beforeUnload)
+    window.addEventListener("popstate", popState)
     document.addEventListener("click", click, true)
     return () => {
       window.removeEventListener("beforeunload", beforeUnload)
+      window.removeEventListener("popstate", popState)
       document.removeEventListener("click", click, true)
-      // Saved, or gone: the question no longer applies.
       toast.dismiss(UNSAVED_TOAST)
     }
-  }, [active, router])
+  }, [router])
 }
 
 // ── the page ─────────────────────────────────────────────────────────────────
@@ -280,7 +348,10 @@ export function MinutesEditor({ minutesId }: { minutesId: string }) {
     )
   }
 
-  if (query.isError) {
+  // Only when there is nothing to show. A refresh that fails later (on focus,
+  // on reconnect) keeps the page and what is typed on it: TanStack keeps the
+  // last good copy, and the page says it may be out of date.
+  if (!query.data) {
     // The server's own sentence: "Those minutes do not exist, or are not yours".
     return (
       <>
@@ -293,10 +364,26 @@ export function MinutesEditor({ minutesId }: { minutesId: string }) {
     )
   }
 
-  return <MinutesDocument key={query.data.id} detail={query.data} />
+  return (
+    <MinutesDocument
+      key={query.data.id}
+      detail={query.data}
+      refreshError={query.isError ? toMessage(query.error) : null}
+      onRetry={() => query.refetch()}
+    />
+  )
 }
 
-function MinutesDocument({ detail }: { detail: SalesMinutesDetail }) {
+function MinutesDocument({
+  detail,
+  refreshError,
+  onRetry,
+}: {
+  detail: SalesMinutesDetail
+  /** A refresh failed after the page loaded; the page stays, and says so. */
+  refreshError: string | null
+  onRetry: () => void
+}) {
   const { accessToken } = useSession()
   const queryClient = useQueryClient()
   const router = useRouter()
@@ -318,6 +405,8 @@ function MinutesDocument({ detail }: { detail: SalesMinutesDetail }) {
     onSuccess: (saved) => {
       queryClient.setQueryData(docKey, saved)
       // The server's copy, cleaned of blank rows and with any tasks it made.
+      // It can replace the draft only because nothing could be typed while
+      // the save was out: the writing column is inert (below).
       const next = draftOf(saved)
       setDraft(next)
       setBaseline(JSON.stringify(bodyOf(next)))
@@ -333,6 +422,9 @@ function MinutesDocument({ detail }: { detail: SalesMinutesDetail }) {
       setSaveError("Give every section a heading.")
       return
     }
+    // A Switch still waiting in its toast would change a section after the
+    // save had read it, so open questions are closed first.
+    toast.dismiss()
     save.mutate()
   }
 
@@ -413,8 +505,29 @@ function MinutesDocument({ detail }: { detail: SalesMinutesDetail }) {
         sub={`${detail.subtitle} · ${meetingWhen(detail.meeting.scheduledAt)}`}
       />
 
+      {refreshError ? (
+        <div className="mb-4 grid gap-2 sm:flex sm:items-start">
+          <div className="min-w-0 flex-1">
+            <PanelAlert>
+              The latest copy could not be loaded, so this page may be out of date. What you typed is still here.{" "}
+              {refreshError}
+            </PanelAlert>
+          </div>
+          <Button type="button" onClick={onRetry} className={OUTLINE}>
+            Try again
+          </Button>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="grid min-w-0 content-start gap-4">
+        {/* Nothing can be typed while a save is out. The save puts the
+            server's copy back on the page, so anything typed meanwhile would
+            vanish under "All changes saved". */}
+        <div
+          inert={save.isPending}
+          aria-busy={save.isPending}
+          className={`grid min-w-0 content-start gap-4 transition-opacity motion-reduce:transition-none ${save.isPending ? "opacity-60" : ""}`}
+        >
           <HeaderCard detail={detail} draft={draft} setDraft={setDraft} />
           <AttendeesCard detail={detail} />
           {detail.asksRequirement ? (

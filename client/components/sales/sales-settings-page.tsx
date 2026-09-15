@@ -25,7 +25,7 @@ import { salesKeys } from "@/lib/api/sales-keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { MinutesKind, MinutesTemplate, MinutesTemplateSection } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
-import { CheckboxField, FormError, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
+import { CheckboxField, FormError, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { MINUTES_KIND_LABEL, shortDay } from "@/components/sales/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,7 +80,8 @@ function MinutesTemplatePanel() {
   })
 
   if (query.isPending) return <PanelLoading />
-  if (query.isError) {
+  // Only when there is nothing to show: a refresh that fails later keeps the form (below).
+  if (!query.data) {
     return (
       <Panel>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -105,9 +106,13 @@ function MinutesTemplatePanel() {
           Saved. Minutes started from now on use this template. Minutes already started keep their sections.
         </PanelNotice>
       ) : null}
-      {/* Keyed by when it was saved, so a save starts the form again from what the server kept. */}
+      {query.isError ? (
+        <PanelAlert>
+          The latest template could not be loaded, so this page may be out of date. Your changes are still here.{" "}
+          {toMessage(query.error)}
+        </PanelAlert>
+      ) : null}
       <TemplateEditor
-        key={query.data.updatedAt ?? "default"}
         template={query.data}
         onSaved={() => setSaved(true)}
         onEdit={() => setSaved(false)}
@@ -144,7 +149,29 @@ function TemplateEditor({
   const queryClient = useQueryClient()
   const [sections, setSections] = useState<MinutesTemplateSection[]>(() => template.sections.map((s) => ({ ...s })))
   const [error, setError] = useState<string | null>(null)
-  const dirty = normalise(sections) !== normalise(template.sections)
+  const serverCopy = normalise(template.sections)
+  const dirty = normalise(sections) !== serverCopy
+
+  /**
+   * The template is shared, so the server's copy can change under an open
+   * form: after a save here, or when somebody else saves. The form used to
+   * start again on every change, which wiped whatever was being typed. Now a
+   * newer copy is taken in only when this form has nothing of its own, or
+   * already matches it; otherwise the changes stay and a notice says so.
+   * Worked out during render from the copy seen last, so no stale frame shows.
+   */
+  const [seen, setSeen] = useState(serverCopy)
+  const [movedUnder, setMovedUnder] = useState(false)
+  if (serverCopy !== seen) {
+    const mine = normalise(sections)
+    setSeen(serverCopy)
+    if (mine === seen || mine === serverCopy) {
+      setSections(template.sections.map((s) => ({ ...s })))
+      setMovedUnder(false)
+    } else {
+      setMovedUnder(true)
+    }
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -207,7 +234,12 @@ function TemplateEditor({
         </span>
       </div>
 
-      <ol className="mt-4 grid gap-2">
+      {/* Locked while a save is out, so what is typed meanwhile is not taken for somebody else's change. */}
+      <ol
+        inert={save.isPending}
+        aria-busy={save.isPending}
+        className={`mt-4 grid gap-2 transition-opacity motion-reduce:transition-none ${save.isPending ? "opacity-60" : ""}`}
+      >
         {sections.map((section, index) => (
           <li key={index} className="rounded-md border border-[#EEF1F5] px-3 py-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -280,12 +312,22 @@ function TemplateEditor({
       <Button
         type="button"
         variant="ghost"
+        disabled={save.isPending}
         onClick={() => change([...sections, { heading: "", kind: "PARAGRAPHS" }])}
         className="mt-2 h-auto px-2 py-1 text-[12px] font-bold text-[#3D4756] hover:bg-[#F1F4F8]"
       >
         <RiAddLine className="size-3.5" aria-hidden />
         Add a section
       </Button>
+
+      {movedUnder ? (
+        <div className="mt-3">
+          <PanelNotice>
+            Someone else saved the template while you were changing it. Your changes are still here. Save replaces
+            their version; Discard changes shows theirs.
+          </PanelNotice>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="mt-3">
@@ -299,7 +341,10 @@ function TemplateEditor({
             type="button"
             variant="ghost"
             disabled={save.isPending}
-            onClick={() => change(template.sections.map((s) => ({ ...s })))}
+            onClick={() => {
+              change(template.sections.map((s) => ({ ...s })))
+              setMovedUnder(false)
+            }}
             className={QUIET}
           >
             Discard changes
