@@ -9,6 +9,7 @@ import { env } from "../config/env"
 import { runAutoCloseOpenDays } from "./attendance-autoclose.job"
 import { runApprovalsDigest, runMissingCheckOutNudge } from "./attendance-digest.job"
 import { runSalesDailyEmail } from "./sales-daily-email.job"
+import { runWeeklyReportReminder } from "./sales-weekly-reminder.job"
 
 /** Runs `job`, logging rather than throwing — an unhandled rejection inside
  *  a scheduled task takes the process down with it. */
@@ -44,6 +45,13 @@ export function startJobs(): void {
   // 00:01, so the email is waiting when people wake and they can prepare for
   // a meeting before coming in (revision §24.14).
   cron.schedule("1 0 * * *", () => guard("sales daily email", () => runSalesDailyEmail()), {
+    timezone: env.APP_TIMEZONE,
+  })
+
+  // 16:00 on the day the weekly report is due, so there are still two
+  // working hours left to write it (revision §26.3). The job itself decides
+  // whose deadline is today, so a holiday moves the reminder with it.
+  cron.schedule("0 16 * * *", () => guard("weekly report reminder", () => runWeeklyReportReminder()), {
     timezone: env.APP_TIMEZONE,
   })
 
