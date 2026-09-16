@@ -435,6 +435,15 @@ export const addOtherWorkSchema = z.object({
   text: z.string().trim().min(1, "Write what you did").max(1000),
 })
 
+/**
+ * The weekly report's Application column, answered on the deal (§26.9).
+ * Null clears it: "nobody has asked yet" is not "no software needed".
+ */
+export const setSoftwareNeededSchema = z.object({
+  softwareNeeded: z.boolean().nullable(),
+})
+export type SetSoftwareNeededBody = z.infer<typeof setSoftwareNeededSchema>
+
 export type WeekQueryInput = z.infer<typeof weekQuerySchema>
 export type SaveWeeklyNoteBody = z.infer<typeof saveWeeklyNoteSchema>
 export type AddOtherWorkInput = z.infer<typeof addOtherWorkSchema>

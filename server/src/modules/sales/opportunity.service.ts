@@ -412,6 +412,51 @@ export async function changeOpportunityNextStep(id: string, body: ChangeOpportun
   })
 }
 
+/** How the event reads: "BS-OPP-00001 software requirement marked Yes". */
+const SOFTWARE_LABEL: Record<string, string> = {
+  true: "marked Yes",
+  false: "marked No",
+  null: "cleared",
+}
+
+/**
+ * Whether this deal's requirement includes software — the weekly report's
+ * Application column (§26.9). It is a fact about the deal, so it lives here
+ * and the report reads it; changing it from the week writes through this
+ * service, with the deal's own History and Timeline.
+ *
+ * Null is a real answer and is kept: "nobody has asked yet" is not "no
+ * software needed".
+ */
+export async function setSoftwareNeeded(
+  id: string,
+  body: { softwareNeeded: boolean | null },
+  actor: AccessTokenPayload
+) {
+  return prisma.$transaction(async (tx) => {
+    const current = await loadForWrite(tx, id, actor)
+    const updated = await tx.opportunity.update({
+      where: { id },
+      data: { softwareNeeded: body.softwareNeeded, lastActivityAt: new Date() },
+      include: INCLUDE,
+    })
+    await writeAudit(tx, {
+      entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
+      before: { softwareNeeded: current.softwareNeeded },
+      after: { softwareNeeded: body.softwareNeeded },
+    })
+    // The week reads deal changes from these events, so answering this counts
+    // as work on the account that day (plan choice 3).
+    await emitEvent(tx, {
+      type: "sales.opportunity.software_needed_changed", entity: "OPPORTUNITY", entityId: id,
+      actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
+      title: `${current.serial} software requirement ${SOFTWARE_LABEL[String(body.softwareNeeded)]}`,
+      meta: null, href: `/opportunities/${id}`,
+    })
+    return presentOpportunity(updated)
+  })
+}
+
 export async function getOpportunityTimeline(id: string, actor: AccessTokenPayload): Promise<{ items: TimelineItem[] }> {
   const visible = await getOpportunity(id, actor)
   const [comments, events, meetings] = await Promise.all([

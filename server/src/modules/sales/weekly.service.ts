@@ -31,6 +31,7 @@ const DEAL_CHANGE_EVENTS = [
   "sales.opportunity.next_step_changed",
   "sales.opportunity.won",
   "sales.opportunity.closed",
+  "sales.opportunity.software_needed_changed",
 ]
 
 const NO_EMPLOYEE = "A weekly report belongs to an employee, and your login has no employee record"

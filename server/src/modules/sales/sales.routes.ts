@@ -22,6 +22,7 @@ import {
   updateSalesAccountHandler,
   addOpportunityLineHandler,
   changeOpportunityNextStepHandler,
+  setSoftwareNeededHandler,
   changeOpportunityStageHandler,
   changeOpportunityStatusHandler,
   createOpportunityHandler,
@@ -126,6 +127,8 @@ router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunit
 router.patch("/opportunities/:id/stage", requireAuth, requireSales(), changeOpportunityStageHandler)
 router.patch("/opportunities/:id/status", requireAuth, requireSales(), changeOpportunityStatusHandler)
 router.patch("/opportunities/:id/next-step", requireAuth, requireSales(), changeOpportunityNextStepHandler)
+// The weekly report Application column, answered on the deal (§26.9).
+router.patch("/opportunities/:id/software-needed", requireAuth, requireSales(), setSoftwareNeededHandler)
 router.get("/opportunities/:id/timeline", requireAuth, requireSales(), getOpportunityTimelineHandler)
 router.get("/opportunities/:id/history", requireAuth, requireSales(), getOpportunityHistoryHandler)
 
