@@ -323,10 +323,12 @@ async function actionRows(
       ? {
           key: "weekly",
           label: "This week's report",
-          count: 0,
+          // One report outstanding, or none. A bare 0 beside a status line
+          // reads as nothing at all; the menu badge is still admin-only.
+          count: myWeek?.status === "SUBMITTED" ? 0 : 1,
           detail:
             myWeek?.status === "SUBMITTED" ? "Submitted" : myWeek?.status === "DRAFT" ? "Draft" : "Not started",
-          tone: toneFor.informational(),
+          tone: toneFor.queue(myWeek?.status === "SUBMITTED" ? 0 : 1),
           href: "/weekly",
         }
       : {

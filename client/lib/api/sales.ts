@@ -612,13 +612,35 @@ export async function previewMyWeek(accessToken: string, week?: string | null): 
   return blob
 }
 
+/**
+ * The name the server gave the file, so a download is called what the kept
+ * copy is called. The header carries it twice: RFC 5987 first, because the
+ * name has an en dash, then a plain fallback.
+ */
+function fileNameFrom(headers: Headers, fallback: string): string {
+  const disposition = headers.get("content-disposition") ?? ""
+  const encoded = /filename*=UTF-8''([^;]+)/i.exec(disposition)
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1])
+    } catch {
+      // A malformed header is not worth failing a download over.
+    }
+  }
+  const plain = /filename="([^"]+)"/i.exec(disposition)
+  return plain ? plain[1] : fallback
+}
+
 /** Keeps the copy, marks the week submitted, and returns that same file. */
-export async function submitMyWeek(accessToken: string, week?: string | null): Promise<Blob> {
-  const { blob } = await apiFetchBlob(`/api/sales/weekly/submit${searchOf({ week: week ?? undefined })}`, {
+export async function submitMyWeek(
+  accessToken: string,
+  week?: string | null
+): Promise<{ blob: Blob; fileName: string }> {
+  const { blob, headers } = await apiFetchBlob(`/api/sales/weekly/submit${searchOf({ week: week ?? undefined })}`, {
     method: "POST",
     accessToken,
   })
-  return blob
+  return { blob, fileName: fileNameFrom(headers, "Weekly Report.pdf") }
 }
 
 /** A kept copy, exactly as it was submitted. */

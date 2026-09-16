@@ -97,6 +97,18 @@ function weekStartOf(date: Date): string {
   return start.toISOString().slice(0, 10)
 }
 
+/**
+ * Today, as the browser has it. The server is the authority on which days
+ * may be written to; this only keeps the page from offering a box that
+ * would be refused.
+ */
+function todayKey(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
 const shiftWeek = (week: string, weeks: number) =>
   new Date(new Date(`${week}T00:00:00.000Z`).getTime() + weeks * 7 * 86_400_000).toISOString().slice(0, 10)
 
@@ -104,7 +116,8 @@ export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
   const { user, status: sessionStatus } = useSession()
   const isAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
 
-  const title = tab === "all" ? "All Reports" : tab === "history" ? "Past Weeks" : "My Week"
+  const title =
+    tab === "all" ? "All Reports" : isAdmin ? "Weekly Report" : tab === "history" ? "Past Weeks" : "My Week"
   const sub =
     tab === "all"
       ? "Every Sales User's week, and who has not sent theirs yet."
@@ -113,16 +126,31 @@ export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
   return (
     <>
       <PageHeader kicker="Weekly Report" title={title} sub={sub} />
+      {/* An admin writes no week of their own (§26.1), so they are offered
+          All Reports alone; a writer is offered the two that are theirs. */}
       <nav className="mb-4 flex flex-wrap gap-2">
-        <TabLink href="/sales/weekly" label="My Week" active={tab === "mine"} />
-        <TabLink href="/sales/weekly/history" label="Past Weeks" active={tab === "history"} />
-        {isAdmin ? <TabLink href="/sales/weekly/all" label="All Reports" active={tab === "all"} /> : null}
+        {isAdmin ? (
+          <TabLink href="/sales/weekly/all" label="All Reports" active={tab === "all"} />
+        ) : (
+          <>
+            <TabLink href="/sales/weekly" label="My Week" active={tab === "mine"} />
+            <TabLink href="/sales/weekly/history" label="Past Weeks" active={tab === "history"} />
+          </>
+        )}
       </nav>
 
       {sessionStatus === "loading" ? (
         <Skeleton className="h-48 w-full" />
       ) : tab === "all" ? (
         <TeamReports />
+      ) : isAdmin ? (
+        <PanelNotice>
+          Weekly reports are written by Sales Users, so you have none of your own. Open{" "}
+          <Link href="/sales/weekly/all" className="underline">
+            All Reports
+          </Link>{" "}
+          to read the team&apos;s.
+        </PanelNotice>
       ) : (
         <MyWeek history={tab === "history"} />
       )}
@@ -213,8 +241,8 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
 
   const submit = useMutation({
     mutationFn: () => submitMyWeek(accessToken!, weekKey),
-    onSuccess: (blob) => {
-      downloadBlob(blob, `Weekly Report – ${week.person.fullName}.pdf`)
+    onSuccess: ({ blob, fileName }) => {
+      downloadBlob(blob, fileName)
       toast.success("Submitted. The copy is kept, and it downloaded.")
       refresh()
     },
@@ -365,6 +393,10 @@ function CopyButton({ copyId, fileName }: { copyId: string; fileName: string }) 
 
 function DayBlock({ day, weekKey, readOnly }: { day: WeeklyDay; weekKey: string; readOnly: boolean }) {
   const labelled = day.label !== null
+  // A day still to come takes nothing: the server refuses it, so the page
+  // does not offer a box that cannot work (§26.5).
+  const future = day.date.slice(0, 10) > todayKey()
+  const shut = readOnly || future
   return (
     <section className="rounded-md border border-[#E4E9EF] bg-white">
       <div
@@ -379,15 +411,19 @@ function DayBlock({ day, weekKey, readOnly }: { day: WeeklyDay; weekKey: string;
       <div className="grid gap-3 px-3.5 py-3">
         {day.accounts.length === 0 && day.otherWork.length === 0 ? (
           <p className={`text-[12px] ${TONE.muted}`}>
-            {labelled ? "The office was closed." : "Nothing recorded on this day."}
+            {labelled
+              ? "The office was closed."
+              : future
+                ? "This day has not happened yet."
+                : "Nothing recorded on this day."}
           </p>
         ) : null}
 
         {day.accounts.map((row) => (
-          <AccountBlock key={row.salesAccountId} row={row} date={day.date} weekKey={weekKey} readOnly={readOnly} />
+          <AccountBlock key={row.salesAccountId} row={row} date={day.date} weekKey={weekKey} readOnly={shut} />
         ))}
 
-        <OtherWork day={day} weekKey={weekKey} readOnly={readOnly} />
+        <OtherWork day={day} weekKey={weekKey} readOnly={shut} />
       </div>
     </section>
   )
@@ -495,6 +531,7 @@ function AccountBlock({
         <Field label="Challenges" hint="What got in your way on this account that day.">
           <Textarea
             rows={2}
+            aria-label={`Challenges on ${row.accountName}`}
             value={challenges}
             disabled={readOnly}
             onChange={(e) => setChallenges(e.target.value)}
@@ -504,6 +541,7 @@ function AccountBlock({
         <Field label="Gap" hint="A shortfall on our side that cost us with this customer.">
           <Textarea
             rows={2}
+            aria-label={`Gap on ${row.accountName}`}
             value={gap}
             disabled={readOnly}
             onChange={(e) => setGap(e.target.value)}
@@ -516,6 +554,7 @@ function AccountBlock({
         <div className="mt-2">
           <Field label="Next step" hint="Kept here while this account has no open deal.">
             <Input
+              aria-label={`Next step for ${row.accountName}`}
               value={nextStep}
               disabled={readOnly}
               onChange={(e) => setNextStep(e.target.value)}

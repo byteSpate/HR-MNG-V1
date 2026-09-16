@@ -548,23 +548,27 @@ describe("the weekly report row", () => {
     expect(payload.actions.find((row) => row.key === "weekly")).toMatchObject({
       label: "This week's report",
       detail: "Not started",
-      count: 0,
+      // One report outstanding: a bare 0 beside a status line reads as
+      // nothing at all. The menu still shows no badge for a writer.
+      count: 1,
       href: "/weekly",
     })
-    // No badge for a writer: the row says where the week stands, and a
-    // number beside the menu item would read as a queue of work.
-    expect(payload.badges["/weekly"]).toBe(0)
+    // No menu badge for a writer (§26.16). The shell keys the Weekly Report
+    // badge on the admin row's own link, and a writer's payload has none.
+    expect(payload.badges["/weekly/all"]).toBeUndefined()
   })
 
   it("says when a Sales User's week is a draft, and when it is submitted", async () => {
     vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue({ status: "DRAFT" } as never)
     expect((await getSalesDashboard({ now: NOW }, USER)).actions.find((r) => r.key === "weekly")).toMatchObject({
       detail: "Draft",
+      count: 1,
     })
 
     vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue({ status: "SUBMITTED" } as never)
     expect((await getSalesDashboard({ now: NOW }, USER)).actions.find((r) => r.key === "weekly")).toMatchObject({
       detail: "Submitted",
+      count: 0,
     })
   })
 
