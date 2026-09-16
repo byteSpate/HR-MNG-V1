@@ -9,8 +9,9 @@ vi.mock("../../config/prisma", () => ({
     salesCommunication: { findMany: vi.fn() },
     salesMeeting: { count: vi.fn(), findMany: vi.fn() },
     salesTask: { count: vi.fn() },
+    weeklyReport: { findUnique: vi.fn(), count: vi.fn() },
     auditLog: { findMany: vi.fn() },
-    employee: { findUnique: vi.fn(), findMany: vi.fn() },
+    employee: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
     user: { findUnique: vi.fn() },
   },
 }))
@@ -312,11 +313,11 @@ describe("the rest of the sales dashboard", () => {
     }
   })
 
-  it("ships all seven action rows, today's meetings and tasks first, then meetings with no minutes", async () => {
+  it("ships all eight action rows, today's meetings and tasks first, then meetings with no minutes", async () => {
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "minutes", "closing", "unverified", "quiet", "stuck"])
+      .toEqual(["meetings", "tasks", "minutes", "weekly", "closing", "unverified", "quiet", "stuck"])
   })
 
   it("has nothing left that is not built, so the notice goes away", async () => {
@@ -522,12 +523,74 @@ describe("the team roll-up", () => {
 
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "minutes", "closing", "unverified", "quiet", "stuck"])
+      .toEqual(["meetings", "tasks", "minutes", "weekly", "closing", "unverified", "quiet", "stuck"])
     expect(Object.keys(payload.badges)).toHaveLength(7)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {
     const payload = await getSalesDashboard({ now: NOW, employeeId: "all" }, ADMIN)
     expect(payload.scope).toBe("all")
+  })
+})
+
+// The weekly report's own row (revision §26.16). A Sales User sees where
+// their week stands; an admin sees how many of last week's are missing.
+describe("the weekly report row", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue(null as never)
+    vi.mocked(prisma.weeklyReport.count).mockResolvedValue(0 as never)
+    vi.mocked(prisma.employee.count).mockResolvedValue(0 as never)
+  })
+
+  it("tells a Sales User their week has not been started, and shows no badge", async () => {
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    expect(payload.actions.find((row) => row.key === "weekly")).toMatchObject({
+      label: "This week's report",
+      detail: "Not started",
+      count: 0,
+      href: "/weekly",
+    })
+    // No badge for a writer: the row says where the week stands, and a
+    // number beside the menu item would read as a queue of work.
+    expect(payload.badges["/weekly"]).toBe(0)
+  })
+
+  it("says when a Sales User's week is a draft, and when it is submitted", async () => {
+    vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue({ status: "DRAFT" } as never)
+    expect((await getSalesDashboard({ now: NOW }, USER)).actions.find((r) => r.key === "weekly")).toMatchObject({
+      detail: "Draft",
+    })
+
+    vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue({ status: "SUBMITTED" } as never)
+    expect((await getSalesDashboard({ now: NOW }, USER)).actions.find((r) => r.key === "weekly")).toMatchObject({
+      detail: "Submitted",
+    })
+  })
+
+  it("counts last week's missing reports for an admin, and badges them", async () => {
+    vi.mocked(prisma.employee.count).mockResolvedValue(5 as never)
+    vi.mocked(prisma.weeklyReport.count).mockResolvedValue(2 as never)
+
+    const payload = await getSalesDashboard({ now: NOW }, ADMIN)
+
+    expect(payload.actions.find((row) => row.key === "weekly")).toMatchObject({
+      label: "Last week's reports not submitted",
+      count: 3,
+      tone: "yellow",
+      href: "/weekly/all",
+    })
+    expect(payload.badges["/weekly/all"]).toBe(3)
+  })
+
+  it("says so plainly when every report for last week is in", async () => {
+    vi.mocked(prisma.employee.count).mockResolvedValue(4 as never)
+    vi.mocked(prisma.weeklyReport.count).mockResolvedValue(4 as never)
+
+    expect((await getSalesDashboard({ now: NOW }, ADMIN)).actions.find((r) => r.key === "weekly")).toMatchObject({
+      count: 0,
+      detail: "Everybody sent last week's report",
+      tone: "green",
+    })
   })
 })
