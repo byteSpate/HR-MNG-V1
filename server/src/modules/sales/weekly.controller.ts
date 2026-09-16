@@ -16,7 +16,7 @@ import {
   removeOtherWork,
   saveAccountNote,
 } from "./weekly.service"
-import { getWeeklyCopy, submitMyWeek, type WeeklyFile } from "./weekly.submit"
+import { getWeeklyCopy, previewMyWeek, submitMyWeek, type WeeklyFile } from "./weekly.submit"
 import { contentDisposition } from "./minutes.pdf"
 import { addOtherWorkSchema, saveWeeklyNoteSchema, weekQuerySchema } from "./sales.validators"
 
@@ -66,6 +66,19 @@ export async function removeOtherWorkHandler(
   catch (err) { return next(err) }
 }
 
+/**
+ * The week as it would print, kept nowhere. Opened in a tab rather than
+ * downloaded, so checking the layout leaves nothing on anybody's disk.
+ */
+export async function previewMyWeekHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const file = await previewMyWeek(weekQuerySchema.parse(req.query), req.user!)
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", contentDisposition("inline", file.fileName))
+    res.setHeader("Cache-Control", "no-store")
+    return res.status(200).send(file.pdf)
+  } catch (err) { return next(err) }
+}
 /** Submit keeps the copy and answers with that same file (§26.17). */
 export async function submitMyWeekHandler(req: Request, res: Response, next: NextFunction) {
   try { return sendPdf(res, await submitMyWeek(weekQuerySchema.parse(req.query), req.user!)) }

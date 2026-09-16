@@ -604,6 +604,14 @@ export function removeWeeklyOtherWork(accessToken: string, id: string): Promise<
   return apiFetch<void>(`/api/sales/weekly/other-work/${id}`, { method: "DELETE", accessToken })
 }
 
+/** The week as it would print, kept nowhere: a look before submitting. */
+export async function previewMyWeek(accessToken: string, week?: string | null): Promise<Blob> {
+  const { blob } = await apiFetchBlob(`/api/sales/weekly/preview${searchOf({ week: week ?? undefined })}`, {
+    accessToken,
+  })
+  return blob
+}
+
 /** Keeps the copy, marks the week submitted, and returns that same file. */
 export async function submitMyWeek(accessToken: string, week?: string | null): Promise<Blob> {
   const { blob } = await apiFetchBlob(`/api/sales/weekly/submit${searchOf({ week: week ?? undefined })}`, {

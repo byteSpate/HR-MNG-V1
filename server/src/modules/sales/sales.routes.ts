@@ -70,6 +70,7 @@ import {
   listTeamWeekHandler,
   removeOtherWorkHandler,
   saveWeeklyNoteHandler,
+  previewMyWeekHandler,
   submitMyWeekHandler,
   weeklyCopyHandler,
 } from "./weekly.controller"
@@ -189,6 +190,9 @@ router.post("/weekly/other-work", requireAuth, requireSales(), addOtherWorkHandl
 router.delete("/weekly/other-work/:id", requireAuth, requireSales(), removeOtherWorkHandler)
 // Submitting keeps the copy and answers with that same file; a kept copy
 // downloads again exactly as it was (§26.17).
+// A look at the week as it would print, keeping nothing (the owner's ask,
+// 2026-09-16). Before /weekly/submit, which is the one that records.
+router.get("/weekly/preview", requireAuth, requireSales(), previewMyWeekHandler)
 router.post("/weekly/submit", requireAuth, requireSales(), submitMyWeekHandler)
 router.get("/weekly/copies/:id/file", requireAuth, requireSales(), weeklyCopyHandler)
 // Before /weekly/all/:employeeId, or the path is read as an employee id.

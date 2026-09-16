@@ -47,6 +47,41 @@ const isAdmin = (actor: AccessTokenPayload) =>
   actor.role === Role.SUPER_ADMIN || actor.salesRole === SalesRole.SALES_ADMIN
 
 /**
+ * The week as it would print, with nothing kept and nothing marked.
+ *
+ * Submitting is a record; a preview is a look. The owner asked to check the
+ * PDF before sending it (2026-09-16), which is the same need the minutes
+ * editor's Preview answers. The file name carries DRAFT, so a preview on
+ * somebody's disk is never mistaken for the copy that went out.
+ */
+export async function previewMyWeek(query: WeekQuery, actor: AccessTokenPayload): Promise<WeeklyFile> {
+  const employeeId = await writerFor(actor)
+  const weekStart = weekFrom(query)
+  const week = await loadWeek(employeeId, weekStart, actor)
+  const weekEnd = weekEndOf(weekStart)
+
+  const pdf = await renderWeeklyPdf({
+    fullName: week.person.fullName,
+    designation: week.person.designation,
+    weekStart,
+    weekEnd,
+    // What it stands at now, not what submitting would make it.
+    status: week.status,
+    submittedLate: week.submittedLate,
+    submittedAt: week.lastSubmittedAt,
+    updatedAt: null,
+    counts: week.counts,
+    days: week.days,
+    companyName: env.COMPANY_NAME,
+    timeZone: env.APP_TIMEZONE,
+  })
+
+  return {
+    pdf,
+    fileName: `DRAFT ${weeklyFileName(week.person.fullName, weekStart, weekEnd, env.APP_TIMEZONE)}`,
+  }
+}
+/**
  * Renders the week, keeps the copy, and marks the report submitted. The
  * answer is that same file, so the page downloads exactly what was kept.
  */

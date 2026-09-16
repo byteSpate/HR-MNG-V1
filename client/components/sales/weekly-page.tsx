@@ -23,6 +23,7 @@ import {
   RiArrowRightSLine,
   RiDeleteBinLine,
   RiDownload2Line,
+  RiEyeLine,
   RiErrorWarningLine,
   RiRefreshLine,
 } from "@remixicon/react"
@@ -35,6 +36,7 @@ import {
   listSalesAccounts,
   listTeamWeek,
   logCommunication,
+  previewMyWeek,
   removeWeeklyOtherWork,
   saveWeeklyNote,
   setSoftwareNeeded,
@@ -219,6 +221,33 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
     onError: (err) => setError(toMessage(err)),
   })
 
+  const [previewing, setPreviewing] = useState(false)
+
+  /**
+   * A look at the PDF, kept nowhere. The tab is opened on the click itself:
+   * one opened after the wait is what a pop-up blocker stops, and if one is
+   * stopped anyway the file downloads instead.
+   */
+  async function openPreview() {
+    setError(null)
+    const win = window.open("", "_blank")
+    setPreviewing(true)
+    try {
+      const blob = await previewMyWeek(accessToken!, weekKey)
+      if (win) {
+        const url = URL.createObjectURL(blob)
+        win.location.href = url
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      } else {
+        downloadBlob(blob, `DRAFT Weekly Report – ${week.person.fullName}.pdf`)
+      }
+    } catch (err) {
+      win?.close()
+      setError(toMessage(err))
+    } finally {
+      setPreviewing(false)
+    }
+  }
   const counts: Array<[number, string]> = [
     [week.counts.accounts, "Accounts worked on"],
     [week.counts.communications, "Calls and messages"],
@@ -251,6 +280,10 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
               <Button type="button" className={OUTLINE} onClick={() => setAddOpen(true)}>
                 <RiAddLine className="size-4" aria-hidden />
                 Add activity
+              </Button>
+              <Button type="button" className={OUTLINE} disabled={previewing} onClick={openPreview}>
+                <RiEyeLine className="size-4" aria-hidden />
+                {previewing ? "Making the preview…" : "Preview"}
               </Button>
               <Button
                 type="button"
@@ -382,7 +415,7 @@ function AccountBlock({
   // A save answers with the whole week, so these boxes follow the server
   // rather than keeping an older copy of their own. Worked out during
   // render, which is what React asks for instead of an effect.
-  const fromServer = [row.challenges ?? "", row.gap ?? "", row.nextStep ?? ""].join(" ")
+  const fromServer = JSON.stringify([row.challenges, row.gap, row.nextStep])
   const [seen, setSeen] = useState(fromServer)
   if (fromServer !== seen) {
     setSeen(fromServer)
