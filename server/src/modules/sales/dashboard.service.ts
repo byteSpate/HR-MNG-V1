@@ -36,6 +36,7 @@ import { dec, sum, toMoneyString, type Money } from "../payroll/payroll.money"
 import { employeeIdFor } from "./sales.access"
 import { marginTotal, type MarginTotal } from "./sales.margin"
 import { WAITING_DAYS, waitingForMinutesWhere } from "./minutes.waiting"
+import { weekStartOf } from "./weekly.dates"
 import { currentQuarter, quarterOf, quarterRange } from "./sales.quarters"
 import { planQuarters, sumPlans, type PlannedQuarter } from "./target.plan"
 import { phasesOf, presentQuarter, winsByQuarter, yearRange } from "./target.service"
@@ -219,7 +220,12 @@ function winsInYear(employeeIds: string[], calendarYear: number): Promise<Win[]>
 }
 
 /** Band 2. Only rows with a table behind them; see the module comment. */
-async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]> {
+async function actionRows(
+  subject: Subject,
+  now: Date,
+  /** Whose own week to report on: a Sales User reading their overview, or null for the roll-up. */
+  writerEmployeeId: string | null
+): Promise<SalesActionRow[]> {
   // Office-local start of today, not the current instant. `expectedCloseDate`
   // is date-only at UTC midnight, so a window opening at "now" drops
   // everything due today the moment midnight passes.
@@ -238,7 +244,13 @@ async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]
     })
   const assigned = subject.employeeIds ? { assignedToEmployeeId: { in: subject.employeeIds } } : {}
 
-  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue, minutesWaiting] = await Promise.all([
+  // A writer reads their own week; everybody else reads the roll-up (§26.16).
+  // Sales Admins do not write weekly reports, so they never see the writer row.
+  const mine = writerEmployeeId
+  const weekStart = weekStartOf(today)
+  const lastWeekStart = addDays(weekStart, -7)
+
+  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue, minutesWaiting, myWeek, weeklyWriters, weeklySubmitted] = await Promise.all([
     prisma.opportunity.count({
       where: { ...open, expectedCloseDate: { gte: today, lte: closingBy } },
     }),
@@ -252,6 +264,22 @@ async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]
     // The Meeting Minutes page's own rule, so this row, its badge and that
     // page's "Waiting for minutes" can never disagree.
     prisma.salesMeeting.count({ where: waitingForMinutesWhere(subject.employeeIds, now) }),
+    // The weekly report (§26.16). A writer is told where their own week
+    // stands; the roll-up counts the reports last week is still missing.
+    mine
+      ? prisma.weeklyReport.findUnique({
+          where: { employeeId_weekStart: { employeeId: mine, weekStart } },
+          select: { status: true },
+        })
+      : Promise.resolve(null),
+    mine
+      ? Promise.resolve(0)
+      : prisma.employee.count({
+          where: { user: { salesRole: SalesRole.SALES_USER, isActive: true }, employmentStatus: "ACTIVE" },
+        }),
+    mine
+      ? Promise.resolve(0)
+      : prisma.weeklyReport.count({ where: { weekStart: lastWeekStart, status: "SUBMITTED" } }),
   ])
 
   return [
@@ -289,6 +317,29 @@ async function actionRows(subject: Subject, now: Date): Promise<SalesActionRow[]
       tone: toneFor.queue(minutesWaiting),
       href: "/meetings/minutes",
     },
+    // A writer sees a status line and no badge: their own week is not a
+    // queue of work. The roll-up counts what is still missing.
+    mine
+      ? {
+          key: "weekly",
+          label: "This week's report",
+          count: 0,
+          detail:
+            myWeek?.status === "SUBMITTED" ? "Submitted" : myWeek?.status === "DRAFT" ? "Draft" : "Not started",
+          tone: toneFor.informational(),
+          href: "/weekly",
+        }
+      : {
+          key: "weekly",
+          label: "Last week's reports not submitted",
+          count: Math.max(weeklyWriters - weeklySubmitted, 0),
+          detail:
+            weeklyWriters - weeklySubmitted <= 0
+              ? "Everybody sent last week's report"
+              : `Of ${weeklyWriters} Sales Users`,
+          tone: toneFor.queue(Math.max(weeklyWriters - weeklySubmitted, 0)),
+          href: "/weekly/all",
+        },
     {
       key: "closing",
       label: `Closing in ${CLOSING_DAYS} days`,
@@ -595,7 +646,7 @@ export async function getSalesDashboard(
       }),
       winsInYear(ids, calendarYear),
       pipelineFor(subject, calendarYear, quarter),
-      actionRows(subject, now),
+      actionRows(subject, now, null),
       accountsWorkedOn(subject, { gte: window.start, lt: window.end }),
       accountsWorkedOn(subject),
       Promise.all(
@@ -693,7 +744,7 @@ export async function getSalesDashboard(
     }),
     winsInYear([employee.id], calendarYear),
     pipelineFor(subject, calendarYear, quarter),
-    actionRows(subject, now),
+    actionRows(subject, now, actor.salesRole === SalesRole.SALES_USER ? employee.id : null),
     accountsWorkedOn(subject, { gte: window.start, lt: window.end }),
     accountsWorkedOn(subject),
   ])

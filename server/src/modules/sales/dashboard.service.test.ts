@@ -524,7 +524,7 @@ describe("the team roll-up", () => {
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
     expect(payload.actions.map((row) => row.key))
       .toEqual(["meetings", "tasks", "minutes", "weekly", "closing", "unverified", "quiet", "stuck"])
-    expect(Object.keys(payload.badges)).toHaveLength(7)
+    expect(Object.keys(payload.badges)).toHaveLength(8)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {
