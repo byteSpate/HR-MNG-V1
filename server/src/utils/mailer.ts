@@ -48,6 +48,9 @@ export type DispatchKind =
   // one straight away when a meeting they attend is added, moved or cancelled.
   | "SALES_DAILY_EMAIL"
   | "SALES_MEETING_CHANGED"
+  // 16:00 on the deadline day, to anyone whose weekly report is still a draft
+  // (revision §26.3). One per person per week.
+  | "SALES_WEEKLY_REMINDER"
 
 export interface MailAttachment {
   filename: string
