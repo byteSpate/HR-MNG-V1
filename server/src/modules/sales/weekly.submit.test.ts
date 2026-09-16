@@ -39,7 +39,7 @@ import prisma from "../../config/prisma"
 import { assertMediaConfigured } from "../media/media.provider"
 import { destroyAsset, uploadBuffer } from "../media/media.service"
 import { renderWeeklyPdf } from "./weekly.pdf"
-import { getWeeklyCopy, submitMyWeek } from "./weekly.submit"
+import { getWeeklyCopy, previewMyWeek, submitMyWeek } from "./weekly.submit"
 
 const day = (value: string) => new Date(`${value}T00:00:00.000Z`)
 const SUNDAY = day("2026-09-13")
@@ -172,5 +172,28 @@ describe("getWeeklyCopy", () => {
   it("refuses a copy that is not the reader's to see", async () => {
     vi.mocked(prisma.weeklyReportCopy.findFirst).mockResolvedValue(null as never)
     await expect(getWeeklyCopy("copy-9", USER)).rejects.toMatchObject({ statusCode: 404 })
+  })
+})
+
+describe("previewMyWeek", () => {
+  it("renders the week, keeps nothing and changes nothing", async () => {
+    const file = await previewMyWeek({ week: "2026-09-13" }, USER)
+
+    expect(renderWeeklyPdf).toHaveBeenCalled()
+    // A preview is a look, not a record: no file store, no copy, no status.
+    expect(assertMediaConfigured).not.toHaveBeenCalled()
+    expect(uploadBuffer).not.toHaveBeenCalled()
+    expect(prisma.weeklyReportCopy.create).not.toHaveBeenCalled()
+    expect(prisma.weeklyReport.update).not.toHaveBeenCalled()
+    expect(file.fileName).toBe("DRAFT Weekly Report – Rahim – 13–17 Sep 2026.pdf")
+  })
+
+  it("previews a week nobody has written to yet, so the layout can be checked", async () => {
+    vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue(null)
+    await expect(previewMyWeek({ week: "2026-09-13" }, USER)).resolves.toBeTruthy()
+  })
+
+  it("is refused to a Sales Admin, who writes no week of their own", async () => {
+    await expect(previewMyWeek({ week: "2026-09-13" }, ADMIN)).rejects.toMatchObject({ statusCode: 403 })
   })
 })
