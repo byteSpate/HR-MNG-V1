@@ -20,9 +20,13 @@ import type { DayLabel } from "./weekly.dates"
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-/** The logo's own colours, so the page belongs to the company (§26.18). */
-const RED = "#E4022C"
+/**
+ * The logo's green, so the page belongs to the company (§26.18). The owner
+ * asked for the header in green rather than the logo's red (2026-09-16), so
+ * red is not used anywhere here.
+ */
 const GREEN = "#12A150"
+const DEEP_GREEN = "#0B7A3B"
 const INK = "#17191C"
 const MUTED = "#5F6B7C"
 const LINE = "#E4E9EF"
@@ -236,18 +240,18 @@ export function renderWeeklyHtml(document: WeeklyDocument): string {
     <style>
       * { box-sizing: border-box; }
       body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10px; color: ${INK}; margin: 0; }
-      header { display: flex; align-items: center; gap: 14px; background: ${RED}; color: #fff; padding: 12px 16px; }
-      .logo { height: 26px; background: #fff; padding: 3px 6px; border-radius: 4px; }
+      header { display: flex; align-items: center; gap: 18px; background: ${GREEN}; color: #fff; padding: 16px 18px; }
+      .logo { height: 36px; background: #fff; padding: 4px 8px; border-radius: 4px; }
       .who { flex: 1; }
-      .title { font-size: 15px; font-weight: 700; letter-spacing: .02em; }
-      .who .name { font-size: 11px; opacity: .95; }
-      .week { text-align: right; font-size: 11px; }
-      .status { display: inline-block; margin-top: 3px; padding: 2px 8px; border-radius: 999px;
-                background: #fff; color: ${RED}; font-weight: 700; font-size: 9.5px; }
-      .updated { display: block; margin-top: 3px; font-size: 9px; opacity: .95; }
-      .counts { display: flex; gap: 8px; padding: 10px 16px; background: #F7F9FB; border-bottom: 1px solid ${LINE}; }
-      .cell { flex: 1; border-left: 3px solid ${GREEN}; padding: 4px 8px; background: #fff; }
-      .count { font-size: 15px; font-weight: 700; color: ${GREEN}; }
+      .title { font-size: 23px; font-weight: 800; letter-spacing: .01em; line-height: 1.1; }
+      .who .name { font-size: 14px; font-weight: 700; margin-top: 2px; }
+      .week { text-align: right; font-size: 14px; font-weight: 700; }
+      .status { display: inline-block; margin-top: 5px; padding: 3px 10px; border-radius: 999px;
+                background: #fff; color: ${DEEP_GREEN}; font-weight: 800; font-size: 11px; }
+      .updated { display: block; margin-top: 4px; font-size: 10px; font-weight: 600; }
+      .counts { display: flex; gap: 8px; padding: 10px 18px; background: #F7F9FB; border-bottom: 1px solid ${LINE}; }
+      .cell { flex: 1; border-left: 3px solid ${GREEN}; padding: 5px 9px; background: #fff; }
+      .count { font-size: 17px; font-weight: 800; color: ${DEEP_GREEN}; }
       .caption { font-size: 8.5px; color: ${MUTED}; text-transform: uppercase; letter-spacing: .04em; }
       main { padding: 10px 16px 16px; }
       .block { margin-bottom: 12px; break-inside: avoid; }

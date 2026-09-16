@@ -69,6 +69,8 @@ import {
   listTeamWeekHandler,
   removeOtherWorkHandler,
   saveWeeklyNoteHandler,
+  submitMyWeekHandler,
+  weeklyCopyHandler,
 } from "./weekly.controller"
 
 const router = Router()
@@ -182,6 +184,10 @@ router.get("/weekly", requireAuth, requireSales(), getMyWeekHandler)
 router.put("/weekly/notes", requireAuth, requireSales(), saveWeeklyNoteHandler)
 router.post("/weekly/other-work", requireAuth, requireSales(), addOtherWorkHandler)
 router.delete("/weekly/other-work/:id", requireAuth, requireSales(), removeOtherWorkHandler)
+// Submitting keeps the copy and answers with that same file; a kept copy
+// downloads again exactly as it was (§26.17).
+router.post("/weekly/submit", requireAuth, requireSales(), submitMyWeekHandler)
+router.get("/weekly/copies/:id/file", requireAuth, requireSales(), weeklyCopyHandler)
 // Before /weekly/all/:employeeId, or the path is read as an employee id.
 router.get("/weekly/all", requireAuth, requireSales(SalesRole.SALES_ADMIN), listTeamWeekHandler)
 router.get(

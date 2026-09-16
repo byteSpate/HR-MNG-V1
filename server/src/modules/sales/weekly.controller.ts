@@ -16,7 +16,20 @@ import {
   removeOtherWork,
   saveAccountNote,
 } from "./weekly.service"
+import { getWeeklyCopy, submitMyWeek, type WeeklyFile } from "./weekly.submit"
+import { contentDisposition } from "./minutes.pdf"
 import { addOtherWorkSchema, saveWeeklyNoteSchema, weekQuerySchema } from "./sales.validators"
+
+/**
+ * A weekly report PDF. Never cached: a copy is downloaded by name, and a
+ * browser holding an older one would hand back last week's file.
+ */
+function sendPdf(res: Response, file: WeeklyFile) {
+  res.setHeader("Content-Type", "application/pdf")
+  res.setHeader("Content-Disposition", contentDisposition("attachment", file.fileName))
+  res.setHeader("Cache-Control", "no-store")
+  return res.status(200).send(file.pdf)
+}
 
 export async function getMyWeekHandler(req: Request, res: Response, next: NextFunction) {
   try { return res.status(200).json(await getMyWeek(weekQuerySchema.parse(req.query), req.user!)) }
@@ -50,6 +63,17 @@ export async function removeOtherWorkHandler(
   next: NextFunction
 ) {
   try { await removeOtherWork(req.params.id, req.user!); return res.status(204).send() }
+  catch (err) { return next(err) }
+}
+
+/** Submit keeps the copy and answers with that same file (§26.17). */
+export async function submitMyWeekHandler(req: Request, res: Response, next: NextFunction) {
+  try { return sendPdf(res, await submitMyWeek(weekQuerySchema.parse(req.query), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function weeklyCopyHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return sendPdf(res, await getWeeklyCopy(req.params.id, req.user!)) }
   catch (err) { return next(err) }
 }
 
