@@ -59,9 +59,8 @@ const report = (overrides: Record<string, unknown> = {}) => ({
 
 /** The transaction runs its callback against the same mocked client. */
 const runsTransaction = () =>
-  vi.mocked(prisma.$transaction).mockImplementation(async (fn: never) =>
-    typeof fn === "function" ? await (fn as (tx: unknown) => unknown)(prisma) : fn
-  )
+  vi.mocked(prisma.$transaction).mockImplementation((async (fn: unknown) =>
+    typeof fn === "function" ? await (fn as (tx: unknown) => unknown)(prisma) : fn) as never)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -150,6 +149,8 @@ describe("saveAccountNote", () => {
   })
 
   it("makes a task from the typed next step, due a week out, and keeps its id", async () => {
+    // A week out from the day it is ticked, so the clock is held still.
+    vi.setSystemTime(new Date("2026-09-14T05:00:00.000Z"))
     vi.mocked(prisma.weeklyReport.upsert).mockResolvedValue(report() as never)
     vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "acc-1", ownerEmployeeId: "emp-1" } as never)
     vi.mocked(prisma.salesTask.create).mockResolvedValue({ id: "task-7" } as never)
@@ -172,6 +173,7 @@ describe("saveAccountNote", () => {
     expect(prisma.weeklyAccountNote.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ create: expect.objectContaining({ taskId: "task-7" }) })
     )
+    vi.useRealTimers()
   })
 
   it("puts a submitted week back to Draft when it is added to", async () => {
