@@ -366,6 +366,8 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
         ) : null}
       </section>
 
+      <AccountsThisWeek week={week} weekKey={weekKey} readOnly={readOnly} />
+
       <div className="grid gap-3 xl:grid-cols-2">
         {week.days.map((day) => (
           <DayBlock key={day.date} day={day} weekKey={weekKey} readOnly={readOnly} />
@@ -391,6 +393,85 @@ function CopyButton({ copyId, fileName }: { copyId: string; fileName: string }) 
   )
 }
 
+/**
+ * What does not change from day to day: each account's open deals, what they
+ * are for, the deal's own next step, Software needed, and the tasks still
+ * open. Said once for the week, because repeating it under every day buried
+ * the one thing that day actually carried.
+ *
+ * The PDF still prints these on every row. That is the team's own sheet
+ * (§26.7), and a printed row has to stand on its own.
+ */
+function AccountsThisWeek({
+  week,
+  weekKey,
+  readOnly,
+}: {
+  week: WeeklyReportDetail
+  weekKey: string
+  readOnly: boolean
+}) {
+  const accounts = useMemo(() => {
+    const seen = new Map<string, WeeklyAccountRow>()
+    for (const day of week.days) {
+      for (const row of day.accounts) {
+        if (!seen.has(row.salesAccountId)) seen.set(row.salesAccountId, row)
+      }
+    }
+    return [...seen.values()]
+  }, [week.days])
+
+  if (accounts.length === 0) return null
+
+  return (
+    <section className="mb-4 rounded-md border border-[#E4E9EF] bg-white px-4 py-3">
+      <span className={`text-[11.5px] font-bold uppercase tracking-wide ${TONE.muted}`}>
+        Accounts this week
+      </span>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        {accounts.map((row) => (
+          <div key={row.salesAccountId} className="rounded-md border border-[#EEF1F5] px-3 py-2">
+            <span className="text-[12.5px] font-bold">{row.accountName}</span>
+            <p className={`mt-0.5 text-[12px] ${TONE.muted}`}>{row.requirement}</p>
+
+            {row.deals.map((deal) => (
+              <div key={deal.id} className="mt-2 rounded-md bg-[#F7F9FB] px-2.5 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[12px] font-bold">{deal.name}</span>
+                  <SoftwareNeeded
+                    dealId={deal.id}
+                    value={deal.softwareNeeded}
+                    weekKey={weekKey}
+                    readOnly={readOnly}
+                  />
+                </div>
+                {deal.nextStep ? (
+                  <p className="mt-1 text-[12px]">
+                    <span className="font-semibold">Next step:</span> {deal.nextStep}
+                  </p>
+                ) : (
+                  <p className={`mt-1 text-[12px] ${TONE.muted}`}>
+                    No next step on this deal.{" "}
+                    <Link href={`/sales/opportunities/${deal.id}`} className="underline">
+                      Set one
+                    </Link>
+                  </p>
+                )}
+              </div>
+            ))}
+
+            {row.pendingTasks.length > 0 ? (
+              <p className="mt-2 text-[12px]">
+                <span className="font-semibold">Pending tasks:</span>{" "}
+                {row.pendingTasks.map((task) => task.title).join(", ")}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
 function DayBlock({ day, weekKey, readOnly }: { day: WeeklyDay; weekKey: string; readOnly: boolean }) {
   const labelled = day.label !== null
   // A day still to come takes nothing: the server refuses it, so the page
@@ -494,37 +575,6 @@ function AccountBlock({
             <li key={index}>{line}</li>
           ))}
         </ul>
-      ) : null}
-
-      <div className={`mt-2 text-[12px] ${TONE.muted}`}>
-        <span className="font-semibold">Requirement:</span> {row.requirement}
-      </div>
-
-      {row.deals.map((deal) => (
-        <div key={deal.id} className="mt-2 rounded-md bg-[#F7F9FB] px-2.5 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12.5px] font-bold">{deal.name}</span>
-            <SoftwareNeeded dealId={deal.id} value={deal.softwareNeeded} weekKey={weekKey} readOnly={readOnly} />
-          </div>
-          {deal.nextStep ? (
-            <p className="mt-1 text-[12px]">
-              <span className="font-semibold">Next step:</span> {deal.nextStep}
-            </p>
-          ) : (
-            <p className={`mt-1 text-[12px] ${TONE.muted}`}>
-              No next step on this deal.{" "}
-              <Link href={`/sales/opportunities/${deal.id}`} className="underline">
-                Set one
-              </Link>
-            </p>
-          )}
-        </div>
-      ))}
-
-      {row.pendingTasks.length > 0 ? (
-        <div className="mt-2 text-[12px]">
-          <span className="font-semibold">Pending tasks:</span> {row.pendingTasks.map((task) => task.title).join(", ")}
-        </div>
       ) : null}
 
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
