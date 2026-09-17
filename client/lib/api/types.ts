@@ -2261,6 +2261,8 @@ export interface CreateOpportunityBody {
   ownerEmployeeId?: string
   /** Adds the owner as a collaborator in the same action when they lack access. */
   addAssignment?: boolean
+  /** The meeting it came out of, when made from that meeting's minutes. */
+  meetingId?: string
 }
 
 export interface UpdateOpportunityBody {
@@ -2453,8 +2455,148 @@ export interface SalesMeetingSummary {
   outcome: string | null
   completedAt: string | null
   attendees: SalesMeetingAttendeeSummary[]
+  /** The meeting's minutes once started (phase 4). Everyone who can see the
+      meeting sees this much; what the minutes say is for the people who work
+      the account (revision §25.27). */
+  minutes: { id: string; status: SalesMinutesStatus; lastSentAt: string | null } | null
   /** Whether the viewer works the account, and so may change the meeting. */
   canManage: boolean
+}
+
+// ── Meeting minutes (phase 4, revision §25) ─────────────────────────────────
+
+export type SalesMinutesStatus = "DRAFT" | "SENT" | "EDITED_AFTER_SENDING"
+/** What a section holds (§25.18). The Next Steps table's columns are fixed. */
+export type MinutesKind = "PARAGRAPHS" | "BULLETS" | "SUBTOPICS" | "TABLE" | "RICH"
+
+/**
+ * Formatted text (the owner's change, 2026-09-15): the Word-style toolbar's
+ * document, as Tiptap saves it. The server checks every node and mark against
+ * a fixed list; the client only needs its shape.
+ */
+export interface RichNode {
+  type: string
+  attrs?: Record<string, unknown>
+  content?: RichNode[]
+  text?: string
+  marks?: { type: string; attrs?: Record<string, unknown> }[]
+}
+
+export interface RichDoc {
+  type: "doc"
+  content: RichNode[]
+}
+
+/** A bullet and the second level under it; the documents go no deeper. */
+export interface MinutesBullet {
+  text: string
+  sub: string[]
+}
+
+export interface MinutesTopic {
+  title: string
+  text: string
+  bullets: MinutesBullet[]
+}
+
+/** A Next Steps row. `taskId` is the task it made, which the server alone sets. */
+export interface MinutesTableRow {
+  actionItem: string
+  responsible: string
+  status: string
+  taskId: string | null
+}
+
+export type MinutesSection =
+  | { heading: string; kind: "PARAGRAPHS"; content: { paragraphs: string[] } }
+  | { heading: string; kind: "BULLETS"; content: { bullets: MinutesBullet[] } }
+  | { heading: string; kind: "SUBTOPICS"; content: { topics: MinutesTopic[] } }
+  | { heading: string; kind: "TABLE"; content: { rows: MinutesTableRow[] } }
+  | { heading: string; kind: "RICH"; content: RichDoc }
+
+export interface SalesMinutesDetail {
+  id: string
+  meetingId: string
+  status: SalesMinutesStatus
+  lastSentAt: string | null
+  purpose: string | null
+  meetingWithNote: string | null
+  requirementFound: boolean | null
+  /** The meeting has no deal, so the requirement question is asked. */
+  asksRequirement: boolean
+  /** Sent at least once, so the answer no longer changes. */
+  requirementLocked: boolean
+  /** "Meeting Minutes – APS Group". */
+  title: string
+  subtitle: string
+  /** The header's labelled lines, exactly as the PDF prints them. */
+  header: { label: string; value: string }[]
+  fileName: string
+  companyName: string
+  meeting: {
+    id: string
+    title: string
+    scheduledAt: string
+    endsAt: string | null
+    status: SalesMeetingStatus
+    salesAccountId: string
+    salesAccountName: string
+    opportunityId: string | null
+    opportunitySerial: string | null
+    opportunityName: string | null
+  }
+  attendees: { side: "OURS" | "THEIRS"; name: string; designation: string | null }[]
+  sections: MinutesSection[]
+  preparers: { employeeId: string; name: string; title: string | null; titleExtra: string | null }[]
+  /** Every copy downloaded for sending, newest first, each kept exactly as it went out. */
+  sends: { id: string; sentAt: string; sentByName: string | null; sentTo: string | null; fileName: string }[]
+  /** One line per save and per send, newest first. */
+  history: { id: string; at: string; byName: string | null; text: string }[]
+  /** Deals made from this meeting. */
+  originatedDeals: { id: string; serial: string; name: string }[]
+  /** Only before the first send. */
+  canDelete: boolean
+}
+
+export interface SalesMinutesListItem {
+  id: string
+  meetingId: string
+  meetingTitle: string
+  scheduledAt: string
+  salesAccountId: string
+  salesAccountName: string
+  preparedBy: string[]
+  status: SalesMinutesStatus
+  lastSentAt: string | null
+}
+
+/** A Next Steps row as Save sends it: `newTask` is the tick, sent once. */
+export interface MinutesTableRowBody extends MinutesTableRow {
+  newTask?: { dueOn: string }
+}
+
+export type MinutesSectionBody =
+  | Exclude<MinutesSection, { kind: "TABLE" }>
+  | { heading: string; kind: "TABLE"; content: { rows: MinutesTableRowBody[] } }
+
+export interface SaveMinutesBody {
+  purpose: string | null
+  meetingWithNote: string | null
+  sections: MinutesSectionBody[]
+  preparers: { employeeId: string; titleExtra: string | null }[]
+}
+
+export interface MinutesTemplateSection {
+  heading: string
+  kind: MinutesKind
+  /** New minutes put the meeting's outcome note here. One section at most, of paragraphs. */
+  startsWithOutcome?: boolean
+}
+
+export interface MinutesTemplate {
+  sections: MinutesTemplateSection[]
+  isDefault: boolean
+  updatedAt: string | null
 }
 
 export interface MeetingAttendeeBody {

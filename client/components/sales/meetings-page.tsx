@@ -14,8 +14,13 @@ import { salesKeys } from "@/lib/api/sales-keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { SalesMeetingSummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
-import { TONE } from "@/components/dashboard/record-kit"
-import { MeetingFormDialog, MeetingStatusDialog, useMeetingStatus } from "@/components/sales/meeting-dialogs"
+import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
+import {
+  MeetingFormDialog,
+  MeetingStatusDialog,
+  useMeetingStatus,
+  useStartMinutes,
+} from "@/components/sales/meeting-dialogs"
 import { MeetingRow, meetingActions } from "@/components/sales/plan-panels"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -67,6 +72,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
   const [editing, setEditing] = useState<SalesMeetingSummary | null>(null)
   const [ending, setEnding] = useState<{ meeting: SalesMeetingSummary; action: "COMPLETED" | "CANCELLED" } | null>(null)
   const putBack = useMeetingStatus()
+  const startMinutes = useStartMinutes()
 
   const filters = { ...(mine ? { mine: true } : {}), from }
   const query = useQuery({
@@ -111,6 +117,12 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
             {!showCancelled && hiddenCancelled > 0 ? `, ${hiddenCancelled} cancelled hidden` : ""}
           </span>
         </section>
+      ) : null}
+
+      {startMinutes.error ? (
+        <div className="mb-3">
+          <PanelAlert onDismiss={() => startMinutes.reset()}>{toMessage(startMinutes.error)}</PanelAlert>
+        </div>
       ) : null}
 
       {isLoading ? (
@@ -171,6 +183,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
                       onComplete: () => setEnding({ meeting, action: "COMPLETED" }),
                       onCancel: () => setEnding({ meeting, action: "CANCELLED" }),
                       onPutBack: () => putBack.mutate({ id: meeting.id, body: { status: "SCHEDULED" } }),
+                      onWriteMinutes: () => startMinutes.mutate(meeting.id),
                     })}
                   />
                 ))}

@@ -131,6 +131,15 @@ export async function createOpportunity(body: CreateOpportunityBody, actor: Acce
   return prisma.$transaction(async (tx) => {
     const access = await requireAccountAccess(body.salesAccountId, actor, asClient(tx))
     const account = { id: access.accountId, ownerEmployeeId: access.ownerEmployeeId }
+    // A deal made from a meeting's minutes (revision §25.6) names that meeting
+    // as its origin. Checked before the serial is issued, so a refusal wastes none.
+    if (body.meetingId) {
+      const origin = await tx.salesMeeting.findFirst({
+        where: { id: body.meetingId, salesAccountId: account.id },
+        select: { id: true },
+      })
+      if (!origin) throw new AppError(400, "That meeting is not on this account")
+    }
     const owner = await ownerFor(tx, account, body.ownerEmployeeId, body.addAssignment, actor)
     const serial = await nextOpportunitySerial(tx)
     const now = new Date()
@@ -142,12 +151,16 @@ export async function createOpportunity(body: CreateOpportunityBody, actor: Acce
         oemAccountManager: body.oemAccountManager ?? null,
         ownerEmployeeId: owner.id, stage: "REQUIREMENT_RECEIVED", status: "ONGOING",
         stageChangedAt: now, lastActivityAt: now, createdBy: actor.sub,
+        ...(body.meetingId ? { meetingId: body.meetingId } : {}),
       },
       include: INCLUDE,
     })
     await writeAudit(tx, {
       entity: "OPPORTUNITY", entityId: created.id, action: "CREATE", changedBy: actor.sub,
-      after: { serial, salesAccountId: account.id, name: body.name, ownerEmployeeId: owner.id },
+      after: {
+        serial, salesAccountId: account.id, name: body.name, ownerEmployeeId: owner.id,
+        ...(body.meetingId ? { meetingId: body.meetingId } : {}),
+      },
     })
     await emitEvent(tx, {
       type: "sales.opportunity.created", entity: "OPPORTUNITY", entityId: created.id,
@@ -419,6 +432,11 @@ export async function getOpportunityTimeline(id: string, actor: AccessTokenPaylo
           // event for the same change.
           {
             entity: "SALES_ACCOUNT", entityId: visible.salesAccountId, type: { startsWith: "sales.meeting." },
+            payload: { path: ["opportunityId"], equals: id },
+          },
+          // Its minutes being written and sent (revision §25.33), named the same way.
+          {
+            entity: "SALES_ACCOUNT", entityId: visible.salesAccountId, type: { startsWith: "sales.minutes." },
             payload: { path: ["opportunityId"], equals: id },
           },
         ],

@@ -92,7 +92,10 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
       }
       badges={{
         "/sales/opportunities": opportunityBadge,
-        "/sales/meetings": badgeFor("/meetings"),
+        // Exact keys for these two: "/meetings/minutes" starts with
+        // "/meetings", so a prefix sum would count the minutes row into Meetings.
+        "/sales/meetings": dashboard.data?.badges["/meetings"] ?? 0,
+        "/sales/meetings/minutes": dashboard.data?.badges["/meetings/minutes"] ?? 0,
         "/sales/tasks": badgeFor("/tasks"),
       }}
       // Wider than a role dashboard's 1220/1600px cap: the accounts table

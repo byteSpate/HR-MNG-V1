@@ -62,6 +62,8 @@ export type EventType =
   | "sales.meeting.cancelled"
   | "sales.task.created"
   | "sales.task.completed"
+  | "sales.minutes.written"
+  | "sales.minutes.sent"
   | "asset.assigned"
   | "asset.acknowledged"
   | "asset.returned"

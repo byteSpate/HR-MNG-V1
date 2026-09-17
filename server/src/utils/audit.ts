@@ -43,6 +43,10 @@ export type AuditEntity =
   | "SALES_TARGET"
   | "SALES_MEETING"
   | "SALES_TASK"
+  | "SALES_MINUTES"
+  // The minutes template on Sales Settings: reference data edited from a
+  // settings screen keeps a trail, as a department or a shift does.
+  | "SALES_MINUTES_TEMPLATE"
   | "ASSET"
   | "ASSET_CATEGORY"
   | "ASSET_ASSIGNMENT"
@@ -96,6 +100,8 @@ export type AuditAction =
   | "CLOSE"
   | "REOPEN"
   | "LOCK"
+  // Meeting minutes downloaded for sending: the copy that went out is kept.
+  | "SEND"
 
 export interface AuditEntry {
   entity: AuditEntity

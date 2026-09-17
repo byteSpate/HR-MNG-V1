@@ -312,11 +312,11 @@ describe("the rest of the sales dashboard", () => {
     }
   })
 
-  it("ships all six action rows, today's meetings and tasks first", async () => {
+  it("ships all seven action rows, today's meetings and tasks first, then meetings with no minutes", async () => {
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "closing", "unverified", "quiet", "stuck"])
+      .toEqual(["meetings", "tasks", "minutes", "closing", "unverified", "quiet", "stuck"])
   })
 
   it("has nothing left that is not built, so the notice goes away", async () => {
@@ -328,21 +328,25 @@ describe("the rest of the sales dashboard", () => {
   it("counts the meetings I attend today and this week, in office time", async () => {
     // NOW is noon on 15 Aug in Dhaka. The day starts at 18:00 UTC on the 14th.
     const DAY_END = "2026-08-15T18:00:00.000Z"
+    // The scheduled-meeting counts only; the minutes row counts completed ones.
+    const scheduled = () =>
+      vi.mocked(prisma.salesMeeting.count).mock.calls
+        .map(([args]: any[]) => args.where)
+        .filter((where) => where.status === "SCHEDULED")
     vi.mocked(prisma.salesMeeting.count).mockImplementation((async (args: any) =>
-      args.where.scheduledAt.lt.toISOString() === DAY_END ? 1 : 3) as never)
+      args.where.status !== "SCHEDULED" ? 0 : args.where.scheduledAt.lt.toISOString() === DAY_END ? 1 : 3) as never)
 
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
     const row = payload.actions.find((r) => r.key === "meetings")!
     expect(row).toMatchObject({ label: "Meetings today and this week", count: 3, detail: "1 today", href: "/meetings" })
-    const where = (vi.mocked(prisma.salesMeeting.count).mock.calls[0][0] as any).where
+    const where = scheduled()[0]
     expect(where).toMatchObject({
       status: "SCHEDULED",
       attendees: { some: { side: "OURS", employeeId: { in: ["emp-2"] } } },
     })
     expect(where.scheduledAt.gte.toISOString()).toBe("2026-08-14T18:00:00.000Z")
-    const weekEnds = vi.mocked(prisma.salesMeeting.count).mock.calls
-      .map(([args]: any[]) => args.where.scheduledAt.lt.toISOString())
+    const weekEnds = scheduled().map((w) => w.scheduledAt.lt.toISOString())
     expect(weekEnds).toContain("2026-08-21T18:00:00.000Z")
   })
 
@@ -368,6 +372,37 @@ describe("the rest of the sales dashboard", () => {
 
     expect(payload.actions.find((r) => r.key === "meetings")?.detail).toBe("Nothing in the next 7 days")
     expect(payload.actions.find((r) => r.key === "tasks")?.detail).toBe("Nothing due today")
+  })
+
+  it("counts my completed meetings from the last 7 days that nobody has written minutes for", async () => {
+    vi.mocked(prisma.salesMeeting.count).mockImplementation((async (args: any) =>
+      args.where.status === "COMPLETED" ? 2 : 0) as never)
+
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    const row = payload.actions.find((r) => r.key === "minutes")!
+    expect(row).toMatchObject({
+      label: "Meetings with no minutes", count: 2, tone: "yellow", href: "/meetings/minutes",
+    })
+    expect(payload.badges["/meetings/minutes"]).toBe(2)
+    const where = vi.mocked(prisma.salesMeeting.count).mock.calls
+      .map(([args]: any[]) => args.where).find((w) => w.status === "COMPLETED")
+    // NOW is noon on 15 Aug in Dhaka, so the window opens at the start of 9 Aug there.
+    expect(where).toEqual({
+      status: "COMPLETED",
+      minutes: { is: null },
+      scheduledAt: { gte: new Date("2026-08-08T18:00:00.000Z") },
+      attendees: { some: { side: "OURS", employeeId: { in: ["emp-2"] } } },
+    })
+  })
+
+  it("says so plainly when every recent meeting has its minutes", async () => {
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+
+    expect(payload.actions.find((r) => r.key === "minutes")).toMatchObject({
+      // The queue rule: nothing waiting is the healthy state.
+      count: 0, detail: "Every meeting from the last 7 days has minutes", tone: "green",
+    })
   })
 
   it("counts an account a completed meeting was on as worked on", async () => {
@@ -487,8 +522,8 @@ describe("the team roll-up", () => {
 
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "closing", "unverified", "quiet", "stuck"])
-    expect(Object.keys(payload.badges)).toHaveLength(6)
+      .toEqual(["meetings", "tasks", "minutes", "closing", "unverified", "quiet", "stuck"])
+    expect(Object.keys(payload.badges)).toHaveLength(7)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {

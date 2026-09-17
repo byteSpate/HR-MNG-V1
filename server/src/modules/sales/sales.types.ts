@@ -9,6 +9,7 @@ import type {
 } from "../../generated/prisma/client"
 import type { DashboardStat, Tone as DashboardTone } from "../dashboard/dashboard.types"
 import type { SalesTargetQuarter } from "./target.service"
+import type { MinutesKind, SectionContent } from "./minutes.content"
 
 export interface OpportunityLineSummary {
   id: string
@@ -266,8 +267,77 @@ export interface SalesMeetingSummary {
   outcome: string | null
   completedAt: string | null
   attendees: SalesMeetingAttendeeSummary[]
+  /**
+   * The meeting's minutes, once started (phase 4). Shown to everyone who can
+   * see the meeting: that they exist is not what they say (§25.27).
+   */
+  minutes: { id: string; status: SalesMinutesStatus; lastSentAt: string | null } | null
   /** Whether the viewer works the account, and so may change the meeting. */
   canManage: boolean
+}
+
+// ── MEETING MINUTES (phase 4) ──────────────────────────────────────────────
+
+export type SalesMinutesStatus = "DRAFT" | "SENT" | "EDITED_AFTER_SENDING"
+
+/** One minutes document, for the people who work the account. */
+export interface SalesMinutesDetail {
+  id: string
+  meetingId: string
+  status: SalesMinutesStatus
+  lastSentAt: string | null
+  purpose: string | null
+  meetingWithNote: string | null
+  /** The requirement question's answer; null until answered. */
+  requirementFound: boolean | null
+  /** The meeting has no deal, so the question is asked (§25.6). */
+  asksRequirement: boolean
+  /** Sent at least once, so the answer can no longer change. */
+  requirementLocked: boolean
+  /** "Meeting Minutes – APS Group". */
+  title: string
+  /** The meeting's title. */
+  subtitle: string
+  /** The header's labelled lines, exactly as the PDF prints them. */
+  header: { label: string; value: string }[]
+  fileName: string
+  companyName: string
+  meeting: {
+    id: string
+    title: string
+    scheduledAt: string
+    endsAt: string | null
+    status: "SCHEDULED" | "COMPLETED" | "CANCELLED"
+    salesAccountId: string
+    salesAccountName: string
+    opportunityId: string | null
+    opportunitySerial: string | null
+    opportunityName: string | null
+  }
+  attendees: { side: "OURS" | "THEIRS"; name: string; designation: string | null }[]
+  sections: { heading: string; kind: MinutesKind; content: SectionContent }[]
+  preparers: { employeeId: string; name: string; title: string | null; titleExtra: string | null }[]
+  /** Every copy downloaded for sending, newest first. Each is kept exactly as it went out. */
+  sends: { id: string; sentAt: string; sentByName: string | null; sentTo: string | null; fileName: string }[]
+  /** One line per save and per send (§25.35), newest first. */
+  history: { id: string; at: string; byName: string | null; text: string }[]
+  /** Deals made from this meeting (Opportunity.meetingId). */
+  originatedDeals: { id: string; serial: string; name: string }[]
+  /** Only before the first send (§25.9). */
+  canDelete: boolean
+}
+
+/** One row of the Meeting Minutes page (§25.28). */
+export interface SalesMinutesListItem {
+  id: string
+  meetingId: string
+  meetingTitle: string
+  scheduledAt: string
+  salesAccountId: string
+  salesAccountName: string
+  preparedBy: string[]
+  status: SalesMinutesStatus
+  lastSentAt: string | null
 }
 
 // ── TASKS (phase 3) ────────────────────────────────────────────────────────

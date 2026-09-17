@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { SessionProvider } from "@/lib/auth/session-context";
 import { QueryProvider } from "@/lib/query/query-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistHeading = Geist({subsets:['latin'],variable:'--font-heading'});
 
@@ -59,7 +60,11 @@ export default function RootLayout({
           never put there. The flag is one level deep: it silences the
           mismatch on this element's own attributes only, so a genuine
           mismatch anywhere inside the tree is still reported. */}
-      <body suppressHydrationWarning className="min-h-full flex flex-col"><QueryProvider><SessionProvider>{children}</SessionProvider></QueryProvider></body>
+      {/* The Toaster was never mounted, so every toast() in the app (the
+          accounting pages' "saved" and "could not save" among them) went
+          nowhere. Light, because the hex palette has no dark mode yet (see
+          docs/features/ui.md); top centre, where a question is seen. */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col"><QueryProvider><SessionProvider>{children}</SessionProvider></QueryProvider><Toaster theme="light" position="top-center" closeButton /></body>
     </html>
   );
 }

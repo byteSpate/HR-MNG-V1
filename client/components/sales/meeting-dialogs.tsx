@@ -9,9 +9,11 @@
  */
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
+  startMinutes,
   changeMeetingStatus,
   createMeeting,
   getSalesAccount,
@@ -58,6 +60,24 @@ export function useMeetingStatus() {
     mutationFn: ({ id, body }: { id: string; body: ChangeMeetingStatusBody }) =>
       changeMeetingStatus(accessToken!, id, body),
     onSuccess: refresh,
+  })
+}
+
+/**
+ * Starts a meeting's minutes, or opens the ones already started, and goes to
+ * the editor. The server answers with the same document either way, so a
+ * second click can never make a second one.
+ */
+export function useStartMinutes() {
+  const { accessToken } = useSession()
+  const router = useRouter()
+  const refresh = usePlanRefresh()
+  return useMutation({
+    mutationFn: (meetingId: string) => startMinutes(accessToken!, meetingId),
+    onSuccess: ({ id }) => {
+      refresh()
+      router.push(`/sales/meetings/minutes/${id}`)
+    },
   })
 }
 
@@ -564,7 +584,10 @@ function MeetingStatusForm({
 }) {
   const [text, setText] = useState("")
   const [error, setError] = useState<string | null>(null)
+  // Once completed, the dialog stays open to offer the minutes (§25.3).
+  const [completed, setCompleted] = useState(false)
   const status = useMeetingStatus()
+  const start = useStartMinutes()
 
   function submit(e?: React.FormEvent) {
     e?.preventDefault()
@@ -577,7 +600,47 @@ function MeetingStatusForm({
       action === "CANCELLED"
         ? { status: "CANCELLED", reason: text.trim() }
         : { status: "COMPLETED", ...(text.trim() ? { outcome: text.trim() } : {}) }
-    status.mutate({ id: meeting.id, body }, { onSuccess: onDone, onError: (err) => setError(toMessage(err)) })
+    status.mutate(
+      { id: meeting.id, body },
+      {
+        onSuccess: () => (action === "COMPLETED" ? setCompleted(true) : onDone()),
+        onError: (err) => setError(toMessage(err)),
+      }
+    )
+  }
+
+  if (completed) {
+    return (
+      <div className="space-y-4">
+        <p className="text-[12.5px] leading-relaxed text-[#1C2733]">
+          <span className="font-semibold">{meeting.title}</span> is marked completed.
+        </p>
+        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          The minutes are the written record you send the customer. They start with the people who came
+          {text.trim() ? " and your note" : ""}. Write them now, or later from the meeting.
+        </p>
+        {start.error ? <FormError>{toMessage(start.error)}</FormError> : null}
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onDone}
+            disabled={start.isPending}
+            className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+          >
+            Not now
+          </Button>
+          <Button
+            type="button"
+            onClick={() => start.mutate(meeting.id)}
+            disabled={start.isPending}
+            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+          >
+            {start.isPending ? "Opening…" : "Write the minutes"}
+          </Button>
+        </DialogFooter>
+      </div>
+    )
   }
 
   return (
@@ -596,7 +659,7 @@ function MeetingStatusForm({
           label="How did it go?"
           htmlFor="meeting-outcome"
           hint="Optional."
-          help="A line or two for the record. Full minutes come in a later phase."
+          help="A line or two for the record. If you write the minutes, their outcome section starts with it."
         >
           <Textarea id="meeting-outcome" value={text} onChange={(e) => setText(e.target.value)} />
         </Field>

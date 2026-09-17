@@ -54,6 +54,15 @@ export function presentMeeting(row: any, canManage = true): SalesMeetingSummary 
       name: attendee.employee?.fullName ?? attendee.contact?.name ?? attendee.name ?? "",
       designation: attendee.designation ?? null,
     })),
+    // That minutes exist, and where they stand, for anyone who can see the
+    // meeting. What they say is read through the minutes' own gate (§25.27).
+    minutes: row.minutes
+      ? {
+          id: row.minutes.id,
+          status: row.minutes.status,
+          lastSentAt: row.minutes.lastSentAt?.toISOString() ?? null,
+        }
+      : null,
     // Decided by the caller, which knows the actor. Defaults to true because
     // every other call site is a write the actor just made.
     canManage,

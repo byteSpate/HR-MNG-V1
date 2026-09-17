@@ -23,12 +23,19 @@ import { salesKeys } from "@/lib/api/sales-keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { SalesMeetingSummary, SalesTaskSummary } from "@/lib/api/types"
 import { Tag } from "@/components/dashboard/tag"
-import { RowActions, type RowAction } from "@/components/dashboard/record-kit"
-import { MeetingFormDialog, MeetingStatusDialog, useMeetingStatus } from "@/components/sales/meeting-dialogs"
+import { PanelAlert, RowActions, toMessage, type RowAction } from "@/components/dashboard/record-kit"
+import {
+  MeetingFormDialog,
+  MeetingStatusDialog,
+  useMeetingStatus,
+  useStartMinutes,
+} from "@/components/sales/meeting-dialogs"
 import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/task-dialogs"
 import {
   MEETING_ICON,
   MEETING_MODE_LABEL,
+  MINUTES_ICON,
+  minutesLine,
   MEETING_STATUS_LABEL,
   MEETING_STATUS_TONE,
   TASK_ICON,
@@ -105,6 +112,8 @@ export function meetingActions(
     onComplete: () => void
     onCancel: () => void
     onPutBack: () => void
+    /** Offered on a completed meeting with no minutes yet (§25.3, §25.26). */
+    onWriteMinutes?: () => void
   }
 ): RowAction[] {
   if (!meeting.canManage) return []
@@ -126,8 +135,21 @@ export function meetingActions(
       { kind: "edit", label: "Edit", onClick: handlers.onEdit },
     ]
   }
-  // Completed is final; a later correction goes in its notes.
-  return [{ kind: "edit", label: "Edit notes", onClick: handlers.onEdit }]
+  // Completed is final; a later correction goes in its notes. It is also the
+  // only state minutes are written for (§25.3).
+  return [
+    ...(meeting.minutes === null && handlers.onWriteMinutes
+      ? [
+          {
+            kind: "custom" as const,
+            label: "Write the minutes",
+            icon: <MINUTES_ICON className="size-3.5" aria-hidden />,
+            onClick: handlers.onWriteMinutes,
+          },
+        ]
+      : []),
+    { kind: "edit", label: "Edit notes", onClick: handlers.onEdit },
+  ]
 }
 
 export function MeetingRow({
@@ -193,6 +215,23 @@ export function MeetingRow({
                 {meeting.outcome}
               </div>
             ) : null}
+            {meeting.minutes ? (
+              <div className="mt-1.5 flex items-center gap-1.5 text-[12px]">
+                <MINUTES_ICON className="size-3.5 shrink-0 text-[#5F6B7C]" aria-hidden />
+                {meeting.canManage ? (
+                  <Link
+                    href={`/sales/meetings/minutes/${meeting.minutes.id}`}
+                    className="font-semibold text-[#3D4756] hover:underline"
+                  >
+                    {minutesLine(meeting.minutes)}
+                  </Link>
+                ) : (
+                  // Somebody who only sees the account learns that the minutes
+                  // exist, not what they say (§25.27).
+                  <span className="font-semibold text-[#5F6B7C]">{minutesLine(meeting.minutes)}</span>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
         <Tag label={MEETING_STATUS_LABEL[meeting.status]} tone={MEETING_STATUS_TONE[meeting.status]} />
@@ -234,6 +273,7 @@ export function MeetingsPanel({
   const [editing, setEditing] = useState<SalesMeetingSummary | null>(null)
   const [ending, setEnding] = useState<{ meeting: SalesMeetingSummary; action: "COMPLETED" | "CANCELLED" } | null>(null)
   const putBack = useMeetingStatus()
+  const startMinutes = useStartMinutes()
 
   const filters = opportunityId ? { opportunityId } : { salesAccountId: accountId }
   const query = useQuery({
@@ -260,6 +300,11 @@ export function MeetingsPanel({
           ) : undefined
         }
       />
+      {startMinutes.error ? (
+        <div className="mb-3">
+          <PanelAlert>{toMessage(startMinutes.error)}</PanelAlert>
+        </div>
+      ) : null}
       {meetings.length === 0 ? (
         <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
           {opportunityId
@@ -278,6 +323,7 @@ export function MeetingsPanel({
                 onComplete: () => setEnding({ meeting, action: "COMPLETED" }),
                 onCancel: () => setEnding({ meeting, action: "CANCELLED" }),
                 onPutBack: () => putBack.mutate({ id: meeting.id, body: { status: "SCHEDULED" } }),
+                onWriteMinutes: () => startMinutes.mutate(meeting.id),
               })}
             />
           ))}

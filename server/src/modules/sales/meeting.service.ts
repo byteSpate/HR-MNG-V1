@@ -22,7 +22,8 @@ import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
 import { standingOf } from "./account.service"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL, presentMeeting, whenLabel } from "./meeting.present"
-import { canManageAccount, employeeIdFor, requireAccountAccess } from "./sales.access"
+import { waitingForMinutesWhere } from "./minutes.waiting"
+import { canManageAccount, employeeIdFor, isSalesAdmin, requireAccountAccess } from "./sales.access"
 import { canWorkAccounts } from "./sales.eligibility"
 import { sendMeetingChanged, type MeetingChange } from "./sales.mailer"
 import type { SalesMeetingSummary } from "./sales.types"
@@ -45,6 +46,9 @@ const INCLUDE = {
   attendees: {
     include: { employee: { select: { fullName: true } }, contact: { select: { name: true } } },
   },
+  // Whether it has minutes, and where they stand. Every viewer gets this much;
+  // what the minutes say is for the people who work the account (§25.27).
+  minutes: { select: { id: true, status: true, lastSentAt: true } },
 } satisfies Prisma.SalesMeetingInclude
 
 type MeetingRow = Prisma.SalesMeetingGetPayload<{ include: typeof INCLUDE }>
@@ -540,6 +544,27 @@ export async function listMeetings(
     include: INCLUDE,
     orderBy: { scheduledAt: "asc" },
     take: 500,
+  })
+  return { items: rows.map((row) => presentMeeting(row, canManageMeeting(row, actor, employeeId))) }
+}
+
+/**
+ * Completed meetings from the last 7 office days that nobody has written
+ * minutes for (§25.28, §25.29), newest first. A Sales User's list is always
+ * their own; a Sales Admin sees everybody's unless they ask for their own.
+ */
+export async function listMeetingsWaitingForMinutes(
+  query: { mine?: boolean },
+  actor: AccessTokenPayload,
+  now: Date = new Date()
+): Promise<{ items: SalesMeetingSummary[] }> {
+  const employeeId = await employeeIdFor(actor)
+  const everyone = isSalesAdmin(actor) && !query.mine
+  const rows = await prisma.salesMeeting.findMany({
+    where: waitingForMinutesWhere(everyone ? null : [employeeId ?? "__none__"], now),
+    include: INCLUDE,
+    orderBy: { scheduledAt: "desc" },
+    take: 200,
   })
   return { items: rows.map((row) => presentMeeting(row, canManageMeeting(row, actor, employeeId))) }
 }
