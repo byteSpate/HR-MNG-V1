@@ -18,7 +18,7 @@ vi.mock("../../config/prisma", () => ({
     opportunity: { findMany: vi.fn() },
     event: { findMany: vi.fn() },
     salesTask: { findMany: vi.fn() },
-    weeklyReport: { findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn() },
+    weeklyReport: { findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     weeklyReportCopy: { create: vi.fn(), findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
   },
@@ -90,6 +90,8 @@ beforeEach(() => {
   vi.mocked(prisma.salesTask.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue(report() as never)
   vi.mocked(prisma.weeklyReport.upsert).mockResolvedValue(report() as never)
+  vi.mocked(prisma.weeklyReport.updateMany).mockResolvedValue({ count: 1 } as never)
+  vi.mocked(prisma.weeklyReportCopy.create).mockResolvedValue({ id: "copy-1" } as never)
   vi.mocked(uploadBuffer).mockResolvedValue({ publicId: "sales/weekly/week-1/abc", bytes: 10 } as never)
 })
 
@@ -110,7 +112,7 @@ describe("submitMyWeek", () => {
         }),
       })
     )
-    expect(prisma.weeklyReport.update).toHaveBeenCalledWith(
+    expect(prisma.weeklyReport.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: "SUBMITTED", submittedLate: false }) })
     )
     expect(file.fileName).toBe("Weekly Report – Rahim – 13–17 Sep 2026.pdf")
@@ -146,10 +148,25 @@ describe("submitMyWeek", () => {
     expect(prisma.weeklyReport.update).not.toHaveBeenCalled()
   })
 
-  it("refuses a week that was never written to", async () => {
+  it("creates and submits a week with only leave or holidays", async () => {
     vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue(null as never)
-    await expect(submitMyWeek({ week: "2026-09-13" }, USER)).rejects.toMatchObject({ statusCode: 400 })
-    expect(uploadBuffer).not.toHaveBeenCalled()
+    vi.mocked(prisma.weeklyReport.upsert).mockResolvedValue(report() as never)
+
+    await expect(submitMyWeek({ week: "2026-09-13" }, USER)).resolves.toMatchObject({
+      fileName: "Weekly Report – Rahim – 13–17 Sep 2026.pdf",
+    })
+
+    expect(prisma.weeklyReport.upsert).toHaveBeenCalled()
+    expect(uploadBuffer).toHaveBeenCalled()
+  })
+
+  it("refuses a stale PDF when the week changed while it was being rendered", async () => {
+    vi.mocked(prisma.weeklyReport.updateMany).mockResolvedValue({ count: 0 } as never)
+
+    await expect(submitMyWeek({ week: "2026-09-13" }, USER)).rejects.toMatchObject({ statusCode: 409 })
+
+    expect(prisma.weeklyReportCopy.create).not.toHaveBeenCalled()
+    expect(destroyAsset).toHaveBeenCalledWith("sales/weekly/week-1/abc")
   })
 
   it("refuses a Sales Admin submitting somebody else's week", async () => {

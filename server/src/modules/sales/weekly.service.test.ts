@@ -13,7 +13,7 @@ vi.mock("../../config/prisma", () => ({
     salesAccount: { findMany: vi.fn(), findFirst: vi.fn() },
     salesCommunication: { findMany: vi.fn() },
     salesMeeting: { findMany: vi.fn() },
-    opportunity: { findMany: vi.fn() },
+    opportunity: { findMany: vi.fn(), findFirst: vi.fn() },
     event: { findMany: vi.fn() },
     salesTask: { findMany: vi.fn(), create: vi.fn() },
     weeklyReport: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), upsert: vi.fn() },
@@ -176,6 +176,21 @@ describe("saveAccountNote", () => {
     vi.useRealTimers()
   })
 
+  it("refuses a typed next step when the account already has an open deal", async () => {
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue({ id: "acc-1", ownerEmployeeId: "emp-1" } as never)
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ id: "opp-1" } as never)
+
+    await expect(
+      saveAccountNote(
+        { date: "2026-09-14", salesAccountId: "acc-1", challenges: null, gap: null, nextStep: "Call tomorrow", makeTask: true },
+        USER
+      )
+    ).rejects.toMatchObject({ statusCode: 400 })
+
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+    expect(prisma.weeklyAccountNote.upsert).not.toHaveBeenCalled()
+  })
+
   it("puts a submitted week back to Draft when it is added to", async () => {
     vi.mocked(prisma.weeklyReport.upsert).mockResolvedValue(
       report({ status: "SUBMITTED", firstSubmittedAt: day("2026-09-17"), lastSubmittedAt: day("2026-09-17") }) as never
@@ -234,5 +249,26 @@ describe("listTeamWeek", () => {
 
   it("is refused to a Sales User", async () => {
     await expect(listTeamWeek({ week: "2026-09-13" }, USER)).rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it("keeps a past report visible after its writer becomes a Sales Admin", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      { id: "emp-2", fullName: "Current user", designation: "Sales Executive" },
+    ] as never)
+    vi.mocked(prisma.weeklyReport.findMany).mockResolvedValue([
+      report({
+        employeeId: "emp-1",
+        status: "SUBMITTED",
+        firstSubmittedAt: day("2026-09-17"),
+        employee: { id: "emp-1", fullName: "Promoted user", designation: "Sales Manager" },
+      }),
+    ] as never)
+
+    const rows = await listTeamWeek({ week: "2026-09-13" }, ADMIN)
+
+    expect(rows.map((row) => [row.fullName, row.status])).toEqual([
+      ["Current user", "NOT_STARTED"],
+      ["Promoted user", "SUBMITTED"],
+    ])
   })
 })
