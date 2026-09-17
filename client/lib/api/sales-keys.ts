@@ -96,6 +96,9 @@ export function planWriteKeys() {
     // or sending minutes moves them on the list. Never the open document.
     ["sales", "minutes", "waiting"] as const,
     ["sales", "minutes", "list"] as const,
+    // A scheduled meeting and a completed task are both source facts for a
+    // Weekly Report, so a write made from that page must refresh its week too.
+    ["sales", "weekly"] as const,
   ]
 }
 
