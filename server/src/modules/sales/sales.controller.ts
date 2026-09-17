@@ -16,6 +16,7 @@ import { getTargetYear, setSalesTarget } from "./target.service"
 import { getSalesDashboard } from "./dashboard.service"
 import {
   changeOpportunityNextStep,
+  setSoftwareNeeded,
   changeOpportunityStage,
   changeOpportunityStatus,
   createOpportunity,
@@ -62,6 +63,7 @@ import {
   listTaskSchema,
   updateTaskSchema,
   changeOpportunityNextStepSchema,
+  setSoftwareNeededSchema,
   changeOpportunityStageSchema,
   changeOpportunityStatusSchema,
   createOpportunityLineSchema,
@@ -303,6 +305,12 @@ export async function changeOpportunityStatusHandler(req: Request<{ id: string }
 
 export async function changeOpportunityNextStepHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await changeOpportunityNextStep(req.params.id, changeOpportunityNextStepSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+/** The weekly report's Application column, answered on the deal (§26.9). */
+export async function setSoftwareNeededHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await setSoftwareNeeded(req.params.id, setSoftwareNeededSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
 }
 

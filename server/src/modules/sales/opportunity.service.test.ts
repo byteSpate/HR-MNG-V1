@@ -33,6 +33,7 @@ import {
   getOpportunityTimeline,
   listOpportunities,
   listOpportunityOwners,
+  setSoftwareNeeded,
   updateOpportunity,
 } from "./opportunity.service"
 import { nextOpportunitySerial } from "./sales.serial"
@@ -551,5 +552,46 @@ describe("the deal Timeline, management notes", () => {
 
     const where = (vi.mocked(prisma.salesComment.findMany).mock.calls[0][0] as any).where
     expect(where).not.toHaveProperty("kind")
+  })
+})
+
+// The weekly report's Application column is a fact about the deal, so it is
+// set once on the deal and read from there (revision §26.9, §26.17).
+describe("software needed on a deal", () => {
+  beforeEach(() => vi.setSystemTime(NOW))
+
+  it("records a Yes, with one audit row and one event", async () => {
+    await setSoftwareNeeded("opp-1", { softwareNeeded: true }, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ softwareNeeded: true, lastActivityAt: NOW }),
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
+    expect(prisma.event.create).toHaveBeenCalledTimes(1)
+  })
+
+  it("records a No", async () => {
+    await setSoftwareNeeded("opp-1", { softwareNeeded: false }, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ softwareNeeded: false }),
+    }))
+  })
+
+  it("clears it back to blank, because not asked and no software are different facts", async () => {
+    await setSoftwareNeeded("opp-1", { softwareNeeded: null }, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ softwareNeeded: null }),
+    }))
+  })
+
+  it("refuses a deal the caller cannot write to, and changes nothing", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(null as any)
+
+    await expect(setSoftwareNeeded("opp-1", { softwareNeeded: true }, USER)).rejects.toMatchObject({
+      statusCode: 404,
+    })
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
   })
 })

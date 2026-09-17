@@ -2733,3 +2733,98 @@ export interface UpdateSalesAccountBody {
   /** Required by the server whenever the status leaves ACTIVE. */
   statusReason?: string | null
 }
+
+// ── the weekly report (phase 5, revision §26) ────────────────────────────────
+
+export type WeeklyReportStatus = "NOT_STARTED" | "DRAFT" | "SUBMITTED"
+
+/** Why a day is empty, when that is not the person's doing (§26.12). */
+export interface WeeklyDayLabel {
+  kind: "HOLIDAY" | "WEEKLY_OFF" | "LEAVE" | "OUTSIDE_EMPLOYMENT"
+  text: string
+}
+
+export interface WeeklyRowDeal {
+  id: string
+  serial: string
+  name: string
+  /** The products, or the deal's name when it has none yet. */
+  requirement: string
+  softwareNeeded: boolean | null
+  nextStep: string | null
+}
+
+/** One account on one day: the row the team's own sheets have (§26.7). */
+export interface WeeklyAccountRow {
+  salesAccountId: string
+  accountName: string
+  deals: WeeklyRowDeal[]
+  requirement: string
+  visited: string[]
+  pendingTasks: { id: string; title: string; dueOn: string }[]
+  challenges: string | null
+  gap: string | null
+  /** Typed, and only where the account has no open deal. */
+  nextStep: string | null
+  taskId: string | null
+}
+
+export interface WeeklyOtherWork {
+  id: string
+  date: string
+  text: string
+}
+
+export interface WeeklyDay {
+  date: string
+  label: WeeklyDayLabel | null
+  accounts: WeeklyAccountRow[]
+  otherWork: WeeklyOtherWork[]
+}
+
+export interface WeeklyCounts {
+  accounts: number
+  communications: number
+  meetings: number
+  dealChanges: number
+  tasksDone: number
+}
+
+export interface WeeklyReportDetail {
+  weekStart: string
+  days: WeeklyDay[]
+  counts: WeeklyCounts
+  status: WeeklyReportStatus
+  /** The day it is due: the Thursday, or the last working day before it. */
+  deadlineDay: string
+  submittedLate: boolean
+  firstSubmittedAt: string | null
+  lastSubmittedAt: string | null
+  copies: { id: string; submittedAt: string; fileName: string }[]
+  person: { employeeId: string; fullName: string; designation: string }
+}
+
+/** One line of All Reports (§26.15). */
+export interface WeeklyTeamRow {
+  employeeId: string
+  fullName: string
+  designation: string
+  status: WeeklyReportStatus
+  submittedLate: boolean
+  firstSubmittedAt: string | null
+}
+
+export interface SaveWeeklyNoteBody {
+  date: string
+  salesAccountId: string
+  challenges: string | null
+  gap: string | null
+  nextStep: string | null
+  /** Turns the typed next step into a task for me, due a week out (§26.10). */
+  makeTask: boolean
+}
+
+export interface AddWeeklyOtherWorkBody {
+  date: string
+  text: string
+}

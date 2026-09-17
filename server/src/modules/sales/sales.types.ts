@@ -52,6 +52,8 @@ export interface OpportunitySummary {
   stageChangedAt: string
   nextStep: string | null
   nextStepDueOn: string | null
+  /** Whether the requirement includes software (§26.9). Null until answered. */
+  softwareNeeded: boolean | null
   ownerEmployeeId: string
   ownerName: string
   wonByEmployeeId: string | null
