@@ -96,6 +96,9 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
         // "/meetings", so a prefix sum would count the minutes row into Meetings.
         "/sales/meetings": dashboard.data?.badges["/meetings"] ?? 0,
         "/sales/meetings/minutes": dashboard.data?.badges["/meetings/minutes"] ?? 0,
+        // Only an admin has a number here: a writer's own week is a status
+        // line on the overview, not a queue (§26.16).
+        "/sales/weekly": dashboard.data?.badges["/weekly/all"] ?? 0,
         "/sales/tasks": badgeFor("/tasks"),
       }}
       // Wider than a role dashboard's 1220/1600px cap: the accounts table

@@ -39,6 +39,8 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     stage: row.stage, stageChangedAt: row.stageChangedAt.toISOString(),
     nextStep: row.nextStep ?? null,
     nextStepDueOn: row.nextStepDueOn?.toISOString().slice(0, 10) ?? null,
+    // The weekly report Application column, answered on the deal (§26.9).
+    softwareNeeded: row.softwareNeeded ?? null,
     ownerEmployeeId: row.ownerEmployeeId, ownerName: row.owner?.fullName ?? "",
     wonByEmployeeId: row.wonByEmployeeId ?? null,
     lastActivityAt: row.lastActivityAt.toISOString(), createdAt: row.createdAt.toISOString(),

@@ -54,6 +54,8 @@ export type EventType =
   | "sales.opportunity.created"
   | "sales.opportunity.stage_changed"
   | "sales.opportunity.next_step_changed"
+  // The weekly report Application column, answered on the deal (§26.9).
+  | "sales.opportunity.software_needed_changed"
   | "sales.opportunity.won"
   | "sales.opportunity.closed"
   | "sales.meeting.scheduled"

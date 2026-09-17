@@ -44,6 +44,9 @@ export type AuditEntity =
   | "SALES_MEETING"
   | "SALES_TASK"
   | "SALES_MINUTES"
+  // A Sales User's weekly report: submitting, reopening, and the lines they
+  // type into it (revision §26).
+  | "WEEKLY_REPORT"
   // The minutes template on Sales Settings: reference data edited from a
   // settings screen keeps a trail, as a department or a shift does.
   | "SALES_MINUTES_TEMPLATE"

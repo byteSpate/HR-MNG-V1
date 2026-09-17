@@ -61,6 +61,10 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // The menu stays flat: §22's tree is not adopted in this phase.
         { label: "Meeting Minutes", href: "/sales/meetings/minutes", icon: "RiFileList3Line" },
         { label: "Tasks", href: "/sales/tasks", icon: "RiTaskLine" },
+        // One person's account of one working week (revision §26.14), right
+        // after Tasks. My Week, Past Weeks and All Reports are tabs inside the
+        // page rather than menu items: the menu stays flat.
+        { label: "Weekly Report", href: "/sales/weekly", icon: "RiCalendarCheckLine" },
         // The hub's settings, the minutes template first (§25.30). Everyone in
         // the hub since 2026-09-15: the template's format changes often, and
         // waiting for an admin slowed people down.

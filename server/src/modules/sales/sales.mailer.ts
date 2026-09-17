@@ -13,6 +13,7 @@ import { notify } from "../../utils/mailer"
 import { officeTimeOf } from "../attendance/attendance.time"
 import { MEETING_MODE_LABEL, whenLabel } from "./meeting.present"
 import type { DailyDigest } from "./sales.reminders"
+import type { WeeklyReminder } from "./weekly.reminders"
 
 const appLink = (path: string) => `${env.CLIENT_ORIGIN}/sales${path}`
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`
@@ -137,5 +138,41 @@ export async function sendMeetingChanged(input: MeetingChangedInput): Promise<vo
     }),
     entity: "SALES_MEETING",
     entityId: input.meeting.id,
+  })
+}
+
+/**
+ * The weekly report reminder (§26.3), at 16:00 on the day it is due — the
+ * Thursday, or the last working day before it when the Thursday is a holiday.
+ * One per person per week; a submitted week gets none.
+ */
+export async function sendWeeklyReminder(reminder: WeeklyReminder): Promise<void> {
+  const week = `${formatShortDate(reminder.weekStart)} to ${formatShortDate(reminder.deadlineDay)}`
+  const subject = "Your weekly report is due today"
+  const intro = `${reminder.fullName}, your weekly report for ${week} has not been submitted. It is due by the end of today.`
+  const link = appLink("/weekly")
+  const facts: FactRow[] = [
+    { label: "Week", value: week },
+    { label: "Due", value: `End of ${formatShortDate(reminder.deadlineDay)}` },
+  ]
+
+  await notify({
+    to: reminder.email,
+    kind: "SALES_WEEKLY_REMINDER",
+    subject,
+    text: [intro, "", ...facts.map((fact) => `${fact.label}: ${fact.value}`), "", `Open your week: ${link}`].join("\n"),
+    html: renderEmail({
+      preheader: "Due by the end of today",
+      serial: serialFor("SALES_WEEKLY_REMINDER"),
+      subject,
+      stamp: { label: "Due today", tone: "action" },
+      intro,
+      facts,
+      action: { label: "Open my week", href: link },
+      footer:
+        "You are receiving this because your weekly report is still a draft on the day it is due. It comes once a week, and never on a day the office is closed.",
+    }),
+    entity: "EMPLOYEE",
+    entityId: reminder.employeeId,
   })
 }
