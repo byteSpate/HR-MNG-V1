@@ -89,13 +89,14 @@ export async function submitMyWeek(query: WeekQuery, actor: AccessTokenPayload):
   const employeeId = await writerFor(actor)
   const weekStart = weekFrom(query)
 
-  const report = await prisma.weeklyReport.findUnique({
+  // Submission is itself a write. It creates the row for an otherwise empty
+  // week, so a week of only approved leave or holidays can still be submitted.
+  const report = await prisma.weeklyReport.upsert({
     where: { employeeId_weekStart: { employeeId, weekStart } },
-    select: { id: true, status: true, firstSubmittedAt: true },
+    create: { employeeId, weekStart, createdBy: actor.sub },
+    update: {},
+    select: { id: true, firstSubmittedAt: true, updatedAt: true },
   })
-  if (!report) {
-    throw new AppError(400, "There is nothing in this week to submit yet")
-  }
   // Before anything is made: a copy that cannot be kept must not be submitted.
   assertMediaConfigured()
 
@@ -126,6 +127,22 @@ export async function submitMyWeek(query: WeekQuery, actor: AccessTokenPayload):
   const asset = await uploadBuffer(pdf, copyPublicId(report.id))
   try {
     await prisma.$transaction(async (tx) => {
+      // The PDF is a frozen record. If another tab saved while it rendered,
+      // do not call the newer report submitted with an older PDF; remove the
+      // upload below and ask the writer to submit the latest version.
+      const written = await tx.weeklyReport.updateMany({
+        where: { id: report.id, updatedAt: report.updatedAt },
+        data: {
+          status: "SUBMITTED",
+          lastSubmittedAt: submittedAt,
+          // Written once. A reopened week keeps the day it was first sent,
+          // and whether that was late.
+          ...(firstTime ? { firstSubmittedAt: submittedAt, submittedLate: late } : {}),
+        },
+      })
+      if (written.count !== 1) {
+        throw new AppError(409, "The week changed while the PDF was being made. Submit the latest version instead.")
+      }
       await tx.weeklyReportCopy.create({
         data: {
           weeklyReportId: report.id,
@@ -133,16 +150,6 @@ export async function submitMyWeek(query: WeekQuery, actor: AccessTokenPayload):
           submittedBy: actor.sub,
           fileId: asset.publicId,
           fileName,
-        },
-      })
-      await tx.weeklyReport.update({
-        where: { id: report.id },
-        data: {
-          status: "SUBMITTED",
-          lastSubmittedAt: submittedAt,
-          // Written once. A reopened week keeps the day it was first sent,
-          // and whether that was late.
-          ...(firstTime ? { firstSubmittedAt: submittedAt, submittedLate: late } : {}),
         },
       })
       await writeAudit(tx, {

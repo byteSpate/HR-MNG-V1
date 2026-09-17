@@ -362,6 +362,20 @@ export async function saveAccountNote(
     })
     if (!account) throw new AppError(404, ACCOUNT_NOT_YOURS)
 
+    // A deal owns its next step. The page already hides this field when an
+    // account has one, but the API must uphold that boundary for direct calls
+    // too — otherwise it can both store a hidden competing step and make a
+    // task from it.
+    if (body.nextStep !== null) {
+      const openDeal = await asClient(tx).opportunity.findFirst({
+        where: { salesAccountId: account.id, status: "ONGOING" },
+        select: { id: true },
+      })
+      if (openDeal) {
+        throw new AppError(400, "This account has an open deal, so change that deal's next step instead")
+      }
+    }
+
     const report = await openWeekFor(tx, employeeId, weekStart, actor)
 
     let taskId: string | null = null
@@ -471,11 +485,14 @@ export async function listTeamWeek(
       select: { id: true, fullName: true, designation: true },
       orderBy: { fullName: "asc" },
     }),
-    prisma.weeklyReport.findMany({ where: { weekStart } }),
+    prisma.weeklyReport.findMany({
+      where: { weekStart },
+      include: { employee: { select: { id: true, fullName: true, designation: true } } },
+    }),
   ])
 
   const byEmployee = new Map(reports.map((report) => [report.employeeId, report]))
-  return people.map((person) => {
+  const rows = people.map((person) => {
     const report = byEmployee.get(person.id)
     return {
       employeeId: person.id,
@@ -486,6 +503,21 @@ export async function listTeamWeek(
       firstSubmittedAt: report?.firstSubmittedAt ?? null,
     }
   })
+  // A Sales User can later become a Sales Admin. Their old reports still
+  // belong in All Reports (§26.1), even though they no longer appear in the
+  // current Sales User directory above.
+  for (const report of reports) {
+    if (rows.some((row) => row.employeeId === report.employeeId)) continue
+    rows.push({
+      employeeId: report.employee.id,
+      fullName: report.employee.fullName,
+      designation: report.employee.designation,
+      status: report.status as WeekStatus,
+      submittedLate: report.submittedLate,
+      firstSubmittedAt: report.firstSubmittedAt,
+    })
+  }
+  return rows
 }
 
 /** One person's week, read by an admin (§26.15). Read-only: admins never write. */

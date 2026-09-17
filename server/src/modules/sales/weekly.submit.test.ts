@@ -122,20 +122,20 @@ describe("submitMyWeek", () => {
     // 00:30 Dhaka on the Friday: the office Thursday is over.
     vi.setSystemTime(new Date("2026-09-17T18:30:00.000Z"))
     await submitMyWeek({ week: "2026-09-13" }, USER)
-    expect(prisma.weeklyReport.update).toHaveBeenCalledWith(
+    expect(prisma.weeklyReport.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ submittedLate: true }) })
     )
   })
 
   it("keeps the on-time mark and the first time when a reopened week is sent again", async () => {
     vi.setSystemTime(new Date("2026-09-19T05:00:00.000Z"))
-    vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue(
+    vi.mocked(prisma.weeklyReport.upsert).mockResolvedValue(
       report({ status: "DRAFT", firstSubmittedAt: day("2026-09-17"), submittedLate: false }) as never
     )
 
     await submitMyWeek({ week: "2026-09-13" }, USER)
 
-    const data = vi.mocked(prisma.weeklyReport.update).mock.calls[0][0].data as Record<string, unknown>
+    const data = vi.mocked(prisma.weeklyReport.updateMany).mock.calls[0][0].data as Record<string, unknown>
     expect(data.firstSubmittedAt).toBeUndefined()
     expect(data.submittedLate).toBeUndefined()
     expect(data.status).toBe("SUBMITTED")

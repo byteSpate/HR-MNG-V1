@@ -49,6 +49,8 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { CheckboxField, Field, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import { downloadBlob } from "@/components/payroll/payroll-shared"
+import { MeetingFormDialog } from "@/components/sales/meeting-dialogs"
+import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
 import { shortDay } from "@/components/sales/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -758,6 +760,8 @@ function AddActivityDialog({ weekKey, onClose }: { weekKey: string; onClose: () 
   const [summary, setSummary] = useState("")
   const [detail, setDetail] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [kind, setKind] = useState<"choose" | "communication" | "meeting" | "requirement" | "other">("choose")
+  const [requirementAccountId, setRequirementAccountId] = useState("")
 
   const accounts = useQuery({
     queryKey: salesKeys.accounts("mine"),
@@ -781,13 +785,52 @@ function AddActivityDialog({ weekKey, onClose }: { weekKey: string; onClose: () 
     onError: (err) => setError(toMessage(err)),
   })
 
+  if (kind === "other") return <AddOtherWorkDialog weekKey={weekKey} onClose={onClose} />
+  if (kind === "meeting") return <MeetingFormDialog open onOpenChange={(open) => !open && onClose()} />
+  if (kind === "requirement" && requirementAccountId) {
+    return <OpportunityFormDialog accountId={requirementAccountId} open onOpenChange={(open) => !open && onClose()} />
+  }
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Log a call or message</DialogTitle>
+          <DialogTitle>{kind === "choose" ? "Add activity" : kind === "requirement" ? "New requirement" : "Log a call or message"}</DialogTitle>
         </DialogHeader>
 
+        {kind === "choose" ? (
+          <div className="grid gap-2">
+            <Button type="button" className={OUTLINE} onClick={() => setKind("communication")}>
+              Log a call or message
+            </Button>
+            <Button type="button" className={OUTLINE} onClick={() => setKind("meeting")}>
+              Schedule a meeting
+            </Button>
+            <Button type="button" className={OUTLINE} onClick={() => setKind("requirement")}>
+              Add a requirement
+            </Button>
+            <Button type="button" className={OUTLINE} onClick={() => setKind("other")}>
+              Add other work
+            </Button>
+            <p className={`text-[12px] ${TONE.muted}`}>Choose where this work belongs. It appears in this week automatically.</p>
+          </div>
+        ) : kind === "requirement" ? (
+          <div className="grid gap-3">
+            <Field label="Account">
+              <Select value={requirementAccountId} onValueChange={(value) => value && setRequirementAccountId(value)}>
+                <SelectTrigger aria-label="Account" className="w-full">
+                  <SelectValue placeholder="Choose an account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(accounts.data ?? []).map((account) => (
+                    <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <p className={`text-[12px] ${TONE.muted}`}>The opportunity form opens as soon as you choose its account.</p>
+          </div>
+        ) : (
         <div className="grid gap-3">
           <Field label="Account">
             <Select value={salesAccountId} onValueChange={(v) => v && setAccount(v)}>
@@ -839,34 +882,61 @@ function AddActivityDialog({ weekKey, onClose }: { weekKey: string; onClose: () 
 
           {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
 
-          <PanelNotice>
-            A meeting or a new requirement has its own form. Open{" "}
-            <Link href="/sales/meetings" className="underline">
-              Meetings
-            </Link>{" "}
-            or{" "}
-            <Link href="/sales/opportunities" className="underline">
-              Opportunities
-            </Link>{" "}
-            and it appears in this week by itself.
-          </PanelNotice>
         </div>
+        )}
 
         <DialogFooter>
-          <Button type="button" className={QUIET} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            className={PRIMARY}
-            disabled={!salesAccountId || !summary.trim() || log.isPending}
-            onClick={() => {
-              setError(null)
-              log.mutate()
-            }}
-          >
-            {log.isPending ? "Saving…" : "Log it"}
-          </Button>
+          {kind !== "choose" ? <Button type="button" className={QUIET} onClick={() => setKind("choose")}>Back</Button> : null}
+          <Button type="button" className={QUIET} onClick={onClose}>Cancel</Button>
+          {kind === "communication" ? (
+            <Button
+              type="button"
+              className={PRIMARY}
+              disabled={!salesAccountId || !summary.trim() || log.isPending}
+              onClick={() => {
+                setError(null)
+                log.mutate()
+              }}
+            >
+              {log.isPending ? "Saving…" : "Log it"}
+            </Button>
+          ) : null}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AddOtherWorkDialog({ weekKey, onClose }: { weekKey: string; onClose: () => void }) {
+  const { accessToken } = useSession()
+  const queryClient = useQueryClient()
+  const saturday = new Date(new Date(`${weekKey}T00:00:00.000Z`).getTime() - 86_400_000).toISOString().slice(0, 10)
+  const thursday = new Date(new Date(`${weekKey}T00:00:00.000Z`).getTime() + 4 * 86_400_000).toISOString().slice(0, 10)
+  const [date, setDate] = useState(weekKey)
+  const [text, setText] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const add = useMutation({
+    mutationFn: () => addWeeklyOtherWork(accessToken!, { date, text: text.trim() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: salesKeys.weeklyMine(weekKey) })
+      toast.success("Other work added to this week.")
+      onClose()
+    },
+    onError: (err) => setError(toMessage(err)),
+  })
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[520px]">
+        <DialogHeader><DialogTitle>Add other work</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <Field label="Day"><Input type="date" min={saturday} max={thursday} value={date} onChange={(event) => setDate(event.target.value)} /></Field>
+          <Field label="What did you do?"><Textarea rows={3} value={text} onChange={(event) => setText(event.target.value)} placeholder="An office discussion, learning, an HLD…" /></Field>
+          {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
+        </div>
+        <DialogFooter>
+          <Button type="button" className={QUIET} onClick={onClose}>Cancel</Button>
+          <Button type="button" className={PRIMARY} disabled={!text.trim() || add.isPending} onClick={() => add.mutate()}>{add.isPending ? "Adding…" : "Add"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
