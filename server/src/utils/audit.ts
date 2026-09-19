@@ -50,6 +50,11 @@ export type AuditEntity =
   // The minutes template on Sales Settings: reference data edited from a
   // settings screen keeps a trail, as a department or a shift does.
   | "SALES_MINUTES_TEMPLATE"
+  // The Saturday funnel review: opening it, completing it, reopening it
+  // (revision §27.11). Edits made *during* a meeting are audited against the
+  // deal they changed, not against this — the note on that row names the
+  // meeting instead (§27.7).
+  | "FUNNEL_MEETING"
   | "ASSET"
   | "ASSET_CATEGORY"
   | "ASSET_ASSIGNMENT"
