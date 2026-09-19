@@ -27,6 +27,7 @@ import {
   RiArticleLine,
   RiFileList3Line,
   RiMailLine,
+  RiFilter3Line,
   RiMegaphoneLine,
   RiNodeTree,
   RiPieChartLine,
@@ -83,6 +84,8 @@ export const icons = {
   RiCalendar2Line,
   /** A follow-up task, in the Sales Hub. */
   RiTaskLine,
+  /** The funnel: every quoted deal, per person (revision §27). */
+  RiFilter3Line,
 } satisfies Record<string, RemixiconComponentType>
 
 export type IconName = keyof typeof icons

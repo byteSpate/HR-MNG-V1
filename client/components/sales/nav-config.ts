@@ -65,6 +65,11 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // after Tasks. My Week, Past Weeks and All Reports are tabs inside the
         // page rather than menu items: the menu stays flat.
         { label: "Weekly Report", href: "/sales/weekly", icon: "RiCalendarCheckLine" },
+        // Every quoted deal, per person, reviewed each Saturday (§27.14).
+        // After Weekly Report, because it reads the week that report covers.
+        // One item: the team list and one person's grid are the same page,
+        // and the meeting is a panel on it rather than a route of its own.
+        { label: "Funnel", href: "/sales/funnel", icon: "RiFilter3Line" },
         // The hub's settings, the minutes template first (§25.30). Everyone in
         // the hub since 2026-09-15: the template's format changes often, and
         // waiting for an admin slowed people down.
