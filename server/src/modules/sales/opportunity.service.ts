@@ -20,6 +20,7 @@ import { presentOpportunity } from "./opportunity.present"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "./meeting.present"
 import { presentChanges, resolveNames } from "./history.present"
 import { createTaskIn } from "./task.service"
+import { stampOfferedOn } from "./funnel/funnel.edit"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
@@ -328,6 +329,12 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
     if (current.status !== "ONGOING") throw new AppError(409, "Reopen this Opportunity before changing its stage")
     if (current.stage === body.stage) return presentOpportunity(current)
     const now = new Date()
+    // Reaching Quotation submitted is the moment a deal joins the funnel, and
+    // the moment its offer date is known (revision §27.2, §27.4). Only ever
+    // fills a blank: a deal that drops back a stage and comes forward again
+    // keeps the date it was really quoted on, and a date somebody has
+    // corrected by hand is never overwritten.
+    const stamped = await stampOfferedOn(tx, id, body.stage, current.offeredOn, officeDateOf(now))
     const updated = await tx.opportunity.update({
       where: { id }, data: { stage: body.stage, stageChangedAt: now, lastActivityAt: now }, include: INCLUDE,
     })
@@ -335,6 +342,13 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
       entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
       before: { stage: current.stage }, after: { stage: body.stage },
     })
+    if (stamped) {
+      await writeAudit(tx, {
+        entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
+        before: { offeredOn: null }, after: { offeredOn: officeDateOf(now).toISOString() },
+        note: "Stamped when the quotation was submitted",
+      })
+    }
     await emitEvent(tx, {
       type: "sales.opportunity.stage_changed", entity: "OPPORTUNITY", entityId: id,
       actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,

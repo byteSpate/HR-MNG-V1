@@ -171,7 +171,9 @@ export async function stampOfferedOn(
   today: Date
 ): Promise<boolean> {
   if (stage !== "QUOTATION_SUBMITTED") return false
-  if (currentOfferedOn !== null) return false
+  // Older callers and fixtures may omit this newly added field entirely.
+  // Like null, undefined means this deal has never been stamped.
+  if (currentOfferedOn) return false
 
   await tx.opportunity.update({
     where: { id: opportunityId },
