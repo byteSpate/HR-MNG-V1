@@ -66,6 +66,13 @@ export type EventType =
   | "sales.task.completed"
   | "sales.minutes.written"
   | "sales.minutes.sent"
+  // The funnel (revision §27). A cell edited in the grid writes to the real
+  // deal, so its event hangs off the OPPORTUNITY and is worded to say whether
+  // the change came out of a Saturday review (§27.7).
+  | "sales.funnel.cell_changed"
+  | "sales.funnel.meeting_opened"
+  | "sales.funnel.meeting_completed"
+  | "sales.funnel.meeting_reopened"
   | "asset.assigned"
   | "asset.acknowledged"
   | "asset.returned"

@@ -3,6 +3,7 @@ import { Router } from "express"
 import { SalesRole } from "../../generated/prisma/client"
 import { requireAuth } from "../../middleware/requireAuth"
 import { requireSales } from "../../middleware/requireSales"
+import funnelRouter from "./funnel/funnel.routes"
 import {
   addContactHandler,
   createSalesAccountHandler,
@@ -210,6 +211,12 @@ router.get(
 // under the same prefix, each with its own guard.
 router.get("/settings/minutes-template", requireAuth, requireSales(), getMinutesTemplateHandler)
 router.put("/settings/minutes-template", requireAuth, requireSales(), saveMinutesTemplateHandler)
+
+// The funnel (revision §27), mounted rather than spelled out. Phases 1 to 5
+// each added their paths to this file and it now carries every route in the
+// module; the funnel keeps its own router, which is the shape §28 will move
+// the rest into.
+router.use("/funnel", funnelRouter)
 
 export default router
 
