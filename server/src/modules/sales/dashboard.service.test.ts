@@ -10,6 +10,7 @@ vi.mock("../../config/prisma", () => ({
     salesMeeting: { count: vi.fn(), findMany: vi.fn() },
     salesTask: { count: vi.fn() },
     weeklyReport: { findUnique: vi.fn(), count: vi.fn() },
+    funnelMeetingReview: { count: vi.fn() },
     auditLog: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
     user: { findUnique: vi.fn() },
@@ -81,6 +82,8 @@ const RAHIM_WINS: Win[] = [
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Nobody's funnel walked yet, unless a test says otherwise (§27.14).
+  vi.mocked(prisma.funnelMeetingReview.count).mockResolvedValue(0 as never)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as never)
   vi.mocked(prisma.employee.findUnique).mockResolvedValue({
     id: "emp-2",
@@ -313,11 +316,11 @@ describe("the rest of the sales dashboard", () => {
     }
   })
 
-  it("ships all eight action rows, today's meetings and tasks first, then meetings with no minutes", async () => {
+  it("ships all nine action rows, today's meetings and tasks first, then meetings with no minutes", async () => {
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "minutes", "weekly", "closing", "unverified", "quiet", "stuck"])
+      .toEqual(["meetings", "tasks", "minutes", "weekly", "funnel", "closing", "unverified", "quiet", "stuck"])
   })
 
   it("has nothing left that is not built, so the notice goes away", async () => {
@@ -523,8 +526,8 @@ describe("the team roll-up", () => {
 
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "minutes", "weekly", "closing", "unverified", "quiet", "stuck"])
-    expect(Object.keys(payload.badges)).toHaveLength(8)
+      .toEqual(["meetings", "tasks", "minutes", "weekly", "funnel", "closing", "unverified", "quiet", "stuck"])
+    expect(Object.keys(payload.badges)).toHaveLength(9)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {

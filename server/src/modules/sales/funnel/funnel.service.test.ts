@@ -39,12 +39,12 @@ const ADMIN = {
 } as never
 
 const QUERY = {
-  sort: "offeredOn",
-  direction: "desc",
+  sort: "offeredOn" as const,
+  direction: "desc" as const,
   limit: 200,
   hideClosed: false,
   changedLastWeek: false,
-} as never
+}
 
 const DEAL = {
   id: "opp-1",
@@ -79,7 +79,7 @@ beforeEach(() => {
 
 describe("getFunnel: who may see whose", () => {
   it("gives a Sales User their own funnel without being asked for an id", async () => {
-    const grid = await getFunnel(QUERY, USER)
+    const grid = await getFunnel(QUERY as never, USER)
     expect(grid.employeeId).toBe("emp-1")
     expect(dealArgs().where.ownerEmployeeId).toBe("emp-1")
   })
@@ -102,12 +102,12 @@ describe("getFunnel: membership and filters", () => {
   it("only ever asks for deals that have been quoted", async () => {
     // Funnel membership is offeredOn being set, and it never comes off
     // (§27.2). A deal still in Requirement received must not appear.
-    await getFunnel(QUERY, USER)
+    await getFunnel(QUERY as never, USER)
     expect(dealArgs().where.offeredOn).toEqual({ not: null })
   })
 
   it("keeps Lost and Cancelled deals unless asked to hide them", async () => {
-    await getFunnel(QUERY, USER)
+    await getFunnel(QUERY as never, USER)
     expect(dealArgs().where.status).toBeUndefined()
   })
 
@@ -127,14 +127,14 @@ describe("getFunnel: membership and filters", () => {
   it("always bounds the read", async () => {
     // The funnel is a list that only grows. An unbounded read here would be
     // the same defect the performance audit found in 191 other places.
-    await getFunnel(QUERY, USER)
+    await getFunnel(QUERY as never, USER)
     expect(dealArgs().take).toBe(200)
   })
 })
 
 describe("getFunnel: sorting happens in the database", () => {
   it("sorts by offer date, newest first, with a stable second key", async () => {
-    await getFunnel(QUERY, USER)
+    await getFunnel(QUERY as never, USER)
     expect(dealArgs().orderBy).toEqual([{ offeredOn: "desc" }, { serial: "asc" }])
   })
 
@@ -148,13 +148,13 @@ describe("getFunnel: management notes", () => {
   it("does not let a Sales User's read pull back a management note", async () => {
     // A `where`, not a filter over fetched rows: a caller who may not read one
     // must not cause it to be read.
-    await getFunnel(QUERY, USER)
+    await getFunnel(QUERY as never, USER)
     const where = mocked(prisma.salesComment.findMany).mock.calls[0][0].where
     expect(where.kind).toEqual({ not: "MANAGEMENT_NOTE" })
   })
 
   it("places no such restriction on an admin", async () => {
-    await getFunnel(QUERY, ADMIN)
+    await getFunnel(QUERY as never, ADMIN)
     const where = mocked(prisma.salesComment.findMany).mock.calls[0][0].where
     expect(where.kind).toBeUndefined()
   })
@@ -163,7 +163,7 @@ describe("getFunnel: management notes", () => {
 describe("getFunnel: an empty funnel reads nothing extra", () => {
   it("skips the comment and audit queries when there are no deals", async () => {
     mocked(prisma.opportunity.findMany).mockResolvedValue([])
-    const grid = await getFunnel(QUERY, USER)
+    const grid = await getFunnel(QUERY as never, USER)
 
     expect(grid.rows).toEqual([])
     expect(grid.totals.quoted).toBe("0.00")

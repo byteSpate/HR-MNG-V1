@@ -250,7 +250,7 @@ async function actionRows(
   const weekStart = weekStartOf(today)
   const lastWeekStart = addDays(weekStart, -7)
 
-  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue, minutesWaiting, myWeek, weeklyWriters, weeklySubmitted] = await Promise.all([
+  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue, minutesWaiting, myWeek, weeklyWriters, weeklySubmitted, myFunnelOpen, funnelReviewed] = await Promise.all([
     prisma.opportunity.count({
       where: { ...open, expectedCloseDate: { gte: today, lte: closingBy } },
     }),
@@ -280,6 +280,21 @@ async function actionRows(
     mine
       ? Promise.resolve(0)
       : prisma.weeklyReport.count({ where: { weekStart: lastWeekStart, status: "SUBMITTED" } }),
+    // The funnel (§27.14). A writer is told how many of their own quoted
+    // deals are still live; an admin is told how many people have not been
+    // walked yet in the week under review.
+    mine
+      ? prisma.opportunity.count({
+          where: {
+            ownerEmployeeId: mine,
+            offeredOn: { not: null },
+            status: { notIn: ["LOST", "CANCELLED"] },
+          },
+        })
+      : Promise.resolve(0),
+    mine
+      ? Promise.resolve(0)
+      : prisma.funnelMeetingReview.count({ where: { funnelMeeting: { weekStart: lastWeekStart } } }),
   ])
 
   return [
@@ -341,6 +356,29 @@ async function actionRows(
               : `Of ${weeklyWriters} Sales Users`,
           tone: toneFor.queue(Math.max(weeklyWriters - weeklySubmitted, 0)),
           href: "/weekly/all",
+        },
+    // The funnel row (§27.14), following Weekly Report in the menu and here.
+    mine
+      ? {
+          key: "funnel",
+          label: "Deals in your funnel",
+          count: myFunnelOpen,
+          // Informational, not a queue: a full funnel is the good outcome.
+          // Colouring it as work would make the number read as a warning.
+          detail: myFunnelOpen === 0 ? "Nothing quoted and still open" : "Quoted and still open",
+          tone: toneFor.informational(),
+          href: "/funnel",
+        }
+      : {
+          key: "funnel",
+          label: "Funnels not reviewed last week",
+          count: Math.max(weeklyWriters - funnelReviewed, 0),
+          detail:
+            weeklyWriters - funnelReviewed <= 0
+              ? "Everybody was walked"
+              : `Of ${weeklyWriters} Sales Users`,
+          tone: toneFor.queue(Math.max(weeklyWriters - funnelReviewed, 0)),
+          href: "/funnel",
         },
     {
       key: "closing",
