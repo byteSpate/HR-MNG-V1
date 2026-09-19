@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   completeFunnelMeeting,
+  createFunnelAction,
+  addManagementNote,
   editFunnelCell,
   getFunnel,
   getFunnelMeeting,
@@ -30,7 +32,7 @@ import {
   setPersonReviewed,
 } from "@/lib/api/funnel"
 import { funnelKeys, funnelWriteKeys } from "@/lib/api/funnel-keys"
-import type { FunnelCellField, FunnelQueryOptions, FunnelSort } from "@/lib/api/types"
+import type { FunnelActionBody, FunnelCellField, FunnelQueryOptions, FunnelSort } from "@/lib/api/types"
 import { useSession } from "@/lib/auth/session-context"
 import { cn } from "@/lib/utils"
 
@@ -130,6 +132,18 @@ export function FunnelPage() {
     onSuccess: refresh,
   })
 
+  const managementNote = useMutation({
+    mutationFn: (input: { opportunityId: string; body: string }) =>
+      addManagementNote(meetingQuery.data!.id, input, accessToken!),
+    onSuccess: refresh,
+  })
+
+  const funnelAction = useMutation({
+    mutationFn: (body: FunnelActionBody) =>
+      createFunnelAction(meetingQuery.data!.id, body, accessToken!),
+    onSuccess: refresh,
+  })
+
   const onEdit = async (opportunityId: string, field: FunnelCellField, value: string | null) => {
     await editCell.mutateAsync({ opportunityId, field, value })
   }
@@ -181,8 +195,14 @@ export function FunnelPage() {
             <FunnelMeetingPanel
               meeting={meetingQuery.data ?? null}
               team={teamQuery.data}
-              busy={meetingAction.isPending}
-              error={meetingAction.isError ? meetingAction.error : null}
+              busy={meetingAction.isPending || funnelAction.isPending}
+              error={
+                meetingAction.isError
+                  ? meetingAction.error
+                  : funnelAction.isError
+                    ? funnelAction.error
+                    : null
+              }
               onOpen={() => meetingAction.mutate({ kind: "open" })}
               onToggleAttendee={(employeeId) =>
                 meetingAction.mutate({ kind: "attendees", employeeId })
@@ -190,6 +210,7 @@ export function FunnelPage() {
               onSaveNote={(note) => meetingAction.mutate({ kind: "note", note })}
               onComplete={() => meetingAction.mutate({ kind: "complete" })}
               onReopen={() => meetingAction.mutate({ kind: "reopen" })}
+              onCreateAction={(body) => funnelAction.mutateAsync(body)}
             />
             <FunnelTeamList team={teamQuery.data} onOpen={setOpenEmployeeId} />
           </>
@@ -243,6 +264,7 @@ export function FunnelPage() {
 
       {gridQuery.isError ? <PanelAlert>{toMessage(gridQuery.error)}</PanelAlert> : null}
       {editCell.isError ? <PanelAlert>{toMessage(editCell.error)}</PanelAlert> : null}
+      {managementNote.isError ? <PanelAlert>{toMessage(managementNote.error)}</PanelAlert> : null}
 
       {gridQuery.isLoading || !grid ? (
         <Skeleton className="h-96 w-full" />
@@ -261,6 +283,10 @@ export function FunnelPage() {
             direction={filters.direction ?? "desc"}
             onSort={onSort}
             onEdit={onEdit}
+            canAddManagementNote={isAdmin && meetingOpen}
+            onAddManagementNote={async (opportunityId, body) => {
+              await managementNote.mutateAsync({ opportunityId, body })
+            }}
           />
           <p className={cn("text-xs", TONE.muted)}>
             Brand, model, quantity and the deal&apos;s status are changed on the deal itself. Open a

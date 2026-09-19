@@ -7,13 +7,13 @@
  * the week's note, and how many action items were handed out.
  */
 
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 
 import { RiCheckLine } from "@remixicon/react"
 
 import { PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
-import type { FunnelMeetingDetail, FunnelTeam } from "@/lib/api/types"
+import type { FunnelActionBody, FunnelMeetingDetail, FunnelTeam } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 interface FunnelMeetingPanelProps {
@@ -26,6 +26,7 @@ interface FunnelMeetingPanelProps {
   onSaveNote: (note: string | null) => void
   onComplete: () => void
   onReopen: () => void
+  onCreateAction: (body: FunnelActionBody) => Promise<unknown>
 }
 
 export function FunnelMeetingPanel({
@@ -38,8 +39,25 @@ export function FunnelMeetingPanel({
   onSaveNote,
   onComplete,
   onReopen,
+  onCreateAction,
 }: FunnelMeetingPanelProps) {
   const [note, setNote] = useState(meeting?.note ?? "")
+  const [actionTitle, setActionTitle] = useState("")
+  const [actionDetail, setActionDetail] = useState("")
+  const [assigneeId, setAssigneeId] = useState("")
+
+  async function submitAction(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!assigneeId || !actionTitle.trim()) return
+    await onCreateAction({
+      assignedToEmployeeId: assigneeId,
+      title: actionTitle.trim(),
+      detail: actionDetail.trim() || null,
+    })
+    setActionTitle("")
+    setActionDetail("")
+    setAssigneeId("")
+  }
 
   if (!meeting) {
     return (
@@ -135,6 +153,51 @@ export function FunnelMeetingPanel({
             Being in the room and having your funnel walked are separate. Mark people reviewed on
             their own grid.
           </p>
+
+          {!completed ? (
+            <form onSubmit={(event) => void submitAction(event)} className="mt-4 border-t border-[#E4E9EF] pt-4">
+              <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
+                Give an action item
+              </h4>
+              <p className={cn("mt-1 text-xs", TONE.muted)}>
+                It is due next Saturday and appears in the recipient&apos;s task list.
+              </p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <select
+                  value={assigneeId}
+                  onChange={(event) => setAssigneeId(event.target.value)}
+                  required
+                  className="rounded-md border border-[#E4E9EF] bg-white px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
+                >
+                  <option value="">Assign to…</option>
+                  {team.rows.map((person) => (
+                    <option key={person.employeeId} value={person.employeeId}>
+                      {person.employeeName}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={actionTitle}
+                  onChange={(event) => setActionTitle(event.target.value)}
+                  required
+                  maxLength={200}
+                  placeholder="What needs doing?"
+                  className="rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
+                />
+              </div>
+              <textarea
+                value={actionDetail}
+                onChange={(event) => setActionDetail(event.target.value)}
+                maxLength={2000}
+                rows={2}
+                placeholder="Optional context"
+                className="mt-2 w-full rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
+              />
+              <Button type="submit" size="sm" className="mt-2" disabled={busy}>
+                {busy ? "Giving…" : "Give action item"}
+              </Button>
+            </form>
+          ) : null}
         </div>
 
         <div>

@@ -11,9 +11,12 @@
 
 import Link from "next/link"
 
+import { useState } from "react"
+
 import { RiArrowRightLine } from "@remixicon/react"
 
-import { TONE } from "@/components/dashboard/record-kit"
+import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
+import { Button } from "@/components/ui/button"
 import type { FunnelRemark, FunnelRow } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
@@ -34,7 +37,34 @@ function when(iso: string): string {
   return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
 }
 
-export function FunnelRowDetail({ row }: { row: FunnelRow }) {
+export function FunnelRowDetail({
+  row,
+  canAddManagementNote,
+  onAddManagementNote,
+}: {
+  row: FunnelRow
+  canAddManagementNote: boolean
+  onAddManagementNote: (opportunityId: string, body: string) => Promise<void>
+}) {
+  const [note, setNote] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<unknown>(null)
+
+  async function addNote() {
+    const body = note.trim()
+    if (!body) return
+    setSaving(true)
+    setError(null)
+    try {
+      await onAddManagementNote(row.opportunityId, body)
+      setNote("")
+    } catch (err) {
+      setError(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <div>
@@ -82,6 +112,33 @@ export function FunnelRowDetail({ row }: { row: FunnelRow }) {
             ))}
           </ul>
         )}
+
+        {canAddManagementNote ? (
+          <div className="mt-3 border-t border-[#E4E9EF] pt-3">
+            <label htmlFor={`management-note-${row.opportunityId}`} className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
+              Management note
+            </label>
+            <textarea
+              id={`management-note-${row.opportunityId}`}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              rows={3}
+              maxLength={4000}
+              placeholder="What is blocking this deal?"
+              className="mt-2 w-full rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
+            />
+            {error ? <PanelAlert>{toMessage(error)}</PanelAlert> : null}
+            <Button
+              type="button"
+              size="sm"
+              className="mt-2"
+              onClick={() => void addNote()}
+              disabled={saving || note.trim() === ""}
+            >
+              {saving ? "Saving…" : "Add management note"}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div>

@@ -60,6 +60,8 @@ interface FunnelGridProps {
   direction: "asc" | "desc"
   onSort: (sort: FunnelSort) => void
   onEdit: (opportunityId: string, field: FunnelCellField, value: string | null) => Promise<void>
+  canAddManagementNote: boolean
+  onAddManagementNote: (opportunityId: string, body: string) => Promise<void>
 }
 
 export function FunnelGridTable({
@@ -69,6 +71,8 @@ export function FunnelGridTable({
   direction,
   onSort,
   onEdit,
+  canAddManagementNote,
+  onAddManagementNote,
 }: FunnelGridProps) {
   const [openRow, setOpenRow] = useState<string | null>(null)
 
@@ -157,6 +161,8 @@ export function FunnelGridTable({
                   setOpenRow(openRow === row.opportunityId ? null : row.opportunityId)
                 }
                 onEdit={onEdit}
+                canAddManagementNote={canAddManagementNote}
+                onAddManagementNote={onAddManagementNote}
               />
             ))}
           </tbody>
@@ -172,12 +178,16 @@ function FunnelGridRow({
   open,
   onToggle,
   onEdit,
+  canAddManagementNote,
+  onAddManagementNote,
 }: {
   row: FunnelRow
   editable: boolean
   open: boolean
   onToggle: () => void
   onEdit: (opportunityId: string, field: FunnelCellField, value: string | null) => Promise<void>
+  canAddManagementNote: boolean
+  onAddManagementNote: (opportunityId: string, body: string) => Promise<void>
 }) {
   const save = (field: FunnelCellField) => (value: string | null) =>
     onEdit(row.opportunityId, field, value)
@@ -339,7 +349,11 @@ function FunnelGridRow({
       {open ? (
         <tr className="border-t border-[#EEF1F5] bg-[#FAFBFC]">
           <td colSpan={15} className="px-4 py-3">
-            <FunnelRowDetail row={row} />
+            <FunnelRowDetail
+              row={row}
+              canAddManagementNote={canAddManagementNote}
+              onAddManagementNote={onAddManagementNote}
+            />
           </td>
         </tr>
       ) : null}
