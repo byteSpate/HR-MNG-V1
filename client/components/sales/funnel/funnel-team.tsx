@@ -10,7 +10,7 @@
 import { RiArrowRightLine, RiCheckLine } from "@remixicon/react"
 
 import { TONE } from "@/components/dashboard/record-kit"
-import { taka } from "@/components/sales/sales-shared"
+import { taka } from "@/components/sales/shared/sales-shared"
 import type { FunnelTeam } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { RemixiconComponentType } from "@remixicon/react"
 
-import { ClickBurst } from "@/components/sales/click-burst"
+import { ClickBurst } from "@/components/sales/shared/click-burst"
 
 // Real navigation is a full route-group swap, which Next.js completes well
 // under the burst's 520ms — the button (and the burst inside it) was gone

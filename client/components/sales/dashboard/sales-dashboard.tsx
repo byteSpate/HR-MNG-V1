@@ -40,7 +40,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MEETING_ICON, MINUTES_ICON, TASK_ICON, taka } from "@/components/sales/sales-shared"
+import { MEETING_ICON, MINUTES_ICON, TASK_ICON, taka } from "@/components/sales/shared/sales-shared"
 
 /** The server's own rule, checked here too so the answer arrives before a round trip. */
 const MONEY = /^\d{1,12}(\.\d{1,2})?$/

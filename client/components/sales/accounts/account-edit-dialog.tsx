@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ACCOUNT_STATUS_LABEL } from "@/components/sales/sales-shared";
+import { ACCOUNT_STATUS_LABEL } from "@/components/sales/shared/sales-shared";
 
 const STATUSES: SalesAccountStatus[] = ["ACTIVE", "INACTIVE", "DO_NOT_CONTACT"];
 

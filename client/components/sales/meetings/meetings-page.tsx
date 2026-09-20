@@ -21,7 +21,7 @@ import {
   useMeetingStatus,
   useStartMinutes,
 } from "@/components/sales/meetings/meeting-dialogs"
-import { MeetingRow, meetingActions } from "@/components/sales/plan-panels"
+import { MeetingRow, meetingActions } from "@/components/sales/shared/plan-panels"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 

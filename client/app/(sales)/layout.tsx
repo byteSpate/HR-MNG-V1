@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Public_Sans, Sora } from "next/font/google"
 
 import { cn } from "@/lib/utils"
-import { SalesShell } from "@/components/sales/sales-shell"
+import { SalesShell } from "@/components/sales/shared/sales-shell"
 
 const publicSans = Public_Sans({
   subsets: ["latin"],

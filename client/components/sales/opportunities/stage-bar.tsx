@@ -1,7 +1,7 @@
 import type { OpportunityStage, OpportunityStatus } from "@/lib/api/types"
 import { tones } from "@/components/dashboard/types"
 import { cn } from "@/lib/utils"
-import { OPPORTUNITY_STATUS_LABEL, STAGE_LABEL } from "@/components/sales/sales-shared"
+import { OPPORTUNITY_STATUS_LABEL, STAGE_LABEL } from "@/components/sales/shared/sales-shared"
 
 /** The six stages in funnel order, the order `STAGE_LABEL` declares them in. */
 const STAGE_ORDER = Object.keys(STAGE_LABEL) as OpportunityStage[]

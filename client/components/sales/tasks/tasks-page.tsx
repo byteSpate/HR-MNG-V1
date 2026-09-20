@@ -19,7 +19,7 @@ import type { TableCell } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, RowActions, TONE } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
-import { taskActions } from "@/components/sales/plan-panels"
+import { taskActions } from "@/components/sales/shared/plan-panels"
 import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
 import {
   TASK_ORIGIN_LABEL,
@@ -28,7 +28,7 @@ import {
   TASK_STATUS_LABEL,
   TASK_STATUS_TONE,
   onDay,
-} from "@/components/sales/sales-shared"
+} from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 

@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import { RiBuilding2Line } from "@remixicon/react"
 
-import { AnimatedNavButton } from "@/components/sales/animated-nav-button"
+import { AnimatedNavButton } from "@/components/sales/shared/animated-nav-button"
 import { useSession } from "@/lib/auth/session-context"
 
 const RAINBOW_RING = ["#f43f5e", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#6366f1", "#d946ef", "#f43f5e"]

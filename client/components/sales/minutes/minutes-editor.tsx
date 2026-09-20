@@ -78,7 +78,7 @@ import {
   dateOnlyOf,
   meetingWhen,
   shortDay,
-} from "@/components/sales/sales-shared"
+} from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"

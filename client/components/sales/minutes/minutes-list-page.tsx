@@ -28,7 +28,7 @@ import {
   MEETING_MODE_LABEL,
   meetingWhen,
   shortDay,
-} from "@/components/sales/sales-shared"
+} from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"

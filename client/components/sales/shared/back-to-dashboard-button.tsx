@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import { RiArrowLeftLine } from "@remixicon/react"
 
-import { AnimatedNavButton } from "@/components/sales/animated-nav-button"
+import { AnimatedNavButton } from "@/components/sales/shared/animated-nav-button"
 import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { useSession } from "@/lib/auth/session-context"
 

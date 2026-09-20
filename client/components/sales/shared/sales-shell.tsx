@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
-import { navGroups } from "@/components/sales/nav-config"
+import { navGroups } from "@/components/sales/shared/nav-config"
 import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { useSession } from "@/lib/auth/session-context"
 import { getSalesDashboard } from "@/lib/api/sales"

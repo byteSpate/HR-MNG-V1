@@ -32,7 +32,7 @@ import {
   toMessage,
 } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
-import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/sales-shared"
+import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/shared/sales-shared"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"

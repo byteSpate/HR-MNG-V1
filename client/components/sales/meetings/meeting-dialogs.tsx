@@ -33,7 +33,7 @@ import type {
   UpdateMeetingBody,
 } from "@/lib/api/types"
 import { CheckboxField, DialogActions, Field, FormError, PanelAlert, toMessage } from "@/components/dashboard/record-kit"
-import { MEETING_MODE_LABEL, toDatetimeLocal } from "@/components/sales/sales-shared"
+import { MEETING_MODE_LABEL, toDatetimeLocal } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"

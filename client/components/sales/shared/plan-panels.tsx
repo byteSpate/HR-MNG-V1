@@ -45,7 +45,7 @@ import {
   TASK_STATUS_TONE,
   meetingWhen,
   onDay,
-} from "@/components/sales/sales-shared"
+} from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 

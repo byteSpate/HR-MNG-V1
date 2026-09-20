@@ -20,7 +20,7 @@ import {
   daysSince,
   stageSentence,
   taka,
-} from "@/components/sales/sales-shared"
+} from "@/components/sales/shared/sales-shared"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import type { TableCell } from "@/components/dashboard/types"
 

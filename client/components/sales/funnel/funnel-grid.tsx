@@ -13,7 +13,7 @@ import { useState } from "react"
 import { RiArrowUpSLine, RiErrorWarningLine } from "@remixicon/react"
 
 import { FieldHelp, PanelNotice, TONE } from "@/components/dashboard/record-kit"
-import { taka } from "@/components/sales/sales-shared"
+import { taka } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import type { FunnelCellField, FunnelGrid, FunnelRow, FunnelSort } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
