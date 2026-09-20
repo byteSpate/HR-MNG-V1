@@ -39,7 +39,7 @@ import {
   toMessage,
 } from "@/components/dashboard/record-kit"
 import { CommentPanel } from "@/components/sales/comment-panel"
-import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
+import { OpportunityFormDialog } from "@/components/sales/opportunities/opportunity-form-dialog"
 import {
   MEETING_ICON,
   OPPORTUNITY_STATUS_LABEL,
@@ -52,7 +52,7 @@ import {
   taka,
 } from "@/components/sales/sales-shared"
 import { MeetingsPanel, TasksPanel } from "@/components/sales/plan-panels"
-import { StageBar } from "@/components/sales/stage-bar"
+import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"

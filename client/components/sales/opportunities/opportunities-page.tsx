@@ -21,7 +21,7 @@ import {
   stageSentence,
   taka,
 } from "@/components/sales/sales-shared"
-import { StageBar } from "@/components/sales/stage-bar"
+import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import type { TableCell } from "@/components/dashboard/types"
 
 const STAGGER_STEP_MS = 40
