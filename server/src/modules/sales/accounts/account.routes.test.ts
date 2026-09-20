@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
@@ -34,9 +34,9 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-import app from "../../app"
-import prisma from "../../config/prisma"
-import { signAccessToken } from "../auth/auth.utils"
+import app from "../../../app"
+import prisma from "../../../config/prisma"
+import { signAccessToken } from "../../auth/auth.utils"
 
 type Actor = {
   role: "EMPLOYEE" | "HR_ADMIN" | "SUPER_ADMIN"
