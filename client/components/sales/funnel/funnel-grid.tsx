@@ -12,8 +12,9 @@ import { useState } from "react"
 
 import { RiArrowUpSLine, RiErrorWarningLine } from "@remixicon/react"
 
-import { FieldHelp, TONE } from "@/components/dashboard/record-kit"
+import { FieldHelp, PanelNotice, TONE } from "@/components/dashboard/record-kit"
 import { taka } from "@/components/sales/sales-shared"
+import { Button } from "@/components/ui/button"
 import type { FunnelCellField, FunnelGrid, FunnelRow, FunnelSort } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
@@ -62,6 +63,12 @@ interface FunnelGridProps {
   onEdit: (opportunityId: string, field: FunnelCellField, value: string | null) => Promise<void>
   canAddManagementNote: boolean
   onAddManagementNote: (opportunityId: string, body: string) => Promise<void>
+  /**
+   * Whether any filter is narrowing the view. An empty grid means two
+   * different things depending on it, and the caller is the one who knows.
+   */
+  filtersActive: boolean
+  onClearFilters: () => void
 }
 
 export function FunnelGridTable({
@@ -73,16 +80,34 @@ export function FunnelGridTable({
   onEdit,
   canAddManagementNote,
   onAddManagementNote,
+  filtersActive,
+  onClearFilters,
 }: FunnelGridProps) {
   const [openRow, setOpenRow] = useState<string | null>(null)
 
+  // A too-narrow filter and a funnel nobody has quoted into are different
+  // facts, so they get different sentences.
   if (grid.rows.length === 0) {
     return (
       <div className="rounded-lg border border-[#E4E9EF] bg-white px-6 py-10 text-center">
-        <p className="text-sm font-medium text-[#1B2733]">Nothing quoted yet</p>
-        <p className={cn("mt-1 text-sm", TONE.muted)}>
-          A deal joins the funnel when its quotation is submitted, and stays here afterwards.
-        </p>
+        {filtersActive ? (
+          <>
+            <p className="text-sm font-medium text-[#1B2733]">No deals match these filters</p>
+            <p className={cn("mt-1 text-sm", TONE.muted)}>
+              Deals are quoted, but none of them passes the filters above.
+            </p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilters}>
+              Clear the filters
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-[#1B2733]">Nothing quoted yet</p>
+            <p className={cn("mt-1 text-sm", TONE.muted)}>
+              A deal joins the funnel when its quotation is submitted, and stays here afterwards.
+            </p>
+          </>
+        )}
       </div>
     )
   }
@@ -98,7 +123,11 @@ export function FunnelGridTable({
     }
     const active = sort === target
     return (
-      <th scope="col" className={cn("px-2 py-2 text-left font-medium", extra)}>
+      <th
+        scope="col"
+        aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"}
+        className={cn("px-2 py-2 text-left font-medium", extra)}
+      >
         <button
           type="button"
           onClick={() => onSort(target)}
@@ -117,56 +146,68 @@ export function FunnelGridTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
-      {/* The grid scrolls in here. The page body never scrolls sideways. */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1800px] border-collapse text-sm">
-          <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
-            <tr>
-              {head("sn", "S/N", "w-14 text-center")}
-              {head("date", "Date", "w-28")}
-              {head("account", "Account", "w-48")}
-              <th scope="col" className="w-48 px-2 py-2 text-left font-medium">
-                <span className="inline-flex items-center gap-1">
-                  Project Name
-                  {/* The business calls it this; the field is the deal's own
-                      name and no Project table exists (§27.6). */}
-                  <FieldHelp label="Project Name">
-                    The deal&apos;s name. It is called Project Name on the funnel sheet, so the
-                    heading is kept — but there is no separate project record behind it.
-                  </FieldHelp>
-                </span>
-              </th>
-              {head("useCase", "Use Case", "w-44")}
-              {head("brand", "Brand", "w-32")}
-              {head("model", "Model", "w-32")}
-              {head("qty", "Qty", "w-20")}
-              {head("amount", "Amount", "w-32 text-right")}
-              {head("status", "Deal Status", "w-32")}
-              {head("stage", "Stage", "w-40")}
-              {head("closing", "Tentative Closing", "w-36")}
-              {head("lostTo", "Lost To", "w-52")}
-              {head("nextStep", "Next Step", "w-52")}
-              {head("remarks", "Remarks", "w-64")}
-            </tr>
-          </thead>
-          <tbody>
-            {grid.rows.map((row) => (
-              <FunnelGridRow
-                key={row.opportunityId}
-                row={row}
-                editable={editable}
-                open={openRow === row.opportunityId}
-                onToggle={() =>
-                  setOpenRow(openRow === row.opportunityId ? null : row.opportunityId)
-                }
-                onEdit={onEdit}
-                canAddManagementNote={canAddManagementNote}
-                onAddManagementNote={onAddManagementNote}
-              />
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-3">
+      {/* The rows are the first page of a longer view, while the totals above
+          add up all of it. Two numbers that disagree with no explanation would
+          read as a bug, so the page says which is which. */}
+      {grid.truncated ? (
+        <PanelNotice>
+          Showing the first {grid.rows.length} of {grid.totals.quotedCount} deals. The totals cover
+          all {grid.totals.quotedCount}. Narrow the filters to see the rest.
+        </PanelNotice>
+      ) : null}
+
+      <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
+        {/* The grid scrolls in here. The page body never scrolls sideways. */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1800px] border-collapse text-sm">
+            <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
+              <tr>
+                {head("sn", "S/N", "w-14 text-center")}
+                {head("date", "Date", "w-28")}
+                {head("account", "Account", "w-48")}
+                <th scope="col" className="w-48 px-2 py-2 text-left font-medium">
+                  <span className="inline-flex items-center gap-1">
+                    Project Name
+                    {/* The business calls it this; the field is the deal's own
+                        name and no Project table exists (§27.6). */}
+                    <FieldHelp label="Project Name">
+                      The deal&apos;s name. It is called Project Name on the funnel sheet, so the
+                      heading is kept — but there is no separate project record behind it.
+                    </FieldHelp>
+                  </span>
+                </th>
+                {head("useCase", "Use Case", "w-44")}
+                {head("brand", "Brand", "w-32")}
+                {head("model", "Model", "w-32")}
+                {head("qty", "Qty", "w-20")}
+                {head("amount", "Amount", "w-32 text-right")}
+                {head("status", "Deal Status", "w-32")}
+                {head("stage", "Stage", "w-40")}
+                {head("closing", "Tentative Closing", "w-36")}
+                {head("lostTo", "Lost To", "w-52")}
+                {head("nextStep", "Next Step", "w-52")}
+                {head("remarks", "Remarks", "w-64")}
+              </tr>
+            </thead>
+            <tbody>
+              {grid.rows.map((row) => (
+                <FunnelGridRow
+                  key={row.opportunityId}
+                  row={row}
+                  editable={editable}
+                  open={openRow === row.opportunityId}
+                  onToggle={() =>
+                    setOpenRow(openRow === row.opportunityId ? null : row.opportunityId)
+                  }
+                  onEdit={onEdit}
+                  canAddManagementNote={canAddManagementNote}
+                  onAddManagementNote={onAddManagementNote}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
@@ -202,6 +243,8 @@ function FunnelGridRow({
             value={row.offeredOn}
             editable={editable}
             type="date"
+            // A quoted deal keeps its offer date: it can change, not go blank.
+            clearable={false}
             onSave={save("offeredOn")}
           />
         </td>

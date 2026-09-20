@@ -2850,6 +2850,14 @@ export interface FunnelRemark {
   funnelMeetingId: string | null
 }
 
+/** One product line of a deal, for the row detail (§27.6). */
+export interface FunnelLine {
+  product: string
+  brand: string | null
+  model: string | null
+  quantity: number | null
+}
+
 /** One line of the grid, in the sheet's fifteen columns (§27.6). */
 export interface FunnelRow {
   /** Screen position, not an identity — it renumbers on filter and sort. */
@@ -2866,6 +2874,8 @@ export interface FunnelRow {
   model: string
   quantity: string
   lineCount: number
+  /** Every line, in order — what "+N more" points at. */
+  lines: FunnelLine[]
   amount: string | null
   status: OpportunityStatus
   stage: OpportunityStage
@@ -2884,9 +2894,11 @@ export interface FunnelRow {
 
 /** Two labelled figures, never one (§27.10). */
 export interface FunnelTotals {
-  quoted: string
+  /** Null when nothing in view is priced: zero would be a claim (§27.10). */
+  quoted: string | null
   quotedCount: number
-  stillOpen: string
+  /** Null on the same terms. */
+  stillOpen: string | null
   stillOpenCount: number
   /** Deals carrying no amount. In neither figure, and said out loud. */
   unpricedCount: number
@@ -2896,6 +2908,11 @@ export interface FunnelGrid {
   employeeId: string
   employeeName: string
   rows: FunnelRow[]
+  /**
+   * True when the view holds more deals than `rows` shows. The totals still
+   * cover every deal in view, so the two can differ and the screen says so.
+   */
+  truncated: boolean
   totals: FunnelTotals
 }
 
@@ -2903,8 +2920,9 @@ export interface FunnelTeamRow {
   employeeId: string
   employeeName: string
   dealCount: number
-  quoted: string
-  stillOpen: string
+  /** Null when the person has no priced deals. Never rendered as zero. */
+  quoted: string | null
+  stillOpen: string | null
   reviewed: boolean
 }
 

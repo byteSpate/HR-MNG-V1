@@ -27,10 +27,24 @@ interface FunnelFiltersProps {
   value: FunnelQueryOptions
   onChange: (next: FunnelQueryOptions) => void
   accounts: { id: string; name: string }[]
-  totals: FunnelTotals
+  /**
+   * Absent while a new view is loading or the last request failed. The totals
+   * belong to one view; showing the previous view's beside the next one's
+   * loading state would read as its answer.
+   */
+  totals?: FunnelTotals
 }
 
 const ALL = "__all__"
+
+/**
+ * A total, or the plain fact that there is none. The server sends null when
+ * nothing in view is priced, and zero would be a claim nobody made.
+ */
+function Figure({ amount, className }: { amount: string | null; className: string }) {
+  if (amount === null) return <span className={cn("text-sm font-normal", TONE.muted)}>No prices yet</span>
+  return <span className={className}>{taka(amount)}</span>
+}
 
 export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFiltersProps) {
   const set = (patch: Partial<FunnelQueryOptions>) => onChange({ ...value, ...patch })
@@ -103,36 +117,44 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
       {/* Two labelled figures, never one (§27.10). A single "Total" would mean
           different things to different readers, because the quoted figure
           includes the deals we lost. */}
-      <dl className="flex items-end gap-6">
-        <div className="text-right">
-          <dt className={cn("text-xs", TONE.muted)}>Quoted</dt>
-          <dd className="text-base font-semibold tabular-nums text-[#1B2733]">
-            {taka(totals.quoted)}
-          </dd>
-          <dd className={cn("text-xs", TONE.muted)}>
-            {totals.quotedCount} {totals.quotedCount === 1 ? "deal" : "deals"}
-          </dd>
-        </div>
-        <div className="text-right">
-          <dt className={cn("text-xs", TONE.muted)}>Still open</dt>
-          <dd className="text-base font-semibold tabular-nums text-[#0B7A3B]">
-            {taka(totals.stillOpen)}
-          </dd>
-          <dd className={cn("text-xs", TONE.muted)}>
-            {totals.stillOpenCount} {totals.stillOpenCount === 1 ? "deal" : "deals"}
-          </dd>
-        </div>
-        {/* Said out loud rather than folded into the totals as zero. */}
-        {totals.unpricedCount > 0 ? (
+      {totals ? (
+        <dl className="flex items-end gap-6">
           <div className="text-right">
-            <dt className={cn("text-xs", TONE.muted)}>No price yet</dt>
-            <dd className="text-base font-semibold tabular-nums text-[#8A5E0C]">
-              {totals.unpricedCount}
+            <dt className={cn("text-xs", TONE.muted)}>Quoted</dt>
+            <dd>
+              <Figure
+                amount={totals.quoted}
+                className="text-base font-semibold tabular-nums text-[#1B2733]"
+              />
             </dd>
-            <dd className={cn("text-xs", TONE.muted)}>in neither figure</dd>
+            <dd className={cn("text-xs", TONE.muted)}>
+              {totals.quotedCount} {totals.quotedCount === 1 ? "deal" : "deals"}
+            </dd>
           </div>
-        ) : null}
-      </dl>
+          <div className="text-right">
+            <dt className={cn("text-xs", TONE.muted)}>Still open</dt>
+            <dd>
+              <Figure
+                amount={totals.stillOpen}
+                className="text-base font-semibold tabular-nums text-[#0B7A3B]"
+              />
+            </dd>
+            <dd className={cn("text-xs", TONE.muted)}>
+              {totals.stillOpenCount} {totals.stillOpenCount === 1 ? "deal" : "deals"}
+            </dd>
+          </div>
+          {/* Said out loud rather than folded into the totals as zero. */}
+          {totals.unpricedCount > 0 ? (
+            <div className="text-right">
+              <dt className={cn("text-xs", TONE.muted)}>No price yet</dt>
+              <dd className="text-base font-semibold tabular-nums text-[#8A5E0C]">
+                {totals.unpricedCount}
+              </dd>
+              <dd className={cn("text-xs", TONE.muted)}>in neither figure</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
     </div>
   )
 }

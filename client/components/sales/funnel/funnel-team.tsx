@@ -19,6 +19,15 @@ interface FunnelTeamListProps {
   onOpen: (employeeId: string) => void
 }
 
+/** Null means nothing is priced, which is not the same as ৳0. */
+function Money({ amount }: { amount: string | null }) {
+  return amount === null ? (
+    <span className={cn("text-xs", TONE.muted)}>No prices yet</span>
+  ) : (
+    <>{taka(amount)}</>
+  )
+}
+
 export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
   if (team.rows.length === 0) {
     return (
@@ -67,9 +76,11 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                 <tr key={row.employeeId} className="border-t border-[#EEF1F5] hover:bg-[#FAFBFC]">
                   <td className="px-4 py-2.5 font-medium text-[#1B2733]">{row.employeeName}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{row.dealCount}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{taka(row.quoted)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    <Money amount={row.quoted} />
+                  </td>
                   <td className="px-4 py-2.5 text-right tabular-nums text-[#0B7A3B]">
-                    {taka(row.stillOpen)}
+                    <Money amount={row.stillOpen} />
                   </td>
                   <td className="px-4 py-2.5">
                     {row.reviewed ? (

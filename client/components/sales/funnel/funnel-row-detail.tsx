@@ -5,8 +5,9 @@
  * and the deal's remarks (revision §27.6, §27.8).
  *
  * The grid shows the first line and "+N more" because fifteen columns leave no
- * room for a three-product deal. This is where the rest actually is — without
- * it, "+2 more" would be a count of something nobody can reach.
+ * room for a three-product deal. This is where the rest actually is — every
+ * line, product, brand, model and quantity — so "+2 more" points at something
+ * a person can reach.
  */
 
 import Link from "next/link"
@@ -146,15 +147,33 @@ export function FunnelRowDetail({
           Products on this deal
         </h4>
 
-        {row.lineCount === 0 ? (
+        {row.lines.length === 0 ? (
           <p className={cn("mt-2 text-sm", TONE.muted)}>No products on this deal yet.</p>
         ) : (
-          <p className="mt-2 text-sm text-[#1B2733]">
-            {row.lineCount} {row.lineCount === 1 ? "product" : "products"}:{" "}
-            {row.brand || "no brand"}
-            {row.model ? `, ${row.model}` : ""}
-            {row.quantity ? `, quantity ${row.quantity}` : ""}
-          </p>
+          // Every line, in the deal's own order: the grid's brand, model and
+          // quantity cells are only the first of these.
+          <ul className="mt-2 space-y-2">
+            {row.lines.map((line, index) => (
+              <li
+                key={index}
+                className="flex items-baseline justify-between gap-3 rounded-md bg-white px-3 py-2 ring-1 ring-[#E4E9EF]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[#1B2733]">{line.product}</p>
+                  <p className={cn("truncate text-xs", TONE.muted)}>
+                    {[line.brand, line.model].filter(Boolean).join(" · ") || "No brand or model"}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm tabular-nums text-[#1B2733]">
+                  {line.quantity === null ? (
+                    <span className={cn("text-xs", TONE.muted)}>No quantity</span>
+                  ) : (
+                    <>Qty {line.quantity}</>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
 
         {/* Products, and the deal's status, are changed on the deal itself.

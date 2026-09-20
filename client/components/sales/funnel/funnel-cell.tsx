@@ -21,6 +21,12 @@ interface FunnelCellProps {
   /** False for a viewer who may read the row but not change it. */
   editable: boolean
   onSave: (next: string | null) => Promise<void>
+  /**
+   * False for a value the server will not accept as empty (the offer date: a
+   * quoted deal keeps one). An emptied draft then reverts and sends nothing,
+   * rather than sending a null the server answers with a 400.
+   */
+  clearable?: boolean
   type?: "text" | "date" | "money"
   placeholder?: string
   align?: "left" | "right"
@@ -32,6 +38,7 @@ export function FunnelCell({
   display,
   editable,
   onSave,
+  clearable = true,
   type = "text",
   placeholder,
   align = "left",
@@ -42,6 +49,12 @@ export function FunnelCell({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  /**
+   * Set the moment an edit is committed or abandoned. Enter and Escape unmount
+   * the input, and a browser may fire blur as it goes: without this, Enter
+   * would save twice and Escape would save the draft it just threw away.
+   */
+  const settledRef = useRef(false)
 
   /**
    * The server is the source of truth: when the row is refetched, a cell that
@@ -67,8 +80,20 @@ export function FunnelCell({
   const shown = display ?? value ?? ""
 
   async function commit(next: string | null) {
+    if (settledRef.current) return
+    settledRef.current = true
     setEditing(false)
-    if (next === value) return
+
+    if (next === null && !clearable) {
+      setDraft(value ?? "")
+      return
+    }
+    // Nothing changed: no request. The server would write nothing either, but
+    // it would still answer, and a click-in, click-out is not an edit.
+    if (next === (value ?? null)) {
+      setDraft(value ?? "")
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -84,6 +109,16 @@ export function FunnelCell({
       setSaving(false)
     }
   }
+
+  /** Escape abandons the edit and restores what the server holds. */
+  function cancel() {
+    if (settledRef.current) return
+    settledRef.current = true
+    setDraft(value ?? "")
+    setEditing(false)
+  }
+
+  const normalised = () => (draft.trim() === "" ? null : draft.trim())
 
   if (!editable) {
     return (
@@ -102,16 +137,10 @@ export function FunnelCell({
         value={draft}
         placeholder={placeholder}
         onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => void commit(draft.trim() === "" ? null : draft.trim())}
+        onBlur={() => void commit(normalised())}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            void commit(draft.trim() === "" ? null : draft.trim())
-          }
-          // Escape abandons the edit and restores what the server holds.
-          if (e.key === "Escape") {
-            setDraft(value ?? "")
-            setEditing(false)
-          }
+          if (e.key === "Enter") void commit(normalised())
+          if (e.key === "Escape") cancel()
         }}
         className={cn(
           "w-full rounded-sm border border-[#2D6CB5] bg-white px-1.5 py-0.5 text-sm outline-none",
@@ -125,7 +154,10 @@ export function FunnelCell({
   return (
     <button
       type="button"
-      onClick={() => setEditing(true)}
+      onClick={() => {
+        settledRef.current = false
+        setEditing(true)
+      }}
       title={error ?? (shown || placeholder)}
       className={cn(
         "block w-full truncate rounded-sm px-1.5 py-0.5 text-left text-sm",
