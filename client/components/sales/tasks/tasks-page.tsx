@@ -20,7 +20,7 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, RowActions, TONE } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import { taskActions } from "@/components/sales/plan-panels"
-import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/task-dialogs"
+import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
 import {
   TASK_ORIGIN_LABEL,
   TASK_PRIORITY_LABEL,

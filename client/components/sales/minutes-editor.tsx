@@ -63,7 +63,7 @@ import {
 import { Tag } from "@/components/dashboard/tag"
 import { downloadBlob } from "@/components/payroll/payroll-shared"
 import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
-import { TaskFormDialog } from "@/components/sales/task-dialogs"
+import { TaskFormDialog } from "@/components/sales/tasks/task-dialogs"
 import {
   EMPTY_RICH,
   RichTextEditor,

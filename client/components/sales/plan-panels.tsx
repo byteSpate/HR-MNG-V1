@@ -30,7 +30,7 @@ import {
   useMeetingStatus,
   useStartMinutes,
 } from "@/components/sales/meeting-dialogs"
-import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/task-dialogs"
+import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
 import {
   MEETING_ICON,
   MEETING_MODE_LABEL,
