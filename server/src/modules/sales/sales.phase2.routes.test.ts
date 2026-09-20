@@ -18,7 +18,7 @@ vi.mock("./comments/comment.service", () => ({
 vi.mock("./targets/target.service", () => ({
   getTargetYear: vi.fn(), setSalesTarget: vi.fn(),
 }))
-vi.mock("./dashboard.service", () => ({ getSalesDashboard: vi.fn() }))
+vi.mock("./dashboard/dashboard.service", () => ({ getSalesDashboard: vi.fn() }))
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
@@ -26,7 +26,7 @@ import * as opportunities from "./opportunities/opportunity.service"
 import * as lines from "./opportunities/opportunity.line.service"
 import * as comments from "./comments/comment.service"
 import * as targets from "./targets/target.service"
-import * as salesDashboard from "./dashboard.service"
+import * as salesDashboard from "./dashboard/dashboard.service"
 
 const token = (salesRole: "SALES_USER" | "SALES_ADMIN" | null) => signAccessToken({
   sub: "user-1", role: "EMPLOYEE" as never, email: "sales@example.com",

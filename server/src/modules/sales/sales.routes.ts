@@ -5,6 +5,7 @@ import { requireAuth } from "../../middleware/requireAuth"
 import { requireSales } from "../../middleware/requireSales"
 import accountRouter from "./accounts/account.routes"
 import commentRouter from "./comments/comment.routes"
+import dashboardRouter from "./dashboard/dashboard.routes"
 import funnelRouter from "./funnel/funnel.routes"
 import meetingRouter from "./meetings/meeting.routes"
 import minutesRouter from "./minutes/minutes.routes"
@@ -12,9 +13,6 @@ import opportunityRouter from "./opportunities/opportunity.routes"
 import targetRouter from "./targets/target.routes"
 import taskRouter from "./tasks/task.routes"
 import weeklyRouter from "./weekly/weekly.routes"
-import {
-  getSalesDashboardHandler,
-} from "./sales.controller"
 
 const router = Router()
 
@@ -41,4 +39,4 @@ router.use("/funnel", funnelRouter)
 export default router
 
 router.use(targetRouter)
-router.get("/dashboard", requireAuth, requireSales(), getSalesDashboardHandler)
+router.use(dashboardRouter)

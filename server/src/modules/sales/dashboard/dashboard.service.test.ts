@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     salesTarget: { findMany: vi.fn() },
@@ -17,11 +17,11 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-import prisma from "../../config/prisma"
-import { bdt } from "../dashboard/dashboard.format"
-import { dec } from "../payroll/payroll.money"
+import prisma from "../../../config/prisma"
+import { bdt } from "../../dashboard/dashboard.format"
+import { dec } from "../../payroll/payroll.money"
 import { getSalesDashboard } from "./dashboard.service"
-import type { SalesDashboardPayload } from "./sales.types"
+import type { SalesDashboardPayload } from "../sales.types"
 
 const USER = {
   sub: "user-2",
