@@ -239,6 +239,9 @@ model Employee {
   salesTasksAssigned      SalesTask[]              @relation("SalesTaskAssignee")
   salesTasksGiven         SalesTask[]              @relation("SalesTaskAssigner")
   salesMinutesPrepared    SalesMinutesPreparer[]
+  funnelMeetingsRan       FunnelMeeting[]          @relation("FunnelMeetingRanBy")
+  funnelMeetingAttendances FunnelMeetingAttendee[] @relation("FunnelMeetingAttendee")
+  funnelReviews            FunnelMeetingReview[]   @relation("FunnelMeetingReviewSubject")
 }
 
 enum EmployeeChangeField {
@@ -2256,6 +2259,32 @@ model Opportunity {
   /// asked yet" and "no software" are different facts.
   softwareNeeded Boolean?
 
+  // ── the funnel (§27) ──
+
+  /// The sheet's Use Case column. Free text with suggestions from prior
+  /// values, the same treatment `OpportunityLine.oemBrand` gets and for the
+  /// same reason: a closed list would be wrong within a month.
+  useCase String?
+
+  /// The date we quoted, date-only at UTC midnight. Stamped when `stage`
+  /// first reaches QUOTATION_SUBMITTED, and editable afterwards, because the
+  /// real offer date is often earlier than the day somebody updated the
+  /// system.
+  ///
+  /// It also decides funnel membership: a deal is in the funnel exactly when
+  /// this is set, and it never leaves (§27.2). One field doing two jobs, said
+  /// out loud here rather than discovered later — if a deal ever needs to be
+  /// in the funnel without an offer date, that is an `inFunnel` column, not a
+  /// sentinel date.
+  offeredOn DateTime?
+
+  /// Who took it, at what price, with what — asked for when `status` becomes
+  /// LOST (§27.4). Three nullable columns rather than a table: there is one
+  /// competitor per lost deal, and a deal is lost once.
+  lostToPartner String?
+  lostToAmount  Decimal? @db.Decimal(14, 2)
+  lostToProduct String?
+
   /// The person running THIS deal — not necessarily the account's Owner. One
   /// company can have a firewall deal run by one person and a switching deal
   /// run by another. Defaults to the account Owner on create, and must already
@@ -2291,6 +2320,11 @@ model Opportunity {
   @@index([status, stage])
   /// The quarterly achievement query.
   @@index([wonByEmployeeId, closedAt])
+  /// The funnel's own query, and the only one it runs per person: the deals
+  /// this employee has quoted, newest offer first (§27.6). Equality column
+  /// first, range/sort column second. Added with the query rather than on
+  /// theory — an index that never shows up in a plan is pure write cost.
+  @@index([ownerEmployeeId, offeredOn])
 }
 
 /// Products, models, quantities and values. An Opportunity may hold several,
@@ -2364,9 +2398,11 @@ model SalesComment {
   author           Employee? @relation(fields: [authorEmployeeId], references: [id], onDelete: Restrict)
 
   /// Set when the comment was written during a Saturday review, which makes
-  /// "what did management say about this deal last week" one query. Stays null
-  /// until the funnel module exists in phase 6.
+  /// "what did management say about this deal last week" one query. Phase 6
+  /// gave it its relation. SetNull: deleting a meeting must not delete what
+  /// was said in it — the note belongs to the deal.
   funnelMeetingId String?
+  funnelMeeting   FunnelMeeting? @relation(fields: [funnelMeetingId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2522,10 +2558,14 @@ model SalesTask {
   opportunity    Opportunity?  @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
   meetingId      String?
   meeting        SalesMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
-  /// Phases 5 and 6 add these relations. The columns exist now, so that will
-  /// be a relation change and not a backfill.
+  /// Phase 5 will add this relation. The column exists now, so that will be a
+  /// relation change and not a backfill.
   projectId       String?
+  /// Phase 6 made good on the other half: an action item given at a Saturday
+  /// review (§27.13). SetNull, not Cascade — deleting a meeting must not
+  /// delete the work it handed out.
   funnelMeetingId String?
+  funnelMeeting   FunnelMeeting? @relation(fields: [funnelMeetingId], references: [id], onDelete: SetNull)
 
   title    String
   detail   String?
@@ -2774,4 +2814,101 @@ model SalesMinutesTemplate {
   sections  Json
   updatedBy String?
   updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// The funnel (§27)
+//
+// The funnel itself is not a table. It is a view over deals that have been
+// quoted — `Opportunity.offeredOn IS NOT NULL` — so nothing here stores a
+// copy of a deal, and editing a funnel cell writes to the deal (§27.7).
+// What these three tables hold is the *meeting*: when it happened, who was
+// there, and whose funnel got walked.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// One Saturday review.
+model FunnelMeeting {
+  id String @id @default(uuid())
+
+  /// The Sunday of the week being reviewed, date-only at UTC midnight — the
+  /// same convention WeeklyReport, leave and attendance follow.
+  ///
+  /// Unique: one review per week. Two meetings for one week would split the
+  /// reviewed ticks between them and neither would be the answer.
+  weekStart DateTime @unique
+
+  /// The day it was actually held, which is usually but not always the
+  /// Saturday after `weekStart`. Stored because "we did last week's funnel on
+  /// the Monday" is a real thing that happens and the date should say so.
+  heldOn DateTime
+
+  status FunnelMeetingStatus @default(SCHEDULED)
+
+  /// Who ran it. An Employee rather than a User id, because this is a person
+  /// in the room, and the team list is drawn from Employee.
+  ranByEmployeeId String
+  ranBy           Employee @relation("FunnelMeetingRanBy", fields: [ranByEmployeeId], references: [id])
+
+  /// One free note for the week — not per person. Per-person and per-deal
+  /// words are SalesComment rows carrying `funnelMeetingId` (§27.8).
+  note String?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendees FunnelMeetingAttendee[]
+  reviews   FunnelMeetingReview[]
+  /// Action items handed out here (§27.13), and notes written here (§27.8).
+  tasks     SalesTask[]
+  comments  SalesComment[]
+
+  @@index([status, heldOn])
+}
+
+/// Who was in the room.
+model FunnelMeetingAttendee {
+  id              String        @id @default(uuid())
+  funnelMeetingId String
+  funnelMeeting   FunnelMeeting @relation(fields: [funnelMeetingId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee      @relation("FunnelMeetingAttendee", fields: [employeeId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([funnelMeetingId, employeeId])
+  @@index([employeeId])
+}
+
+/// The per-person "their funnel was walked" mark.
+///
+/// **Deliberately not the same thing as attendance** (§27.3). Somebody can be
+/// away and their deals still reviewed, and somebody can sit through the whole
+/// meeting without their own funnel being opened. Collapsing the two would
+/// make both answers wrong.
+///
+/// A row rather than a boolean, so "reviewed" carries when, and by whom.
+model FunnelMeetingReview {
+  id              String        @id @default(uuid())
+  funnelMeetingId String
+  funnelMeeting   FunnelMeeting @relation(fields: [funnelMeetingId], references: [id], onDelete: Cascade)
+  /// Whose funnel was walked.
+  employeeId      String
+  employee        Employee      @relation("FunnelMeetingReviewSubject", fields: [employeeId], references: [id])
+
+  reviewedAt DateTime @default(now())
+  /// The user id of whoever ticked it.
+  reviewedBy String?
+
+  @@unique([funnelMeetingId, employeeId])
+  @@index([employeeId, reviewedAt])
+}
+
+enum FunnelMeetingStatus {
+  SCHEDULED
+  /// Takes no new notes and no new action items, and locks nothing already
+  /// written. Reopening is ordinary, not an exception (§27.11) — which is why
+  /// this is an enum and not a boolean: the audit log can then tell "reopened"
+  /// from "never completed".
+  COMPLETED
 }

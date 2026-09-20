@@ -380,6 +380,61 @@ describe("stage, status, and next step", () => {
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
   })
 
+  it("stamps the offer date once when a deal first reaches quotation submitted", async () => {
+    await changeOpportunityStage("opp-1", { stage: "QUOTATION_SUBMITTED" }, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: { id: "opp-1" },
+      data: { offeredOn: new Date("2026-09-09T00:00:00.000Z") },
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(2)
+  })
+
+  it("stamps a deal moved straight past quotation submitted, so it still joins the funnel", async () => {
+    // Stage changes are free-form: nothing makes a deal pass through
+    // Quotation submitted on its way to Negotiation.
+    for (const stage of ["NEGOTIATION", "AWAITING_DECISION"] as const) {
+      vi.clearAllMocks()
+      vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+        stage: "SOLUTION_DESIGN", offeredOn: null,
+      }) as any)
+
+      await changeOpportunityStage("opp-1", { stage }, USER)
+
+      expect(prisma.opportunity.update).toHaveBeenNthCalledWith(1, expect.objectContaining({
+        data: { offeredOn: new Date("2026-09-09T00:00:00.000Z") },
+      }))
+    }
+  })
+
+  it("does not stamp a stage that comes before the quotation", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      stage: "SOLUTION_DESIGN", offeredOn: null,
+    }) as any)
+
+    await changeOpportunityStage("opp-1", { stage: "OEM_PRICING" }, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenCalledTimes(1)
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.not.objectContaining({ offeredOn: expect.anything() }),
+    }))
+  })
+
+  it("does not overwrite an offer date when a deal returns to quotation submitted", async () => {
+    const offeredOn = new Date("2026-08-21T00:00:00.000Z")
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      stage: "NEGOTIATION", offeredOn,
+    }) as any)
+
+    await changeOpportunityStage("opp-1", { stage: "QUOTATION_SUBMITTED" }, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenCalledTimes(1)
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.not.objectContaining({ offeredOn: expect.anything() }),
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
+  })
+
   it("refuses a stage change on a won deal and says to reopen first", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ status: "WON" }) as any)
     await expect(changeOpportunityStage("opp-1", { stage: "NEGOTIATION" }, USER))

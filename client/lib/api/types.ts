@@ -2828,3 +2828,162 @@ export interface AddWeeklyOtherWorkBody {
   date: string
   text: string
 }
+
+// ── the funnel (revision §27) ───────────────────────────────────────────────
+// Hand-mirrored from the server's `funnel/funnel.types.ts`, as everything in
+// this file is. Keep the two in step by hand; there is no shared package.
+
+/** Who took a deal we lost, and with what (§27.4). */
+export interface FunnelLostTo {
+  partner: string | null
+  amount: string | null
+  product: string | null
+}
+
+/** One remark: the deal's own comment, not a funnel field (§27.8). */
+export interface FunnelRemark {
+  id: string
+  kind: SalesCommentKind
+  body: string
+  authorName: string
+  createdAt: string
+  funnelMeetingId: string | null
+}
+
+/** One product line of a deal, for the row detail (§27.6). */
+export interface FunnelLine {
+  product: string
+  brand: string | null
+  model: string | null
+  quantity: number | null
+}
+
+/** One line of the grid, in the sheet's fifteen columns (§27.6). */
+export interface FunnelRow {
+  /** Screen position, not an identity — it renumbers on filter and sort. */
+  serialNo: number
+  opportunityId: string
+  serial: string
+  offeredOn: string | null
+  salesAccountId: string
+  accountName: string
+  /** Headed "Project Name" in the grid. There is no Project table (§27.6). */
+  projectName: string
+  useCase: string | null
+  brand: string
+  model: string
+  quantity: string
+  lineCount: number
+  /** Every line, in order — what "+N more" points at. */
+  lines: FunnelLine[]
+  amount: string | null
+  status: OpportunityStatus
+  stage: OpportunityStage
+  closingDate: string | null
+  /** "Oct 2026", or empty. Never a day number (§27.6). */
+  closingDateLabel: string
+  /** Derived from the audit log, stored nowhere (§27.15). */
+  closingDateSlipped: boolean
+  previousClosingDate: string | null
+  lostTo: FunnelLostTo
+  nextStep: string | null
+  /** Composed per read and never stored (§27.8). */
+  offerLine: string | null
+  remarks: FunnelRemark[]
+}
+
+/** Two labelled figures, never one (§27.10). */
+export interface FunnelTotals {
+  /** Null when nothing in view is priced: zero would be a claim (§27.10). */
+  quoted: string | null
+  quotedCount: number
+  /** Null on the same terms. */
+  stillOpen: string | null
+  stillOpenCount: number
+  /** Deals carrying no amount. In neither figure, and said out loud. */
+  unpricedCount: number
+}
+
+export interface FunnelGrid {
+  employeeId: string
+  employeeName: string
+  rows: FunnelRow[]
+  /**
+   * True when the view holds more deals than `rows` shows. The totals still
+   * cover every deal in view, so the two can differ and the screen says so.
+   */
+  truncated: boolean
+  totals: FunnelTotals
+}
+
+export interface FunnelTeamRow {
+  employeeId: string
+  employeeName: string
+  dealCount: number
+  /** Null when the person has no priced deals. Never rendered as zero. */
+  quoted: string | null
+  stillOpen: string | null
+  reviewed: boolean
+}
+
+export interface FunnelTeam {
+  /** The Sunday of the week under review. */
+  weekStart: string
+  rows: FunnelTeamRow[]
+}
+
+export type FunnelSort = "offeredOn" | "status" | "amount" | "expectedCloseDate" | "account"
+
+export interface FunnelQueryOptions {
+  employeeId?: string
+  status?: OpportunityStatus
+  salesAccountId?: string
+  hideClosed?: boolean
+  changedLastWeek?: boolean
+  sort?: FunnelSort
+  direction?: "asc" | "desc"
+}
+
+/**
+ * The cells the grid may write. Status is not among them: changing it has its
+ * own rules and lives on the deal page (§27.7).
+ */
+export type FunnelCellField =
+  | "useCase"
+  | "offeredOn"
+  | "expectedCloseDate"
+  | "amount"
+  | "nextStep"
+  | "lostToPartner"
+  | "lostToAmount"
+  | "lostToProduct"
+
+export interface FunnelCellEdit {
+  field: FunnelCellField
+  value: string | null
+}
+
+export interface FunnelMeetingDetail {
+  id: string
+  weekStart: string
+  heldOn: string
+  status: "SCHEDULED" | "COMPLETED"
+  ranByEmployeeId: string
+  ranByName: string
+  note: string | null
+  attendees: { employeeId: string; employeeName: string }[]
+  /** Kept apart from attendance on purpose (§27.3). */
+  reviewed: { employeeId: string; employeeName: string; reviewedAt: string }[]
+  actionItemCount: number
+}
+
+export interface FunnelActionBody {
+  assignedToEmployeeId: string
+  title: string
+  detail?: string | null
+  /** Defaults to next Saturday when absent (§27.13). */
+  dueOn?: string
+  priority?: "LOW" | "NORMAL" | "HIGH"
+  salesAccountId?: string | null
+  opportunityId?: string | null
+}

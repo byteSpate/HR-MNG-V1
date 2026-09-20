@@ -3,7 +3,8 @@
  *
  * In phase 3 a task is always its maker's own (revision §24.7): the owner is
  * the caller and the origin is SELF, whatever the request says. Giving a task
- * to somebody else arrives with the Saturday funnel meeting in phase 6.
+ * to somebody else is the funnel meeting's action item (phase 6), which has its
+ * own guarded path in `funnel/funnel.actions.ts`; this file's rule is unchanged.
  *
  * Every task hangs off an account its maker works (§24.8), so it shows on that
  * account's Timeline. Reading follows §24.20: the owner, the people who work

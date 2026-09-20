@@ -99,6 +99,11 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
         // Only an admin has a number here: a writer's own week is a status
         // line on the overview, not a queue (§26.16).
         "/sales/weekly": dashboard.data?.badges["/weekly/all"] ?? 0,
+        // The same for the funnel: an admin's number is the people not yet
+        // walked last week, while a writer's is a count of their own live
+        // deals, which is information rather than work, so it gets no badge.
+        // Keyed "/funnel" for both, so the read is gated here, not on the key.
+        "/sales/funnel": isSalesAdmin ? (dashboard.data?.badges["/funnel"] ?? 0) : 0,
         "/sales/tasks": badgeFor("/tasks"),
       }}
       // Wider than a role dashboard's 1220/1600px cap: the accounts table

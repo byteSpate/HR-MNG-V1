@@ -10,6 +10,7 @@ vi.mock("../../config/prisma", () => ({
     salesMeeting: { count: vi.fn(), findMany: vi.fn() },
     salesTask: { count: vi.fn() },
     weeklyReport: { findUnique: vi.fn(), count: vi.fn() },
+    funnelMeetingReview: { count: vi.fn() },
     auditLog: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
     user: { findUnique: vi.fn() },
@@ -81,6 +82,8 @@ const RAHIM_WINS: Win[] = [
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Nobody's funnel walked yet, unless a test says otherwise (§27.14).
+  vi.mocked(prisma.funnelMeetingReview.count).mockResolvedValue(0 as never)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as never)
   vi.mocked(prisma.employee.findUnique).mockResolvedValue({
     id: "emp-2",
@@ -313,11 +316,11 @@ describe("the rest of the sales dashboard", () => {
     }
   })
 
-  it("ships all eight action rows, today's meetings and tasks first, then meetings with no minutes", async () => {
+  it("ships all nine action rows, today's meetings and tasks first, then meetings with no minutes", async () => {
     const payload = await getSalesDashboard({ now: NOW }, USER)
 
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "minutes", "weekly", "closing", "unverified", "quiet", "stuck"])
+      .toEqual(["meetings", "tasks", "minutes", "weekly", "funnel", "closing", "unverified", "quiet", "stuck"])
   })
 
   it("has nothing left that is not built, so the notice goes away", async () => {
@@ -523,8 +526,8 @@ describe("the team roll-up", () => {
 
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "minutes", "weekly", "closing", "unverified", "quiet", "stuck"])
-    expect(Object.keys(payload.badges)).toHaveLength(8)
+      .toEqual(["meetings", "tasks", "minutes", "weekly", "funnel", "closing", "unverified", "quiet", "stuck"])
+    expect(Object.keys(payload.badges)).toHaveLength(9)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {
@@ -596,5 +599,40 @@ describe("the weekly report row", () => {
       detail: "Everybody sent last week's report",
       tone: "green",
     })
+  })
+})
+
+// The funnel row's admin side (revision §27.14): how many writers have not been
+// walked in last week's review. Numerator and denominator must count the same
+// people, or one reviewed admin cancels out an unreviewed writer.
+describe("the funnel row for an admin", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.employee.count).mockResolvedValue(4 as never)
+    vi.mocked(prisma.funnelMeetingReview.count).mockResolvedValue(1 as never)
+  })
+
+  it("counts writers not yet reviewed, and badges them", async () => {
+    const payload = await getSalesDashboard({ now: NOW }, ADMIN)
+
+    expect(payload.actions.find((row) => row.key === "funnel")).toMatchObject({ count: 3, href: "/funnel" })
+    expect(payload.badges["/funnel"]).toBe(3)
+  })
+
+  it("counts only reviews of the same active Sales Users it divides by", async () => {
+    await getSalesDashboard({ now: NOW }, ADMIN)
+
+    const where = vi.mocked(prisma.funnelMeetingReview.count).mock.calls[0][0]?.where as never as {
+      employee: { user: { salesRole: string; isActive: boolean }; employmentStatus: string }
+    }
+    expect(where.employee).toEqual({
+      user: { salesRole: "SALES_USER", isActive: true },
+      employmentStatus: "ACTIVE",
+    })
+  })
+
+  it("never goes below zero when more were reviewed than there are writers", async () => {
+    vi.mocked(prisma.funnelMeetingReview.count).mockResolvedValue(9 as never)
+    const payload = await getSalesDashboard({ now: NOW }, ADMIN)
+    expect(payload.actions.find((row) => row.key === "funnel")?.count).toBe(0)
   })
 })
