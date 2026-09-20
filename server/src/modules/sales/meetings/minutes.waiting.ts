@@ -6,9 +6,9 @@
  * the Meeting Minutes page, so the three can never disagree.
  */
 
-import type { Prisma } from "../../generated/prisma/client"
-import { addDays } from "../../utils/dates"
-import { officeDateOf, officeInstantOf } from "../attendance/attendance.time"
+import type { Prisma } from "../../../generated/prisma/client"
+import { addDays } from "../../../utils/dates"
+import { officeDateOf, officeInstantOf } from "../../attendance/attendance.time"
 
 /** Today and the six office days before it. */
 export const WAITING_DAYS = 7

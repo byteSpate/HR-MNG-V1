@@ -11,7 +11,7 @@ import { renderEmail, serialFor, type FactRow, type Stamp } from "../../template
 import { formatShortDate } from "../../utils/dates"
 import { notify } from "../../utils/mailer"
 import { officeTimeOf } from "../attendance/attendance.time"
-import { MEETING_MODE_LABEL, whenLabel } from "./meeting.present"
+import { MEETING_MODE_LABEL, whenLabel } from "./meetings/meeting.present"
 import type { DailyDigest } from "./sales.reminders"
 import type { WeeklyReminder } from "./weekly.reminders"
 

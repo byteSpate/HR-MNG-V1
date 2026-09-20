@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     user: { findUnique: vi.fn() },
@@ -14,15 +14,15 @@ vi.mock("../../config/prisma", () => ({
     event: { create: vi.fn() },
   },
 }))
-vi.mock("./sales.mailer", () => ({ sendMeetingChanged: vi.fn(), sendSalesDailyEmail: vi.fn() }))
+vi.mock("../sales.mailer", () => ({ sendMeetingChanged: vi.fn(), sendSalesDailyEmail: vi.fn() }))
 
-import prisma from "../../config/prisma"
+import prisma from "../../../config/prisma"
 import {
   changeMeetingStatus, createMeeting, listMeetingAttendeeOptions, listMeetings, listMeetingsWaitingForMinutes,
   updateMeeting,
 } from "./meeting.service"
 import { waitingForMinutesWhere } from "./minutes.waiting"
-import { sendMeetingChanged } from "./sales.mailer"
+import { sendMeetingChanged } from "../sales.mailer"
 
 const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "rahim@demo.com",

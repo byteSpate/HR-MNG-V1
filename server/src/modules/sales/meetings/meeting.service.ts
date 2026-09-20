@@ -14,25 +14,25 @@
  * the transaction, and an email once it has committed.
  */
 
-import prisma from "../../config/prisma"
-import type { Prisma } from "../../generated/prisma/client"
-import { AppError } from "../../middleware/errorHandler"
-import { writeAudit } from "../../utils/audit"
-import type { AccessTokenPayload } from "../auth/auth.types"
-import { emitEvent } from "../event/event.emit"
-import { standingOf } from "./accounts/account.service"
+import prisma from "../../../config/prisma"
+import type { Prisma } from "../../../generated/prisma/client"
+import { AppError } from "../../../middleware/errorHandler"
+import { writeAudit } from "../../../utils/audit"
+import type { AccessTokenPayload } from "../../auth/auth.types"
+import { emitEvent } from "../../event/event.emit"
+import { standingOf } from "../accounts/account.service"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL, presentMeeting, whenLabel } from "./meeting.present"
 import { waitingForMinutesWhere } from "./minutes.waiting"
-import { canManageAccount, employeeIdFor, isSalesAdmin, requireAccountAccess } from "./sales.access"
-import { canWorkAccounts } from "./sales.eligibility"
-import { sendMeetingChanged, type MeetingChange } from "./sales.mailer"
-import type { SalesMeetingSummary } from "./sales.types"
+import { canManageAccount, employeeIdFor, isSalesAdmin, requireAccountAccess } from "../sales.access"
+import { canWorkAccounts } from "../sales.eligibility"
+import { sendMeetingChanged, type MeetingChange } from "../sales.mailer"
+import type { SalesMeetingSummary } from "../sales.types"
 import type {
   ChangeMeetingStatusBody,
   CreateMeetingBody,
   ListMeetingQuery,
   UpdateMeetingBody,
-} from "./sales.validators"
+} from "./meeting.validators"
 
 export const MEETING_NOT_VISIBLE = "That meeting does not exist, or is not yours"
 

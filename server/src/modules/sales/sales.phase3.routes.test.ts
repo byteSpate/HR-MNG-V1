@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
-vi.mock("./meeting.service", () => ({
+vi.mock("./meetings/meeting.service", () => ({
   createMeeting: vi.fn(), listMeetings: vi.fn(), getMeeting: vi.fn(),
   updateMeeting: vi.fn(), changeMeetingStatus: vi.fn(), listMeetingAttendeeOptions: vi.fn(),
 }))
@@ -16,7 +16,7 @@ vi.mock("./opportunity.service", async (original) => ({
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
-import * as meetings from "./meeting.service"
+import * as meetings from "./meetings/meeting.service"
 import * as opportunities from "./opportunity.service"
 import * as tasks from "./tasks/task.service"
 

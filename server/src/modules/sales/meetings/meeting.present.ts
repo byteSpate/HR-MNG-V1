@@ -1,5 +1,5 @@
-import { env } from "../../config/env"
-import type { SalesMeetingSummary } from "./sales.types"
+import { env } from "../../../config/env"
+import type { SalesMeetingSummary } from "../sales.types"
 
 /** "Sun 20 Sep, 10:00" in office time, for event titles and emails. */
 export function whenLabel(at: Date): string {

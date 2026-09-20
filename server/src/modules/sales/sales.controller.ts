@@ -21,15 +21,7 @@ import {
   suggestOpportunityLineValues,
   updateOpportunityLine,
 } from "./opportunity.line.service"
-import {
-  changeMeetingStatus,
-  createMeeting,
-  getMeeting,
-  listMeetingAttendeeOptions,
-  listMeetings,
-  listMeetingsWaitingForMinutes,
-  updateMeeting,
-} from "./meeting.service"
+import { listMeetingsWaitingForMinutes } from "./meetings/meeting.service"
 import {
   answerRequirement,
   deleteMinutes,
@@ -55,10 +47,6 @@ import {
   reorderOpportunityLinesSchema,
   updateOpportunityLineSchema,
   updateOpportunitySchema,
-  changeMeetingStatusSchema,
-  createMeetingSchema,
-  listMeetingSchema,
-  updateMeetingSchema,
   answerRequirementSchema,
   listMinutesSchema,
   saveMinutesSchema,
@@ -114,38 +102,6 @@ export async function setSoftwareNeededHandler(req: Request<{ id: string }>, res
 
 export async function getOpportunityTimelineHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await getOpportunityTimeline(req.params.id, req.user!)) }
-  catch (err) { return next(err) }
-}
-
-// ── meetings ────────────────────────────────────────────────────────────────
-
-export async function listMeetingsHandler(req: Request, res: Response, next: NextFunction) {
-  try { return res.status(200).json(await listMeetings(listMeetingSchema.parse(req.query), req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function createMeetingHandler(req: Request, res: Response, next: NextFunction) {
-  try { return res.status(201).json(await createMeeting(createMeetingSchema.parse(req.body), req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function getMeetingHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
-  try { return res.status(200).json(await getMeeting(req.params.id, req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function updateMeetingHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
-  try { return res.status(200).json(await updateMeeting(req.params.id, updateMeetingSchema.parse(req.body), req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function changeMeetingStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
-  try { return res.status(200).json(await changeMeetingStatus(req.params.id, changeMeetingStatusSchema.parse(req.body), req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function listMeetingAttendeeOptionsHandler(_req: Request, res: Response, next: NextFunction) {
-  try { return res.status(200).json(await listMeetingAttendeeOptions()) }
   catch (err) { return next(err) }
 }
 

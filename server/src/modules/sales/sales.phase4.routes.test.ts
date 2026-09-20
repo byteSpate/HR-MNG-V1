@@ -9,14 +9,14 @@ vi.mock("./minutes.service", () => ({
   deleteMinutes: vi.fn(), listMinutes: vi.fn(),
 }))
 vi.mock("./minutes.send", () => ({ previewMinutes: vi.fn(), sendMinutes: vi.fn(), getSentCopy: vi.fn() }))
-vi.mock("./meeting.service", async (original) => ({
-  ...(await original<typeof import("./meeting.service")>()),
+vi.mock("./meetings/meeting.service", async (original) => ({
+  ...(await original<typeof import("./meetings/meeting.service")>()),
   listMeetingsWaitingForMinutes: vi.fn(),
 }))
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
-import * as meetings from "./meeting.service"
+import * as meetings from "./meetings/meeting.service"
 import * as sending from "./minutes.send"
 import * as minutes from "./minutes.service"
 import * as template from "./minutes.template.service"
