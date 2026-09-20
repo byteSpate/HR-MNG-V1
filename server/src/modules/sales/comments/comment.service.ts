@@ -1,17 +1,17 @@
-import prisma from "../../config/prisma"
-import type { Prisma, SalesCommentKind } from "../../generated/prisma/client"
-import { AppError } from "../../middleware/errorHandler"
-import { writeAudit } from "../../utils/audit"
-import type { AccessTokenPayload } from "../auth/auth.types"
+import prisma from "../../../config/prisma"
+import type { Prisma, SalesCommentKind } from "../../../generated/prisma/client"
+import { AppError } from "../../../middleware/errorHandler"
+import { writeAudit } from "../../../utils/audit"
+import type { AccessTokenPayload } from "../../auth/auth.types"
 import {
   commentKindScopeFor,
   employeeIdFor,
   isSalesAdmin,
   requireAccountAccess,
   requireOpportunityAccess,
-} from "./sales.access"
-import type { SalesCommentPage, SalesCommentSummary } from "./sales.types"
-import type { CreateSalesCommentBody, ListSalesCommentQuery, UpdateSalesCommentBody } from "./sales.validators"
+} from "../sales.access"
+import type { SalesCommentPage, SalesCommentSummary } from "../sales.types"
+import type { CreateSalesCommentBody, ListSalesCommentQuery, UpdateSalesCommentBody } from "./comment.validators"
 
 const LIMIT = 100
 const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prisma

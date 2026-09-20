@@ -34,7 +34,6 @@ import {
   suggestOpportunityLineValues,
   updateOpportunityLine,
 } from "./opportunity.line.service"
-import { createSalesComment, listSalesComments, updateSalesComment } from "./comment.service"
 import {
   changeMeetingStatus,
   createMeeting,
@@ -63,7 +62,6 @@ import {
   changeOpportunityStatusSchema,
   createOpportunityLineSchema,
   createOpportunitySchema,
-  createSalesCommentSchema,
   createSalesAccountSchema,
   updateSalesAccountSchema,
   createSalesContactSchema,
@@ -72,13 +70,11 @@ import {
   setSalesTargetSchema,
   salesDashboardSchema,
   listOpportunitySchema,
-  listSalesCommentSchema,
   opportunitySuggestionSchema,
   reorderOpportunityLinesSchema,
   setContactStatusSchema,
   updateOpportunityLineSchema,
   updateOpportunitySchema,
-  updateSalesCommentSchema,
   changeMeetingStatusSchema,
   createMeetingSchema,
   listMeetingSchema,
@@ -453,21 +449,6 @@ export async function reorderOpportunityLinesHandler(req: Request<{ id: string }
 
 export async function suggestOpportunityLinesHandler(req: Request, res: Response, next: NextFunction) {
   try { return res.status(200).json(await suggestOpportunityLineValues(opportunitySuggestionSchema.parse(req.query), req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function createSalesCommentHandler(req: Request, res: Response, next: NextFunction) {
-  try { return res.status(201).json(await createSalesComment(createSalesCommentSchema.parse(req.body), req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function listSalesCommentsHandler(req: Request, res: Response, next: NextFunction) {
-  try { return res.status(200).json(await listSalesComments(listSalesCommentSchema.parse(req.query), req.user!)) }
-  catch (err) { return next(err) }
-}
-
-export async function updateSalesCommentHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
-  try { return res.status(200).json(await updateSalesComment(req.params.id, updateSalesCommentSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
 }
 

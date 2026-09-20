@@ -3,6 +3,7 @@ import { Router } from "express"
 import { SalesRole } from "../../generated/prisma/client"
 import { requireAuth } from "../../middleware/requireAuth"
 import { requireSales } from "../../middleware/requireSales"
+import commentRouter from "./comments/comment.routes"
 import funnelRouter from "./funnel/funnel.routes"
 import taskRouter from "./tasks/task.routes"
 import {
@@ -28,19 +29,16 @@ import {
   changeOpportunityStageHandler,
   changeOpportunityStatusHandler,
   createOpportunityHandler,
-  createSalesCommentHandler,
   deleteOpportunityLineHandler,
   getOpportunityHandler,
   getOpportunityTimelineHandler,
   getOpportunityHistoryHandler,
   listOpportunitiesHandler,
   listOpportunityOwnersHandler,
-  listSalesCommentsHandler,
   reorderOpportunityLinesHandler,
   suggestOpportunityLinesHandler,
   updateOpportunityHandler,
   updateOpportunityLineHandler,
-  updateSalesCommentHandler,
   changeMeetingStatusHandler,
   createMeetingHandler,
   getMeetingHandler,
@@ -136,9 +134,7 @@ router.patch("/lines/:lineId", requireAuth, requireSales(), updateOpportunityLin
 router.delete("/lines/:lineId", requireAuth, requireSales(), deleteOpportunityLineHandler)
 router.get("/suggestions/oem", requireAuth, requireSales(), suggestOpportunityLinesHandler)
 
-router.get("/comments", requireAuth, requireSales(), listSalesCommentsHandler)
-router.post("/comments", requireAuth, requireSales(), createSalesCommentHandler)
-router.patch("/comments/:id", requireAuth, requireSales(), updateSalesCommentHandler)
+router.use(commentRouter)
 
 // Meetings. Reads are open to the hub, like the account they belong to; the
 // service narrows every write to the people who work that account.

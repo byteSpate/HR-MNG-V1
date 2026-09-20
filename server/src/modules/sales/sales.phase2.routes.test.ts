@@ -11,7 +11,7 @@ vi.mock("./opportunity.line.service", () => ({
   addOpportunityLine: vi.fn(), updateOpportunityLine: vi.fn(), deleteOpportunityLine: vi.fn(),
   reorderOpportunityLines: vi.fn(), suggestOpportunityLineValues: vi.fn(),
 }))
-vi.mock("./comment.service", () => ({
+vi.mock("./comments/comment.service", () => ({
   createSalesComment: vi.fn(), listSalesComments: vi.fn(), updateSalesComment: vi.fn(),
 }))
 
@@ -24,7 +24,7 @@ import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as opportunities from "./opportunity.service"
 import * as lines from "./opportunity.line.service"
-import * as comments from "./comment.service"
+import * as comments from "./comments/comment.service"
 import * as targets from "./target.service"
 import * as salesDashboard from "./dashboard.service"
 
