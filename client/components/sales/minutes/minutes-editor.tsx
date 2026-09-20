@@ -70,7 +70,7 @@ import {
   bulletsToRich,
   paragraphsToRich,
   topicsToRich,
-} from "@/components/sales/rich-text-editor"
+} from "@/components/sales/minutes/rich-text-editor"
 import {
   MINUTES_KIND_LABEL,
   MINUTES_STATUS_LABEL,
