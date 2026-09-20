@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     salesMinutesTemplate: { findUnique: vi.fn(), upsert: vi.fn() },
@@ -8,7 +8,7 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-import prisma from "../../config/prisma"
+import prisma from "../../../config/prisma"
 import { DEFAULT_TEMPLATE } from "./minutes.content"
 import { getMinutesTemplate, saveMinutesTemplate } from "./minutes.template.service"
 

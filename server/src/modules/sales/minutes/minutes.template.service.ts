@@ -10,10 +10,10 @@
  * default from the four real documents applies.
  */
 
-import prisma from "../../config/prisma"
-import type { Prisma } from "../../generated/prisma/client"
-import { writeAudit } from "../../utils/audit"
-import type { AccessTokenPayload } from "../auth/auth.types"
+import prisma from "../../../config/prisma"
+import type { Prisma } from "../../../generated/prisma/client"
+import { writeAudit } from "../../../utils/audit"
+import type { AccessTokenPayload } from "../../auth/auth.types"
 import { DEFAULT_TEMPLATE, templateSchema, type TemplateBody, type TemplateSection } from "./minutes.content"
 
 const TEMPLATE_ID = 1

@@ -13,7 +13,7 @@
 
 import { z } from "zod"
 
-import { escapeHtml } from "../../utils/pdf"
+import { escapeHtml } from "../../../utils/pdf"
 
 export const MINUTES_KINDS = ["PARAGRAPHS", "BULLETS", "SUBTOPICS", "TABLE", "RICH"] as const
 export type MinutesKind = (typeof MINUTES_KINDS)[number]

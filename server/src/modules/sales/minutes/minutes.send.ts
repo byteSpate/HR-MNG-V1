@@ -14,17 +14,17 @@
 
 import { randomUUID } from "node:crypto"
 
-import { env } from "../../config/env"
-import prisma from "../../config/prisma"
-import { AppError } from "../../middleware/errorHandler"
-import { writeAudit } from "../../utils/audit"
-import type { AccessTokenPayload } from "../auth/auth.types"
-import { emitEvent } from "../event/event.emit"
-import { assertMediaConfigured } from "../media/media.provider"
-import { destroyAsset, signedDocumentUrl, uploadBuffer } from "../media/media.service"
+import { env } from "../../../config/env"
+import prisma from "../../../config/prisma"
+import { AppError } from "../../../middleware/errorHandler"
+import { writeAudit } from "../../../utils/audit"
+import type { AccessTokenPayload } from "../../auth/auth.types"
+import { emitEvent } from "../../event/event.emit"
+import { assertMediaConfigured } from "../../media/media.provider"
+import { destroyAsset, signedDocumentUrl, uploadBuffer } from "../../media/media.service"
 import { dayLabel, minutesFileName, renderMinutesPdf } from "./minutes.pdf"
 import { documentOf, loadMinutes, namesFor, type MinutesRow } from "./minutes.service"
-import { accountScopeFor, employeeIdFor } from "./sales.access"
+import { accountScopeFor, employeeIdFor } from "../sales.access"
 
 export const SENT_COPY_NOT_VISIBLE = "That copy does not exist, or is not yours"
 

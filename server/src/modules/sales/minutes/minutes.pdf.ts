@@ -10,8 +10,8 @@
  * what the tests read, and `renderMinutesPdf` only drives the browser.
  */
 
-import { env } from "../../config/env"
-import { escapeHtml, renderPdf } from "../../utils/pdf"
+import { env } from "../../../config/env"
+import { escapeHtml, renderPdf } from "../../../utils/pdf"
 import {
   RICH_ALIGNMENTS,
   RICH_HIGHLIGHTS,

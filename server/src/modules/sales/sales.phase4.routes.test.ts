@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
-vi.mock("./minutes.template.service", () => ({
+vi.mock("./minutes/minutes.template.service", () => ({
   getMinutesTemplate: vi.fn(), saveMinutesTemplate: vi.fn(),
 }))
-vi.mock("./minutes.service", () => ({
+vi.mock("./minutes/minutes.service", () => ({
   startMinutes: vi.fn(), getMinutes: vi.fn(), saveMinutes: vi.fn(), answerRequirement: vi.fn(),
   deleteMinutes: vi.fn(), listMinutes: vi.fn(),
 }))
-vi.mock("./minutes.send", () => ({ previewMinutes: vi.fn(), sendMinutes: vi.fn(), getSentCopy: vi.fn() }))
+vi.mock("./minutes/minutes.send", () => ({ previewMinutes: vi.fn(), sendMinutes: vi.fn(), getSentCopy: vi.fn() }))
 vi.mock("./meetings/meeting.service", async (original) => ({
   ...(await original<typeof import("./meetings/meeting.service")>()),
   listMeetingsWaitingForMinutes: vi.fn(),
@@ -17,9 +17,9 @@ vi.mock("./meetings/meeting.service", async (original) => ({
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as meetings from "./meetings/meeting.service"
-import * as sending from "./minutes.send"
-import * as minutes from "./minutes.service"
-import * as template from "./minutes.template.service"
+import * as sending from "./minutes/minutes.send"
+import * as minutes from "./minutes/minutes.service"
+import * as template from "./minutes/minutes.template.service"
 
 const token = (salesRole: "SALES_USER" | "SALES_ADMIN" | null) => signAccessToken({
   sub: "user-1", role: "EMPLOYEE" as never, email: "sales@example.com",

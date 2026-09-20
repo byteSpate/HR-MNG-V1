@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     user: { findUnique: vi.fn(), findMany: vi.fn() },
@@ -14,13 +14,13 @@ vi.mock("./minutes.pdf", async (original) => ({
   ...(await original<typeof import("./minutes.pdf")>()),
   renderMinutesPdf: vi.fn(),
 }))
-vi.mock("../media/media.service", () => ({ uploadBuffer: vi.fn(), destroyAsset: vi.fn(), signedDocumentUrl: vi.fn() }))
-vi.mock("../media/media.provider", () => ({ assertMediaConfigured: vi.fn(), isMediaConfigured: vi.fn(() => true) }))
+vi.mock("../../media/media.service", () => ({ uploadBuffer: vi.fn(), destroyAsset: vi.fn(), signedDocumentUrl: vi.fn() }))
+vi.mock("../../media/media.provider", () => ({ assertMediaConfigured: vi.fn(), isMediaConfigured: vi.fn(() => true) }))
 
-import prisma from "../../config/prisma"
-import { AppError } from "../../middleware/errorHandler"
-import { assertMediaConfigured } from "../media/media.provider"
-import { destroyAsset, signedDocumentUrl, uploadBuffer } from "../media/media.service"
+import prisma from "../../../config/prisma"
+import { AppError } from "../../../middleware/errorHandler"
+import { assertMediaConfigured } from "../../media/media.provider"
+import { destroyAsset, signedDocumentUrl, uploadBuffer } from "../../media/media.service"
 import { renderMinutesPdf } from "./minutes.pdf"
 import { getSentCopy, previewMinutes, sendMinutes } from "./minutes.send"
 

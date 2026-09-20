@@ -17,7 +17,7 @@ import {
   saveAccountNote,
 } from "./weekly.service"
 import { getWeeklyCopy, previewMyWeek, submitMyWeek, type WeeklyFile } from "./weekly.submit"
-import { contentDisposition } from "./minutes.pdf"
+import { contentDisposition } from "./minutes/minutes.pdf"
 import { addOtherWorkSchema, saveWeeklyNoteSchema, weekQuerySchema } from "./sales.validators"
 
 /**
