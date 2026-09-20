@@ -64,7 +64,7 @@ import {
 } from "@/components/sales/sales-shared"
 import { MeetingsPanel, TasksPanel } from "@/components/sales/plan-panels"
 import { Button } from "@/components/ui/button"
-import { AccountEditDialog } from "@/components/sales/account-edit-dialog"
+import { AccountEditDialog } from "@/components/sales/accounts/account-edit-dialog"
 import { CommentPanel } from "@/components/sales/comment-panel"
 import { OpportunityFormDialog } from "@/components/sales/opportunity-form-dialog"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
