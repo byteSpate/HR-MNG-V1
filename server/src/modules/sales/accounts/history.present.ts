@@ -1,5 +1,5 @@
-import prisma from "../../config/prisma"
-import type { HistoryChange } from "./sales.types"
+import prisma from "../../../config/prisma"
+import type { HistoryChange } from "../sales.types"
 
 /**
  * Turning an audit row's raw `before`/`after` JSON into something a person

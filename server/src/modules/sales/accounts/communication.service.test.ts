@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     salesAccount: { findFirst: vi.fn(), findUnique: vi.fn() },
@@ -15,8 +15,8 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-import prisma from "../../config/prisma"
-import { AppError } from "../../middleware/errorHandler"
+import prisma from "../../../config/prisma"
+import { AppError } from "../../../middleware/errorHandler"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 
 const USER = {

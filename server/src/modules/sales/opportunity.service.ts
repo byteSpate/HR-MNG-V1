@@ -18,7 +18,7 @@ import { employmentAllowsSales } from "./sales.eligibility"
 import { nextOpportunitySerial } from "./sales.serial"
 import { presentOpportunity } from "./opportunity.present"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "./meeting.present"
-import { presentChanges, resolveNames } from "./history.present"
+import { presentChanges, resolveNames } from "./accounts/history.present"
 import { createTaskIn } from "./tasks/task.service"
 import { stampOfferedOn } from "./funnel/funnel.edit"
 import type {

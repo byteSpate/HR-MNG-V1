@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
@@ -20,8 +20,8 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-import prisma from "../../config/prisma"
-import { AppError } from "../../middleware/errorHandler"
+import prisma from "../../../config/prisma"
+import { AppError } from "../../../middleware/errorHandler"
 import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
 
 const USER = {

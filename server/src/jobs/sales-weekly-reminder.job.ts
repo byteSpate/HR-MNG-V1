@@ -11,7 +11,7 @@
 
 import prisma from "../config/prisma"
 import { officeDateOf, officeInstantOf } from "../modules/attendance/attendance.time"
-import { standingOf } from "../modules/sales/account.service"
+import { standingOf } from "../modules/sales/accounts/account.service"
 import { canWorkAccounts } from "../modules/sales/sales.eligibility"
 import { sendWeeklyReminder } from "../modules/sales/sales.mailer"
 import { whoNeedsReminding } from "../modules/sales/weekly.reminders"

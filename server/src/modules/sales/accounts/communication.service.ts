@@ -1,19 +1,19 @@
-import prisma from "../../config/prisma"
-import { AppError } from "../../middleware/errorHandler"
-import { writeAudit } from "../../utils/audit"
-import { formatShortDate } from "../../utils/dates"
-import type { SalesChannel } from "../../generated/prisma/client"
-import { TASK_STATUS_LABEL } from "./tasks/task.present"
-import type { AccessTokenPayload } from "../auth/auth.types"
-import type { SalesCommunicationSummary, TimelineItem } from "./sales.types"
-import type { LogCommunicationBody } from "./sales.validators"
+import prisma from "../../../config/prisma"
+import { AppError } from "../../../middleware/errorHandler"
+import { writeAudit } from "../../../utils/audit"
+import { formatShortDate } from "../../../utils/dates"
+import type { SalesChannel } from "../../../generated/prisma/client"
+import { TASK_STATUS_LABEL } from "../tasks/task.present"
+import type { AccessTokenPayload } from "../../auth/auth.types"
+import type { SalesCommunicationSummary, TimelineItem } from "../sales.types"
+import type { LogCommunicationBody } from "./account.validators"
 import {
   accountScopeFor,
   commentKindScopeFor,
   employeeIdFor,
   requireAccountAccess,
   requireAccountVisible,
-} from "./sales.access"
+} from "../sales.access"
 
 /**
  * How many rows of each source the Timeline reads.
