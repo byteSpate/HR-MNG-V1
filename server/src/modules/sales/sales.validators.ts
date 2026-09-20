@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { sectionInputSchema } from "./minutes.content"
+import { dateOnly, money } from "./sales.primitives"
 
 export const createSalesAccountSchema = z.object({
   name: z.string().trim().min(2, "A Sales Account needs a name").max(160),
@@ -161,14 +162,12 @@ export type UpdateMeetingBody = z.infer<typeof updateMeetingSchema>
 export type ChangeMeetingStatusBody = z.infer<typeof changeMeetingStatusSchema>
 export type ListMeetingQuery = z.infer<typeof listMeetingSchema>
 
-const money = z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, "Enter an amount with up to two decimal places")
 // The profit on a deal, as a percentage of its value. Negative is a deal sold
 // at a loss; beyond 100 either way is a typing mistake, not a margin.
 const marginPercent = z
   .string()
   .regex(/^-?\d{1,3}(\.\d{1,2})?$/, "Enter the margin as a percentage with up to two decimal places, like 12.5")
   .refine((value) => Math.abs(Number(value)) <= 100, "A margin is between -100% and 100%")
-const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
 const opportunityStage = z.enum([
   "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING",
   "QUOTATION_SUBMITTED", "NEGOTIATION", "AWAITING_DECISION",
