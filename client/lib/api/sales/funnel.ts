@@ -6,7 +6,7 @@
  * (§27.18).
  */
 
-import { apiFetch } from "./client"
+import { apiFetch } from "../client"
 import type {
   FunnelActionBody,
   FunnelCellEdit,
@@ -15,7 +15,7 @@ import type {
   FunnelQueryOptions,
   FunnelTeam,
   SalesTaskSummary,
-} from "./types"
+} from "../types"
 
 /**
  * Only the filters actually set reach the query string.

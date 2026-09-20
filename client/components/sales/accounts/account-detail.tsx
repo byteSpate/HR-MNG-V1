@@ -25,12 +25,14 @@ import {
   getAccountTimeline,
   getSalesAccount,
   listContacts,
-  listOpportunities,
   logCommunication,
   setContactStatus,
   setPrimaryContact,
-} from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+} from "@/lib/api/sales/accounts"
+import {
+  listOpportunities,
+} from "@/lib/api/sales/opportunities"
+import { salesKeys } from "@/lib/api/sales/keys"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type {

@@ -18,8 +18,8 @@ import {
   suggestOpportunityLineValues,
   updateOpportunityLine,
   updateOpportunity,
-} from "@/lib/api/sales"
-import { opportunityWriteKeys, planWriteKeys, salesKeys } from "@/lib/api/sales-keys"
+} from "@/lib/api/sales/opportunities"
+import { opportunityWriteKeys, planWriteKeys, salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   OpportunityLineSummary,

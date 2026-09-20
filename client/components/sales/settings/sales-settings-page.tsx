@@ -20,8 +20,8 @@ import {
   RiRefreshLine,
 } from "@remixicon/react"
 
-import { getMinutesTemplate, saveMinutesTemplate } from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+import { getMinutesTemplate, saveMinutesTemplate } from "@/lib/api/sales/minutes"
+import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { MinutesKind, MinutesTemplate, MinutesTemplateSection } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"

@@ -8,8 +8,8 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { navGroups } from "@/components/sales/shared/nav-config"
 import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { useSession } from "@/lib/auth/session-context"
-import { getSalesDashboard } from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+import { getSalesDashboard } from "@/lib/api/sales/dashboard"
+import { salesKeys } from "@/lib/api/sales/keys"
 
 /**
  * Turns the signed-in session into the hub's nav tree.

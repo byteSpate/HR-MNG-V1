@@ -16,7 +16,7 @@ import {
   listAllSalesAccounts,
   listSalesAccounts,
   listSalesEligibleEmployees,
-} from "@/lib/api/sales"
+} from "@/lib/api/sales/accounts"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type { CreateSalesAccountBody, SalesAccountSummary } from "@/lib/api/types"

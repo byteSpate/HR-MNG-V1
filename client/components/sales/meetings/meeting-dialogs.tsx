@@ -13,17 +13,23 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
-  startMinutes,
-  changeMeetingStatus,
-  createMeeting,
   getSalesAccount,
   listAllSalesAccounts,
   listContacts,
-  listMeetingAttendeeOptions,
+} from "@/lib/api/sales/accounts"
+import {
   listOpportunities,
+} from "@/lib/api/sales/opportunities"
+import {
+  changeMeetingStatus,
+  createMeeting,
+  listMeetingAttendeeOptions,
   updateMeeting,
-} from "@/lib/api/sales"
-import { planWriteKeys, salesKeys } from "@/lib/api/sales-keys"
+} from "@/lib/api/sales/meetings"
+import {
+  startMinutes,
+} from "@/lib/api/sales/minutes"
+import { planWriteKeys, salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   ChangeMeetingStatusBody,

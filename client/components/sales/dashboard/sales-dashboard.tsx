@@ -13,8 +13,9 @@ import {
   type RemixiconComponentType,
 } from "@remixicon/react"
 
-import { getSalesDashboard, getSalesTargetYear, setSalesTarget } from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+import { getSalesTargetYear, setSalesTarget } from "@/lib/api/sales/targets"
+import { getSalesDashboard } from "@/lib/api/sales/dashboard"
+import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   DashboardStat,

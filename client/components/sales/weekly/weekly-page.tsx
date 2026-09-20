@@ -29,20 +29,24 @@ import {
 } from "@remixicon/react"
 
 import {
+  listSalesAccounts,
+  logCommunication,
+} from "@/lib/api/sales/accounts"
+import {
+  setSoftwareNeeded,
+} from "@/lib/api/sales/opportunities"
+import {
   addWeeklyOtherWork,
   getEmployeeWeek,
   getMyWeek,
   getWeeklyCopy,
-  listSalesAccounts,
   listTeamWeek,
-  logCommunication,
   previewMyWeek,
   removeWeeklyOtherWork,
   saveWeeklyNote,
-  setSoftwareNeeded,
   submitMyWeek,
-} from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+} from "@/lib/api/sales/weekly"
+import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { WeeklyAccountRow, WeeklyDay, WeeklyReportDetail, WeeklyTeamRow } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"

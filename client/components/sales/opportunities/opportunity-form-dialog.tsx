@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
-  createOpportunity,
   getSalesAccount,
   listSalesEligibleEmployees,
+} from "@/lib/api/sales/accounts"
+import {
+  createOpportunity,
   updateOpportunity,
-} from "@/lib/api/sales"
-import { opportunityWriteKeys, salesKeys } from "@/lib/api/sales-keys"
+} from "@/lib/api/sales/opportunities"
+import { opportunityWriteKeys, salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   CreateOpportunityBody,

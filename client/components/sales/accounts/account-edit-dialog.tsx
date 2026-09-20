@@ -6,8 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listSalesEligibleEmployees,
   updateSalesAccount,
-} from "@/lib/api/sales";
-import { salesKeys } from "@/lib/api/sales-keys";
+} from "@/lib/api/sales/accounts";
+import { salesKeys } from "@/lib/api/sales/keys";
 import { useSession } from "@/lib/auth/session-context";
 import type {
   SalesAccountStatus,

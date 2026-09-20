@@ -30,16 +30,18 @@ import {
 } from "@remixicon/react"
 
 import {
+  listMeetingAttendeeOptions,
+} from "@/lib/api/sales/meetings"
+import {
   answerMinutesRequirement,
   deleteMinutes,
   getMinutes,
   getSentMinutesCopy,
-  listMeetingAttendeeOptions,
   previewMinutes,
   saveMinutes,
   sendMinutes,
-} from "@/lib/api/sales"
-import { planWriteKeys, salesKeys } from "@/lib/api/sales-keys"
+} from "@/lib/api/sales/minutes"
+import { planWriteKeys, salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   MinutesBullet,

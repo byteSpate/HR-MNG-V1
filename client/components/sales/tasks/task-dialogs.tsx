@@ -10,8 +10,10 @@
 import { useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 
-import { changeTaskStatus, createTask, listMeetings, listOpportunities, updateTask } from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+import { listOpportunities } from "@/lib/api/sales/opportunities"
+import { listMeetings } from "@/lib/api/sales/meetings"
+import { changeTaskStatus, createTask, updateTask } from "@/lib/api/sales/tasks"
+import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { ChangeTaskStatusBody, SalesTaskPriority, SalesTaskSummary } from "@/lib/api/types"
 import { DialogActions, Field, FormError, toMessage } from "@/components/dashboard/record-kit"

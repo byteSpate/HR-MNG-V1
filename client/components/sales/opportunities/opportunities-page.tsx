@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { RiArrowRightLine, RiBriefcaseLine, RiFilterOffLine, RiLayoutColumnLine } from "@remixicon/react"
 
-import { listOpportunities, listOpportunityOwners, type ListOpportunitiesQuery } from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+import {
+  listOpportunities,
+  listOpportunityOwners,
+  type ListOpportunitiesQuery,
+} from "@/lib/api/sales/opportunities"
+import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunityStatus, OpportunitySummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"

@@ -18,8 +18,9 @@ import {
   RiRefreshLine,
 } from "@remixicon/react"
 
-import { listMeetings, listTasks } from "@/lib/api/sales"
-import { salesKeys } from "@/lib/api/sales-keys"
+import { listMeetings } from "@/lib/api/sales/meetings"
+import { listTasks } from "@/lib/api/sales/tasks"
+import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { SalesMeetingSummary, SalesTaskSummary } from "@/lib/api/types"
 import { Tag } from "@/components/dashboard/tag"

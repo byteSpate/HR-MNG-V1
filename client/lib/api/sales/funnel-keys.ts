@@ -7,7 +7,7 @@
  * step.
  */
 
-import type { FunnelQueryOptions } from "./types"
+import type { FunnelQueryOptions } from "../types"
 
 export const funnelKeys = {
   all: ["sales", "funnel"] as const,
