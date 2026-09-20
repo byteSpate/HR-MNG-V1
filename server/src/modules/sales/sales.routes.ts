@@ -1,8 +1,13 @@
+/**
+ * The Sales Hub's routes. Each feature folder owns its own router (accounts,
+ * opportunities, comments, meetings, tasks, minutes, weekly, funnel, targets,
+ * dashboard); this file only mounts them, in the order their routes were first
+ * registered, so first-match order is unchanged. The routers are mounted at
+ * `/` with full paths, except the funnel, which keeps `/funnel`.
+ */
+
 import { Router } from "express"
 
-import { SalesRole } from "../../generated/prisma/client"
-import { requireAuth } from "../../middleware/requireAuth"
-import { requireSales } from "../../middleware/requireSales"
 import accountRouter from "./accounts/account.routes"
 import commentRouter from "./comments/comment.routes"
 import dashboardRouter from "./dashboard/dashboard.routes"
@@ -36,7 +41,8 @@ router.use(weeklyRouter)
 // the rest into.
 router.use("/funnel", funnelRouter)
 
-export default router
-
 router.use(targetRouter)
+
 router.use(dashboardRouter)
+
+export default router
