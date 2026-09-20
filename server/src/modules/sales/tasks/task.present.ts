@@ -1,5 +1,5 @@
-import { formatDateOnly } from "../../utils/dates"
-import type { SalesTaskSummary } from "./sales.types"
+import { formatDateOnly } from "../../../utils/dates"
+import type { SalesTaskSummary } from "../sales.types"
 
 export const TASK_STATUS_LABEL: Record<string, string> = {
   PENDING: "Pending",

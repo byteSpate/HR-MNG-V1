@@ -30,7 +30,7 @@ import { accountScopeFor, employeeIdFor } from "./sales.access"
 import { canWorkAccounts } from "./sales.eligibility"
 import type { SalesMinutesDetail, SalesMinutesListItem } from "./sales.types"
 import type { ListMinutesQuery, SaveMinutesBody } from "./sales.validators"
-import { createTaskIn } from "./task.service"
+import { createTaskIn } from "./tasks/task.service"
 
 export const MINUTES_NOT_VISIBLE = "Those minutes do not exist, or are not yours"
 

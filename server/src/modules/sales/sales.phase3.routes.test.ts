@@ -5,7 +5,7 @@ vi.mock("./meeting.service", () => ({
   createMeeting: vi.fn(), listMeetings: vi.fn(), getMeeting: vi.fn(),
   updateMeeting: vi.fn(), changeMeetingStatus: vi.fn(), listMeetingAttendeeOptions: vi.fn(),
 }))
-vi.mock("./task.service", () => ({
+vi.mock("./tasks/task.service", () => ({
   createTask: vi.fn(), listTasks: vi.fn(), getTask: vi.fn(),
   updateTask: vi.fn(), changeTaskStatus: vi.fn(),
 }))
@@ -18,7 +18,7 @@ import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as meetings from "./meeting.service"
 import * as opportunities from "./opportunity.service"
-import * as tasks from "./task.service"
+import * as tasks from "./tasks/task.service"
 
 const token = (salesRole: "SALES_USER" | "SALES_ADMIN" | null) => signAccessToken({
   sub: "user-1", role: "EMPLOYEE" as never, email: "sales@example.com",

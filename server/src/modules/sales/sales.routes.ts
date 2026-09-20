@@ -4,6 +4,7 @@ import { SalesRole } from "../../generated/prisma/client"
 import { requireAuth } from "../../middleware/requireAuth"
 import { requireSales } from "../../middleware/requireSales"
 import funnelRouter from "./funnel/funnel.routes"
+import taskRouter from "./tasks/task.routes"
 import {
   addContactHandler,
   createSalesAccountHandler,
@@ -46,11 +47,6 @@ import {
   listMeetingAttendeeOptionsHandler,
   listMeetingsHandler,
   updateMeetingHandler,
-  changeTaskStatusHandler,
-  createTaskHandler,
-  getTaskHandler,
-  listTasksHandler,
-  updateTaskHandler,
   getMinutesTemplateHandler,
   saveMinutesTemplateHandler,
   answerRequirementHandler,
@@ -156,13 +152,7 @@ router.get("/meetings/:id", requireAuth, requireSales(), getMeetingHandler)
 router.patch("/meetings/:id", requireAuth, requireSales(), updateMeetingHandler)
 router.patch("/meetings/:id/status", requireAuth, requireSales(), changeMeetingStatusHandler)
 
-// Tasks. Everyone makes tasks for themselves in this phase; the service
-// decides who may read one and keeps changing it to its owner.
-router.get("/tasks", requireAuth, requireSales(), listTasksHandler)
-router.post("/tasks", requireAuth, requireSales(), createTaskHandler)
-router.get("/tasks/:id", requireAuth, requireSales(), getTaskHandler)
-router.patch("/tasks/:id", requireAuth, requireSales(), updateTaskHandler)
-router.patch("/tasks/:id/status", requireAuth, requireSales(), changeTaskStatusHandler)
+router.use(taskRouter)
 
 // Meeting minutes (revision §25). Open to the hub at the route; the service
 // narrows every read and write to the people who work the meeting's account
