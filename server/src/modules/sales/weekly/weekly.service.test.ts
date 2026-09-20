@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/env", () => ({ env: { APP_TIMEZONE: "Asia/Dhaka" } }))
+vi.mock("../../../config/env", () => ({ env: { APP_TIMEZONE: "Asia/Dhaka" } }))
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     user: { findUnique: vi.fn() },
@@ -23,7 +23,7 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-import prisma from "../../config/prisma"
+import prisma from "../../../config/prisma"
 import { addOtherWork, getMyWeek, listTeamWeek, removeOtherWork, saveAccountNote } from "./weekly.service"
 
 const day = (value: string) => new Date(`${value}T00:00:00.000Z`)

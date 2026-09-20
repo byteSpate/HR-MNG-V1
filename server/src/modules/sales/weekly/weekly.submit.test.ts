@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/env", () => ({
+vi.mock("../../../config/env", () => ({
   env: { APP_TIMEZONE: "Asia/Dhaka", COMPANY_NAME: "Bytespate Limited" },
 }))
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     user: { findUnique: vi.fn() },
@@ -24,8 +24,8 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-vi.mock("../media/media.provider", () => ({ assertMediaConfigured: vi.fn() }))
-vi.mock("../media/media.service", () => ({
+vi.mock("../../media/media.provider", () => ({ assertMediaConfigured: vi.fn() }))
+vi.mock("../../media/media.service", () => ({
   uploadBuffer: vi.fn(),
   destroyAsset: vi.fn(),
   signedDocumentUrl: vi.fn(() => ({ url: "https://files.test/weekly.pdf" })),
@@ -35,9 +35,9 @@ vi.mock("./weekly.pdf", async (importOriginal) => ({
   renderWeeklyPdf: vi.fn(async () => Buffer.from("%PDF-1.7 weekly")),
 }))
 
-import prisma from "../../config/prisma"
-import { assertMediaConfigured } from "../media/media.provider"
-import { destroyAsset, uploadBuffer } from "../media/media.service"
+import prisma from "../../../config/prisma"
+import { assertMediaConfigured } from "../../media/media.provider"
+import { destroyAsset, uploadBuffer } from "../../media/media.service"
 import { renderWeeklyPdf } from "./weekly.pdf"
 import { getWeeklyCopy, previewMyWeek, submitMyWeek } from "./weekly.submit"
 

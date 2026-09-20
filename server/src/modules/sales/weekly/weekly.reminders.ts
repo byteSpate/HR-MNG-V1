@@ -7,9 +7,9 @@
  * on a day the office was shut.
  */
 
-import type { Shift } from "../../generated/prisma/client"
-import { resolveShift } from "../attendance/attendance.grid"
-import type { HolidayRow } from "./sales.reminders"
+import type { Shift } from "../../../generated/prisma/client"
+import { resolveShift } from "../../attendance/attendance.grid"
+import type { HolidayRow } from "../sales.reminders"
 import { deadlineDayOf, weekStartOf } from "./weekly.dates"
 
 export interface ReminderPerson {

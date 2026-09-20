@@ -13,7 +13,7 @@ import { notify } from "../../utils/mailer"
 import { officeTimeOf } from "../attendance/attendance.time"
 import { MEETING_MODE_LABEL, whenLabel } from "./meetings/meeting.present"
 import type { DailyDigest } from "./sales.reminders"
-import type { WeeklyReminder } from "./weekly.reminders"
+import type { WeeklyReminder } from "./weekly/weekly.reminders"
 
 const appLink = (path: string) => `${env.CLIENT_ORIGIN}/sales${path}`
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`

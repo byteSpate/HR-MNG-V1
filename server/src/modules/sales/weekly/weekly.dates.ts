@@ -10,10 +10,10 @@
  * late, which is read through the office timezone rather than off UTC.
  */
 
-import type { Shift } from "../../generated/prisma/client"
-import { addDays, formatDateOnly } from "../../utils/dates"
-import { officeDateOf } from "../attendance/attendance.time"
-import { isWorkingDay, type HolidayRow } from "./sales.reminders"
+import type { Shift } from "../../../generated/prisma/client"
+import { addDays, formatDateOnly } from "../../../utils/dates"
+import { officeDateOf } from "../../attendance/attendance.time"
+import { isWorkingDay, type HolidayRow } from "../sales.reminders"
 
 const SUNDAY = 0
 const THURSDAY = 4

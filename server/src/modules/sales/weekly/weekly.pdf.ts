@@ -14,7 +14,7 @@
  * what the tests read, and `renderWeeklyPdf` only drives the browser.
  */
 
-import { brandAsset, escapeHtml, renderPdf } from "../../utils/pdf"
+import { brandAsset, escapeHtml, renderPdf } from "../../../utils/pdf"
 import type { DayLabel } from "./weekly.dates"
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]

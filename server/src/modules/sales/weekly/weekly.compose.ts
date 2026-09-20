@@ -12,7 +12,7 @@
  * the page, the PDF and the tests all see the same week.
  */
 
-import { officeDateOf } from "../attendance/attendance.time"
+import { officeDateOf } from "../../attendance/attendance.time"
 import {
   dayLabelOf,
   saturdayBefore,
@@ -21,7 +21,7 @@ import {
   type LeaveWindow,
   type WeeklyHoliday,
 } from "./weekly.dates"
-import type { Shift } from "../../generated/prisma/client"
+import type { Shift } from "../../../generated/prisma/client"
 
 // ── what the loader passes in ────────────────────────────────────────────────
 
