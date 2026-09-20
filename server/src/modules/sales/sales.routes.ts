@@ -5,6 +5,7 @@ import { requireAuth } from "../../middleware/requireAuth"
 import { requireSales } from "../../middleware/requireSales"
 import commentRouter from "./comments/comment.routes"
 import funnelRouter from "./funnel/funnel.routes"
+import targetRouter from "./targets/target.routes"
 import taskRouter from "./tasks/task.routes"
 import {
   addContactHandler,
@@ -19,8 +20,6 @@ import {
   listSalesEligibleEmployeesHandler,
   setContactStatusHandler,
   setPrimaryContactHandler,
-  getTargetYearHandler,
-  setSalesTargetHandler,
   getSalesDashboardHandler,
   updateSalesAccountHandler,
   addOpportunityLineHandler,
@@ -206,10 +205,5 @@ router.use("/funnel", funnelRouter)
 
 export default router
 
-// Targets and the dashboard. Reads are open to any hub member and narrowed by
-// the service, which is where "your own, or anybody if you are an admin"
-// lives. Setting a target is a Sales Admin act: a target somebody sets for
-// themselves is not a target.
-router.get("/targets", requireAuth, requireSales(), getTargetYearHandler)
-router.put("/targets", requireAuth, requireSales(SalesRole.SALES_ADMIN), setSalesTargetHandler)
+router.use(targetRouter)
 router.get("/dashboard", requireAuth, requireSales(), getSalesDashboardHandler)

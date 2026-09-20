@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { dec, toMoneyString, type Money } from "../payroll/payroll.money"
+import { dec, toMoneyString, type Money } from "../../payroll/payroll.money"
 import { phaseOf, planQuarters, splitYearly, sumPlans, type QuarterPhase } from "./target.plan"
 
 /** Lakh, the way the business says it. */

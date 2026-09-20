@@ -8,7 +8,7 @@ import type {
   SalesContactStatus,
 } from "../../generated/prisma/client"
 import type { DashboardStat, Tone as DashboardTone } from "../dashboard/dashboard.types"
-import type { SalesTargetQuarter } from "./target.service"
+import type { SalesTargetQuarter } from "./targets/target.service"
 import type { MinutesKind, SectionContent } from "./minutes.content"
 
 export interface OpportunityLineSummary {

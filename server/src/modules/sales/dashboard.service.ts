@@ -37,9 +37,9 @@ import { employeeIdFor } from "./sales.access"
 import { marginTotal, type MarginTotal } from "./sales.margin"
 import { WAITING_DAYS, waitingForMinutesWhere } from "./minutes.waiting"
 import { weekStartOf } from "./weekly.dates"
-import { currentQuarter, quarterOf, quarterRange } from "./sales.quarters"
-import { planQuarters, sumPlans, type PlannedQuarter } from "./target.plan"
-import { phasesOf, presentQuarter, winsByQuarter, yearRange } from "./target.service"
+import { currentQuarter, quarterOf, quarterRange } from "./targets/sales.quarters"
+import { planQuarters, sumPlans, type PlannedQuarter } from "./targets/target.plan"
+import { phasesOf, presentQuarter, winsByQuarter, yearRange } from "./targets/target.service"
 import type { SalesActionRow, SalesDashboardPayload, SalesTeamRow } from "./sales.types"
 
 const MS_PER_DAY = 86_400_000

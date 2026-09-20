@@ -16,8 +16,8 @@
  * ever pointed somewhere that observes daylight saving.
  */
 
-import { parseDateOnly } from "../../utils/dates"
-import { officeDateOf, officeInstantOf } from "../attendance/attendance.time"
+import { parseDateOnly } from "../../../utils/dates"
+import { officeDateOf, officeInstantOf } from "../../attendance/attendance.time"
 
 export interface QuarterRange {
   /** Inclusive. The instant local midnight began on the quarter's first day. */

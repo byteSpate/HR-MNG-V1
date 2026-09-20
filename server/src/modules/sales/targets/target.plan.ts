@@ -19,7 +19,7 @@
  * what was won and says which quarters have ended.
  */
 
-import { ZERO, sum, type Money } from "../payroll/payroll.money"
+import { ZERO, sum, type Money } from "../../payroll/payroll.money"
 
 export type QuarterPhase = "ended" | "current" | "upcoming"
 
