@@ -7,26 +7,11 @@ import accountRouter from "./accounts/account.routes"
 import commentRouter from "./comments/comment.routes"
 import funnelRouter from "./funnel/funnel.routes"
 import meetingRouter from "./meetings/meeting.routes"
+import opportunityRouter from "./opportunities/opportunity.routes"
 import targetRouter from "./targets/target.routes"
 import taskRouter from "./tasks/task.routes"
 import {
   getSalesDashboardHandler,
-  addOpportunityLineHandler,
-  changeOpportunityNextStepHandler,
-  setSoftwareNeededHandler,
-  changeOpportunityStageHandler,
-  changeOpportunityStatusHandler,
-  createOpportunityHandler,
-  deleteOpportunityLineHandler,
-  getOpportunityHandler,
-  getOpportunityTimelineHandler,
-  getOpportunityHistoryHandler,
-  listOpportunitiesHandler,
-  listOpportunityOwnersHandler,
-  reorderOpportunityLinesHandler,
-  suggestOpportunityLinesHandler,
-  updateOpportunityHandler,
-  updateOpportunityLineHandler,
   getMinutesTemplateHandler,
   saveMinutesTemplateHandler,
   answerRequirementHandler,
@@ -56,24 +41,7 @@ const router = Router()
 
 router.use(accountRouter)
 
-router.get("/opportunities", requireAuth, requireSales(), listOpportunitiesHandler)
-router.post("/opportunities", requireAuth, requireSales(), createOpportunityHandler)
-router.get("/opportunities/owners", requireAuth, requireSales(), listOpportunityOwnersHandler)
-router.get("/opportunities/:id", requireAuth, requireSales(), getOpportunityHandler)
-router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunityHandler)
-router.patch("/opportunities/:id/stage", requireAuth, requireSales(), changeOpportunityStageHandler)
-router.patch("/opportunities/:id/status", requireAuth, requireSales(), changeOpportunityStatusHandler)
-router.patch("/opportunities/:id/next-step", requireAuth, requireSales(), changeOpportunityNextStepHandler)
-// The weekly report Application column, answered on the deal (§26.9).
-router.patch("/opportunities/:id/software-needed", requireAuth, requireSales(), setSoftwareNeededHandler)
-router.get("/opportunities/:id/timeline", requireAuth, requireSales(), getOpportunityTimelineHandler)
-router.get("/opportunities/:id/history", requireAuth, requireSales(), getOpportunityHistoryHandler)
-
-router.post("/opportunities/:id/lines", requireAuth, requireSales(), addOpportunityLineHandler)
-router.put("/opportunities/:id/lines/reorder", requireAuth, requireSales(), reorderOpportunityLinesHandler)
-router.patch("/lines/:lineId", requireAuth, requireSales(), updateOpportunityLineHandler)
-router.delete("/lines/:lineId", requireAuth, requireSales(), deleteOpportunityLineHandler)
-router.get("/suggestions/oem", requireAuth, requireSales(), suggestOpportunityLinesHandler)
+router.use(opportunityRouter)
 
 router.use(commentRouter)
 

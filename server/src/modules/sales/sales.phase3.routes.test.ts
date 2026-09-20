@@ -9,15 +9,15 @@ vi.mock("./tasks/task.service", () => ({
   createTask: vi.fn(), listTasks: vi.fn(), getTask: vi.fn(),
   updateTask: vi.fn(), changeTaskStatus: vi.fn(),
 }))
-vi.mock("./opportunity.service", async (original) => ({
-  ...(await original<typeof import("./opportunity.service")>()),
+vi.mock("./opportunities/opportunity.service", async (original) => ({
+  ...(await original<typeof import("./opportunities/opportunity.service")>()),
   changeOpportunityNextStep: vi.fn(),
 }))
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as meetings from "./meetings/meeting.service"
-import * as opportunities from "./opportunity.service"
+import * as opportunities from "./opportunities/opportunity.service"
 import * as tasks from "./tasks/task.service"
 
 const token = (salesRole: "SALES_USER" | "SALES_ADMIN" | null) => signAccessToken({

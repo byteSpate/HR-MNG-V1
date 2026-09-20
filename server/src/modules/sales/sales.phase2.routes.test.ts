@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
-vi.mock("./opportunity.service", () => ({
+vi.mock("./opportunities/opportunity.service", () => ({
   createOpportunity: vi.fn(), listOpportunities: vi.fn(), listOpportunityOwners: vi.fn(), getOpportunity: vi.fn(),
   updateOpportunity: vi.fn(), changeOpportunityStage: vi.fn(),
   changeOpportunityStatus: vi.fn(), changeOpportunityNextStep: vi.fn(),
   getOpportunityTimeline: vi.fn(), getOpportunityHistory: vi.fn(),
 }))
-vi.mock("./opportunity.line.service", () => ({
+vi.mock("./opportunities/opportunity.line.service", () => ({
   addOpportunityLine: vi.fn(), updateOpportunityLine: vi.fn(), deleteOpportunityLine: vi.fn(),
   reorderOpportunityLines: vi.fn(), suggestOpportunityLineValues: vi.fn(),
 }))
@@ -22,8 +22,8 @@ vi.mock("./dashboard.service", () => ({ getSalesDashboard: vi.fn() }))
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
-import * as opportunities from "./opportunity.service"
-import * as lines from "./opportunity.line.service"
+import * as opportunities from "./opportunities/opportunity.service"
+import * as lines from "./opportunities/opportunity.line.service"
 import * as comments from "./comments/comment.service"
 import * as targets from "./targets/target.service"
 import * as salesDashboard from "./dashboard.service"

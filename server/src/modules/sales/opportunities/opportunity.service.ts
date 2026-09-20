@@ -1,11 +1,11 @@
-import prisma from "../../config/prisma"
-import type { Prisma } from "../../generated/prisma/client"
-import { AppError } from "../../middleware/errorHandler"
-import { writeAudit } from "../../utils/audit"
-import type { AccessTokenPayload } from "../auth/auth.types"
-import { emitEvent } from "../event/event.emit"
-import { officeDateOf } from "../attendance/attendance.time"
-import { dec } from "../payroll/payroll.money"
+import prisma from "../../../config/prisma"
+import type { Prisma } from "../../../generated/prisma/client"
+import { AppError } from "../../../middleware/errorHandler"
+import { writeAudit } from "../../../utils/audit"
+import type { AccessTokenPayload } from "../../auth/auth.types"
+import { emitEvent } from "../../event/event.emit"
+import { officeDateOf } from "../../attendance/attendance.time"
+import { dec } from "../../payroll/payroll.money"
 import {
   accountScopeFor,
   canManageAccount,
@@ -13,19 +13,19 @@ import {
   employeeIdFor,
   OPPORTUNITY_NOT_VISIBLE,
   requireAccountAccess,
-} from "./sales.access"
-import { employmentAllowsSales } from "./sales.eligibility"
-import { nextOpportunitySerial } from "./sales.serial"
+} from "../sales.access"
+import { employmentAllowsSales } from "../sales.eligibility"
+import { nextOpportunitySerial } from "../sales.serial"
 import { presentOpportunity } from "./opportunity.present"
-import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "./meetings/meeting.present"
-import { presentChanges, resolveNames } from "./accounts/history.present"
-import { createTaskIn } from "./tasks/task.service"
-import { stampOfferedOn } from "./funnel/funnel.edit"
+import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.present"
+import { presentChanges, resolveNames } from "../accounts/history.present"
+import { createTaskIn } from "../tasks/task.service"
+import { stampOfferedOn } from "../funnel/funnel.edit"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
-} from "./sales.validators"
-import type { OpportunityHistory, OpportunityHistoryEntry, TimelineItem } from "./sales.types"
+} from "./opportunity.validators"
+import type { OpportunityHistory, OpportunityHistoryEntry, TimelineItem } from "../sales.types"
 
 const MS_PER_DAY = 86_400_000
 const HISTORY_LIMIT = 100

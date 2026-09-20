@@ -1,15 +1,15 @@
-import prisma from "../../config/prisma"
-import type { Prisma } from "../../generated/prisma/client"
-import { AppError } from "../../middleware/errorHandler"
-import { writeAudit } from "../../utils/audit"
-import type { AccessTokenPayload } from "../auth/auth.types"
-import { dec, toMoneyString } from "../payroll/payroll.money"
+import prisma from "../../../config/prisma"
+import type { Prisma } from "../../../generated/prisma/client"
+import { AppError } from "../../../middleware/errorHandler"
+import { writeAudit } from "../../../utils/audit"
+import type { AccessTokenPayload } from "../../auth/auth.types"
+import { dec, toMoneyString } from "../../payroll/payroll.money"
 import { presentLine } from "./opportunity.present"
-import { accountScopeFor, employeeIdFor, requireOpportunityAccess } from "./sales.access"
+import { accountScopeFor, employeeIdFor, requireOpportunityAccess } from "../sales.access"
 import type {
   CreateOpportunityLineBody, OpportunitySuggestionQuery, ReorderOpportunityLinesBody,
   UpdateOpportunityLineBody,
-} from "./sales.validators"
+} from "./opportunity.validators"
 
 const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prisma
 const nullable = (value: string | undefined) => value === undefined || value === "" ? null : value

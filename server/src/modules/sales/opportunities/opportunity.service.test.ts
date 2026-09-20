@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../../config/prisma", () => ({
+vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     idCounter: { upsert: vi.fn() },
@@ -20,9 +20,9 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
-import prisma from "../../config/prisma"
-import { AppError } from "../../middleware/errorHandler"
-import { dec } from "../payroll/payroll.money"
+import prisma from "../../../config/prisma"
+import { AppError } from "../../../middleware/errorHandler"
+import { dec } from "../../payroll/payroll.money"
 import {
   changeOpportunityNextStep,
   changeOpportunityStage,
@@ -36,7 +36,7 @@ import {
   setSoftwareNeeded,
   updateOpportunity,
 } from "./opportunity.service"
-import { nextOpportunitySerial } from "./sales.serial"
+import { nextOpportunitySerial } from "../sales.serial"
 
 const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "sales@example.com",

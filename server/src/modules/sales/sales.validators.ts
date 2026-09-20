@@ -1,107 +1,6 @@
 import { z } from "zod"
 
 import { sectionInputSchema } from "./minutes.content"
-import { dateOnly, money } from "./sales.primitives"
-
-// The profit on a deal, as a percentage of its value. Negative is a deal sold
-// at a loss; beyond 100 either way is a typing mistake, not a margin.
-const marginPercent = z
-  .string()
-  .regex(/^-?\d{1,3}(\.\d{1,2})?$/, "Enter the margin as a percentage with up to two decimal places, like 12.5")
-  .refine((value) => Math.abs(Number(value)) <= 100, "A margin is between -100% and 100%")
-const opportunityStage = z.enum([
-  "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING",
-  "QUOTATION_SUBMITTED", "NEGOTIATION", "AWAITING_DECISION",
-])
-const opportunityStatus = z.enum(["ONGOING", "WON", "LOST", "CANCELLED"])
-
-export const createOpportunitySchema = z.object({
-  salesAccountId: z.string().uuid(),
-  name: z.string().trim().min(2, "An Opportunity needs a name").max(180),
-  track: z.enum(["NETWORKING"]),
-  amount: money.optional(),
-  expectedCloseDate: dateOnly.optional(),
-  oemAccountManager: z.string().trim().max(160).optional(),
-  ownerEmployeeId: z.string().uuid().optional(),
-  addAssignment: z.boolean().optional(),
-  /** The meeting it came out of, when made from that meeting's minutes (revision §25.6). */
-  meetingId: z.string().uuid().optional(),
-})
-export type CreateOpportunityBody = z.infer<typeof createOpportunitySchema>
-
-export const listOpportunitySchema = z.object({
-  status: opportunityStatus.optional(),
-  stage: opportunityStage.optional(),
-  salesAccountId: z.string().uuid().optional(),
-  ownerEmployeeId: z.string().uuid().optional(),
-  mine: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
-  closing: z.coerce.number().int().min(1).max(365).optional(),
-  quiet: z.coerce.number().int().min(1).max(365).optional(),
-  stuck: z.coerce.number().int().min(1).max(365).optional(),
-  cursor: z.string().uuid().optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-})
-export type ListOpportunityQuery = z.infer<typeof listOpportunitySchema>
-
-export const updateOpportunitySchema = z.object({
-  name: z.string().trim().min(2).max(180).optional(),
-  track: z.enum(["NETWORKING"]).optional(),
-  amount: money.nullable().optional(),
-  expectedCloseDate: dateOnly.nullable().optional(),
-  oemAccountManager: z.string().trim().max(160).nullable().optional(),
-  ownerEmployeeId: z.string().uuid().optional(),
-  addAssignment: z.boolean().optional(),
-}).refine((body) => Object.keys(body).some((key) => key !== "addAssignment"), { message: "Nothing was changed" })
-export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
-
-export const changeOpportunityStageSchema = z.object({ stage: opportunityStage })
-export const changeOpportunityStatusSchema = z.object({
-  status: opportunityStatus,
-  statusReason: z.string().trim().max(500).optional(),
-})
-export const changeOpportunityNextStepSchema = z.object({
-  nextStep: z.string().trim().max(500).nullable().optional(),
-  nextStepDueOn: dateOnly.nullable().optional(),
-  /** The unticked box under the Next step: also make it a task, for whoever ticks it (§24.11). */
-  alsoCreateTask: z.boolean().optional(),
-}).refine((body) => body.nextStep !== undefined || body.nextStepDueOn !== undefined, { message: "Nothing was changed" })
-
-export const createOpportunityLineSchema = z.object({
-  product: z.string().trim().min(1, "A line needs a product").max(180),
-  oemBrand: z.string().trim().max(120).optional(),
-  model: z.string().trim().max(120).optional(),
-  quantity: z.number().int().positive().optional(),
-  unitValue: money.optional(),
-  lineValue: money.optional(),
-  marginPercent: marginPercent.optional(),
-  note: z.string().trim().max(500).optional(),
-})
-export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
-  // Prices are nullable on edit though not on create, and the two states are
-  // different answers: absent leaves the price alone, null takes it back off.
-  // Without that difference a price typed by mistake can never be undone, and
-  // storing 0 instead would claim the line is free.
-  .extend({
-    quantity: z.number().int().positive().nullable().optional(),
-    unitValue: money.nullable().optional(),
-    lineValue: money.nullable().optional(),
-    marginPercent: marginPercent.nullable().optional(),
-  })
-  .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
-export const reorderOpportunityLinesSchema = z.object({
-  lineIds: z.array(z.string().uuid()).min(1).refine((ids) => new Set(ids).size === ids.length, { message: "Line ids must be unique" }),
-})
-export const opportunitySuggestionSchema = z.object({
-  field: z.enum(["product", "brand", "model"]), q: z.string().trim().max(120).default(""),
-})
-
-export type ChangeOpportunityStageBody = z.infer<typeof changeOpportunityStageSchema>
-export type ChangeOpportunityStatusBody = z.infer<typeof changeOpportunityStatusSchema>
-export type ChangeOpportunityNextStepBody = z.infer<typeof changeOpportunityNextStepSchema>
-export type CreateOpportunityLineBody = z.infer<typeof createOpportunityLineSchema>
-export type UpdateOpportunityLineBody = z.infer<typeof updateOpportunityLineSchema>
-export type ReorderOpportunityLinesBody = z.infer<typeof reorderOpportunityLinesSchema>
-export type OpportunitySuggestionQuery = z.infer<typeof opportunitySuggestionSchema>
 
 export const salesDashboardSchema = z.object({
   // A uuid, or the literal "all" for the team roll-up. Documented that way in
@@ -180,15 +79,6 @@ export const addOtherWorkSchema = z.object({
   date: weeklyDate,
   text: z.string().trim().min(1, "Write what you did").max(1000),
 })
-
-/**
- * The weekly report's Application column, answered on the deal (§26.9).
- * Null clears it: "nobody has asked yet" is not "no software needed".
- */
-export const setSoftwareNeededSchema = z.object({
-  softwareNeeded: z.boolean().nullable(),
-})
-export type SetSoftwareNeededBody = z.infer<typeof setSoftwareNeededSchema>
 
 export type WeekQueryInput = z.infer<typeof weekQuerySchema>
 export type SaveWeeklyNoteBody = z.infer<typeof saveWeeklyNoteSchema>

@@ -1,6 +1,6 @@
-import { dec, sum, toMoneyString, type Money } from "../payroll/payroll.money"
-import { linesMargin, marginAmount } from "./sales.margin"
-import type { OpportunityLineSummary, OpportunitySummary } from "./sales.types"
+import { dec, sum, toMoneyString, type Money } from "../../payroll/payroll.money"
+import { linesMargin, marginAmount } from "../sales.margin"
+import type { OpportunityLineSummary, OpportunitySummary } from "../sales.types"
 
 const moneyOrNull = (value: Money | null) => (value === null ? null : toMoneyString(value))
 
