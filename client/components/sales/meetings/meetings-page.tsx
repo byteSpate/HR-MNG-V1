@@ -20,7 +20,7 @@ import {
   MeetingStatusDialog,
   useMeetingStatus,
   useStartMinutes,
-} from "@/components/sales/meeting-dialogs"
+} from "@/components/sales/meetings/meeting-dialogs"
 import { MeetingRow, meetingActions } from "@/components/sales/plan-panels"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"

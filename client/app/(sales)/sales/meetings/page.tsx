@@ -1,4 +1,4 @@
-import { MeetingsPage } from "@/components/sales/meetings-page"
+import { MeetingsPage } from "@/components/sales/meetings/meetings-page"
 
 export default async function Page({
   searchParams,

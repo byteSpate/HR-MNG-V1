@@ -20,7 +20,7 @@ import type { SalesMeetingSummary, SalesMinutesStatus } from "@/lib/api/types"
 import type { TableCell } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelAlert, PanelTable, RowActions, TONE, toMessage } from "@/components/dashboard/record-kit"
-import { useStartMinutes } from "@/components/sales/meeting-dialogs"
+import { useStartMinutes } from "@/components/sales/meetings/meeting-dialogs"
 import {
   MINUTES_ICON,
   MINUTES_STATUS_LABEL,
