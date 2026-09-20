@@ -30,6 +30,14 @@ export interface FunnelRemark {
   funnelMeetingId: string | null
 }
 
+/** One product line of a deal, for the row detail (§27.6). */
+export interface FunnelLine {
+  product: string
+  brand: string | null
+  model: string | null
+  quantity: number | null
+}
+
 /** One line of the grid: one quoted deal, in the sheet's fifteen columns. */
 export interface FunnelRow {
   /**
@@ -64,6 +72,8 @@ export interface FunnelRow {
   model: string
   quantity: string
   lineCount: number
+  /** Every line, in order — what "+N more" points at. */
+  lines: FunnelLine[]
 
   amount: string | null
   status: OpportunityStatus
@@ -101,11 +111,12 @@ export interface FunnelRow {
  * "Total" means different things to different readers.
  */
 export interface FunnelTotals {
-  /** Every row in view. */
-  quoted: string
+  /** Every deal in view. Null when none of them carries a price: zero would be
+      a claim, and an unpriced view has made none. */
+  quoted: string | null
   quotedCount: number
-  /** The rows that are neither Lost nor Cancelled. */
-  stillOpen: string
+  /** The deals that are neither Lost nor Cancelled. Null on the same terms. */
+  stillOpen: string | null
   stillOpenCount: number
   /** Rows carrying no amount at all. They are in neither figure, and saying
       how many is the difference between a total and a guess. */
@@ -116,6 +127,9 @@ export interface FunnelGrid {
   employeeId: string
   employeeName: string
   rows: FunnelRow[]
+  /** True when the view holds more deals than `rows` shows. The totals still
+      cover every deal in view, so the two can differ and the screen says so. */
+  truncated: boolean
   totals: FunnelTotals
 }
 

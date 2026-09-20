@@ -89,17 +89,42 @@ describe("summariseLines", () => {
 })
 
 describe("composeFunnel: the grid", () => {
-  it("numbers rows by screen position, newest offer first", () => {
+  it("numbers rows by screen position, in the order the database chose", () => {
     const result = grid({
       deals: [
-        deal({ id: "old", serial: "BS-OPP-00001", offeredOn: day("2026-08-01") }),
         deal({ id: "new", serial: "BS-OPP-00002", offeredOn: day("2026-09-05") }),
+        deal({ id: "old", serial: "BS-OPP-00001", offeredOn: day("2026-08-01") }),
       ],
     })
     expect(result.rows.map((r) => r.opportunityId)).toEqual(["new", "old"])
     // S/N is position, so it reads 1 then 2 whatever the deals' own serials say.
     expect(result.rows.map((r) => r.serialNo)).toEqual([1, 2])
     expect(result.rows.map((r) => r.serial)).toEqual(["BS-OPP-00002", "BS-OPP-00001"])
+  })
+
+  it("never re-sorts what the database already ordered", () => {
+    // Oldest offer first, which is what an ascending date sort asks for. The
+    // composer used to put newest first regardless, which silently defeated
+    // every sort the grid offers.
+    const ascending = grid({
+      deals: [
+        deal({ id: "a", offeredOn: day("2026-08-01") }),
+        deal({ id: "b", offeredOn: day("2026-08-15") }),
+        deal({ id: "c", offeredOn: day("2026-09-05") }),
+      ],
+    })
+    expect(ascending.rows.map((r) => r.opportunityId)).toEqual(["a", "b", "c"])
+    expect(ascending.rows.map((r) => r.serialNo)).toEqual([1, 2, 3])
+
+    // Sorted by amount, so the offer dates are in no order at all.
+    const byAmount = grid({
+      deals: [
+        deal({ id: "low", amount: "10.00", offeredOn: day("2026-08-01") }),
+        deal({ id: "high", amount: "90.00", offeredOn: day("2026-09-05") }),
+        deal({ id: "mid", amount: "50.00", offeredOn: day("2026-07-01") }),
+      ],
+    })
+    expect(byAmount.rows.map((r) => r.opportunityId)).toEqual(["low", "high", "mid"])
   })
 
   it("keeps the business heading but carries the real field", () => {
@@ -281,12 +306,57 @@ describe("composeFunnel: two totals, both labelled", () => {
     expect(result.totals.unpricedCount).toBe(1)
   })
 
-  it("totals an empty funnel to zero rather than to nothing", () => {
-    const result = grid({ deals: [] })
-    expect(result.totals.quoted).toBe("0.00")
-    expect(result.totals.stillOpen).toBe("0.00")
-    expect(result.totals.quotedCount).toBe(0)
-    expect(result.rows).toEqual([])
+  it("gives no figure, not zero, for a view with nothing priced in it", () => {
+    const empty = grid({ deals: [] })
+    expect(empty.totals.quoted).toBeNull()
+    expect(empty.totals.stillOpen).toBeNull()
+    expect(empty.totals.quotedCount).toBe(0)
+    expect(empty.rows).toEqual([])
+
+    const unpriced = grid({ deals: [deal({ amount: null })] })
+    expect(unpriced.totals.quoted).toBeNull()
+    expect(unpriced.totals.quotedCount).toBe(1)
+    expect(unpriced.totals.unpricedCount).toBe(1)
+  })
+
+  it("uses the totals it is handed when the rows are only the first page of the view", () => {
+    const totals = {
+      quoted: "9000.00",
+      quotedCount: 300,
+      stillOpen: "7000.00",
+      stillOpenCount: 250,
+      unpricedCount: 4,
+    }
+    const result = composeFunnel({
+      employeeId: "emp-1",
+      employeeName: "Rahim Uddin",
+      deals: [deal()],
+      comments: [],
+      closeChanges: [],
+      totals,
+      truncated: true,
+    })
+    expect(result.totals).toEqual(totals)
+    expect(result.truncated).toBe(true)
+    expect(grid().truncated).toBe(false)
+  })
+
+  it("carries every product line for the row detail, in stored order", () => {
+    const result = grid({
+      deals: [
+        deal({
+          lines: [
+            line({ product: "Firewall", oemBrand: "Fortinet", model: "FG-100F", quantity: 2, order: 1 }),
+            line({ product: "Switch", oemBrand: "Cisco", model: "C9300", quantity: 4, order: 0 }),
+          ],
+        }),
+      ],
+    })
+    expect(result.rows[0].lines).toEqual([
+      { product: "Switch", brand: "Cisco", model: "C9300", quantity: 4 },
+      { product: "Firewall", brand: "Fortinet", model: "FG-100F", quantity: 2 },
+    ])
+    expect(result.rows[0].lineCount).toBe(2)
   })
 
   it("carries the person the grid belongs to", () => {

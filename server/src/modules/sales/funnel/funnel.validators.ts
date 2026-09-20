@@ -8,8 +8,41 @@
 
 import { z } from "zod"
 
-/** Date-only, the house wire format. */
-const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date in YYYY-MM-DD form")
+import { parseDateOnly } from "../../../utils/dates"
+
+function isRealDate(value: string): boolean {
+  try {
+    parseDateOnly(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Date-only, the house wire format — and a date that exists. The shape alone
+ * lets `2026-02-30` through, which `parseDateOnly` then rejects with a plain
+ * Error, so a typo in a cell became a 500 instead of a 400.
+ */
+const dateOnly = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date in YYYY-MM-DD form")
+  .refine(isRealDate, "That is not a real calendar date")
+
+/**
+ * The Sunday a week begins on. A meeting dated any other day would defeat the
+ * one-review-per-week rule (`weekStart` is unique) and never be found by the
+ * team list, which looks weeks up by their Sunday.
+ */
+export const weekStartDate = dateOnly.refine(
+  (value) => !isRealDate(value) || parseDateOnly(value).getUTCDay() === 0,
+  "A week starts on a Sunday"
+)
+
+/** `GET /meeting`: which week, if not the one under review. */
+export const meetingQuerySchema = z.object({
+  weekStart: weekStartDate.optional(),
+})
 
 /** Up to two decimal places, and no more than the column holds. */
 const money = z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, "Use an amount like 35536.00")
@@ -60,7 +93,14 @@ export type FunnelQuery = z.infer<typeof funnelQuerySchema>
  */
 export const editFunnelCellSchema = z.discriminatedUnion("field", [
   z.object({ field: z.literal("useCase"), value: z.string().trim().max(200).nullable() }),
-  z.object({ field: z.literal("offeredOn"), value: dateOnly.nullable() }),
+  // Not nullable, unlike its neighbours: funnel membership is `offeredOn`
+  // being set and it never comes off (§27.2), so clearing it would silently
+  // remove a quoted deal, and its amount, from the funnel. It can be corrected,
+  // not erased.
+  z.object({
+    field: z.literal("offeredOn"),
+    value: z.string({ error: "A quoted deal keeps its offer date. Change it, but it cannot be cleared" }).pipe(dateOnly),
+  }),
   z.object({ field: z.literal("expectedCloseDate"), value: dateOnly.nullable() }),
   z.object({ field: z.literal("amount"), value: money.nullable() }),
   z.object({ field: z.literal("nextStep"), value: z.string().trim().max(500).nullable() }),
@@ -86,7 +126,7 @@ export const editFunnelCellBodySchema = z.object({
 /** Opening the Saturday review (§27.11). */
 export const openMeetingSchema = z.object({
   /** The Sunday of the week under review. Defaults to the last finished week. */
-  weekStart: dateOnly.optional(),
+  weekStart: weekStartDate.optional(),
   /** The day it is actually held. Defaults to today. */
   heldOn: dateOnly.optional(),
 })

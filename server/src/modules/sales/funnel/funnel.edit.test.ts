@@ -21,7 +21,7 @@ vi.mock("../../../config/prisma", () => {
 })
 
 import prisma from "../../../config/prisma"
-import { editFunnelCell, MEETING_NOT_OPEN } from "./funnel.edit"
+import { editFunnelCell, MEETING_ADMIN_ONLY, MEETING_NOT_OPEN, OFFER_DATE_REQUIRED } from "./funnel.edit"
 
 const mocked = (fn: unknown) => fn as ReturnType<typeof vi.fn>
 const tx = (prisma as unknown as { __tx: Record<string, Record<string, unknown>> }).__tx
@@ -32,6 +32,14 @@ const USER = {
   email: "rahim@example.com",
   mustChangePassword: false,
   salesRole: "SALES_USER",
+} as never
+
+const ADMIN = {
+  sub: "user-2",
+  role: "EMPLOYEE",
+  email: "admin@example.com",
+  mustChangePassword: false,
+  salesRole: "SALES_ADMIN",
 } as never
 
 const DEAL = {
@@ -60,8 +68,8 @@ beforeEach(() => {
   mocked(tx.employee.findUnique).mockResolvedValue({ reportingManagerId: null })
 })
 
-const edit = (field: string, value: string | null, funnelMeetingId?: string) =>
-  editFunnelCell({ opportunityId: "opp-1", edit: { field, value } as never, funnelMeetingId }, USER)
+const edit = (field: string, value: string | null, funnelMeetingId?: string, actor: never = USER) =>
+  editFunnelCell({ opportunityId: "opp-1", edit: { field, value } as never, funnelMeetingId }, actor)
 
 describe("editing writes to the real deal", () => {
   it("updates the opportunity itself, not a funnel copy", async () => {
@@ -129,14 +137,14 @@ describe("an edit made inside a meeting", () => {
   })
 
   it("names the meeting in the audit note", async () => {
-    await edit("amount", "250.00", "fm-1")
+    await edit("amount", "250.00", "fm-1", ADMIN)
     expect(mocked(tx.auditLog.create).mock.calls[0][0].data.note).toBe(
       "Changed in the funnel meeting of 2026-09-19"
     )
   })
 
   it("words the timeline entry as coming from the meeting", async () => {
-    await edit("amount", "250.00", "fm-1")
+    await edit("amount", "250.00", "fm-1", ADMIN)
     expect(mocked(tx.event.create).mock.calls[0][0].data.title).toContain(
       "changed in the funnel meeting"
     )
@@ -149,7 +157,7 @@ describe("an edit made inside a meeting", () => {
       status: "COMPLETED",
       heldOn: new Date("2026-09-19T00:00:00.000Z"),
     })
-    await expect(edit("amount", "250.00", "fm-1")).rejects.toMatchObject({
+    await expect(edit("amount", "250.00", "fm-1", ADMIN)).rejects.toMatchObject({
       statusCode: 409,
       message: MEETING_NOT_OPEN,
     })
@@ -158,6 +166,57 @@ describe("an edit made inside a meeting", () => {
 
   it("is refused when the meeting does not exist at all", async () => {
     mocked(tx.funnelMeeting.findUnique).mockResolvedValue(null)
-    await expect(edit("amount", "250.00", "fm-9")).rejects.toMatchObject({ statusCode: 409 })
+    await expect(edit("amount", "250.00", "fm-9", ADMIN)).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it("is refused to a Sales User, who cannot attribute a change to a review", async () => {
+    // Holding a meeting's id is not the same as having been in the room.
+    await expect(edit("amount", "250.00", "fm-1")).rejects.toMatchObject({
+      statusCode: 403,
+      message: MEETING_ADMIN_ONLY,
+    })
+    expect(tx.opportunity.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("the offer date is funnel membership", () => {
+  it("cannot be cleared, since that would remove a quoted deal from the funnel", async () => {
+    await expect(edit("offeredOn", null)).rejects.toMatchObject({
+      statusCode: 400,
+      message: OFFER_DATE_REQUIRED,
+    })
+    await expect(edit("offeredOn", "")).rejects.toMatchObject({ statusCode: 400 })
+    expect(tx.opportunity.update).not.toHaveBeenCalled()
+  })
+
+  it("can be corrected to another date", async () => {
+    await edit("offeredOn", "2026-09-01")
+    expect(mocked(tx.opportunity.update).mock.calls[0][0].data.offeredOn.toISOString()).toBe(
+      "2026-09-01T00:00:00.000Z"
+    )
+  })
+})
+
+describe("saving what is already there", () => {
+  it("writes nothing: no update, no audit row, no Timeline entry", async () => {
+    await edit("useCase", "Old use case")
+    await edit("amount", "100.00")
+    await edit("expectedCloseDate", "2026-09-30")
+
+    expect(tx.opportunity.update).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
+    expect(tx.event.create).not.toHaveBeenCalled()
+  })
+
+  it("still answers with the value, so the cell settles", async () => {
+    await expect(edit("useCase", "Old use case")).resolves.toMatchObject({
+      field: "useCase",
+      value: "Old use case",
+    })
+  })
+
+  it("treats clearing an already-empty cell as no change", async () => {
+    await edit("nextStep", "")
+    expect(tx.opportunity.update).not.toHaveBeenCalled()
   })
 })

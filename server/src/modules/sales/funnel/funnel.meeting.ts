@@ -9,10 +9,11 @@
  */
 
 import prisma from "../../../config/prisma"
+import { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
 import { formatDateOnly, parseDateOnly } from "../../../utils/dates"
-import { officeToday } from "../../attendance/attendance.time"
+import { officeDateOf } from "../../attendance/attendance.time"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
 import { employeeIdFor, isSalesAdmin } from "../sales.access"
@@ -22,6 +23,8 @@ export const ADMIN_ONLY = "Only a Sales Admin can run a funnel meeting"
 export const MEETING_NOT_FOUND = "That funnel meeting does not exist"
 export const MEETING_CLOSED = "That funnel meeting is completed. Reopen it to make changes"
 export const NEEDS_EMPLOYEE = "A Sales Admin needs an employee record to run a meeting"
+export const UNKNOWN_PEOPLE = "One or more of those people do not exist"
+export const UNKNOWN_PERSON = "That person does not exist"
 
 export interface FunnelMeetingDetail {
   id: string
@@ -108,46 +111,61 @@ export async function openFunnelMeeting(
   const employeeId = await employeeIdFor(actor)
   if (!employeeId) throw new AppError(409, NEEDS_EMPLOYEE)
 
-  const weekStart = body.weekStart ? parseDateOnly(body.weekStart) : weekReviewedBy(now)
-  const heldOn = body.heldOn ? parseDateOnly(body.heldOn) : officeToday()
+  // The office's own date, not the UTC one: at 03:00 in Dhaka on a Saturday
+  // the UTC date is still Friday, which is the week before.
+  const today = officeDateOf(now)
+  const weekStart = body.weekStart ? parseDateOnly(body.weekStart) : weekReviewedBy(today)
+  const heldOn = body.heldOn ? parseDateOnly(body.heldOn) : today
 
   const existing = await prisma.funnelMeeting.findUnique({ where: { weekStart }, select: DETAIL })
   if (existing) return present(existing as DetailRow)
 
-  const created = await prisma.$transaction(async (tx) => {
-    const meeting = await tx.funnelMeeting.create({
-      data: { weekStart, heldOn, ranByEmployeeId: employeeId, createdBy: actor.sub },
-      select: DETAIL,
+  try {
+    const created = await prisma.$transaction(async (tx) => {
+      const meeting = await tx.funnelMeeting.create({
+        data: { weekStart, heldOn, ranByEmployeeId: employeeId, createdBy: actor.sub },
+        select: DETAIL,
+      })
+
+      await writeAudit(tx, {
+        entity: "FUNNEL_MEETING",
+        entityId: meeting.id,
+        action: "CREATE",
+        changedBy: actor.sub,
+        after: { weekStart: formatDateOnly(weekStart), heldOn: formatDateOnly(heldOn) },
+      })
+
+      await emitEvent(tx, {
+        type: "sales.funnel.meeting_opened",
+        entity: "FUNNEL_MEETING",
+        entityId: meeting.id,
+        actorUserId: actor.sub,
+        // The admin who ran it is the subject: the event is about what they
+        // did, and it gives the row a real audience. `managerEmployeeId: null`
+        // stops it travelling up a reporting line that has no part in the
+        // funnel (§27.16).
+        subjectEmployeeId: employeeId,
+        managerEmployeeId: null,
+        title: `Funnel meeting opened for the week of ${formatDateOnly(weekStart)}`,
+        meta: null,
+        href: "/sales/funnel",
+      })
+
+      return meeting
     })
 
-    await writeAudit(tx, {
-      entity: "FUNNEL_MEETING",
-      entityId: meeting.id,
-      action: "CREATE",
-      changedBy: actor.sub,
-      after: { weekStart: formatDateOnly(weekStart), heldOn: formatDateOnly(heldOn) },
-    })
-
-    await emitEvent(tx, {
-      type: "sales.funnel.meeting_opened",
-      entity: "FUNNEL_MEETING",
-      entityId: meeting.id,
-      actorUserId: actor.sub,
-      // The admin who ran it is the subject: the event is about what they
-      // did, and it gives the row a real audience. `managerEmployeeId: null`
-      // stops it travelling up a reporting line that has no part in the
-      // funnel (§27.16).
-      subjectEmployeeId: employeeId,
-      managerEmployeeId: null,
-      title: `Funnel meeting opened for the week of ${formatDateOnly(weekStart)}`,
-      meta: null,
-      href: "/sales/funnel",
-    })
-
-    return meeting
-  })
-
-  return present(created as DetailRow)
+    return present(created as DetailRow)
+  } catch (err) {
+    // Two admins pressing the button in the same instant both pass the check
+    // above; the unique week key lets one through and refuses the other. The
+    // loser should land in the winner's meeting, as the comment promises,
+    // rather than see a 500.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const winner = await prisma.funnelMeeting.findUnique({ where: { weekStart }, select: DETAIL })
+      if (winner) return present(winner as DetailRow)
+    }
+    throw err
+  }
 }
 
 /** The meeting for a week, if one has been opened. */
@@ -157,20 +175,36 @@ export async function getFunnelMeeting(
   now: Date = new Date()
 ): Promise<FunnelMeetingDetail | null> {
   requireAdmin(actor)
-  const week = weekStart ? parseDateOnly(weekStart) : weekReviewedBy(now)
+  const week = weekStart ? parseDateOnly(weekStart) : weekReviewedBy(officeDateOf(now))
   const row = await prisma.funnelMeeting.findUnique({ where: { weekStart: week }, select: DETAIL })
   return row ? present(row as DetailRow) : null
 }
 
-async function loadOpen(id: string) {
-  const meeting = await prisma.funnelMeeting.findUnique({
+/**
+ * Locks the meeting for the rest of the transaction, then reads it.
+ *
+ * Checking that a meeting is open and then writing to it are two steps, and
+ * "complete the meeting" can land between them: a note or an action item
+ * would arrive on a meeting that had just been closed. The row lock makes the
+ * check and the write one step. Every writer here takes it, so they queue.
+ */
+export async function lockMeeting(
+  tx: Prisma.TransactionClient,
+  id: string,
+  { open }: { open: boolean }
+) {
+  await tx.$queryRaw`SELECT "id" FROM "FunnelMeeting" WHERE "id" = ${id} FOR UPDATE`
+  const meeting = await tx.funnelMeeting.findUnique({
     where: { id },
-    select: { id: true, status: true, weekStart: true },
+    select: { id: true, status: true, weekStart: true, ranByEmployeeId: true, note: true },
   })
   if (!meeting) throw new AppError(404, MEETING_NOT_FOUND)
-  if (meeting.status === "COMPLETED") throw new AppError(409, MEETING_CLOSED)
+  // A completed meeting takes no new work (§27.11).
+  if (open && meeting.status === "COMPLETED") throw new AppError(409, MEETING_CLOSED)
   return meeting
 }
+
+const sorted = (ids: string[]) => [...ids].sort()
 
 /**
  * Ticks who was in the room. The whole list is sent, so unticking is simply a
@@ -182,16 +216,43 @@ export async function setMeetingAttendees(
   actor: AccessTokenPayload
 ): Promise<FunnelMeetingDetail> {
   requireAdmin(actor)
-  await loadOpen(id)
+  const employeeIds = [...new Set(body.employeeIds)]
 
   const row = await prisma.$transaction(async (tx) => {
+    await lockMeeting(tx, id, { open: true })
+
+    // A stranger's id would be a foreign-key error, which is a 500.
+    if (employeeIds.length > 0) {
+      const known = await tx.employee.findMany({
+        where: { id: { in: employeeIds } },
+        select: { id: true },
+      })
+      if (known.length !== employeeIds.length) throw new AppError(400, UNKNOWN_PEOPLE)
+    }
+
+    const before = await tx.funnelMeetingAttendee.findMany({
+      where: { funnelMeetingId: id },
+      select: { employeeId: true },
+    })
+
     await tx.funnelMeetingAttendee.deleteMany({ where: { funnelMeetingId: id } })
-    if (body.employeeIds.length > 0) {
+    if (employeeIds.length > 0) {
       await tx.funnelMeetingAttendee.createMany({
-        data: body.employeeIds.map((employeeId) => ({ funnelMeetingId: id, employeeId })),
+        data: employeeIds.map((employeeId) => ({ funnelMeetingId: id, employeeId })),
         skipDuplicates: true,
       })
     }
+
+    await writeAudit(tx, {
+      entity: "FUNNEL_MEETING",
+      entityId: id,
+      action: "UPDATE",
+      changedBy: actor.sub,
+      before: { attendees: sorted(before.map((a) => a.employeeId)) },
+      after: { attendees: sorted(employeeIds) },
+      note: "Attendees changed",
+    })
+
     return tx.funnelMeeting.findUniqueOrThrow({ where: { id }, select: DETAIL })
   })
 
@@ -211,9 +272,16 @@ export async function setPersonReviewed(
   actor: AccessTokenPayload
 ): Promise<FunnelMeetingDetail> {
   requireAdmin(actor)
-  await loadOpen(id)
 
   const row = await prisma.$transaction(async (tx) => {
+    await lockMeeting(tx, id, { open: true })
+
+    const person = await tx.employee.findUnique({
+      where: { id: body.employeeId },
+      select: { id: true },
+    })
+    if (!person) throw new AppError(404, UNKNOWN_PERSON)
+
     if (body.reviewed) {
       await tx.funnelMeetingReview.upsert({
         where: { funnelMeetingId_employeeId: { funnelMeetingId: id, employeeId: body.employeeId } },
@@ -225,6 +293,16 @@ export async function setPersonReviewed(
         where: { funnelMeetingId: id, employeeId: body.employeeId },
       })
     }
+
+    await writeAudit(tx, {
+      entity: "FUNNEL_MEETING",
+      entityId: id,
+      action: "UPDATE",
+      changedBy: actor.sub,
+      after: { employeeId: body.employeeId, reviewed: body.reviewed },
+      note: body.reviewed ? "Funnel marked reviewed" : "Reviewed mark taken off",
+    })
+
     return tx.funnelMeeting.findUniqueOrThrow({ where: { id }, select: DETAIL })
   })
 
@@ -238,13 +316,32 @@ export async function setMeetingNote(
   actor: AccessTokenPayload
 ): Promise<FunnelMeetingDetail> {
   requireAdmin(actor)
-  await loadOpen(id)
 
-  const row = await prisma.funnelMeeting.update({
-    where: { id },
-    data: { note: body.note },
-    select: DETAIL,
+  const row = await prisma.$transaction(async (tx) => {
+    const meeting = await lockMeeting(tx, id, { open: true })
+
+    const updated = await tx.funnelMeeting.update({
+      where: { id },
+      data: { note: body.note },
+      select: DETAIL,
+    })
+
+    // The note is the meeting's own record, so a change to it is audited like
+    // any other. A save that changes nothing is not.
+    if ((meeting.note ?? null) !== (body.note ?? null)) {
+      await writeAudit(tx, {
+        entity: "FUNNEL_MEETING",
+        entityId: id,
+        action: "UPDATE",
+        changedBy: actor.sub,
+        before: { note: meeting.note ?? null },
+        after: { note: body.note ?? null },
+        note: "Week note changed",
+      })
+    }
+    return updated
   })
+
   return present(row as DetailRow)
 }
 
@@ -264,13 +361,16 @@ export async function setMeetingStatus(
 ): Promise<FunnelMeetingDetail> {
   requireAdmin(actor)
 
-  const meeting = await prisma.funnelMeeting.findUnique({
-    where: { id },
-    select: { id: true, status: true, weekStart: true, ranByEmployeeId: true },
-  })
-  if (!meeting) throw new AppError(404, MEETING_NOT_FOUND)
-
   const row = await prisma.$transaction(async (tx) => {
+    const meeting = await lockMeeting(tx, id, { open: false })
+
+    // Already there: a double click, or a second admin. Nothing changed, so
+    // nothing is written — a fresh audit row saying "reopened" for a meeting
+    // that was never completed would defeat the reason the status is an enum.
+    if (meeting.status === status) {
+      return tx.funnelMeeting.findUniqueOrThrow({ where: { id }, select: DETAIL })
+    }
+
     const updated = await tx.funnelMeeting.update({
       where: { id },
       data: { status },

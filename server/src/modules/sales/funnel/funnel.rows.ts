@@ -10,13 +10,14 @@
  */
 
 import { formatDateOnly } from "../../../utils/dates"
-import { dec, sum, toMoneyString, ZERO, type Money } from "../../payroll/payroll.money"
+import { dec, sum, toMoneyString, type Money } from "../../payroll/payroll.money"
 import { monthYearOf } from "./funnel.dates"
 import type {
   FunnelCloseChange,
   FunnelCommentInput,
   FunnelDealInput,
   FunnelGrid,
+  FunnelLine,
   FunnelLineInput,
   FunnelRemark,
   FunnelRow,
@@ -159,7 +160,25 @@ function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
   return out
 }
 
-function totalsFor(deals: FunnelDealInput[]): FunnelTotals {
+/** Every line of a deal, in stored order, for the row detail. */
+function linesOf(lines: FunnelLineInput[]): FunnelLine[] {
+  return [...lines]
+    .sort((a, b) => a.order - b.order)
+    .map((line) => ({
+      product: line.product,
+      brand: line.oemBrand,
+      model: line.model,
+      quantity: line.quantity,
+    }))
+}
+
+/**
+ * The two labelled totals over deals in hand (§27.10).
+ *
+ * A figure with nothing priced behind it is null, never "0.00": an unpriced
+ * view has not been valued at zero, it has not been valued.
+ */
+export function totalsFor(deals: FunnelDealInput[]): FunnelTotals {
   const priced: Money[] = []
   const open: Money[] = []
   let unpricedCount = 0
@@ -179,9 +198,9 @@ function totalsFor(deals: FunnelDealInput[]): FunnelTotals {
   }
 
   return {
-    quoted: toMoneyString(priced.length > 0 ? sum(priced) : ZERO),
+    quoted: priced.length > 0 ? toMoneyString(sum(priced)) : null,
     quotedCount: deals.length,
-    stillOpen: toMoneyString(open.length > 0 ? sum(open) : ZERO),
+    stillOpen: open.length > 0 ? toMoneyString(sum(open)) : null,
     stillOpenCount,
     unpricedCount,
   }
@@ -193,27 +212,27 @@ export interface ComposeFunnelInput {
   deals: FunnelDealInput[]
   comments: FunnelCommentInput[]
   closeChanges: FunnelCloseChange[]
+  /**
+   * Totals over the whole view when the deals above are only the first page of
+   * it. Absent, they are worked out from the deals in hand.
+   */
+  totals?: FunnelTotals
+  truncated?: boolean
 }
 
 /**
  * The grid for one person.
  *
- * Deals arrive already filtered by the database — the service does that, so
- * the funnel does not become another of the unbounded reads the performance
- * audit found. Newest offer first is applied here as well, so an unsorted call
- * still comes back looking like the sheet.
+ * Deals arrive already filtered **and sorted** by the database — the service
+ * does that, so the funnel does not become another of the unbounded reads the
+ * performance audit found. The order they arrive in is the order they leave
+ * in: re-sorting here would silently defeat every sort the grid offers.
  */
 export function composeFunnel(input: ComposeFunnelInput): FunnelGrid {
   const commentsByDeal = groupBy(input.comments, (c) => c.entityId)
   const changesByDeal = groupBy(input.closeChanges, (c) => c.entityId)
 
-  const ordered = [...input.deals].sort((a, b) => {
-    const left = a.offeredOn ? a.offeredOn.getTime() : 0
-    const right = b.offeredOn ? b.offeredOn.getTime() : 0
-    return right - left
-  })
-
-  const rows: FunnelRow[] = ordered.map((deal, index) => {
+  const rows: FunnelRow[] = input.deals.map((deal, index) => {
     const slip = slipFor(changesByDeal.get(deal.id) ?? [])
     const remarks = (commentsByDeal.get(deal.id) ?? [])
       .slice()
@@ -234,6 +253,7 @@ export function composeFunnel(input: ComposeFunnelInput): FunnelGrid {
       model: summariseLines(deal.lines, "model"),
       quantity: summariseLines(deal.lines, "quantity"),
       lineCount: deal.lines.length,
+      lines: linesOf(deal.lines),
       amount: money(deal.amount),
       status: deal.status,
       stage: deal.stage,
@@ -256,6 +276,7 @@ export function composeFunnel(input: ComposeFunnelInput): FunnelGrid {
     employeeId: input.employeeId,
     employeeName: input.employeeName,
     rows,
-    totals: totalsFor(input.deals),
+    truncated: input.truncated ?? false,
+    totals: input.totals ?? totalsFor(input.deals),
   }
 }

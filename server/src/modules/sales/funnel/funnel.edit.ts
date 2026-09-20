@@ -17,10 +17,12 @@ import { writeAudit } from "../../../utils/audit"
 import { parseDateOnly } from "../../../utils/dates"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
-import { accountScopeFor, employeeIdFor, OPPORTUNITY_NOT_VISIBLE } from "../sales.access"
+import { accountScopeFor, employeeIdFor, isSalesAdmin, OPPORTUNITY_NOT_VISIBLE } from "../sales.access"
 import type { EditFunnelCell } from "./funnel.validators"
 
 export const MEETING_NOT_OPEN = "That funnel meeting is not open"
+export const MEETING_ADMIN_ONLY = "Only a Sales Admin can make a change on behalf of a funnel meeting"
+export const OFFER_DATE_REQUIRED = "A quoted deal keeps its offer date. Change it, but it cannot be cleared"
 
 /** The columns the grid may write. */
 type Writable = EditFunnelCell["field"]
@@ -53,6 +55,21 @@ function forAudit(value: Date | string | Prisma.Decimal | null): string | null {
   return String(value)
 }
 
+/**
+ * Whether a save would leave the cell as it is. Money is compared as a number,
+ * because `100.00` typed into a cell and `100` read back from a Decimal column
+ * are the same amount, and neither should write an audit row.
+ */
+function unchanged(
+  field: Writable,
+  before: Date | string | Prisma.Decimal | null,
+  next: Date | string | Prisma.Decimal | null
+): boolean {
+  if (before === null || next === null) return before === next
+  if (MONEY_FIELDS.has(field)) return new Prisma.Decimal(before as never).equals(next as never)
+  return forAudit(before) === forAudit(next)
+}
+
 const LABEL: Record<Writable, string> = {
   useCase: "use case",
   offeredOn: "offer date",
@@ -82,6 +99,18 @@ export async function editFunnelCell(
   actor: AccessTokenPayload
 ): Promise<{ opportunityId: string; field: Writable; value: string | null }> {
   const { opportunityId, edit } = input
+
+  // Belt and braces with the validator: membership is `offeredOn` being set
+  // (§27.2), so nothing that reaches this function may take it off.
+  if (edit.field === "offeredOn" && (edit.value === null || edit.value === "")) {
+    throw new AppError(400, OFFER_DATE_REQUIRED)
+  }
+  // Attributing a change to a meeting is the review's own act. A Sales User
+  // holding a meeting's id must not be able to stamp their edits as having
+  // been made in it.
+  if (input.funnelMeetingId && !isSalesAdmin(actor)) {
+    throw new AppError(403, MEETING_ADMIN_ONLY)
+  }
 
   return prisma.$transaction(async (tx) => {
     const employeeId = await employeeIdFor(actor, tx as never)
@@ -120,6 +149,13 @@ export async function editFunnelCell(
     const next = toColumn(edit.field, edit.value)
     const before = current[edit.field] as Date | string | Prisma.Decimal | null
 
+    // Saving what is already there changes nothing, so it writes nothing: no
+    // audit row, no Timeline entry, no "changed" bump to the activity clock
+    // that "quiet" and "changed in the last week" both read.
+    if (unchanged(edit.field, before, next)) {
+      return { opportunityId, field: edit.field, value: edit.value }
+    }
+
     await tx.opportunity.update({
       where: { id: opportunityId },
       data: { [edit.field]: next, lastActivityAt: new Date() },
@@ -156,8 +192,23 @@ export async function editFunnelCell(
 }
 
 /**
- * Stamps the offer date the first time a deal reaches Quotation submitted
- * (§27.4), which is also the moment it joins the funnel (§27.2).
+ * The stages at which a quotation has gone out: Quotation submitted and the
+ * two that can only follow it.
+ *
+ * A stage change is free-form — nothing forces a deal through Quotation
+ * submitted on its way to Negotiation — so the stamp cannot key on that one
+ * stage alone. A deal moved straight to Negotiation has been quoted as far as
+ * anybody can tell, and would otherwise never enter the funnel.
+ */
+const QUOTED_STAGES: ReadonlySet<string> = new Set([
+  "QUOTATION_SUBMITTED",
+  "NEGOTIATION",
+  "AWAITING_DECISION",
+])
+
+/**
+ * Stamps the offer date the first time a deal reaches a quoted stage (§27.4),
+ * which is also the moment it joins the funnel (§27.2).
  *
  * Only ever fills a blank. A deal that drops back to an earlier stage and
  * comes forward again keeps the date it was really quoted on, and a date
@@ -170,9 +221,7 @@ export async function stampOfferedOn(
   currentOfferedOn: Date | null,
   today: Date
 ): Promise<boolean> {
-  if (stage !== "QUOTATION_SUBMITTED") return false
-  // Older callers and fixtures may omit this newly added field entirely.
-  // Like null, undefined means this deal has never been stamped.
+  if (!QUOTED_STAGES.has(stage)) return false
   if (currentOfferedOn) return false
 
   await tx.opportunity.update({

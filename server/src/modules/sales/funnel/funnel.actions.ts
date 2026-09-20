@@ -24,11 +24,13 @@ import { employeeIdFor, isSalesAdmin } from "../sales.access"
 import type { SalesTaskSummary } from "../sales.types"
 import { presentTask } from "../task.present"
 import { nextSaturdayFrom } from "./funnel.dates"
-import { MEETING_CLOSED, MEETING_NOT_FOUND } from "./funnel.meeting"
+import { lockMeeting } from "./funnel.meeting"
 
 export const ACTIONS_ADMIN_ONLY = "Only a Sales Admin can give out an action item"
 export const ASSIGNEE_NOT_SALES = "That person is not in the Sales Hub"
 export const ACTIONS_NEED_EMPLOYEE = "You need an employee record to give out an action item"
+export const ACTION_DEAL_MISSING = "That deal does not exist"
+export const ACTION_ACCOUNT_MISSING = "That account does not exist"
 
 const INCLUDE = {
   salesAccount: { select: { name: true } },
@@ -54,7 +56,8 @@ export interface FunnelActionInput {
  * next review", which is the reason everyone is in the room.
  *
  * It reaches the assignee through paths that already exist: their task list,
- * their overview, and the 00:01 daily email (§24.14). No new email is sent,
+ * their overview, and the existing 00:01 daily email when it becomes due
+ * (and on subsequent days while overdue) (§24.14). No new email is sent,
  * and nothing here knows about email at all.
  */
 export async function createFunnelAction(
@@ -68,38 +71,41 @@ export async function createFunnelAction(
   const assignerEmployeeId = await employeeIdFor(actor)
   if (!assignerEmployeeId) throw new AppError(409, ACTIONS_NEED_EMPLOYEE)
 
-  const meeting = await prisma.funnelMeeting.findUnique({
-    where: { id: meetingId },
-    select: { id: true, status: true },
-  })
-  if (!meeting) throw new AppError(404, MEETING_NOT_FOUND)
-  // A completed meeting takes no new action items (§27.11).
-  if (meeting.status === "COMPLETED") throw new AppError(409, MEETING_CLOSED)
-
-  // The assignee must actually be in the Sales Hub. Handing work to somebody
-  // who cannot open the page is a task nobody will ever see.
-  const assignee = await prisma.employee.findFirst({
-    where: { id: body.assignedToEmployeeId, user: { salesRole: { not: null }, isActive: true } },
-    select: { id: true },
-  })
-  if (!assignee) throw new AppError(400, ASSIGNEE_NOT_SALES)
-
-  let salesAccountId = body.salesAccountId ?? null
-  if (body.opportunityId) {
-    const deal = await prisma.opportunity.findUnique({
-      where: { id: body.opportunityId },
-      select: { id: true, salesAccountId: true },
-    })
-    if (!deal) throw new AppError(400, "That deal does not exist")
-    // Keep the account and the deal consistent, so the task lands on the right
-    // Timeline rather than on none.
-    salesAccountId = deal.salesAccountId
-  }
-
   const dueOn = body.dueOn ? parseDateOnly(body.dueOn) : nextSaturdayFrom(officeDateOf(now))
   const priority = body.priority ?? "NORMAL"
 
   const created = await prisma.$transaction(async (tx) => {
+    // Locked and re-read here, not checked beforehand: a meeting completed a
+    // moment ago must not take this action item (§27.11).
+    await lockMeeting(tx, meetingId, { open: true })
+
+    // The assignee must actually be in the Sales Hub. Handing work to somebody
+    // who cannot open the page is a task nobody will ever see.
+    const assignee = await tx.employee.findFirst({
+      where: { id: body.assignedToEmployeeId, user: { salesRole: { not: null }, isActive: true } },
+      select: { id: true },
+    })
+    if (!assignee) throw new AppError(400, ASSIGNEE_NOT_SALES)
+
+    let salesAccountId = body.salesAccountId ?? null
+    if (body.opportunityId) {
+      const deal = await tx.opportunity.findUnique({
+        where: { id: body.opportunityId },
+        select: { id: true, salesAccountId: true },
+      })
+      if (!deal) throw new AppError(400, ACTION_DEAL_MISSING)
+      // Keep the account and the deal consistent, so the task lands on the right
+      // Timeline rather than on none.
+      salesAccountId = deal.salesAccountId
+    } else if (salesAccountId) {
+      // An unknown id would be a foreign-key error, which is a 500.
+      const account = await tx.salesAccount.findUnique({
+        where: { id: salesAccountId },
+        select: { id: true },
+      })
+      if (!account) throw new AppError(400, ACTION_ACCOUNT_MISSING)
+    }
+
     const task = await tx.salesTask.create({
       data: {
         origin: "FUNNEL_MEETING",

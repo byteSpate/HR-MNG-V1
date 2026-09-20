@@ -294,7 +294,18 @@ async function actionRows(
       : Promise.resolve(0),
     mine
       ? Promise.resolve(0)
-      : prisma.funnelMeetingReview.count({ where: { funnelMeeting: { weekStart: lastWeekStart } } }),
+      : prisma.funnelMeetingReview.count({
+          where: {
+            funnelMeeting: { weekStart: lastWeekStart },
+            // The same people `weeklyWriters` counts. Reviews are recorded for
+            // anybody in the team list, admins included, so counting them all
+            // would let a reviewed admin cancel out an unreviewed writer.
+            employee: {
+              user: { salesRole: SalesRole.SALES_USER, isActive: true },
+              employmentStatus: "ACTIVE",
+            },
+          },
+        }),
   ])
 
   return [

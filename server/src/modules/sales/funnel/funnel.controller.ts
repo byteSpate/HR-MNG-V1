@@ -11,9 +11,7 @@
 
 import type { NextFunction, Request, Response } from "express"
 
-import prisma from "../../../config/prisma"
 import { AppError } from "../../../middleware/errorHandler"
-import { isSalesAdmin } from "../sales.access"
 import { createFunnelAction, listMeetingActions } from "./funnel.actions"
 import { editFunnelCell } from "./funnel.edit"
 import {
@@ -24,6 +22,7 @@ import {
   setMeetingStatus,
   setPersonReviewed,
 } from "./funnel.meeting"
+import { addManagementNote } from "./funnel.notes"
 import { getFunnel, listFunnelTeam } from "./funnel.service"
 import {
   editFunnelCellBodySchema,
@@ -31,6 +30,7 @@ import {
   funnelQuerySchema,
   managementNoteSchema,
   meetingAttendeesSchema,
+  meetingQuerySchema,
   meetingNoteSchema,
   openMeetingSchema,
   reviewPersonSchema,
@@ -87,47 +87,13 @@ export async function editFunnelCellHandler(req: Request, res: Response, next: N
 }
 
 /**
- * A management note on a deal (§27.8, §27.12). Admin only, and it lands as an
- * ordinary SalesComment carrying the meeting, so it shows in the deal's
- * remarks and on its Timeline without a second store.
+ * A management note on a deal (§27.8, §27.12). Admin only; the rules live in
+ * `funnel.notes.ts`, like every other write in this module.
  */
 export async function addManagementNoteHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const actor = req.user!
-    if (!isSalesAdmin(actor)) {
-      throw new AppError(403, "Only a Sales Admin can write a management note")
-    }
     const body = managementNoteSchema.parse(req.body)
-    const meetingId = pathParam(req, "id")
-
-    const meeting = await prisma.funnelMeeting.findUnique({
-      where: { id: meetingId },
-      select: { id: true, status: true },
-    })
-    if (!meeting) throw new AppError(404, "That funnel meeting does not exist")
-    if (meeting.status === "COMPLETED") {
-      throw new AppError(409, "That funnel meeting is completed. Reopen it to make changes")
-    }
-
-    const deal = await prisma.opportunity.findUnique({
-      where: { id: body.opportunityId },
-      select: { id: true },
-    })
-    if (!deal) throw new AppError(404, "That Opportunity does not exist, or is not yours")
-
-    const created = await prisma.salesComment.create({
-      data: {
-        entity: "OPPORTUNITY",
-        entityId: body.opportunityId,
-        kind: "MANAGEMENT_NOTE",
-        body: body.body,
-        authorUserId: actor.sub,
-        funnelMeetingId: meetingId,
-      },
-      select: { id: true, createdAt: true },
-    })
-
-    return res.status(201).json({ id: created.id, createdAt: created.createdAt.toISOString() })
+    return res.status(201).json(await addManagementNote(pathParam(req, "id"), body, req.user!))
   } catch (err) {
     return next(err)
   }
@@ -144,7 +110,7 @@ export async function openFunnelMeetingHandler(req: Request, res: Response, next
 
 export async function getFunnelMeetingHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const weekStart = typeof req.query.weekStart === "string" ? req.query.weekStart : undefined
+    const { weekStart } = meetingQuerySchema.parse(req.query)
     return res.status(200).json(await getFunnelMeeting(weekStart, req.user!))
   } catch (err) {
     return next(err)

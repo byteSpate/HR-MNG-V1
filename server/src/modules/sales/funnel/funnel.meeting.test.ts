@@ -4,18 +4,20 @@ vi.mock("../../../config/env", () => ({ env: { APP_TIMEZONE: "Asia/Dhaka" } }))
 
 vi.mock("../../../config/prisma", () => {
   const tx = {
+    $queryRaw: vi.fn(),
+    salesAccount: { findUnique: vi.fn() },
     funnelMeeting: {
       create: vi.fn(),
       update: vi.fn(),
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
     },
-    funnelMeetingAttendee: { deleteMany: vi.fn(), createMany: vi.fn() },
+    funnelMeetingAttendee: { findMany: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn() },
     funnelMeetingReview: { upsert: vi.fn(), deleteMany: vi.fn() },
     salesTask: { create: vi.fn(), findMany: vi.fn() },
     auditLog: { create: vi.fn() },
     event: { create: vi.fn() },
-    employee: { findUnique: vi.fn(), findFirst: vi.fn() },
+    employee: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
     opportunity: { findUnique: vi.fn() },
   }
   return {
@@ -32,13 +34,23 @@ vi.mock("../../../config/prisma", () => {
 })
 
 import prisma from "../../../config/prisma"
-import { ACTIONS_ADMIN_ONLY, ASSIGNEE_NOT_SALES, createFunnelAction } from "./funnel.actions"
+import { Prisma } from "../../../generated/prisma/client"
+import {
+  ACTION_ACCOUNT_MISSING,
+  ACTIONS_ADMIN_ONLY,
+  ASSIGNEE_NOT_SALES,
+  createFunnelAction,
+} from "./funnel.actions"
 import {
   ADMIN_ONLY,
   MEETING_CLOSED,
   openFunnelMeeting,
+  setMeetingAttendees,
+  setMeetingNote,
   setMeetingStatus,
   setPersonReviewed,
+  UNKNOWN_PEOPLE,
+  UNKNOWN_PERSON,
 } from "./funnel.meeting"
 
 const mocked = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -73,8 +85,24 @@ const DETAIL = {
   _count: { tasks: 0 },
 }
 
+/** What the row lock reads back. Every write takes it, then checks the status. */
+const meetingIs = (status: "SCHEDULED" | "COMPLETED", note: string | null = null) =>
+  mocked(tx.funnelMeeting.findUnique).mockResolvedValue({
+    id: "fm-1",
+    status,
+    weekStart: new Date("2026-09-13T00:00:00.000Z"),
+    ranByEmployeeId: "emp-admin",
+    note,
+  })
+
+const auditCalls = () => mocked(tx.auditLog.create).mock.calls.map((c) => c[0].data)
+
 beforeEach(() => {
   vi.clearAllMocks()
+  meetingIs("SCHEDULED")
+  mocked(tx.$queryRaw).mockResolvedValue([])
+  mocked(tx.employee.findMany).mockResolvedValue([{ id: "emp-1" }, { id: "emp-2" }])
+  mocked(tx.funnelMeetingAttendee.findMany).mockResolvedValue([])
   mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-admin" } })
   mocked(prisma.funnelMeeting.findUnique).mockResolvedValue(null)
   mocked(tx.funnelMeeting.create).mockResolvedValue(DETAIL)
@@ -126,14 +154,7 @@ describe("opening the review", () => {
 })
 
 describe("a completed meeting takes no new work", () => {
-  beforeEach(() => {
-    mocked(prisma.funnelMeeting.findUnique).mockResolvedValue({
-      id: "fm-1",
-      status: "COMPLETED",
-      weekStart: new Date("2026-09-13T00:00:00.000Z"),
-      ranByEmployeeId: "emp-admin",
-    })
-  })
+  beforeEach(() => meetingIs("COMPLETED"))
 
   it("refuses a new reviewed tick", async () => {
     await expect(
@@ -155,14 +176,6 @@ describe("a completed meeting takes no new work", () => {
 })
 
 describe("reviewed is not attendance", () => {
-  beforeEach(() => {
-    mocked(prisma.funnelMeeting.findUnique).mockResolvedValue({
-      id: "fm-1",
-      status: "SCHEDULED",
-      weekStart: new Date("2026-09-13T00:00:00.000Z"),
-      ranByEmployeeId: "emp-admin",
-    })
-  })
 
   it("marks somebody reviewed without touching the attendee list", async () => {
     // Somebody can be away and their deals still walked (§27.3).
@@ -183,8 +196,7 @@ describe("reviewed is not attendance", () => {
 
 describe("action items: the one behaviour change in phase 6", () => {
   beforeEach(() => {
-    mocked(prisma.funnelMeeting.findUnique).mockResolvedValue({ id: "fm-1", status: "SCHEDULED" })
-    mocked(prisma.employee.findFirst).mockResolvedValue({ id: "emp-1" })
+    mocked(tx.employee.findFirst).mockResolvedValue({ id: "emp-1" })
     mocked(tx.salesTask.create).mockResolvedValue({
       id: "task-1",
       origin: "FUNNEL_MEETING",
@@ -241,7 +253,7 @@ describe("action items: the one behaviour change in phase 6", () => {
 
   it("refuses to hand work to somebody outside the Sales Hub", async () => {
     // A task the assignee cannot open is a task nobody will ever see.
-    mocked(prisma.employee.findFirst).mockResolvedValue(null)
+    mocked(tx.employee.findFirst).mockResolvedValue(null)
     await expect(
       createFunnelAction("fm-1", { assignedToEmployeeId: "emp-9", title: "Chase it" }, ADMIN)
     ).rejects.toMatchObject({ statusCode: 400, message: ASSIGNEE_NOT_SALES })
@@ -258,5 +270,201 @@ describe("action items: the one behaviour change in phase 6", () => {
     )
     expect(tx.salesTask.create).toHaveBeenCalledTimes(1)
     expect(tx.auditLog.create).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("action items: what they may point at", () => {
+  beforeEach(() => {
+    mocked(tx.employee.findFirst).mockResolvedValue({ id: "emp-1" })
+  })
+
+  it("refuses an account that does not exist instead of failing on a foreign key", async () => {
+    mocked(tx.salesAccount.findUnique).mockResolvedValue(null)
+    await expect(
+      createFunnelAction(
+        "fm-1",
+        { assignedToEmployeeId: "emp-1", title: "Chase it", salesAccountId: "acc-9" },
+        ADMIN
+      )
+    ).rejects.toMatchObject({ statusCode: 400, message: ACTION_ACCOUNT_MISSING })
+    expect(tx.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("locks the meeting before it reads its status, so a completion cannot slip between", async () => {
+    mocked(tx.salesAccount.findUnique).mockResolvedValue(null)
+    await createFunnelAction(
+      "fm-1",
+      { assignedToEmployeeId: "emp-1", title: "Chase it", salesAccountId: "acc-9" },
+      ADMIN
+    ).catch(() => undefined)
+    expect(tx.$queryRaw).toHaveBeenCalled()
+    expect(mocked(tx.$queryRaw).mock.invocationCallOrder[0]).toBeLessThan(
+      mocked(tx.funnelMeeting.findUnique).mock.invocationCallOrder[0]
+    )
+  })
+})
+
+describe("opening the review: races and dates", () => {
+  it("lands the second of two simultaneous opens in the first one's meeting", async () => {
+    // Both pass the "does it exist" check; the unique week key refuses one.
+    mocked(prisma.funnelMeeting.findUnique)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(DETAIL)
+    mocked(tx.funnelMeeting.create).mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "test",
+      })
+    )
+    const result = await openFunnelMeeting({}, ADMIN, new Date("2026-09-19T09:00:00.000Z"))
+    expect(result.id).toBe("fm-1")
+  })
+
+  it("does not swallow a failure that is not the unique key", async () => {
+    mocked(tx.funnelMeeting.create).mockRejectedValue(new Error("connection lost"))
+    await expect(openFunnelMeeting({}, ADMIN, new Date("2026-09-19T09:00:00.000Z"))).rejects.toThrow(
+      "connection lost"
+    )
+  })
+
+  it("reads the office's date: 03:00 Saturday in Dhaka reviews the week just finished", async () => {
+    // 2026-09-11T21:00Z is Saturday 12 Sep in Dhaka but still Friday in UTC,
+    // which would have named the week before.
+    await openFunnelMeeting({}, ADMIN, new Date("2026-09-11T21:00:00.000Z"))
+    const data = mocked(tx.funnelMeeting.create).mock.calls[0][0].data
+    expect(data.weekStart.toISOString()).toBe("2026-09-06T00:00:00.000Z")
+    expect(data.heldOn.toISOString()).toBe("2026-09-12T00:00:00.000Z")
+  })
+})
+
+describe("who was in the room", () => {
+  it("records the change, before and after", async () => {
+    mocked(tx.funnelMeetingAttendee.findMany).mockResolvedValue([{ employeeId: "emp-2" }])
+    await setMeetingAttendees("fm-1", { employeeIds: ["emp-1", "emp-2"] }, ADMIN)
+    expect(auditCalls()).toHaveLength(1)
+    expect(auditCalls()[0]).toMatchObject({
+      entity: "FUNNEL_MEETING",
+      entityId: "fm-1",
+      before: { attendees: ["emp-2"] },
+      after: { attendees: ["emp-1", "emp-2"] },
+    })
+  })
+
+  it("counts a person once however many times they are sent", async () => {
+    await setMeetingAttendees("fm-1", { employeeIds: ["emp-1", "emp-1", "emp-2"] }, ADMIN)
+    expect(mocked(tx.funnelMeetingAttendee.createMany).mock.calls[0][0].data).toHaveLength(2)
+  })
+
+  it("refuses somebody who does not exist rather than failing on a foreign key", async () => {
+    mocked(tx.employee.findMany).mockResolvedValue([{ id: "emp-1" }])
+    await expect(
+      setMeetingAttendees("fm-1", { employeeIds: ["emp-1", "emp-9"] }, ADMIN)
+    ).rejects.toMatchObject({ statusCode: 400, message: UNKNOWN_PEOPLE })
+    expect(tx.funnelMeetingAttendee.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it("is refused once the meeting is completed", async () => {
+    meetingIs("COMPLETED")
+    await expect(setMeetingAttendees("fm-1", { employeeIds: [] }, ADMIN)).rejects.toMatchObject({
+      statusCode: 409,
+      message: MEETING_CLOSED,
+    })
+  })
+})
+
+describe("marking somebody reviewed leaves a trail", () => {
+  it("audits the tick and the tick coming off", async () => {
+    await setPersonReviewed("fm-1", { employeeId: "emp-1", reviewed: true }, ADMIN)
+    await setPersonReviewed("fm-1", { employeeId: "emp-1", reviewed: false }, ADMIN)
+    expect(auditCalls().map((a) => a.after)).toEqual([
+      { employeeId: "emp-1", reviewed: true },
+      { employeeId: "emp-1", reviewed: false },
+    ])
+  })
+
+  it("refuses somebody who does not exist", async () => {
+    mocked(tx.employee.findUnique).mockResolvedValue(null)
+    await expect(
+      setPersonReviewed("fm-1", { employeeId: "emp-9", reviewed: true }, ADMIN)
+    ).rejects.toMatchObject({ statusCode: 404, message: UNKNOWN_PERSON })
+    expect(tx.funnelMeetingReview.upsert).not.toHaveBeenCalled()
+  })
+})
+
+describe("the week note", () => {
+  it("audits a change, with what it was and what it became", async () => {
+    meetingIs("SCHEDULED", "Old note")
+    await setMeetingNote("fm-1", { note: "New note" }, ADMIN)
+    expect(auditCalls()[0]).toMatchObject({
+      before: { note: "Old note" },
+      after: { note: "New note" },
+    })
+  })
+
+  it("writes no audit row for a save that changes nothing", async () => {
+    meetingIs("SCHEDULED", "Same note")
+    await setMeetingNote("fm-1", { note: "Same note" }, ADMIN)
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it("is refused once the meeting is completed", async () => {
+    meetingIs("COMPLETED")
+    await expect(setMeetingNote("fm-1", { note: "Late" }, ADMIN)).rejects.toMatchObject({
+      statusCode: 409,
+    })
+    expect(tx.funnelMeeting.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("completing and reopening", () => {
+  it("audits and announces a real completion", async () => {
+    await setMeetingStatus("fm-1", "COMPLETED", ADMIN)
+    expect(auditCalls()[0]).toMatchObject({
+      before: { status: "SCHEDULED" },
+      after: { status: "COMPLETED" },
+    })
+    expect(mocked(tx.event.create).mock.calls[0][0].data.type).toBe("sales.funnel.meeting_completed")
+  })
+
+  it("audits and announces a real reopening, and says so", async () => {
+    meetingIs("COMPLETED")
+    await setMeetingStatus("fm-1", "SCHEDULED", ADMIN)
+    expect(auditCalls()[0]).toMatchObject({
+      before: { status: "COMPLETED" },
+      after: { status: "SCHEDULED" },
+    })
+    expect(mocked(tx.event.create).mock.calls[0][0].data.type).toBe("sales.funnel.meeting_reopened")
+  })
+
+  it("does nothing, and says nothing, when the meeting is already there", async () => {
+    // A second click, or a second admin. A "reopened" row for a meeting that
+    // was never completed would defeat the point of the status being an enum.
+    await setMeetingStatus("fm-1", "SCHEDULED", ADMIN)
+    meetingIs("COMPLETED")
+    await setMeetingStatus("fm-1", "COMPLETED", ADMIN)
+    expect(tx.funnelMeeting.update).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
+    expect(tx.event.create).not.toHaveBeenCalled()
+  })
+
+  it("takes the row lock before reading the status", async () => {
+    await setMeetingStatus("fm-1", "COMPLETED", ADMIN)
+    expect(mocked(tx.$queryRaw).mock.invocationCallOrder[0]).toBeLessThan(
+      mocked(tx.funnelMeeting.findUnique).mock.invocationCallOrder[0]
+    )
+  })
+
+  it("answers not found for a meeting that does not exist", async () => {
+    mocked(tx.funnelMeeting.findUnique).mockResolvedValue(null)
+    await expect(setMeetingStatus("fm-9", "COMPLETED", ADMIN)).rejects.toMatchObject({
+      statusCode: 404,
+    })
+  })
+
+  it("is refused to a Sales User", async () => {
+    await expect(setMeetingStatus("fm-1", "COMPLETED", USER)).rejects.toMatchObject({
+      statusCode: 403,
+      message: ADMIN_ONLY,
+    })
   })
 })

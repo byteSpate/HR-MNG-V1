@@ -5,8 +5,16 @@ vi.mock("../../../config/env", () => ({ env: { APP_TIMEZONE: "Asia/Dhaka" } }))
 vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
     employee: { findUnique: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
-    opportunity: { findMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), groupBy: vi.fn() },
+    opportunity: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      groupBy: vi.fn(),
+      aggregate: vi.fn(),
+      count: vi.fn(),
+    },
     salesComment: { findMany: vi.fn(), create: vi.fn() },
     auditLog: { findMany: vi.fn(), create: vi.fn() },
     funnelMeeting: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
@@ -74,7 +82,7 @@ beforeEach(() => {
   mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-1", fullName: "Rahim Uddin" })
   mocked(prisma.opportunity.findMany).mockResolvedValue([DEAL])
   mocked(prisma.salesComment.findMany).mockResolvedValue([])
-  mocked(prisma.auditLog.findMany).mockResolvedValue([])
+  mocked(prisma.$queryRaw).mockResolvedValue([])
 })
 
 describe("getFunnel: who may see whose", () => {
@@ -128,7 +136,8 @@ describe("getFunnel: membership and filters", () => {
     // The funnel is a list that only grows. An unbounded read here would be
     // the same defect the performance audit found in 191 other places.
     await getFunnel(QUERY as never, USER)
-    expect(dealArgs().take).toBe(200)
+    // One past the limit, so a longer view is noticed rather than guessed at.
+    expect(dealArgs().take).toBe(201)
   })
 })
 
@@ -136,6 +145,34 @@ describe("getFunnel: sorting happens in the database", () => {
   it("sorts by offer date, newest first, with a stable second key", async () => {
     await getFunnel(QUERY as never, USER)
     expect(dealArgs().orderBy).toEqual([{ offeredOn: "desc" }, { serial: "asc" }])
+  })
+
+  it("puts unpriced and undated deals last whichever way the sort runs", async () => {
+    await getFunnel({ ...QUERY, sort: "amount", direction: "asc" } as never, USER)
+    expect(dealArgs().orderBy[0]).toEqual({ amount: { sort: "asc", nulls: "last" } })
+
+    vi.clearAllMocks()
+    mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } })
+    mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-1", fullName: "Rahim Uddin" })
+    mocked(prisma.opportunity.findMany).mockResolvedValue([DEAL])
+    mocked(prisma.salesComment.findMany).mockResolvedValue([])
+    mocked(prisma.$queryRaw).mockResolvedValue([])
+    await getFunnel({ ...QUERY, sort: "expectedCloseDate", direction: "desc" } as never, USER)
+    expect(dealArgs().orderBy[0]).toEqual({ expectedCloseDate: { sort: "desc", nulls: "last" } })
+  })
+
+  it("hands back rows in the order the database returned them", async () => {
+    // The composer used to re-sort by offer date, so asking for amount order —
+    // or oldest first — came back newest first. The mock stands in for the
+    // database having honoured the sort.
+    const low = { ...DEAL, id: "low", amount: "10.00", offeredOn: day("2026-08-01") }
+    const high = { ...DEAL, id: "high", amount: "90.00", offeredOn: day("2026-09-05") }
+    const mid = { ...DEAL, id: "mid", amount: "50.00", offeredOn: day("2026-07-01") }
+    mocked(prisma.opportunity.findMany).mockResolvedValue([low, high, mid])
+
+    const grid = await getFunnel({ ...QUERY, sort: "amount", direction: "asc" } as never, USER)
+    expect(grid.rows.map((r) => r.opportunityId)).toEqual(["low", "high", "mid"])
+    expect(grid.rows.map((r) => r.serialNo)).toEqual([1, 2, 3])
   })
 
   it("sorts by the account's name through the relation", async () => {
@@ -166,9 +203,72 @@ describe("getFunnel: an empty funnel reads nothing extra", () => {
     const grid = await getFunnel(QUERY as never, USER)
 
     expect(grid.rows).toEqual([])
-    expect(grid.totals.quoted).toBe("0.00")
+    // No priced deal, so no figure — not "0.00".
+    expect(grid.totals.quoted).toBeNull()
     expect(prisma.salesComment.findMany).not.toHaveBeenCalled()
-    expect(prisma.auditLog.findMany).not.toHaveBeenCalled()
+    expect(prisma.$queryRaw).not.toHaveBeenCalled()
+  })
+})
+
+describe("getFunnel: a view longer than the page", () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => ({ ...DEAL, id: `opp-${i}` }))
+
+  it("is not truncated, and adds nothing up in the database, when it fits", async () => {
+    mocked(prisma.opportunity.findMany).mockResolvedValue(many(3))
+    const grid = await getFunnel({ ...QUERY, limit: 3 } as never, USER)
+    expect(grid.truncated).toBe(false)
+    expect(grid.rows).toHaveLength(3)
+    expect(prisma.opportunity.aggregate).not.toHaveBeenCalled()
+  })
+
+  it("says so, and totals the whole view rather than the rows it shows", async () => {
+    // limit 3 asks for 4; four coming back means there is more.
+    mocked(prisma.opportunity.findMany).mockResolvedValue(many(4))
+    mocked(prisma.opportunity.aggregate)
+      .mockResolvedValueOnce({ _count: { _all: 250 }, _sum: { amount: "25000.00" } })
+      .mockResolvedValueOnce({ _count: { _all: 200 }, _sum: { amount: "20000.00" } })
+    mocked(prisma.opportunity.count).mockResolvedValue(7)
+
+    const grid = await getFunnel({ ...QUERY, limit: 3 } as never, USER)
+
+    expect(grid.truncated).toBe(true)
+    expect(grid.rows).toHaveLength(3)
+    expect(grid.totals).toEqual({
+      quoted: "25000.00",
+      quotedCount: 250,
+      stillOpen: "20000.00",
+      stillOpenCount: 200,
+      unpricedCount: 7,
+    })
+  })
+
+  it("adds up over the same filters the rows were read with", async () => {
+    mocked(prisma.opportunity.findMany).mockResolvedValue(many(4))
+    mocked(prisma.opportunity.aggregate).mockResolvedValue({ _count: { _all: 4 }, _sum: { amount: null } })
+    mocked(prisma.opportunity.count).mockResolvedValue(0)
+
+    const grid = await getFunnel({ ...QUERY, limit: 3, status: "ONGOING" } as never, USER)
+
+    const where = mocked(prisma.opportunity.aggregate).mock.calls[0][0].where
+    expect(where.ownerEmployeeId).toBe("emp-1")
+    expect(where.status).toBe("ONGOING")
+    // Nothing priced, so no figure rather than a zero.
+    expect(grid.totals.quoted).toBeNull()
+  })
+})
+
+describe("getFunnel: the slipped closing date", () => {
+  it("asks the database for closing-date moves only, one per deal", async () => {
+    // Filtering after a limit meant five unrelated edits hid a deal's slip.
+    await getFunnel(QUERY as never, USER)
+
+    const query = mocked(prisma.$queryRaw).mock.calls[0][0]
+    const text = query.strings.join(" ")
+    expect(text).toContain("jsonb_exists")
+    expect(text).toContain("expectedCloseDate")
+    expect(text).toContain("PARTITION BY")
+    expect(query.values).toContain(1)
+    expect(query.values).toContain("opp-1")
   })
 })
 
@@ -236,7 +336,9 @@ describe("listFunnelTeam", () => {
     const result = await listFunnelTeam(ADMIN, new Date("2026-09-19T09:00:00.000Z"))
     expect(result.rows.map((r) => r.employeeName)).toEqual(["Rahim Uddin", "Karim Ahmed"])
     expect(result.rows[1].dealCount).toBe(0)
-    expect(result.rows[1].quoted).toBe("0.00")
+    // Nothing quoted is not the same fact as "quoted nothing".
+    expect(result.rows[1].quoted).toBeNull()
+    expect(result.rows[1].stillOpen).toBeNull()
   })
 
   it("carries both totals and the reviewed tick", async () => {
@@ -254,6 +356,13 @@ describe("listFunnelTeam", () => {
     // Saturday 19 Sep reviews the week whose Sunday is 13 Sep.
     const result = await listFunnelTeam(ADMIN, new Date("2026-09-19T09:00:00.000Z"))
     expect(result.weekStart).toBe("2026-09-13")
+  })
+
+  it("reads the office's Saturday, not the UTC date, when picking the week", async () => {
+    // 03:00 in Dhaka on Saturday 12 Sep is still Friday 11 Sep in UTC. Read
+    // off the UTC date it reviewed the week before the one just finished.
+    const result = await listFunnelTeam(ADMIN, new Date("2026-09-11T21:00:00.000Z"))
+    expect(result.weekStart).toBe("2026-09-06")
   })
 
   it("aggregates in the database rather than fetching every deal", async () => {

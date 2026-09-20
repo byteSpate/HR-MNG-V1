@@ -601,3 +601,38 @@ describe("the weekly report row", () => {
     })
   })
 })
+
+// The funnel row's admin side (revision §27.14): how many writers have not been
+// walked in last week's review. Numerator and denominator must count the same
+// people, or one reviewed admin cancels out an unreviewed writer.
+describe("the funnel row for an admin", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.employee.count).mockResolvedValue(4 as never)
+    vi.mocked(prisma.funnelMeetingReview.count).mockResolvedValue(1 as never)
+  })
+
+  it("counts writers not yet reviewed, and badges them", async () => {
+    const payload = await getSalesDashboard({ now: NOW }, ADMIN)
+
+    expect(payload.actions.find((row) => row.key === "funnel")).toMatchObject({ count: 3, href: "/funnel" })
+    expect(payload.badges["/funnel"]).toBe(3)
+  })
+
+  it("counts only reviews of the same active Sales Users it divides by", async () => {
+    await getSalesDashboard({ now: NOW }, ADMIN)
+
+    const where = vi.mocked(prisma.funnelMeetingReview.count).mock.calls[0][0]?.where as never as {
+      employee: { user: { salesRole: string; isActive: boolean }; employmentStatus: string }
+    }
+    expect(where.employee).toEqual({
+      user: { salesRole: "SALES_USER", isActive: true },
+      employmentStatus: "ACTIVE",
+    })
+  })
+
+  it("never goes below zero when more were reviewed than there are writers", async () => {
+    vi.mocked(prisma.funnelMeetingReview.count).mockResolvedValue(9 as never)
+    const payload = await getSalesDashboard({ now: NOW }, ADMIN)
+    expect(payload.actions.find((row) => row.key === "funnel")?.count).toBe(0)
+  })
+})
