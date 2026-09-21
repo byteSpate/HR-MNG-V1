@@ -1,9 +1,8 @@
 /**
  * What the funnel accepts from a request (revision §27).
  *
- * Its own file, not more lines in `sales.validators.ts`. That one is already
- * 452 lines and grows with every phase because it belongs to no feature
- * (§28); the funnel does not add to it (§27.18).
+ * Its own file in the funnel's own folder: every feature owns its validators
+ * rather than adding schemas to a shared file (§27.18, §28).
  */
 
 import { z } from "zod"

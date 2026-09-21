@@ -1,9 +1,8 @@
 /**
  * The funnel's handlers (revision §27).
  *
- * Its own file, and nothing is added to `sales.controller.ts` — that one is
- * already 531 lines and grows with every phase because it belongs to no
- * feature (§27.18, §28).
+ * Its own file in the funnel's own folder: every feature owns its controller
+ * rather than adding handlers to a shared one (§27.18, §28).
  *
  * House style: parse, call the service, answer, and let the error middleware
  * say what went wrong.

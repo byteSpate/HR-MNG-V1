@@ -35,10 +35,9 @@ router.use(minutesRouter)
 
 router.use(weeklyRouter)
 
-// The funnel (revision §27), mounted rather than spelled out. Phases 1 to 5
-// each added their paths to this file and it now carries every route in the
-// module; the funnel keeps its own router, which is the shape §28 will move
-// the rest into.
+// Each folder owns its routes and this file only mounts them (§28). The order
+// is the order the routes were registered in before the split, so first-match
+// precedence is unchanged. The funnel (revision §27) alone sits under a prefix.
 router.use("/funnel", funnelRouter)
 
 router.use(targetRouter)

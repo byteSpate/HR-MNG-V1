@@ -1,10 +1,10 @@
 /**
  * The two Zod primitives that more than one Sales feature validates with.
  *
- * Moved here, unchanged, from `sales.validators.ts` when that file was split
- * per feature (Sales Hub phase 7). `money` is used by opportunities and
- * targets; `dateOnly` by opportunities and tasks. Every other constant that
- * file held is used by exactly one feature and travelled with it.
+ * Moved here, unchanged, from the shared validators file that Sales Hub
+ * phase 7 split up per feature. `money` is used by opportunities and targets;
+ * `dateOnly` by opportunities and tasks. Every other constant that file held
+ * is used by exactly one feature and travelled with it.
  *
  * `funnel/funnel.validators.ts` keeps its own copies on purpose.
  */

@@ -1,10 +1,9 @@
 /**
  * The funnel's routes (revision §27.18).
  *
- * A router of its own, mounted by one line in `sales.routes.ts`. Phases 1 to 5
- * each added their paths to that file directly and it now carries every route
- * in the module; the funnel is the first to stop doing that, ahead of the
- * wider tidy-up in §28.
+ * A router of its own, mounted by one line in `sales.routes.ts` under
+ * `/funnel`. Every feature folder now owns its routes the same way (§28); the
+ * funnel was the first.
  */
 
 import { Router } from "express"

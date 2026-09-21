@@ -1,8 +1,8 @@
 /**
  * The Weekly Report's handlers (revision §26).
  *
- * Its own file rather than more lines in `sales.controller.ts`, which is
- * already the longest file in the module. The style is the house one: parse,
+ * Its own file in the weekly folder, like every other feature's controller.
+ * The style is the house one: parse,
  * call the service, answer, and let the error middleware say what went wrong.
  */
 
