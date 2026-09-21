@@ -11,11 +11,11 @@
 
 import prisma from "../config/prisma"
 import { officeDateOf, officeInstantOf } from "../modules/attendance/attendance.time"
-import { standingOf } from "../modules/sales/account.service"
+import { standingOf } from "../modules/sales/accounts/account.service"
 import { canWorkAccounts } from "../modules/sales/sales.eligibility"
 import { sendWeeklyReminder } from "../modules/sales/sales.mailer"
-import { whoNeedsReminding } from "../modules/sales/weekly.reminders"
-import { saturdayBefore, weekEndOf, weekStartOf } from "../modules/sales/weekly.dates"
+import { whoNeedsReminding } from "../modules/sales/weekly/weekly.reminders"
+import { saturdayBefore, weekEndOf, weekStartOf } from "../modules/sales/weekly/weekly.dates"
 
 export async function runWeeklyReportReminder(now: Date = new Date()): Promise<number> {
   const today = officeDateOf(now)

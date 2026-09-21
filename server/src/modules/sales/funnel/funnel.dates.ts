@@ -11,7 +11,7 @@
  */
 
 import { addDays, MS_PER_DAY } from "../../../utils/dates"
-import { weekStartOf } from "../weekly.dates"
+import { weekStartOf } from "../weekly/weekly.dates"
 
 const DAYS_PER_WEEK = 7
 /** Sunday is 0, so the Saturday that closes a week is six days on from it. */

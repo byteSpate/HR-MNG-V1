@@ -1,0 +1,830 @@
+import prisma from "../../../config/prisma"
+import { AppError } from "../../../middleware/errorHandler"
+import { writeAudit } from "../../../utils/audit"
+import { emitEvent } from "../../event/event.emit"
+import type { AccessTokenPayload } from "../../auth/auth.types"
+import type { CreateSalesAccountBody, UpdateSalesAccountBody } from "./account.validators"
+import type { AccountHistory, AccountHistoryEntry, SalesAccountSummary } from "../sales.types"
+import { EmploymentStatus, SalesRole, type Prisma } from "../../../generated/prisma/client"
+import {
+  ACCOUNT_NOT_VISIBLE,
+  canManageAccount,
+  employeeIdFor,
+  ownedScopeFor,
+  requireAccountAccess,
+  requireAccountVisible,
+} from "../sales.access"
+import {
+  canBeAccountOwner,
+  canWorkAccounts,
+  employmentAllowsSales,
+  type SalesStanding,
+} from "../sales.eligibility"
+import { presentChanges, resolveNames } from "./history.present"
+import { marginTotal, type MarginTotal } from "../sales.margin"
+
+/**
+ * How many History rows one read returns.
+ *
+ * Matches the Timeline's cap. Both feeds grow without bound and both render
+ * every row they are given, so neither can be left unlimited; an account
+ * worked for a year accumulates thousands of audit rows.
+ */
+const HISTORY_LIMIT = 100
+
+/**
+ * One sentence, used by both paths that can find a clash — the check inside
+ * the transaction and the database a moment later. Naming the existing owner
+ * is the difference between a dead end and a phone call, so the racing
+ * caller must not get a lesser message than everyone else.
+ */
+function duplicateNameMessage(existingName: string, ownerName: string): string {
+  return `"${existingName}" already exists and is owned by ${ownerName}. Talk to them before creating a second one.`
+}
+
+/**
+ * A Prisma employee row narrowed to the four facts the eligibility rules
+ * need. One place to assemble it, so a caller cannot select the columns and
+ * then forget to pass one of them through.
+ */
+export function standingOf(employee: {
+  employmentStatus: EmploymentStatus
+  lastWorkingDay: Date | null
+  user: { salesRole: SalesRole | null; isActive: boolean } | null
+}): SalesStanding {
+  return {
+    salesRole: employee.user?.salesRole ?? null,
+    employmentStatus: employee.employmentStatus,
+    lastWorkingDay: employee.lastWorkingDay,
+    // No login row at all is not an active login.
+    loginActive: employee.user?.isActive ?? false,
+  }
+}
+
+function findClash(client: typeof prisma, name: string) {
+  return client.salesAccount.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+    include: { owner: { select: { fullName: true } } },
+  })
+}
+
+/**
+ * PostgreSQL's ordinary unique index on `name` is case-sensitive, while the
+ * Sales Account rule is not. Serialize Sales Account name writes before the
+ * case-insensitive lookup, so `Acme` and `acme` cannot both pass an absent-row
+ * precheck and commit concurrently.
+ *
+ * This intentionally uses one fixed, two-part PostgreSQL advisory key rather
+ * than hashing a JavaScript-normalized name. JavaScript case folding and the
+ * database collation can disagree for Unicode, which could give two names
+ * PostgreSQL considers equal different locks. Account creates and renames are
+ * rare, so serializing just those writes is the safer tradeoff. The lock
+ * releases automatically on commit or rollback.
+ */
+async function lockAccountNames(client: typeof prisma): Promise<void> {
+  // `SELECT 1 FROM`, not `SELECT pg_advisory_xact_lock(...)`: the function
+  // returns `void`, a column type the pg driver adapter cannot deserialize, so
+  // the bare form takes the lock and then throws on reading the result.
+  await client.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(1935762243, 1)`
+}
+
+/** Lock one existing account before its authorization and before-values are read. */
+async function lockAccountRow(client: typeof prisma, id: string): Promise<void> {
+  await client.$queryRaw`SELECT "id" FROM "SalesAccount" WHERE "id" = ${id} FOR UPDATE`
+}
+
+/**
+ * The four facts that decide whether somebody may own an account, and the
+ * four different sentences that say which one failed.
+ *
+ * Shared by creating an account and by reassigning one. "Not allowed" would
+ * leave a Sales Admin guessing which of the four applies, and letting the two
+ * paths carry their own copies of these sentences is how one of them ends up
+ * a year out of date.
+ *
+ * Granting hub access is deliberately not this function's job: `setSalesRole`
+ * is guarded by `requireRole` rather than `requireSales`, precisely so a Sales
+ * Admin cannot widen their own team.
+ */
+async function loadEligibleOwner(client: typeof prisma, employeeId: string) {
+  const owner = await client.employee.findUnique({
+    where: { id: employeeId },
+    select: {
+      id: true,
+      fullName: true,
+      employmentStatus: true,
+      lastWorkingDay: true,
+      user: { select: { salesRole: true, isActive: true } },
+    },
+  })
+  if (!owner) {
+    throw new AppError(400, "That owner is not an employee")
+  }
+  if (!owner.user?.salesRole) {
+    throw new AppError(
+      400,
+      `${owner.fullName} does not have Techno Sales Hub access yet. Grant it from their employee record before making them the owner.`
+    )
+  }
+  if (!employmentAllowsSales(owner.employmentStatus, owner.lastWorkingDay)) {
+    throw new AppError(
+      400,
+      `${owner.fullName} has left the company and cannot own an account. Choose someone who is still employed.`
+    )
+  }
+  if (!owner.user.isActive) {
+    throw new AppError(
+      400,
+      `${owner.fullName}'s login has been deactivated, so they cannot open the hub. Reactivate their account before making them the owner.`
+    )
+  }
+  if (!canBeAccountOwner(standingOf(owner))) {
+    throw new AppError(
+      400,
+      `${owner.fullName} is a Sales Admin. Sales Admins manage the hub rather than owning accounts in it — choose a Sales User as the owner.`
+    )
+  }
+  return owner
+}
+
+export async function createSalesAccount(
+  body: CreateSalesAccountBody,
+  actor: AccessTokenPayload
+): Promise<SalesAccountSummary> {
+  // Read before the transaction opens: it is a fact about the caller, not
+  // about the account being written, and issuing it on the global client
+  // from inside the callback would run it outside the transaction anyway.
+  const actorEmployeeId = await employeeIdFor(actor)
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // `name @unique` is exact-match only. The advisory lock makes this
+      // case-insensitive refusal atomic without a second schema migration.
+      await lockAccountNames(tx as typeof prisma)
+      const clash = await findClash(tx as typeof prisma, body.name)
+      if (clash) {
+        throw new AppError(409, duplicateNameMessage(clash.name, clash.owner.fullName))
+      }
+
+      const owner = await loadEligibleOwner(tx as typeof prisma, body.ownerEmployeeId)
+
+      // The owner is already on the account. Storing them again as an
+      // assignment is the same fact twice, and the two copies drift.
+      //
+      // Deduped as well: a repeated id violates
+      // @@unique([salesAccountId, employeeId]), which the error middleware
+      // renders as a 500 for what is really a harmless double-click.
+      const extras = [...new Set(body.assigneeIds ?? [])].filter((id) => id !== owner.id)
+
+      // Populated below when there are extras, and reused for the return
+      // value so the caller sees names, not just a count, without a second
+      // query for the same rows this validation already fetched.
+      let assignees: { id: string; fullName: string }[] = []
+
+      if (extras.length > 0) {
+        // The relation is required, so the database would refuse an unknown id
+        // anyway — but as a P2003 the error middleware renders it as a 500.
+        // Checking first turns that into the same 400 the owner field already
+        // gives, instead of two different answers to one mistake. One query,
+        // not one per id.
+        const found = await tx.employee.findMany({
+          where: { id: { in: extras } },
+          select: {
+            id: true,
+            fullName: true,
+            employmentStatus: true,
+            lastWorkingDay: true,
+            user: { select: { salesRole: true, isActive: true } },
+          },
+        })
+        const byId = new Map(found.map((employee) => [employee.id, employee]))
+        for (const id of extras) {
+          const employee = byId.get(id)
+          if (!employee) {
+            throw new AppError(400, `${id} is not an employee`)
+          }
+          // Same rules as the owner: a collaborator works the account, so
+          // they must be able to open it and must still be here to do it.
+          if (!employee.user?.salesRole) {
+            throw new AppError(
+              400,
+              `${employee.fullName} does not have Techno Sales Hub access yet. Grant it from their employee record first.`
+            )
+          }
+          if (!employmentAllowsSales(employee.employmentStatus, employee.lastWorkingDay)) {
+            throw new AppError(
+              400,
+              `${employee.fullName} has left the company and cannot be added as a collaborator.`
+            )
+          }
+          if (!employee.user.isActive) {
+            throw new AppError(
+              400,
+              `${employee.fullName}'s login has been deactivated, so they cannot open the hub.`
+            )
+          }
+          if (!canBeAccountOwner(standingOf(employee))) {
+            throw new AppError(
+              400,
+              `${employee.fullName} is a Sales Admin, and already has access to every account — they do not need to be added as a collaborator.`
+            )
+          }
+        }
+        assignees = extras.map((id) => ({ id, fullName: byId.get(id)!.fullName }))
+      }
+
+      const account = await tx.salesAccount.create({
+        data: {
+          name: body.name,
+          industry: body.industry ?? null,
+          website: body.website ?? null,
+          address: body.address ?? null,
+          ownerEmployeeId: owner.id,
+          createdBy: actor.sub,
+        },
+      })
+
+      if (extras.length > 0) {
+        await tx.salesAccountAssignment.createMany({
+          data: extras.map((employeeId) => ({
+            salesAccountId: account.id,
+            employeeId,
+            assignedBy: actor.sub,
+          })),
+        })
+      }
+
+      await writeAudit(tx, {
+        entity: "SALES_ACCOUNT",
+        entityId: account.id,
+        action: "CREATE",
+        changedBy: actor.sub,
+        after: { name: account.name, ownerEmployeeId: owner.id, status: account.status },
+      })
+
+      await emitEvent(tx, {
+        type: "sales.account.created",
+        entity: "SALES_ACCOUNT",
+        entityId: account.id,
+        actorUserId: actor.sub,
+        subjectEmployeeId: owner.id,
+        // Explicit null suppresses the reporting-line lookup. A sales account
+        // is not a fact about somebody's manager.
+        managerEmployeeId: null,
+        // Event rows written before the rename keep their old wording: they
+        // record what was announced at the time, and are not a template.
+        title: `${account.name} added to the Techno Sales Hub`,
+        meta: `Owner: ${owner.fullName}`,
+        href: `/accounts/${account.id}`,
+      })
+
+      return {
+        id: account.id,
+        name: account.name,
+        industry: account.industry,
+        website: account.website,
+        address: account.address,
+        status: account.status,
+        // A new account is always ACTIVE, and an ACTIVE account never carries
+        // a reason. Spelled out rather than read back from the row, which is
+        // what every other field here does.
+        statusReason: null,
+        ownerEmployeeId: owner.id,
+        ownerName: owner.fullName,
+        assigneeCount: extras.length,
+        assignees,
+        // Just validated as eligible a few lines above, so this is true by
+        // construction rather than by a second check.
+        ownerActive: true,
+        // Creating an account is a Sales Admin act, and canManageAccount
+        // already returns true for one — spelled out here rather than
+        // computed, since the actor that just created this is always able
+        // to manage it.
+        canManage: true,
+        // Not `true` to match: a Super Admin can create an account and still
+        // be unable to log a call against it, having no Employee row to be
+        // the author.
+        canLogActivity: actorEmployeeId !== null,
+        createdAt: account.createdAt.toISOString(),
+      }
+    })
+  } catch (err) {
+    // Two admins submitting the same name in the same instant both pass the
+    // check above and both insert; the loser lands here. Caught around the
+    // transaction and not inside it, matching `createCategory` — the failed
+    // statement has already aborted the transaction, so the re-read has to
+    // happen on a fresh connection.
+    if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
+      const clash = await findClash(prisma, body.name)
+      throw clash
+        ? new AppError(409, duplicateNameMessage(clash.name, clash.owner.fullName))
+        : new AppError(409, `"${body.name}" already exists`)
+    }
+    throw err
+  }
+}
+
+export interface SalesEligibleEmployee {
+  id: string
+  fullName: string
+  designation: string
+}
+
+/**
+ * Who the "New Sales Account" owner/collaborator pickers may offer.
+ *
+ * Sales Users who are still employed, and only those. Both rules are
+ * enforced again in `createSalesAccount` — filtering here is what makes the
+ * picker honest, but the client is never the boundary:
+ *
+ * - **Sales Users, not Sales Admins.** An admin administers the hub rather
+ *   than carrying accounts inside it (`canBeAccountOwner`).
+ * - **Still employed.** An account owned by someone who has left is
+ *   answerable to nobody, and their tokens no longer carry a sales role, so
+ *   they could not open it in any case.
+ */
+export async function listSalesEligibleEmployees(): Promise<SalesEligibleEmployee[]> {
+  const candidates = await prisma.employee.findMany({
+    // `isActive` is a separate fact from `employmentStatus` throughout this
+    // codebase — a current employee can have a disabled login — and a
+    // deactivated login cannot authenticate at all, so offering them here
+    // hands an account to somebody who can never open it.
+    where: { user: { salesRole: SalesRole.SALES_USER, isActive: true } },
+    select: {
+      id: true,
+      fullName: true,
+      designation: true,
+      employmentStatus: true,
+      lastWorkingDay: true,
+    },
+    orderBy: { fullName: "asc" },
+  })
+
+  // Filtered in memory rather than in the `where`: a leaver serving notice is
+  // still eligible until their last working day, which is a comparison
+  // against "today" that Prisma cannot express without a raw query. The
+  // candidate set is the sales team, so this is a handful of rows.
+  return candidates
+    .filter((employee) => employmentAllowsSales(employee.employmentStatus, employee.lastWorkingDay))
+    .map(({ id, fullName, designation }) => ({ id, fullName, designation }))
+}
+
+/** Shared so the list and the detail page cannot describe an account differently. */
+const SUMMARY_INCLUDE = {
+  owner: {
+    select: {
+      fullName: true,
+      employmentStatus: true,
+      lastWorkingDay: true,
+      user: { select: { salesRole: true, isActive: true } },
+    },
+  },
+  assignments: { select: { employee: { select: { id: true, fullName: true } } } },
+} as const
+
+type AccountRow = {
+  id: string
+  name: string
+  industry: string | null
+  website: string | null
+  address: string | null
+  status: SalesAccountSummary["status"]
+  statusReason: string | null
+  ownerEmployeeId: string
+  createdAt: Date
+  owner: {
+    fullName: string
+    employmentStatus: EmploymentStatus
+    lastWorkingDay: Date | null
+    user: { salesRole: SalesRole | null; isActive: boolean } | null
+  }
+  assignments: { employee: { id: string; fullName: string } }[]
+}
+
+/**
+ * `employeeId` and `canManage` are per-*viewer*, not per-account, so they are
+ * arguments rather than something `toSummary` could derive from the row
+ * alone — the same account is "mine" for its owner and "not mine, just
+ * visible" for everyone else in "All Accounts".
+ */
+function toSummary(
+  account: AccountRow,
+  actor: AccessTokenPayload,
+  viewerEmployeeId: string | null
+): SalesAccountSummary {
+  const assignees = account.assignments.map((a) => a.employee)
+  const canManage = canManageAccount(
+    actor,
+    viewerEmployeeId,
+    account.ownerEmployeeId,
+    assignees.map((a) => a.id)
+  )
+  return {
+    id: account.id,
+    name: account.name,
+    industry: account.industry,
+    website: account.website,
+    address: account.address,
+    status: account.status,
+    statusReason: account.statusReason,
+    ownerEmployeeId: account.ownerEmployeeId,
+    ownerName: account.owner.fullName,
+    assigneeCount: assignees.length,
+    assignees,
+    // Eligibility is checked when an account is created, but ownership
+    // outlives that moment: revoking someone's hub access or recording their
+    // exit leaves the account still naming them. Nothing blocks either
+    // operation — HR's workflow is not the Sales Hub's to gate — so the state
+    // is surfaced instead of prevented, and a Sales Admin can see which
+    // accounts need a new owner.
+    ownerActive: canWorkAccounts(standingOf(account.owner)),
+    canManage,
+    // Permission is necessary but not sufficient: authorship is a required
+    // column, so a caller with no Employee row cannot log one however senior.
+    canLogActivity: canManage && viewerEmployeeId !== null,
+    createdAt: account.createdAt.toISOString(),
+  }
+}
+
+/**
+ * "My Accounts" — owned or assigned, literally, for everyone including an
+ * admin. `ownedScopeFor`, not `accountScopeFor`: an admin's *permission* to
+ * reach every account is not a claim that every account is theirs, and using
+ * the permission scope here made this page an exact copy of "All Accounts"
+ * for every admin who opened it.
+ */
+export async function listSalesAccounts(
+  actor: AccessTokenPayload,
+  unverified = false
+): Promise<SalesAccountSummary[]> {
+  const employeeId = await employeeIdFor(actor)
+  const accounts = await prisma.salesAccount.findMany({
+    where: {
+      ...ownedScopeFor(employeeId),
+      ...(unverified ? { contacts: { none: { status: "VERIFIED" as const } } } : {}),
+    },
+    orderBy: { name: "asc" },
+    include: SUMMARY_INCLUDE,
+  })
+  return accounts.map((a) => toSummary(a, actor, employeeId))
+}
+
+/**
+ * "All Accounts" — the shared directory. Every account, to every Sales Hub
+ * member, with `canManage` telling the client which ones they can actually
+ * work rather than merely see. Deliberately unscoped: this is the read side
+ * of the split `requireAccountVisible` documents in sales.access.ts.
+ */
+export async function listAllSalesAccounts(
+  actor: AccessTokenPayload,
+  unverified = false,
+  ownerEmployeeId?: string
+): Promise<SalesAccountSummary[]> {
+  // Independent: this list is deliberately unscoped, so the caller's employee
+  // id is not part of the query — it is only needed afterwards, to decide
+  // `canManage` per row. Issued together rather than one after the other.
+  const where = {
+    ...(unverified ? { contacts: { none: { status: "VERIFIED" as const } } } : {}),
+    ...(ownerEmployeeId ? { ownerEmployeeId } : {}),
+  }
+  const [employeeId, accounts] = await Promise.all([
+    employeeIdFor(actor),
+    prisma.salesAccount.findMany({
+      ...(Object.keys(where).length > 0 ? { where } : {}),
+      orderBy: { name: "asc" }, include: SUMMARY_INCLUDE,
+    }),
+  ])
+  return accounts.map((a) => toSummary(a, actor, employeeId))
+}
+
+export async function getSalesAccount(
+  id: string,
+  actor: AccessTokenPayload
+): Promise<SalesAccountSummary> {
+  // The visibility check and the caller's employee id do not depend on each
+  // other, so they go together. The account read waits for the check — it
+  // must not run for an account the caller may not see.
+  const [, employeeId] = await Promise.all([
+    requireAccountVisible(id, actor),
+    employeeIdFor(actor),
+  ])
+  // requireAccountVisible already confirmed the row exists; a second,
+  // unscoped read here (rather than passing its result through) keeps this
+  // function the one place SUMMARY_INCLUDE and toSummary are wired together.
+  const account = await prisma.salesAccount.findUniqueOrThrow({
+    where: { id },
+    include: SUMMARY_INCLUDE,
+  })
+  return toSummary(account, actor, employeeId)
+}
+
+/**
+ * The margin won on one account: the product margins on its won deals,
+ * added up.
+ *
+ * Behind the strict gate — owner, collaborators and admins, the same people
+ * who see the account's deals. The All Accounts directory is shared; what the
+ * company made on an account is not. A product with no Total price or no
+ * margin, and a won deal with no products, are left out and counted, never
+ * summed as zero.
+ */
+export async function getAccountMargin(id: string, actor: AccessTokenPayload): Promise<MarginTotal> {
+  await requireAccountAccess(id, actor)
+  const won = await prisma.opportunity.findMany({
+    where: { salesAccountId: id, status: "WON" },
+    select: { lines: { select: { lineValue: true, marginPercent: true } } },
+  })
+  return marginTotal(won)
+}
+
+/** Status as a person says it, for event titles and refusal sentences. */
+const STATUS_LABEL: Record<SalesAccountSummary["status"], string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  DO_NOT_CONTACT: "Do Not Contact",
+}
+
+/**
+ * Editing an account: the name, the three descriptive fields, who owns it,
+ * and whether it is still being worked.
+ *
+ * Phase 1 could create an account and read one, and nothing else. Two
+ * consequences were live: an account whose owner had resigned or had hub
+ * access revoked was flagged "needs a new owner" with no way to give it one,
+ * and INACTIVE / DO_NOT_CONTACT existed in the schema with a statusReason
+ * column that nothing could set — states the system could hold but never
+ * reach.
+ *
+ * Behind the transaction's freshly evaluated `canManageAccount` write gate:
+ * everyone in the hub may read the directory, but changing a record stays
+ * with the owner, collaborators and admins.
+ */
+export async function updateSalesAccount(
+  id: string,
+  body: UpdateSalesAccountBody,
+  actor: AccessTokenPayload
+): Promise<SalesAccountSummary> {
+  // A stable fact about the caller. Account authorization itself happens
+  // only after the account row is locked and freshly read below.
+  const employeeId = await employeeIdFor(actor)
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      await lockAccountRow(tx as typeof prisma, id)
+      const current = await tx.salesAccount.findUnique({
+        where: { id },
+        include: SUMMARY_INCLUDE,
+      })
+      if (!current) {
+        throw new AppError(404, ACCOUNT_NOT_VISIBLE)
+      }
+      if (
+        !canManageAccount(
+          actor,
+          employeeId,
+          current.ownerEmployeeId,
+          current.assignments.map((assignment) => assignment.employee.id)
+        )
+      ) {
+        throw new AppError(
+          403,
+          "You can view this Sales Account, but only its owner, collaborators, or a Sales Admin can edit it"
+        )
+      }
+
+      const data: Record<string, string | null> = {}
+      const before: Record<string, string | null> = {}
+      const after: Record<string, string | null> = {}
+
+      /**
+       * Records a field only when the submitted value actually differs from
+       * what is stored. A form that re-sends every field on every save would
+       * otherwise write a history row claiming six things changed when one
+       * did, and "what changed" is the whole job of that panel.
+       */
+      const stage = (field: string, next: string | null | undefined, prev: string | null) => {
+        if (next === undefined || next === prev) return
+        data[field] = next
+        before[field] = prev
+        after[field] = next
+      }
+
+      // An emptied form field arrives as "" once Zod has trimmed it, and it
+      // means the same as null: remove this. Absent still means leave alone.
+      const blankToNull = (value: string | null | undefined) =>
+        value === undefined ? undefined : value === "" ? null : value
+
+      if (body.name !== undefined && body.name !== current.name) {
+        await lockAccountNames(tx as typeof prisma)
+        const clash = await findClash(tx as typeof prisma, body.name)
+        // Excluding this account's own row. The check is case-insensitive, so
+        // correcting "rising group" to "Rising Group" finds itself, and
+        // refusing that would make a capitalisation fix impossible.
+        if (clash && clash.id !== id) {
+          throw new AppError(409, duplicateNameMessage(clash.name, clash.owner.fullName))
+        }
+      }
+      stage("name", body.name, current.name)
+      stage("industry", blankToNull(body.industry), current.industry)
+      stage("website", blankToNull(body.website), current.website)
+      stage("address", blankToNull(body.address), current.address)
+
+      let newOwner: { id: string; fullName: string } | null = null
+      if (body.ownerEmployeeId !== undefined && body.ownerEmployeeId !== current.ownerEmployeeId) {
+        // The same four checks, and the same four sentences, that creating an
+        // account uses. Reassignment is the operation that fixes an orphaned
+        // account, so handing it to somebody who also cannot work it would
+        // leave the flag exactly where it was.
+        newOwner = await loadEligibleOwner(tx as typeof prisma, body.ownerEmployeeId)
+        stage("ownerEmployeeId", newOwner.id, current.ownerEmployeeId)
+      }
+
+      const nextStatus = body.status ?? current.status
+      const statusChanged = nextStatus !== current.status
+
+      if (statusChanged) {
+        if (nextStatus === "ACTIVE") {
+          // A reason left behind on a reactivated account reads as a live
+          // warning about an account nobody is warning you about.
+          stage("statusReason", null, current.statusReason)
+        } else {
+          // A different non-active status describes a different decision.
+          // Do not silently carry an old Inactive reason into Do Not Contact,
+          // or vice versa.
+          const reason = blankToNull(body.statusReason)
+          if (!reason) {
+            throw new AppError(
+              400,
+              `Say why ${current.name} is being marked ${STATUS_LABEL[nextStatus]}. The reason is shown beside the status, so whoever opens this next knows what happened.`
+            )
+          }
+          stage("statusReason", reason, current.statusReason)
+        }
+      } else if (body.statusReason !== undefined) {
+        if (nextStatus === "ACTIVE") {
+          stage("statusReason", null, current.statusReason)
+        } else {
+          const reason = blankToNull(body.statusReason)
+          if (!reason) {
+            throw new AppError(400, `A ${STATUS_LABEL[nextStatus]} account must keep a reason`)
+          }
+          stage("statusReason", reason, current.statusReason)
+        }
+      }
+      stage("status", nextStatus, current.status)
+
+      // Every submitted value matched what was already stored. Returning the
+      // account unchanged is honest; writing an audit row saying nothing
+      // changed is not.
+      if (Object.keys(data).length === 0) {
+        return toSummary(current, actor, employeeId)
+      }
+
+      if (newOwner) {
+        // Ownership already grants access. Keeping the same employee in the
+        // assignment table stores one fact twice and inflates assigneeCount.
+        await tx.salesAccountAssignment.deleteMany({
+          where: { salesAccountId: id, employeeId: newOwner.id },
+        })
+      }
+
+      const updated = await tx.salesAccount.update({
+        where: { id },
+        data: data as Prisma.SalesAccountUncheckedUpdateInput,
+        include: SUMMARY_INCLUDE,
+      })
+
+      // The plan makes a field the atomic history fact. Keep every row and
+      // the account write in this transaction so a failed audit still rolls
+      // back the entire save.
+      for (const field of Object.keys(before)) {
+        await writeAudit(tx, {
+          entity: "SALES_ACCOUNT",
+          entityId: id,
+          action: "UPDATE",
+          changedBy: actor.sub,
+          before: { [field]: before[field] },
+          after: { [field]: after[field] },
+        })
+      }
+
+      if (newOwner) {
+        await emitEvent(tx, {
+          type: "sales.account.reassigned",
+          entity: "SALES_ACCOUNT",
+          entityId: id,
+          actorUserId: actor.sub,
+          subjectEmployeeId: newOwner.id,
+          // Explicit null suppresses the reporting-line lookup, as on create:
+          // a sales account is not a fact about somebody's manager.
+          managerEmployeeId: null,
+          title: `${updated.name} is now owned by ${newOwner.fullName}`,
+          meta: `Previously ${current.owner.fullName}`,
+          href: `/accounts/${id}`,
+        })
+      }
+
+      if (statusChanged) {
+        await emitEvent(tx, {
+          type: "sales.account.status_changed",
+          entity: "SALES_ACCOUNT",
+          entityId: id,
+          actorUserId: actor.sub,
+          subjectEmployeeId: updated.ownerEmployeeId,
+          managerEmployeeId: null,
+          title: `${updated.name} marked ${STATUS_LABEL[nextStatus]}`,
+          meta:
+            nextStatus === "ACTIVE"
+              ? `Previously ${STATUS_LABEL[current.status]}`
+              : String(data.statusReason ?? current.statusReason),
+          href: `/accounts/${id}`,
+        })
+      }
+
+      return toSummary(updated, actor, employeeId)
+    })
+  } catch (err) {
+    // The advisory lock closes races through this service, while the existing
+    // exact-match database constraint remains the final guard for any legacy
+    // or out-of-band writer. Translate that constraint outside the transaction:
+    // the failed statement has already aborted it, so the re-read needs a fresh
+    // connection.
+    if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
+      const clash = body.name ? await findClash(prisma, body.name) : null
+      throw clash && clash.id !== id
+        ? new AppError(409, duplicateNameMessage(clash.name, clash.owner.fullName))
+        : new AppError(409, `"${body.name}" already exists`)
+    }
+    throw err
+  }
+}
+
+/**
+ * The field-by-field record for an account: its own audit rows, plus its
+ * contacts'. Not the contacts' communications — logging one is not audited
+ * in its own right (`communication.service.ts`: "a communication is already
+ * a Timeline row"), so there is nothing here to merge in for it.
+ *
+ * Merged in the service for the same reason the Timeline is: `AuditLog` is
+ * polymorphic by `(entity, entityId)`, so a contact's rows live under its
+ * own id, not the account's — one query with an `OR`, not the account read
+ * followed by one query per contact.
+ */
+export async function getAccountHistory(
+  accountId: string,
+  actor: AccessTokenPayload
+): Promise<AccountHistory> {
+  await requireAccountVisible(accountId, actor)
+
+  const contacts = await prisma.salesContact.findMany({
+    where: { salesAccountId: accountId },
+    select: { id: true },
+  })
+  const contactIds = contacts.map((c) => c.id)
+
+  const rows = await prisma.auditLog.findMany({
+    where: {
+      OR: [
+        { entity: "SALES_ACCOUNT", entityId: accountId },
+        ...(contactIds.length > 0
+          ? [{ entity: "SALES_CONTACT" as const, entityId: { in: contactIds } }]
+          : []),
+      ],
+    },
+    orderBy: { changedAt: "desc" },
+    // Capped like the Timeline, and for the same reason: this grows forever,
+    // every row is rendered, and an account worked for a year would send
+    // thousands. An account with more history than this needs paging, which
+    // is a Phase 2 conversation — `truncated` says so rather than quietly
+    // dropping the rest.
+    take: HISTORY_LIMIT + 1,
+  })
+
+  // Asking for one more than the cap is how we learn there *is* more without
+  // a second COUNT query; the extra row is dropped before rendering.
+  const truncated = rows.length > HISTORY_LIMIT
+  const page = truncated ? rows.slice(0, HISTORY_LIMIT) : rows
+
+  // One pass over every row to collect the ids, then two queries — rather
+  // than a lookup per row, which on a busy account is twenty round trips to
+  // name the same three people.
+  const names = await resolveNames(page)
+
+  const items = page.map((row) => ({
+    id: row.id,
+    entity: row.entity as AccountHistoryEntry["entity"],
+    entityId: row.entityId,
+    action: row.action,
+    changedAt: row.changedAt.toISOString(),
+    // Null, not the "Someone no longer on file" wording `presentChanges`
+    // uses for an unresolved id inside a change. Deliberately different:
+    // this is a byline, and "Updated · Someone no longer on file" is noise
+    // where simply omitting the name is not. Inside a change, the id *is*
+    // the value being reported, so it has to say something.
+    changedByName: row.changedBy ? (names.get(row.changedBy) ?? null) : null,
+    changes: presentChanges(row.before, row.after, names),
+    note: row.note,
+  }))
+
+  return { items, truncated, limit: HISTORY_LIMIT }
+}

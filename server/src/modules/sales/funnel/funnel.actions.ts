@@ -22,7 +22,7 @@ import { officeDateOf } from "../../attendance/attendance.time"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { employeeIdFor, isSalesAdmin } from "../sales.access"
 import type { SalesTaskSummary } from "../sales.types"
-import { presentTask } from "../task.present"
+import { presentTask } from "../tasks/task.present"
 import { nextSaturdayFrom } from "./funnel.dates"
 import { lockMeeting } from "./funnel.meeting"
 
