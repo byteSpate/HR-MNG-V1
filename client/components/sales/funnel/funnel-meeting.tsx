@@ -12,7 +12,7 @@ import { useState, type FormEvent } from "react"
 import { RiCheckLine } from "@remixicon/react"
 
 import { PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
-import { onDay } from "@/components/sales/sales-shared"
+import { onDay } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import type {

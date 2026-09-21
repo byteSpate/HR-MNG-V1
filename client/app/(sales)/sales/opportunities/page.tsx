@@ -1,4 +1,4 @@
-import { OpportunitiesPage } from "@/components/sales/opportunities-page"
+import { OpportunitiesPage } from "@/components/sales/opportunities/opportunities-page"
 
 export default async function Page({ searchParams }: PageProps<"/sales/opportunities">) {
   const query = await searchParams

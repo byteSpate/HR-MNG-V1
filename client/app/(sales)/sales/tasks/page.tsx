@@ -1,4 +1,4 @@
-import { TasksPage } from "@/components/sales/tasks-page"
+import { TasksPage } from "@/components/sales/tasks/tasks-page"
 import type { TaskDueFilter } from "@/lib/api/types"
 
 const DUE_FILTERS: TaskDueFilter[] = ["overdue", "today", "now", "week"]

@@ -1,4 +1,4 @@
-import { AccountsPage } from "@/components/sales/accounts-page"
+import { AccountsPage } from "@/components/sales/accounts/accounts-page"
 
 export default async function Page({ searchParams }: PageProps<"/sales/accounts">) {
   const query = await searchParams

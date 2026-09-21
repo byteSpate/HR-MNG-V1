@@ -1,4 +1,4 @@
-import { MinutesEditor } from "@/components/sales/minutes-editor"
+import { MinutesEditor } from "@/components/sales/minutes/minutes-editor"
 
 export default async function Page({ params }: PageProps<"/sales/meetings/minutes/[id]">) {
   const { id } = await params

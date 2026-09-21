@@ -1,4 +1,4 @@
-import { MinutesListPage } from "@/components/sales/minutes-list-page"
+import { MinutesListPage } from "@/components/sales/minutes/minutes-list-page"
 
 export default async function Page({
   searchParams,

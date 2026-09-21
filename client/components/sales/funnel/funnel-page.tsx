@@ -31,8 +31,8 @@ import {
   setMeetingAttendees,
   setMeetingNote,
   setPersonReviewed,
-} from "@/lib/api/funnel"
-import { funnelKeys, funnelWriteKeys } from "@/lib/api/funnel-keys"
+} from "@/lib/api/sales/funnel"
+import { funnelKeys, funnelWriteKeys } from "@/lib/api/sales/funnel-keys"
 import type { FunnelActionBody, FunnelCellField, FunnelQueryOptions, FunnelSort } from "@/lib/api/types"
 import { useSession } from "@/lib/auth/session-context"
 import { cn } from "@/lib/utils"

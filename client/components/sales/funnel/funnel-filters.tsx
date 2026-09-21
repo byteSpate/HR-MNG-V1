@@ -12,7 +12,7 @@
  */
 
 import { TONE } from "@/components/dashboard/record-kit"
-import { taka } from "@/components/sales/sales-shared"
+import { taka } from "@/components/sales/shared/sales-shared"
 import {
   Select,
   SelectContent,
