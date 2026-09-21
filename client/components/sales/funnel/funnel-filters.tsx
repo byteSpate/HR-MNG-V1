@@ -38,6 +38,23 @@ interface FunnelFiltersProps {
 const ALL = "__all__"
 
 /**
+ * The wording of both dropdowns, in one place.
+ *
+ * Base UI's `SelectValue` prints the selected *value* unless it is told what to
+ * print, and the value of "no filter" is the `__all__` sentinel — so the closed
+ * control read `__all__` while the open list said "Any status". The closed
+ * control is given its text explicitly, from the same table the list uses.
+ */
+const ANY_STATUS = "Any status"
+const EVERY_ACCOUNT = "Every account"
+const STATUS_OPTIONS: { value: OpportunityStatus; label: string }[] = [
+  { value: "ONGOING", label: "Ongoing" },
+  { value: "WON", label: "Won" },
+  { value: "LOST", label: "Lost" },
+  { value: "CANCELLED", label: "Cancelled" },
+]
+
+/**
  * A total, or the plain fact that there is none. The server sends null when
  * nothing in view is priced, and zero would be a claim nobody made.
  */
@@ -48,6 +65,9 @@ function Figure({ amount, className }: { amount: string | null; className: strin
 
 export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFiltersProps) {
   const set = (patch: Partial<FunnelQueryOptions>) => onChange({ ...value, ...patch })
+
+  const statusText = STATUS_OPTIONS.find((o) => o.value === value.status)?.label ?? ANY_STATUS
+  const accountText = accounts.find((a) => a.id === value.salesAccountId)?.name ?? EVERY_ACCOUNT
 
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-[#E4E9EF] bg-white px-4 py-3">
@@ -61,14 +81,15 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             }
           >
             <SelectTrigger className="h-8 w-40 text-sm">
-              <SelectValue />
+              <SelectValue>{() => statusText}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Any status</SelectItem>
-              <SelectItem value="ONGOING">Ongoing</SelectItem>
-              <SelectItem value="WON">Won</SelectItem>
-              <SelectItem value="LOST">Lost</SelectItem>
-              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              <SelectItem value={ALL}>{ANY_STATUS}</SelectItem>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </label>
@@ -80,10 +101,10 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             onValueChange={(next) => set({ salesAccountId: next && next !== ALL ? next : undefined })}
           >
             <SelectTrigger className="h-8 w-56 text-sm">
-              <SelectValue />
+              <SelectValue>{() => accountText}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Every account</SelectItem>
+              <SelectItem value={ALL}>{EVERY_ACCOUNT}</SelectItem>
               {accounts.map((account) => (
                 <SelectItem key={account.id} value={account.id}>
                   {account.name}
