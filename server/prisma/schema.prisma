@@ -1983,7 +1983,10 @@ model Customer {
 
   // Required before the first invoice is approved (Phase 3 enforces this,
   // not this model) — a Mushak 6.3 tax invoice needs both parties' names.
-  legalName      String
+  // Unique so the opening-balance importer (customer.opening-balance.import.ts)
+  // can match a row by name exactly, the same way Supplier.name already
+  // does — added once the importer needed it, not speculatively in Task 1.
+  legalName      String  @unique
   billingAddress String?
   bin            String?
   // Days until an invoice is due. 30 is the ordinary default; Finance can
