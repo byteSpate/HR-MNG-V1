@@ -121,3 +121,23 @@ export async function deactivateSupplier(id: string, actor: AccessTokenPayload) 
     return supplier
   })
 }
+
+export async function reactivateSupplier(id: string, actor: AccessTokenPayload) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.supplier.findUnique({ where: { id } })
+    if (!existing) throw new AppError(404, "Supplier not found")
+
+    const supplier = await tx.supplier.update({ where: { id }, data: { isActive: true } })
+
+    await writeAudit(tx, {
+      entity: "SUPPLIER",
+      entityId: id,
+      action: "UPDATE",
+      changedBy: actor.sub,
+      before: { isActive: false },
+      after: { isActive: true },
+    })
+
+    return supplier
+  })
+}

@@ -11,6 +11,7 @@ import {
   getSupplierHandler,
   listSuppliersHandler,
   previewSupplierOpeningBalancesHandler,
+  reactivateSupplierHandler,
   updateSupplierHandler,
 } from "./supplier.controller"
 
@@ -23,6 +24,7 @@ router.get("/:id", requireAuth, getSupplierHandler)
 router.post("/", requireAuth, requireRole(...WRITE_ROLES), createSupplierHandler)
 router.patch("/:id", requireAuth, requireRole(...WRITE_ROLES), updateSupplierHandler)
 router.post("/:id/deactivate", requireAuth, requireRole(...WRITE_ROLES), deactivateSupplierHandler)
+router.post("/:id/reactivate", requireAuth, requireRole(...WRITE_ROLES), reactivateSupplierHandler)
 
 router.post(
   "/opening-balances/preview",

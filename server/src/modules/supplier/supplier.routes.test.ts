@@ -76,6 +76,26 @@ describe("POST /api/suppliers/:id/deactivate", () => {
   })
 })
 
+describe("POST /api/suppliers/:id/reactivate", () => {
+  it("refuses a non-Finance, non-Admin role with 403", async () => {
+    const res = await request(app)
+      .post("/api/suppliers/s1/reactivate")
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+
+  it("accepts Finance Officer and reactivates the record", async () => {
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+    vi.mocked(prisma.supplier.findUnique).mockResolvedValue({ id: "s1", name: "Star Tech" } as any)
+    vi.mocked(prisma.supplier.update).mockResolvedValue({ id: "s1", isActive: true } as any)
+    const res = await request(app)
+      .post("/api/suppliers/s1/reactivate")
+      .set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ id: "s1", isActive: true })
+  })
+})
+
 describe("POST /api/suppliers/opening-balances/preview", () => {
   it("refuses a non-Finance, non-Admin role with 403", async () => {
     const res = await request(app)

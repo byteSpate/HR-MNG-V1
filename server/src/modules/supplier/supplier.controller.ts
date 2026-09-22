@@ -10,6 +10,7 @@ import {
   deactivateSupplier,
   getSupplier,
   listSuppliers,
+  reactivateSupplier,
   updateSupplier,
 } from "./supplier.service"
 import { createSupplierSchema, updateSupplierSchema } from "./supplier.validators"
@@ -59,6 +60,14 @@ export async function updateSupplierHandler(req: RequestWithId, res: Response, n
 export async function deactivateSupplierHandler(req: RequestWithId, res: Response, next: NextFunction) {
   try {
     return res.json(await deactivateSupplier(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function reactivateSupplierHandler(req: RequestWithId, res: Response, next: NextFunction) {
+  try {
+    return res.json(await reactivateSupplier(req.params.id, req.user!))
   } catch (err) {
     return next(err)
   }

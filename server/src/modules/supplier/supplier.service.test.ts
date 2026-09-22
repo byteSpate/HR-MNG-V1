@@ -16,6 +16,7 @@ import {
   deactivateSupplier,
   getSupplier,
   listSuppliers,
+  reactivateSupplier,
   updateSupplier,
 } from "./supplier.service"
 
@@ -115,5 +116,35 @@ describe("deactivateSupplier", () => {
       })
     )
     expect(result).toEqual({ id: "s1", isActive: false })
+  })
+})
+
+describe("reactivateSupplier", () => {
+  it("refuses when the supplier does not exist", async () => {
+    vi.mocked(prisma.supplier.findUnique).mockResolvedValue(null)
+    await expect(reactivateSupplier("missing", ACTOR)).rejects.toThrow(AppError)
+  })
+
+  it("sets isActive to true and writes an audit entry", async () => {
+    vi.mocked(prisma.supplier.findUnique).mockResolvedValue({ id: "s1", name: "Star Tech" } as any)
+    vi.mocked(prisma.supplier.update).mockResolvedValue({ id: "s1", isActive: true } as any)
+
+    const result = await reactivateSupplier("s1", ACTOR)
+
+    expect(prisma.supplier.update).toHaveBeenCalledWith({
+      where: { id: "s1" },
+      data: { isActive: true },
+    })
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          entity: "SUPPLIER",
+          action: "UPDATE",
+          before: expect.objectContaining({ isActive: false }),
+          after: expect.objectContaining({ isActive: true }),
+        }),
+      })
+    )
+    expect(result).toEqual({ id: "s1", isActive: true })
   })
 })
