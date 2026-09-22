@@ -1710,6 +1710,28 @@ export interface UpdateAccountInput {
   description?: string | null
 }
 
+export interface Customer {
+  id: string
+  legalName: string
+  billingAddress: string | null
+  bin: string | null
+  paymentDays: number
+  salesAccountId: string | null
+  createdAt: string
+}
+
+export interface Supplier {
+  id: string
+  name: string
+  contactName: string | null
+  contactPhone: string | null
+  contactEmail: string | null
+  bin: string | null
+  paymentDays: number
+  isActive: boolean
+  createdAt: string
+}
+
 export interface AccountingPeriod {
   id: string
   financialYearId: string
