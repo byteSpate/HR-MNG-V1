@@ -143,9 +143,24 @@ async function main() {
   const hrAdmin = await seedAdminUser("hr@demo.com", Role.HR_ADMIN)
   await seedAdminUser("finance@demo.com", Role.FINANCE_OFFICER)
 
-  const departments = ["Engineering", "People Operations", "Finance", "Operations"]
-  for (const name of departments) {
-    await prisma.department.upsert({ where: { name }, update: {}, create: { name } })
+  const departments = [
+    { name: "Engineering", costNature: "ADMINISTRATIVE" as const },
+    { name: "People Operations", costNature: "ADMINISTRATIVE" as const },
+    { name: "Finance", costNature: "ADMINISTRATIVE" as const },
+    { name: "Operations", costNature: "ADMINISTRATIVE" as const },
+    // The two Direct Departments (design §2/§4) — every Won Opportunity
+    // belongs to exactly one, and payroll already posts a direct
+    // department's salaries as a cost of sales.
+    { name: "Network & Security", costNature: "DIRECT" as const },
+    { name: "Software Development", costNature: "DIRECT" as const },
+    // Confirmed 2026-09-22: Finance, HR and management must not sit inside
+    // either Direct Department, or their salaries would inflate cost of
+    // sales. This is the fix for that, not a new mechanism — costNature
+    // already existed.
+    { name: "Administration", costNature: "ADMINISTRATIVE" as const },
+  ]
+  for (const { name, costNature } of departments) {
+    await prisma.department.upsert({ where: { name }, update: {}, create: { name, costNature } })
   }
 
   await seedAssetCategories()
