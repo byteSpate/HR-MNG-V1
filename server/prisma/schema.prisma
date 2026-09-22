@@ -13,29 +13,29 @@ datasource db {
 
 // ── AUTH & USERS ──────────────────────────────
 model User {
-  id                  String               @id @default(uuid())
-  email               String               @unique
-  passwordHash        String
-  role                Role
-  salesRole           SalesRole?
-  isActive            Boolean              @default(true)
-  mustChangePassword  Boolean              @default(false)
+  id                    String               @id @default(uuid())
+  email                 String               @unique
+  passwordHash          String
+  role                  Role
+  salesRole             SalesRole?
+  isActive              Boolean              @default(true)
+  mustChangePassword    Boolean              @default(false)
   // Identity for an account with no Employee row — Super Admin, HR Admin and
   // Finance Officer, who otherwise have no name and no face anywhere in the
   // product and appear as a raw email address.
   //
   // Deliberately NOT used for staff: their name lives on Employee and is
   // HR's to change, which is the existing rule and not one this relaxes.
-  displayName         String?
+  displayName           String?
   /// Packed "publicId:version", exactly as Employee.profilePicture is.
-  avatarUrl           String?
-  employee            Employee?
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  emailChangeRequests EmailChangeRequest[]
+  avatarUrl             String?
+  employee              Employee?
+  refreshTokens         RefreshToken[]
+  passwordResetTokens   PasswordResetToken[]
+  emailChangeRequests   EmailChangeRequest[]
   salesCommentsAuthored SalesComment[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 }
 
 enum Role {
@@ -76,16 +76,16 @@ model RefreshToken {
   //
   // Carried forward by `refresh()` onto the replacement row, along with
   // startedAt and userAgent. Only ever one live row per sessionId.
-  sessionId String   @default(uuid())
+  sessionId  String   @default(uuid())
   /// When the session began — NOT when this token was written.
-  startedAt DateTime @default(now())
+  startedAt  DateTime @default(now())
   /// Bumped on every rotation. The honest reading of "last active".
   lastUsedAt DateTime @default(now())
   /// Frozen at login: the browser does not change mid-session.
-  userAgent String?
+  userAgent  String?
   /// Updated on rotation, unlike userAgent — a laptop moves, and where it is
   /// *now* is what makes an unfamiliar entry worth noticing.
-  ipAddress String?
+  ipAddress  String?
 
   @@index([userId, sessionId])
 }
@@ -224,24 +224,24 @@ model Employee {
   assetRequests    AssetRequest[]
   assetRecoveries  AssetRecovery[]
 
-  journalLines    JournalLine[]
-  changeRequests  EmployeeChangeRequest[]
+  journalLines   JournalLine[]
+  changeRequests EmployeeChangeRequest[]
 
-  salesAccountsOwned      SalesAccount[]           @relation("SalesAccountOwner")
-  salesAccountAssignments SalesAccountAssignment[] @relation("SalesAccountAssignee")
-  salesCommunications     SalesCommunication[]
-  opportunitiesOwned      Opportunity[]            @relation("OpportunityOwner")
-  weeklyReports           WeeklyReport[]
-  opportunitiesWon        Opportunity[]            @relation("OpportunityWonBy")
-  salesComments           SalesComment[]
-  salesTargets            SalesTarget[]
-  salesMeetingAttendances SalesMeetingAttendee[]
-  salesTasksAssigned      SalesTask[]              @relation("SalesTaskAssignee")
-  salesTasksGiven         SalesTask[]              @relation("SalesTaskAssigner")
-  salesMinutesPrepared    SalesMinutesPreparer[]
-  funnelMeetingsRan       FunnelMeeting[]          @relation("FunnelMeetingRanBy")
-  funnelMeetingAttendances FunnelMeetingAttendee[] @relation("FunnelMeetingAttendee")
-  funnelReviews            FunnelMeetingReview[]   @relation("FunnelMeetingReviewSubject")
+  salesAccountsOwned       SalesAccount[]           @relation("SalesAccountOwner")
+  salesAccountAssignments  SalesAccountAssignment[] @relation("SalesAccountAssignee")
+  salesCommunications      SalesCommunication[]
+  opportunitiesOwned       Opportunity[]            @relation("OpportunityOwner")
+  weeklyReports            WeeklyReport[]
+  opportunitiesWon         Opportunity[]            @relation("OpportunityWonBy")
+  salesComments            SalesComment[]
+  salesTargets             SalesTarget[]
+  salesMeetingAttendances  SalesMeetingAttendee[]
+  salesTasksAssigned       SalesTask[]              @relation("SalesTaskAssignee")
+  salesTasksGiven          SalesTask[]              @relation("SalesTaskAssigner")
+  salesMinutesPrepared     SalesMinutesPreparer[]
+  funnelMeetingsRan        FunnelMeeting[]          @relation("FunnelMeetingRanBy")
+  funnelMeetingAttendances FunnelMeetingAttendee[]  @relation("FunnelMeetingAttendee")
+  funnelReviews            FunnelMeetingReview[]    @relation("FunnelMeetingReviewSubject")
 }
 
 enum EmployeeChangeField {
@@ -330,7 +330,7 @@ model Department {
   assets        Asset[]
 
   journalLines JournalLine[]
-  costNature CostNature @default(ADMINISTRATIVE)
+  costNature   CostNature    @default(ADMINISTRATIVE)
 }
 
 enum DocumentType {
@@ -899,12 +899,12 @@ model EmailDispatch {
 }
 
 model ExpenseClaim {
-  id          String        @id @default(uuid())
-  employeeId  String
-  employee    Employee      @relation(fields: [employeeId], references: [id])
-  amount      Decimal       @db.Decimal(14, 2)
-  categoryId  String
-  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  id                 String          @id @default(uuid())
+  employeeId         String
+  employee           Employee        @relation(fields: [employeeId], references: [id])
+  amount             Decimal         @db.Decimal(14, 2)
+  categoryId         String
+  category           ExpenseCategory @relation(fields: [categoryId], references: [id])
   legacyCategoryText String?
   /// What this claim is, in a few words — "Water jar", "Taxi to Motijheel".
   ///
@@ -915,14 +915,14 @@ model ExpenseClaim {
   /// Nullable only because claims already exist. The create validator requires
   /// it, and the migration backfills the column from `description`, which is
   /// exactly what people had been putting there.
-  name        String?
-  description String?
+  name               String?
+  description        String?
   /// Superseded by `ExpenseAttachment`. Kept because claims already carry
   /// links people pasted, and dropping the column would erase the only
   /// evidence behind an approved claim. Write path is closed; reads still
   /// show it.
-  receiptUrl  String?
-  status      ExpenseStatus @default(PENDING)
+  receiptUrl         String?
+  status             ExpenseStatus   @default(PENDING)
 
   /// Where a journey started and ended. Nullable and free text, because only
   /// travel and conveyance claims have a route at all, and "Gulshan 1 to
@@ -1051,7 +1051,7 @@ model Settlement {
   emailedAt   DateTime?
   generatedAt DateTime  @default(now())
 
-  claims ExpenseClaim[]
+  claims            ExpenseClaim[]
   assetRecoveryRows AssetRecovery[]
 
   @@index([employeeId])
@@ -1182,10 +1182,10 @@ model AssetCategory {
 
   // A laptop has a serial; a chair does not. Enforced at create rather than
   // being a nullable field everyone forgets.
-  requiresSerial   Boolean @default(true)
+  requiresSerial Boolean             @default(true)
   // Issued and never expected back — a mouse, a keyboard, a headset. Excluded
   // from the exit checklist.
-  isConsumable     Boolean @default(false)
+  isConsumable   Boolean             @default(false)
   // IT or non-IT, stated once per category. A property of the kind of thing,
   // never of a single asset and never of a request — a chair is non-IT no
   // matter who asks for it or why. Non-null deliberately: a nullable column
@@ -1200,7 +1200,7 @@ model AssetCategory {
   // Straight-line life. Unused in phase 1; the book-value report is phase 2.
   // The column exists now so the importer can carry it and there is no second
   // migration to backfill it later.
-  usefulLifeMonths Int?
+  usefulLifeMonths   Int?
 
   assets   Asset[]
   requests AssetRequest[]
@@ -1256,12 +1256,12 @@ model Asset {
   retiredBy      String? // User id
   retirementNote String?
 
-  assignments AssetAssignment[]
-  repairs     AssetRepair[]
-  requests          AssetRequest[] @relation("RequestTarget")
-  fulfilledRequests AssetRequest[] @relation("RequestFulfilment")
-  attachments AssetAttachment[]
-  recoveries  AssetRecovery[]
+  assignments       AssetAssignment[]
+  repairs           AssetRepair[]
+  requests          AssetRequest[]    @relation("RequestTarget")
+  fulfilledRequests AssetRequest[]    @relation("RequestFulfilment")
+  attachments       AssetAttachment[]
+  recoveries        AssetRecovery[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1276,10 +1276,10 @@ model Asset {
 // Operating costs lack this column, which is exactly why USD costs cannot
 // post at all.
 model DepreciationRun {
-  id     String @id @default(uuid())
+  id     String                @id @default(uuid())
   // IdCounter key "DEP" — the mechanism already issuing journal and employee
   // numbers. "BS-DEP-00007".
-  runNo  String @unique
+  runNo  String                @unique
   year   Int
   month  Int
   status DepreciationRunStatus @default(DRAFT)
@@ -1289,10 +1289,10 @@ model DepreciationRun {
   journalId String?
   journal   Journal? @relation(fields: [journalId], references: [id])
 
-  createdBy String
-  createdAt DateTime  @default(now())
-  postedBy  String?
-  postedAt  DateTime?
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  postedBy   String?
+  postedAt   DateTime?
   reversedBy String?
   reversedAt DateTime?
 
@@ -1305,11 +1305,11 @@ model DepreciationRun {
 }
 
 model AssetDepreciation {
-  id    String @id @default(uuid())
-  runId String
-  run   DepreciationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  id      String          @id @default(uuid())
+  runId   String
+  run     DepreciationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id])
+  asset   Asset           @relation(fields: [assetId], references: [id])
 
   // Always BDT. A USD asset is converted once, at capitalisation, and never
   // again — see spec Decision 7.
@@ -1347,26 +1347,26 @@ enum AssetRecoveryStatus {
 }
 
 model AssetRecovery {
-  id         String   @id @default(uuid())
-  assetId    String
-  asset      Asset    @relation(fields: [assetId], references: [id])
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  id           String           @id @default(uuid())
+  assetId      String
+  asset        Asset            @relation(fields: [assetId], references: [id])
+  employeeId   String
+  employee     Employee         @relation(fields: [employeeId], references: [id])
   // The custody episode it arose under. Nullable because an asset can go
   // missing with nobody holding it, and because a recovery may be raised
   // after the assignment has been closed out.
   assignmentId String?
   assignment   AssetAssignment? @relation(fields: [assignmentId], references: [id])
 
-  kind AssetRecoveryKind
+  kind     AssetRecoveryKind
   // Typed by a person, never computed. Book value, replacement cost and
   // original cost are three defensible answers and the system cannot see
   // which one applies.
-  amount   Decimal  @db.Decimal(14, 2)
-  currency Currency @default(BDT)
+  amount   Decimal           @db.Decimal(14, 2)
+  currency Currency          @default(BDT)
   // Required, and required non-empty. An unexplained deduction from
   // somebody's pay is a dispute waiting.
-  reason String
+  reason   String
 
   status AssetRecoveryStatus @default(PENDING)
 
@@ -1382,7 +1382,7 @@ model AssetRecovery {
   adjustment   PayrollAdjustment? @relation(fields: [adjustmentId], references: [id])
   // Not unique: one settlement legitimately clears several recoveries.
   settlementId String?
-  settlement   Settlement? @relation(fields: [settlementId], references: [id])
+  settlement   Settlement?        @relation(fields: [settlementId], references: [id])
 
   createdBy String
   createdAt DateTime @default(now())
@@ -1710,7 +1710,7 @@ enum CashFlowKind {
 }
 
 model Account {
-  id String @id @default(uuid())
+  id   String      @id @default(uuid())
   // Four digits. The first digit is fixed by `type`: 1 ASSET, 2 LIABILITY,
   // 3 EQUITY, 4 INCOME, 5 EXPENSE — validated on write. This is why the
   // trial balance sorts into statement order on `code` alone, and why an
@@ -1751,17 +1751,17 @@ model Account {
 
   description String?
 
-  noteRef String?
-  cashFlowKind CashFlowKind @default(NONE)
-  depreciationRate Decimal? @db.Decimal(5, 2)
-  contraAccountId String? @unique
-  contra          Account? @relation("AccountContra", fields: [contraAccountId], references: [id])
-  contraOf        Account? @relation("AccountContra")
+  noteRef          String?
+  cashFlowKind     CashFlowKind @default(NONE)
+  depreciationRate Decimal?     @db.Decimal(5, 2)
+  contraAccountId  String?      @unique
+  contra           Account?     @relation("AccountContra", fields: [contraAccountId], references: [id])
+  contraOf         Account?     @relation("AccountContra")
 
-  lines     JournalLine[]
+  lines        JournalLine[]
   postingRules PostingRule[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([type, code])
   @@index([parentId])
@@ -1772,8 +1772,8 @@ model Account {
 model FinancialYear {
   id        String              @id @default(uuid())
   name      String              @unique // "FY 2026-27"
-  startDate DateTime            // 1 Jul, UTC midnight
-  endDate   DateTime            // 30 Jun
+  startDate DateTime // 1 Jul, UTC midnight
+  endDate   DateTime // 30 Jun
   status    FinancialYearStatus @default(OPEN)
 
   periods AccountingPeriod[]
@@ -1806,10 +1806,10 @@ model AccountingPeriod {
 
   status PeriodStatus @default(OPEN)
 
-  closedBy   String?
-  closedAt   DateTime?
-  reopenedBy String?
-  reopenedAt DateTime?
+  closedBy     String?
+  closedAt     DateTime?
+  reopenedBy   String?
+  reopenedAt   DateTime?
   // Required on reopen. An unexplained reopen of a closed month is the first
   // thing an auditor asks about.
   reopenReason String?
@@ -1827,7 +1827,7 @@ enum PeriodStatus {
 }
 
 model Journal {
-  id String @id @default(uuid())
+  id        String @id @default(uuid())
   // "BS-JV-00123", issued from IdCounter with key "JV" — the same mechanism
   // that issues employee codes and asset tags.
   journalNo String @unique
@@ -1856,7 +1856,7 @@ model Journal {
   // Which event on that record. One payroll run legitimately produces two
   // journals — the accrual and the payment — and this is what keeps them
   // distinct while each stays individually idempotent.
-  sourceEvent String?
+  sourceEvent  String?
 
   createdBy     String
   createdAt     DateTime  @default(now())
@@ -1895,11 +1895,11 @@ model Journal {
 }
 
 enum JournalType {
-  OPENING  // the one opening-balance journal per financial year
-  MANUAL   // typed by a human
-  SYSTEM   // generated by another module — slice 3 onward
+  OPENING // the one opening-balance journal per financial year
+  MANUAL // typed by a human
+  SYSTEM // generated by another module — slice 3 onward
   REVERSAL
-  CLOSING  // year-end: P&L accounts → Retained Earnings
+  CLOSING // year-end: P&L accounts → Retained Earnings
 }
 
 // REJECTED is deliberately absent. A rejection returns the journal to DRAFT
@@ -1945,12 +1945,105 @@ model JournalLine {
   sourceAmount   Decimal?  @db.Decimal(14, 2)
   fxRateToBdt    Decimal?  @db.Decimal(18, 6)
 
+  // ── deal-based dimensions, added for receivables & payables ──
+  // Same pattern as departmentId/employeeId above: optional, so nothing
+  // that already posts has to change. A line carries at most one of
+  // customerId/supplierId in practice, never both, but nothing here
+  // enforces that — the posting builders that create these lines are
+  // what guarantee it (Phase 2/3), the same way nothing on this model
+  // enforces "exactly one of debit/credit is non-zero" either.
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  customerId    String?
+  customer      Customer?    @relation(fields: [customerId], references: [id])
+  supplierId    String?
+  supplier      Supplier?    @relation(fields: [supplierId], references: [id])
+
   sortOrder Int @default(0)
 
   @@index([accountId])
   @@index([journalId])
   @@index([employeeId])
   @@index([departmentId])
+  @@index([opportunityId])
+  @@index([customerId])
+  @@index([supplierId])
+}
+
+// ── RECEIVABLES & PAYABLES — Phase 1 ────────────────────────────────────────
+
+model Customer {
+  id String @id @default(uuid())
+
+  // Optional: set when a Customer is created from a Won Opportunity
+  // (Phase 3). Opening-balance imports create Customers with no Sales
+  // Account behind them — pre-existing debtors this system never quoted.
+  salesAccountId String?       @unique
+  salesAccount   SalesAccount? @relation(fields: [salesAccountId], references: [id])
+
+  // Required before the first invoice is approved (Phase 3 enforces this,
+  // not this model) — a Mushak 6.3 tax invoice needs both parties' names.
+  legalName      String
+  billingAddress String?
+  bin            String?
+  // Days until an invoice is due. 30 is the ordinary default; Finance can
+  // set a different figure per customer.
+  paymentDays    Int     @default(30)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  journalLines   JournalLine[]
+  openingBalance CustomerOpeningBalance?
+
+  @@index([legalName])
+}
+
+model Supplier {
+  id String @id @default(uuid())
+
+  name         String  @unique
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+  bin          String?
+  paymentDays  Int     @default(30)
+
+  // Retired, not deleted, once it carries a bill — same posture as
+  // Account and AssetCategory.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  journalLines   JournalLine[]
+  openingBalance SupplierOpeningBalance?
+
+  @@index([name])
+}
+
+// One row per party: what they owed us, or we owed them, on the day this
+// system went live. Not an itemised open invoice/bill — those models don't
+// exist until Phase 3, and building throwaway ones now would be wasted
+// work. `asOf` is `SALES_GO_LIVE`, the same date for every row.
+model CustomerOpeningBalance {
+  id         String   @id @default(uuid())
+  customerId String   @unique
+  customer   Customer @relation(fields: [customerId], references: [id])
+  amount     Decimal  @db.Decimal(14, 2)
+  asOf       DateTime
+  importedBy String
+  createdAt  DateTime @default(now())
+}
+
+model SupplierOpeningBalance {
+  id         String   @id @default(uuid())
+  supplierId String   @unique
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  amount     Decimal  @db.Decimal(14, 2)
+  asOf       DateTime
+  importedBy String
+  createdAt  DateTime @default(now())
 }
 
 model JournalAttachment {
@@ -1972,15 +2065,16 @@ model JournalAttachment {
 
 // ── POSTING RULES ─────────────────────────────
 model PostingRule {
-  id String @id @default(uuid())
-  event String
-  key String
+  id        String   @id @default(uuid())
+  event     String
+  key       String
   accountId String
-  account Account @relation(fields: [accountId], references: [id])
-  note String?
+  account   Account  @relation(fields: [accountId], references: [id])
+  note      String?
   updatedBy String?
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+
   @@unique([event, key])
   @@index([event])
 }
@@ -1991,18 +2085,18 @@ enum CostNature {
 }
 
 model ExpenseCategory {
-  id String @id @default(uuid())
-  code String @unique
-  name String @unique
+  id     String         @id @default(uuid())
+  code   String         @unique
+  name   String         @unique
   claims ExpenseClaim[]
 }
 
 model StatementNote {
-  id String @id @default(uuid())
-  ref String @unique
-  title String
-  body String
-  sortOrder Int @default(0)
+  id        String @id @default(uuid())
+  ref       String @unique
+  title     String
+  body      String
+  sortOrder Int    @default(0)
 
   updatedBy String?
   updatedAt DateTime @updatedAt
@@ -2046,6 +2140,11 @@ model SalesAccount {
   meetings       SalesMeeting[]
   tasks          SalesTask[]
   weeklyNotes    WeeklyAccountNote[]
+
+  // Receivables & payables, Phase 1. Set the day this account's first
+  // Opportunity is Won (Phase 3 wires the hook); absent for accounts with
+  // no won deal yet.
+  customer Customer?
 
   @@index([ownerEmployeeId, status])
   @@index([status])
@@ -2162,6 +2261,7 @@ model SalesCommunication {
 /// somebody builds what sits behind it.
 enum SalesTrack {
   NETWORKING
+  SOFTWARE_DEVELOPMENT
 }
 
 /// Did we get it? The outcome. Distinct from Stage, which is the position.
@@ -2313,6 +2413,10 @@ model Opportunity {
   meetings SalesMeeting[]    @relation("MeetingOpportunity")
   tasks    SalesTask[]
 
+  // Receivables & payables, Phase 1: the back-relation for
+  // JournalLine.opportunityId. Empty until Phase 2/3 post against a deal.
+  journalLines JournalLine[]
+
   @@index([salesAccountId])
   @@index([status, expectedCloseDate])
   @@index([ownerEmployeeId, status])
@@ -2337,23 +2441,23 @@ model OpportunityLine {
   /// Free text with suggestions from prior values — the same treatment the OEM
   /// brand gets, for the same reason: a closed list would be wrong within a
   /// month and nobody would be able to record the deal they actually have.
-  product   String
-  oemBrand  String?
-  model     String?
+  product       String
+  oemBrand      String?
+  model         String?
   /// Nullable because some lines are services, not units.
-  quantity  Int?
-  unitValue Decimal? @db.Decimal(14, 2)
+  quantity      Int?
+  unitValue     Decimal? @db.Decimal(14, 2)
   /// Never derived silently from quantity × unitValue. A number written
   /// without being asked for is the same defect as a faked one; the interface
   /// offers to fill it and a person presses the button.
-  lineValue Decimal? @db.Decimal(14, 2)
+  lineValue     Decimal? @db.Decimal(14, 2)
   /// The profit on this product, as a percentage of `lineValue`, typed by a
   /// person: -100 to 100, negative for one sold at a loss. The taka figure is
   /// worked out when read (sales.margin.ts), so it follows the Total price;
   /// the deal's margin is these added up. Null is "no margin yet", never 0%.
   marginPercent Decimal? @db.Decimal(5, 2)
-  note      String?
-  order     Int      @default(0)
+  note          String?
+  order         Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2552,12 +2656,12 @@ model SalesTask {
   /// Required by the service in phase 3, so every task is on an account's
   /// Timeline. Nullable in the table because a phase 5 project task may not
   /// belong to an account.
-  salesAccountId String?
-  salesAccount   SalesAccount? @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-  opportunityId  String?
-  opportunity    Opportunity?  @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
-  meetingId      String?
-  meeting        SalesMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  salesAccountId  String?
+  salesAccount    SalesAccount?  @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  opportunityId   String?
+  opportunity     Opportunity?   @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  meetingId       String?
+  meeting         SalesMeeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
   /// Phase 5 will add this relation. The column exists now, so that will be a
   /// relation change and not a backfill.
   projectId       String?
@@ -2720,11 +2824,11 @@ model WeeklyReport {
   /// and attendance already follow.
   weekStart  DateTime
 
-  status WeeklyReportStatus @default(DRAFT)
+  status           WeeklyReportStatus @default(DRAFT)
   /// The first submit, and whether it was after the deadline. Both frozen: a
   /// week reopened and submitted again keeps its on-time mark (§26.4).
   firstSubmittedAt DateTime?
-  submittedLate    Boolean   @default(false)
+  submittedLate    Boolean            @default(false)
   lastSubmittedAt  DateTime?
 
   /// The user id, so a report can be traced to the sign-in that wrote it.
