@@ -34,6 +34,18 @@ const envSchema = z.object({
   // second justifies refusing to boot.
   COMPANY_NAME: z.string().default("Byte Spate"),
   COMPANY_ADDRESS: z.string().default(""),
+  // The company's own VAT registration number. Needed on every Mushak 6.3
+  // tax invoice alongside the customer's BIN. Optional with a blank
+  // default, matching COMPANY_ADDRESS — cosmetic until the first invoice
+  // is actually issued in Phase 3, not worth refusing to boot over.
+  COMPANY_BIN: z.string().default(""),
+  // The date receivables & payables became the record of truth, mirroring
+  // ATTENDANCE_GO_LIVE. Required, no default: an opening-balance import
+  // needs a fixed date to import *as of*, and a wrong or missing one means
+  // every customer and supplier balance is undatable.
+  SALES_GO_LIVE: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "SALES_GO_LIVE must be a YYYY-MM-DD date"),
   // Optional, following SMTP_HOST: an unconfigured integration degrades to a
   // clear 503 on upload rather than refusing to boot. Requiring them would
   // block every developer and every CI run on a Cloudinary account, for a

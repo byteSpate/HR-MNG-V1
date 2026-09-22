@@ -79,6 +79,9 @@ export type AuditEntity =
   | "DEPARTMENT"
   | "SHIFT"
   | "LEAVE_TYPE"
+  // Receivables & payables master data.
+  | "CUSTOMER"
+  | "SUPPLIER"
 
 export type AuditAction =
   | "CREATE"
