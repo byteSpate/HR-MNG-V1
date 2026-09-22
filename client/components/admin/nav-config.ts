@@ -33,6 +33,8 @@ export const navGroups: NavGroup[] = [
       { label: "Annexure-A", href: "/admin/statements/annexure-a", icon: "RiTableLine" },
       { label: "Policy notes", href: "/admin/statements/policy-notes", icon: "RiArticleLine" },
       { label: "Chart of accounts", href: "/admin/accounting/accounts", icon: "RiNodeTree" },
+      { label: "Customers", href: "/admin/accounting/customers", icon: "RiUserLine" },
+      { label: "Suppliers", href: "/admin/accounting/suppliers", icon: "RiTruckLine" },
       { label: "General ledger", href: "/admin/accounting/ledger", icon: "RiBookOpenLine" },
       { label: "Cash book", href: "/admin/accounting/cash-book", icon: "RiCashLine" },
       { label: "Bank book", href: "/admin/accounting/bank-book", icon: "RiBankLine" },

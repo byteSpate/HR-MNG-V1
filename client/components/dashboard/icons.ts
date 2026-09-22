@@ -40,7 +40,9 @@ import {
   RiTaskLine,
   RiTeamLine,
   RiTimeLine,
+  RiTruckLine,
   RiUser3Line,
+  RiUserLine,
   RiWallet3Line,
   type RemixiconComponentType,
 } from "@remixicon/react"
@@ -88,6 +90,8 @@ export const icons = {
   RiTaskLine,
   /** The funnel: every quoted deal, per person (revision §27). */
   RiFilter3Line,
+  RiUserLine,
+  RiTruckLine,
 } satisfies Record<string, RemixiconComponentType>
 
 export type IconName = keyof typeof icons
