@@ -12,7 +12,6 @@ export const navGroups: NavGroup[] = [
       { label: "Employee expenses", href: "/finance/expenses", icon: "RiReceiptLine" },
       { label: "Settlements", href: "/finance/settlements", icon: "RiHandCoinLine" },
       { label: "Expenses", href: "/finance/costs", icon: "RiBillLine" },
-      { label: "Posting rules", href: "/finance/posting-rules", icon: "RiSettingsLine" },
       { label: "Assets", href: "/finance/assets", icon: "RiComputerLine" },
       { label: "Depreciation", href: "/finance/depreciation", icon: "RiCalculatorLine" },
       { label: "Asset value", href: "/finance/assets/value", icon: "RiPieChartLine" },
@@ -41,6 +40,9 @@ export const navGroups: NavGroup[] = [
     // they're read back, one account or one book at a time.
     label: "Ledger",
     items: [
+      // Pairs with Journals in the guide's own "Post" step — the map that
+      // decides which account a journal line lands on.
+      { label: "Posting rules", href: "/finance/posting-rules", icon: "RiSettingsLine" },
       { label: "Journals", href: "/finance/accounting/journals", icon: "RiFileList3Line" },
       { label: "General ledger", href: "/finance/accounting/ledger", icon: "RiBookOpenLine" },
       { label: "Cash book", href: "/finance/accounting/cash-book", icon: "RiCashLine" },

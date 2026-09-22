@@ -19,7 +19,6 @@ export const navGroups: NavGroup[] = [
       { label: "Employee expenses", href: "/admin/expenses", icon: "RiReceiptLine" },
       { label: "Settlements", href: "/admin/settlements", icon: "RiHandCoinLine" },
       { label: "Expenses", href: "/admin/costs", icon: "RiBillLine" },
-      { label: "Posting rules", href: "/admin/posting-rules", icon: "RiSettingsLine" },
     ],
   },
   {
@@ -42,6 +41,9 @@ export const navGroups: NavGroup[] = [
     // they're read back, one account or one book at a time.
     label: "Ledger",
     items: [
+      // Pairs with Journals in the guide's own "Post" step — the map that
+      // decides which account a journal line lands on.
+      { label: "Posting rules", href: "/admin/posting-rules", icon: "RiSettingsLine" },
       { label: "Journals", href: "/admin/accounting/journals", icon: "RiFileList3Line" },
       { label: "General ledger", href: "/admin/accounting/ledger", icon: "RiBookOpenLine" },
       { label: "Cash book", href: "/admin/accounting/cash-book", icon: "RiCashLine" },
