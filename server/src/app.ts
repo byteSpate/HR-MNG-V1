@@ -15,6 +15,7 @@ import authRoutes from "./modules/auth/auth.routes"
 import userRoutes from "./modules/auth/user.routes"
 import costRoutes from "./modules/cost/cost.routes"
 import customerRoutes from "./modules/customer/customer.routes"
+import supplierRoutes from "./modules/supplier/supplier.routes"
 import dashboardRoutes from "./modules/dashboard/dashboard.routes"
 import notificationRoutes from "./modules/notification/notification.routes"
 import salesRoutes from "./modules/sales/sales.routes"
@@ -77,6 +78,7 @@ app.use("/api/dashboard", dashboardRoutes)
 app.use("/api/emails", notificationRoutes)
 app.use("/api/sales", salesRoutes)
 app.use("/api/customers", customerRoutes)
+app.use("/api/suppliers", supplierRoutes)
 
 app.use(errorHandler)
 
