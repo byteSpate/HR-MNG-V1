@@ -22,25 +22,41 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    // Setup and master data: done once, or rarely. Split out of what used to
+    // be one 15-item "Accounting" group (see Ledger and Statements below) —
+    // matches the guide page's own "Set up" step.
     label: "Accounting",
     items: [
       { label: "Guide", href: "/finance/accounting/guide", icon: "RiQuestionLine" },
+      { label: "Chart of accounts", href: "/finance/accounting/accounts", icon: "RiNodeTree" },
+      { label: "Customers", href: "/finance/accounting/customers", icon: "RiUserLine" },
+      { label: "Suppliers", href: "/finance/accounting/suppliers", icon: "RiTruckLine" },
+      // Setup, and used rarely — last, below the things used daily.
+      { label: "Years & periods", href: "/finance/accounting/periods", icon: "RiCalendarCheckLine" },
+      { label: "Opening balances", href: "/finance/accounting/opening-balances", icon: "RiPlayCircleLine" },
+    ],
+  },
+  {
+    // The guide's "Post" and "Read" steps: where entries land and how
+    // they're read back, one account or one book at a time.
+    label: "Ledger",
+    items: [
       { label: "Journals", href: "/finance/accounting/journals", icon: "RiFileList3Line" },
+      { label: "General ledger", href: "/finance/accounting/ledger", icon: "RiBookOpenLine" },
+      { label: "Cash book", href: "/finance/accounting/cash-book", icon: "RiCashLine" },
+      { label: "Bank book", href: "/finance/accounting/bank-book", icon: "RiBankLine" },
+      { label: "Trial balance", href: "/finance/accounting/trial-balance", icon: "RiScales3Line" },
+    ],
+  },
+  {
+    // The guide's "Report" step: what gets filed.
+    label: "Statements",
+    items: [
       { label: "Financial statements", href: "/finance/accounting/statements", icon: "RiFileChartLine" },
       { label: "Cash flow", href: "/finance/statements/cash-flow", icon: "RiExchangeDollarLine" },
       { label: "Notes", href: "/finance/statements/notes", icon: "RiFileTextLine" },
       { label: "Annexure-A", href: "/finance/statements/annexure-a", icon: "RiTableLine" },
       { label: "Policy notes", href: "/finance/statements/policy-notes", icon: "RiArticleLine" },
-      { label: "Chart of accounts", href: "/finance/accounting/accounts", icon: "RiNodeTree" },
-      { label: "Customers", href: "/finance/accounting/customers", icon: "RiUserLine" },
-      { label: "Suppliers", href: "/finance/accounting/suppliers", icon: "RiTruckLine" },
-      { label: "General ledger", href: "/finance/accounting/ledger", icon: "RiBookOpenLine" },
-      { label: "Cash book", href: "/finance/accounting/cash-book", icon: "RiCashLine" },
-      { label: "Bank book", href: "/finance/accounting/bank-book", icon: "RiBankLine" },
-      { label: "Trial balance", href: "/finance/accounting/trial-balance", icon: "RiScales3Line" },
-      // Setup, and used rarely — last, below the things used daily.
-      { label: "Years & periods", href: "/finance/accounting/periods", icon: "RiCalendarCheckLine" },
-      { label: "Opening balances", href: "/finance/accounting/opening-balances", icon: "RiPlayCircleLine" },
     ],
   },
   {
