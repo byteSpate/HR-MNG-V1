@@ -33,6 +33,7 @@ import {
   RiPieChartLine,
   RiPlayCircleLine,
   RiPulseLine,
+  RiQuestionLine,
   RiReceiptLine,
   RiScales3Line,
   RiSettingsLine,
@@ -80,6 +81,7 @@ export const icons = {
   RiCalculatorLine,
   RiPieChartLine,
   RiPulseLine,
+  RiQuestionLine,
   /** A meeting with a customer, in the Sales Hub. */
   RiCalendar2Line,
   /** A follow-up task, in the Sales Hub. */
