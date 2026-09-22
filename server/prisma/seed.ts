@@ -164,10 +164,15 @@ async function main() {
   }
 
   await seedAssetCategories()
-  await seedCostCategories()
   await seedChartOfAccounts()
   await seedPolicyNotes()
   await seedPostingRules()
+  // Last, not third: this one has a pre-existing bug (a P2002 on an
+  // in-place rename colliding with a row already at the new name) that
+  // predates the receivables & payables work and crashes main() outright.
+  // Running it last means that crash no longer silently skips the chart of
+  // accounts and posting rules seeded above it.
+  await seedCostCategories()
 
   // The standing shift every employee falls back to when shiftId is null.
   // 09:00-18:00 with the 1h lunch/break inside the span, so a full day is
