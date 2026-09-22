@@ -88,6 +88,14 @@ describe("createCustomer", () => {
       expect.objectContaining({ data: expect.objectContaining({ paymentDays: 30 }) })
     )
   })
+
+  it("refuses a duplicate legal name with a clear message", async () => {
+    vi.mocked(prisma.customer.create).mockRejectedValue({ code: "P2002" })
+
+    await expect(createCustomer({ legalName: "Acme" }, ACTOR)).rejects.toThrow(
+      "A customer with this legal name already exists"
+    )
+  })
 })
 
 describe("updateCustomer", () => {
