@@ -5,6 +5,7 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     customer: { findMany: vi.fn(), create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+    customerOpeningBalance: { create: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -81,5 +82,48 @@ describe("PATCH /api/customers/:id", () => {
       .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
       .send({ legalName: "New Name" })
     expect(res.status).toBe(403)
+  })
+})
+
+describe("POST /api/customers/opening-balances/preview", () => {
+  it("refuses a non-Finance, non-Admin role with 403", async () => {
+    const res = await request(app)
+      .post("/api/customers/opening-balances/preview")
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+      .attach("file", Buffer.from("legalName,amount\nAcme,1000\n"), "test.csv")
+    expect(res.status).toBe(403)
+  })
+
+  it("returns a preview for Finance Officer", async () => {
+    vi.mocked(prisma.customer.findMany).mockResolvedValue([])
+    const res = await request(app)
+      .post("/api/customers/opening-balances/preview")
+      .set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+      .attach("file", Buffer.from("legalName,amount\nAcme,1000\n"), "test.csv")
+    expect(res.status).toBe(200)
+    expect(res.body.rows).toEqual([expect.objectContaining({ legalName: "Acme", amount: 1000 })])
+  })
+})
+
+describe("POST /api/customers/opening-balances/commit", () => {
+  it("refuses Finance Officer with 403 — commit is Super Admin only", async () => {
+    const res = await request(app)
+      .post("/api/customers/opening-balances/commit")
+      .set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+      .attach("file", Buffer.from("legalName,amount\nAcme,1000\n"), "test.csv")
+    expect(res.status).toBe(403)
+  })
+
+  it("accepts Super Admin and commits the import", async () => {
+    vi.mocked(prisma.customer.findMany).mockResolvedValue([])
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+    vi.mocked(prisma.customer.findUnique).mockResolvedValue(null)
+    vi.mocked(prisma.customer.create).mockResolvedValue({ id: "c1", legalName: "Acme" } as any)
+    const res = await request(app)
+      .post("/api/customers/opening-balances/commit")
+      .set("Authorization", `Bearer ${tokenFor("SUPER_ADMIN")}`)
+      .attach("file", Buffer.from("legalName,amount\nAcme,1000\n"), "test.csv")
+    expect(res.status).toBe(201)
+    expect(res.body).toEqual({ customerCount: 1, totalAmount: 1000 })
   })
 })
