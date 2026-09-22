@@ -348,6 +348,102 @@ export const HELP: Record<string, HelpEntry> = {
     ],
   },
 
+  "accounting/customers": {
+    title: "Customers",
+    lede: "Every company we invoice, and what they owe. This is the Customer record itself, not yet an invoice or a receipt: recording a bill against someone here comes in a later phase.",
+    step: "setup",
+    connects: {
+      fedBy: ["Added by hand here, or by a one-time opening-balance import for customers who already owed money before this system went live"],
+      feeds: ["Every invoice and receipt, once buying and selling are built"],
+    },
+    reading: [
+      {
+        name: "BIN",
+        body: "The customer's own VAT registration number. Optional here, but required before the first tax invoice can be raised against them, since a Mushak 6.3 needs both parties' BIN.",
+      },
+      {
+        name: "Payment days",
+        body: "How long they have to pay once invoiced. Thirty is the ordinary default; some customers negotiate longer.",
+      },
+    ],
+    does: [
+      {
+        name: "Add a customer",
+        body: "Legal name, billing address, BIN and payment days. Only the legal name is required, and it is what a tax invoice will print.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Edit a customer",
+        body: "Every field except which Sales Account they came from, which is a historical fact set once and never rewritten here.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Finance adds a new customer before the first invoice",
+        steps: [
+          "A deal is agreed with Smart Technologies, and the first invoice is due next month.",
+          "Add them here with their legal name, billing address and BIN, before that invoice is written.",
+          "Set payment days to whatever was agreed. Thirty if nothing unusual was discussed.",
+          "The invoice, once that feature exists, picks this record rather than a name typed fresh each time.",
+        ],
+      },
+    ],
+    watchFor: [
+      "A Customer being created automatically the moment a Sales Account's first deal is Won is planned, not built yet. Until then, add the record here by hand.",
+    ],
+  },
+
+  "accounting/suppliers": {
+    title: "Suppliers",
+    lede: "Every company we buy from, and what we owe them. The Supplier record itself, not yet a bill or a payment.",
+    step: "setup",
+    connects: {
+      fedBy: ["Added by hand here, or by a one-time opening-balance import for suppliers we already owed before this system went live"],
+      feeds: ["Every bill and payment, once buying is built"],
+    },
+    reading: [
+      {
+        name: "Active and Inactive",
+        body: "A supplier is deactivated, never deleted, once it carries a bill. Deactivating hides it from new bill entry without touching anything it already has on record.",
+      },
+      {
+        name: "BIN",
+        body: "The supplier's own VAT registration number, needed to claim input VAT against their bills.",
+      },
+    ],
+    does: [
+      {
+        name: "Add a supplier",
+        body: "Name, contact details, BIN and payment days. Only the name is required and it has to be unique: adding one that already exists is refused with that reason.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Edit a supplier",
+        body: "Any field, at any time.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Deactivate a supplier",
+        body: "For one no longer used. Its history stays exactly where it is, and it can be brought back by editing it again.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Buying hardware for a new deal",
+        steps: [
+          "The deal needs firewalls from Smart Technologies, a supplier we have not used before.",
+          "Add them here with a thirty-day payment term, before the purchase order goes out.",
+          "The bill, once that feature exists, is entered against this record rather than a name typed fresh each time.",
+        ],
+      },
+    ],
+    watchFor: [
+      "A duplicate name is refused outright, since two records for one company would split its history in two.",
+    ],
+  },
+
   // ── Post ──────────────────────────────────────────────────────────────────
   "posting-rules": {
     title: "Posting rules",

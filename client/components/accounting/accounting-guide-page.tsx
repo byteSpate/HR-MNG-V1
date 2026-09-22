@@ -346,6 +346,25 @@ const MODULES: ModuleEntry[] = [
     also: "Assets · Depreciation",
   },
   {
+    id: "customer-supplier",
+    title: "Adding a Customer or Supplier",
+    trigger: (
+      <>
+        Before a bill or an invoice can be recorded against anyone, they have to exist here
+        first. Finance adds Smart Technologies as a supplier, with a thirty-day payment term.
+      </>
+    ),
+    lines: [],
+    note: (
+      <>
+        Nothing posts yet. Adding a Customer or Supplier is master data, the same as adding a
+        department or an account. The first real entry is a bill or an invoice, once buying and
+        selling are built.
+      </>
+    ),
+    also: "Customers · Suppliers",
+  },
+  {
     id: "manual-journal",
     title: "A Hand-Typed Journal",
     trigger: (
@@ -433,7 +452,7 @@ export function AccountingGuidePage() {
                 <div key={mod.id} className="rounded-lg border border-[#E4E9EF] p-5">
                   <h3 className="mb-2 text-[14px] font-bold text-[#17191C]">{mod.title}</h3>
                   <p className="mb-1">{mod.trigger}</p>
-                  <LedgerLines lines={mod.lines} />
+                  {mod.lines.length > 0 ? <LedgerLines lines={mod.lines} /> : null}
                   {mod.note ? <p className="text-[12.5px] text-[#5F6B7C]">{mod.note}</p> : null}
                   <p className="mt-4 text-[12px] text-[#8792A3]">
                     <span className="font-bold">Also recorded this way:</span> {mod.also}
