@@ -48,3 +48,10 @@ export function deactivateSupplier(accessToken: string, id: string): Promise<Sup
     accessToken,
   })
 }
+
+export function reactivateSupplier(accessToken: string, id: string): Promise<Supplier> {
+  return apiFetch<Supplier>(`/api/suppliers/${id}/reactivate`, {
+    method: "POST",
+    accessToken,
+  })
+}

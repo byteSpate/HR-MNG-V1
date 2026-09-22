@@ -3,7 +3,13 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { createSupplier, deactivateSupplier, listSuppliers, updateSupplier } from "@/lib/api/supplier"
+import {
+  createSupplier,
+  deactivateSupplier,
+  listSuppliers,
+  reactivateSupplier,
+  updateSupplier,
+} from "@/lib/api/supplier"
 import { useSession } from "@/lib/auth/session-context"
 import type { Supplier } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -76,6 +82,15 @@ export function SupplierPage() {
     },
   })
 
+  const reactivate = useMutation({
+    mutationFn: (id: string) => reactivateSupplier(accessToken!, id),
+    onSuccess: () => {
+      setError(null)
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] })
+    },
+    onError: (err) => setError(toMessage(err)),
+  })
+
   const add = () => {
     setError(null)
     setEditing("new")
@@ -116,7 +131,14 @@ export function SupplierPage() {
                     },
                   },
                 ]
-              : []),
+              : [
+                  {
+                    kind: "custom" as const,
+                    label: "Reactivate",
+                    icon: null,
+                    onClick: () => reactivate.mutate(s.id),
+                  },
+                ]),
           ]}
         />
       ),
