@@ -6,6 +6,9 @@ vi.mock("../../config/prisma", () => ({
     journalLine: { aggregate: vi.fn() },
     customerPoLine: { findMany: vi.fn() },
     invoiceLine: { findMany: vi.fn() },
+    invoice: { findUniqueOrThrow: vi.fn() },
+    earningEventLine: { findMany: vi.fn() },
+    monthlyEarning: { findMany: vi.fn() },
   },
 }))
 vi.mock("../posting/posting.rules", () => ({ loadRules: vi.fn(), resolveAccountCode: vi.fn() }))
@@ -15,11 +18,15 @@ import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import { postSystemJournal } from "../accounting/accounting.posting"
-import { computeCostRelease, dealInvoicing, heldGoodsCost, releaseLateCost } from "./costRelease"
+import { computeCostRelease, dealProgress, heldGoodsCost, releaseCostForInvoice, releaseLateCost } from "./costRelease"
 
 const d = (v: string) => new Prisma.Decimal(v)
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(prisma.earningEventLine.findMany).mockResolvedValue([])
+  vi.mocked(prisma.monthlyEarning.findMany).mockResolvedValue([])
+})
 
 describe("heldGoodsCost", () => {
   it("is posted debits minus credits on the goods account, for this deal only", async () => {
@@ -76,7 +83,7 @@ describe("computeCostRelease", () => {
   })
 })
 
-describe("dealInvoicing", () => {
+describe("dealProgress", () => {
   it("uses goods lines as the basis when the deal has any", async () => {
     vi.mocked(prisma.customerPoLine.findMany).mockResolvedValue([
       { kind: "GOODS", amount: d("800000") }, { kind: "SERVICE", amount: d("100000") },
@@ -85,8 +92,8 @@ describe("dealInvoicing", () => {
       { amount: d("300000"), poLine: { kind: "GOODS" } }, { amount: d("100000"), poLine: { kind: "SERVICE" } },
     ] as any)
 
-    await expect(dealInvoicing(prisma as any, "opp-1")).resolves.toEqual({
-      basis: d("800000"), invoiced: d("300000"), basisKinds: ["GOODS"],
+    await expect(dealProgress(prisma as any, "opp-1")).resolves.toEqual({
+      basis: d("800000"), progressed: d("300000"), basisKinds: ["GOODS"],
     })
     expect(prisma.customerPoLine.findMany).toHaveBeenCalledWith({
       where: { po: { opportunityId: "opp-1", status: { in: ["OPEN", "COMPLETE"] } } },
@@ -98,8 +105,8 @@ describe("dealInvoicing", () => {
     vi.mocked(prisma.customerPoLine.findMany).mockResolvedValue([{ kind: "SERVICE", amount: d("500000") }] as any)
     vi.mocked(prisma.invoiceLine.findMany).mockResolvedValue([{ amount: d("200000"), poLine: { kind: "SERVICE" } }] as any)
 
-    await expect(dealInvoicing(prisma as any, "opp-1")).resolves.toEqual({
-      basis: d("500000"), invoiced: d("200000"), basisKinds: ["GOODS", "SERVICE"],
+    await expect(dealProgress(prisma as any, "opp-1")).resolves.toEqual({
+      basis: d("500000"), progressed: d("200000"), basisKinds: ["GOODS", "SERVICE"],
     })
   })
 
@@ -107,13 +114,55 @@ describe("dealInvoicing", () => {
     vi.mocked(prisma.customerPoLine.findMany).mockResolvedValue([{ kind: "GOODS", amount: d("800000") }] as any)
     vi.mocked(prisma.invoiceLine.findMany).mockResolvedValue([{ amount: d("300000"), poLine: { kind: "GOODS" } }] as any)
 
-    await dealInvoicing(prisma as any, "opp-1", "inv-being-approved")
+    await dealProgress(prisma as any, "opp-1", { invoiceId: "inv-being-approved" })
 
     expect(prisma.invoiceLine.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         invoice: expect.objectContaining({ id: { not: "inv-being-approved" } }),
       }),
     }))
+  })
+
+  it("adds untracked invoices and tracked earnings into one progress figure", async () => {
+    vi.mocked(prisma.customerPoLine.findMany).mockResolvedValue([
+      { kind: "GOODS", amount: d("600000") }, { kind: "GOODS", amount: d("400000") },
+    ] as any)
+    vi.mocked(prisma.invoiceLine.findMany).mockResolvedValue([{ amount: d("600000"), poLine: { kind: "GOODS" } }] as any)
+    vi.mocked(prisma.earningEventLine.findMany).mockResolvedValue([{ amount: d("100000"), poLine: { kind: "GOODS" } }] as any)
+
+    await expect(dealProgress(prisma as any, "opp-1")).resolves.toEqual({
+      basis: d("1000000"), progressed: d("700000"), basisKinds: ["GOODS"],
+    })
+  })
+
+  it("only counts an untracked PO's invoices and a tracked PO's earnings, never the other pairing", async () => {
+    vi.mocked(prisma.customerPoLine.findMany).mockResolvedValue([{ kind: "GOODS", amount: d("1000000") }] as any)
+    vi.mocked(prisma.invoiceLine.findMany).mockResolvedValue([])
+    vi.mocked(prisma.earningEventLine.findMany).mockResolvedValue([])
+    vi.mocked(prisma.monthlyEarning.findMany).mockResolvedValue([{ amount: d("300000"), poLine: { kind: "GOODS" } }] as any)
+
+    await expect(dealProgress(prisma as any, "opp-1")).resolves.toEqual({
+      basis: d("1000000"), progressed: d("300000"), basisKinds: ["GOODS"],
+    })
+    expect(prisma.invoiceLine.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ invoice: expect.objectContaining({ po: { opportunityId: "opp-1", trackDelivery: false } } as any) }),
+    }))
+    expect(prisma.earningEventLine.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ event: expect.objectContaining({ po: { opportunityId: "opp-1", trackDelivery: true } } as any) }),
+    }))
+  })
+})
+
+describe("releaseCostForInvoice", () => {
+  it("releases no cost on a tracked PO's invoice: its goods release on delivery", async () => {
+    vi.mocked(prisma.invoice.findUniqueOrThrow).mockResolvedValue({
+      id: "inv1", date: new Date("2026-09-23"), invoiceNumber: "INV-1",
+      po: { opportunityId: "opp-1", trackDelivery: true },
+      lines: [{ amount: d("500000"), poLine: { kind: "GOODS" } }],
+    } as any)
+
+    await expect(releaseCostForInvoice(prisma as any, "inv1", "admin-1")).resolves.toEqual(d("0"))
+    expect(postSystemJournal).not.toHaveBeenCalled()
   })
 })
 
