@@ -12,8 +12,8 @@ import {
 const router = Router()
 const WRITE_ROLES = [Role.FINANCE_OFFICER, Role.SUPER_ADMIN] as const
 
-router.get("/", requireAuth, listSupplierCreditNotesHandler)
-router.get("/:id", requireAuth, getSupplierCreditNoteHandler)
+router.get("/", requireAuth, requireRole(...WRITE_ROLES), listSupplierCreditNotesHandler)
+router.get("/:id", requireAuth, requireRole(...WRITE_ROLES), getSupplierCreditNoteHandler)
 router.post("/", requireAuth, requireRole(...WRITE_ROLES), createSupplierCreditNoteHandler)
 router.post("/:id/approve", requireAuth, requireRole(Role.SUPER_ADMIN), approveSupplierCreditNoteHandler)
 
