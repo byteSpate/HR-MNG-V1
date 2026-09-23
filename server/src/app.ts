@@ -17,6 +17,7 @@ import costRoutes from "./modules/cost/cost.routes"
 import customerRoutes from "./modules/customer/customer.routes"
 import supplierRoutes from "./modules/supplier/supplier.routes"
 import vatCodeRoutes from "./modules/vatCode/vatCode.routes"
+import supplierBillRoutes from "./modules/supplierBill/supplierBill.routes"
 import dashboardRoutes from "./modules/dashboard/dashboard.routes"
 import notificationRoutes from "./modules/notification/notification.routes"
 import salesRoutes from "./modules/sales/sales.routes"
@@ -80,6 +81,7 @@ app.use("/api/emails", notificationRoutes)
 app.use("/api/sales", salesRoutes)
 app.use("/api/customers", customerRoutes)
 app.use("/api/vat-codes", vatCodeRoutes)
+app.use("/api/supplier-bills", supplierBillRoutes)
 app.use("/api/suppliers", supplierRoutes)
 
 app.use(errorHandler)
