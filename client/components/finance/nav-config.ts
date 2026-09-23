@@ -58,6 +58,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Supplier bills", href: "/finance/accounting/supplier-bills", icon: "RiBillLine" },
       { label: "Supplier payments", href: "/finance/accounting/supplier-payments", icon: "RiHandCoinLine" },
+      { label: "Supplier credit notes", href: "/finance/accounting/supplier-credit-notes", icon: "RiFileReduceLine" },
+      { label: "Supplier ageing", href: "/finance/accounting/supplier-ageing", icon: "RiTimeLine" },
     ],
   },
   {

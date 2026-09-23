@@ -19,6 +19,7 @@ import {
   RiComputerLine,
   RiContactsBook2Line,
   RiDashboardLine,
+  RiFileReduceLine,
   RiFileChartLine,
   RiExchangeDollarLine,
   RiFileTextLine,
@@ -92,6 +93,8 @@ export const icons = {
   RiFilter3Line,
   RiUserLine,
   RiTruckLine,
+  /** A supplier credit note: a bill, reduced. */
+  RiFileReduceLine,
 } satisfies Record<string, RemixiconComponentType>
 
 export type IconName = keyof typeof icons
