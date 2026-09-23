@@ -31,7 +31,10 @@ function arrangePo(over: { trackDelivery?: boolean; status?: string; lines?: Arr
   vi.mocked(prisma.earningEvent.create).mockResolvedValue({ id: "ev1" } as any)
 }
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+})
 
 const DELIVERY_INPUT = { poId: "po1", kind: "DELIVERY" as const, date: "2026-09-23", evidenceRef: "CH-118", lines: [{ poLineId: "pl1", quantity: "4" }] }
 
@@ -81,21 +84,21 @@ describe("createEarningEvent", () => {
   })
 
   it("refuses a delivery line with no quantity", async () => {
-    arrangePo({ lines: [{ id: "pl1", description: "Firewall", earnKind: "DELIVERY", quantity: d("10"), unitPrice: d("80000"), earningLines: [], monthlyEarnings: [] }] })
+    arrangePo({ lines: [{ id: "pl1", description: "Firewall", earnKind: "DELIVERY", quantity: d("10"), unitPrice: d("80000"), amount: d("800000"), earningLines: [], monthlyEarnings: [] }] })
     await expect(
       createEarningEvent({ ...DELIVERY_INPUT, lines: [{ poLineId: "pl1" }] } as any, FINANCE)
     ).rejects.toThrow("Give the quantity delivered for Firewall")
   })
 
   it("refuses an acceptance line with no amount", async () => {
-    arrangePo({ lines: [{ id: "pl1", description: "Installation", earnKind: "ACCEPTANCE", quantity: d("1"), unitPrice: d("150000"), earningLines: [], monthlyEarnings: [] }] })
+    arrangePo({ lines: [{ id: "pl1", description: "Installation", earnKind: "ACCEPTANCE", quantity: d("1"), unitPrice: d("150000"), amount: d("150000"), earningLines: [], monthlyEarnings: [] }] })
     await expect(
       createEarningEvent({ ...DELIVERY_INPUT, kind: "ACCEPTANCE", lines: [{ poLineId: "pl1" }] } as any, FINANCE)
     ).rejects.toThrow("Give the amount accepted for Installation")
   })
 
   it("refuses more quantity than is left to deliver", async () => {
-    arrangePo({ lines: [{ id: "pl1", description: "Firewall", earnKind: "DELIVERY", quantity: d("10"), unitPrice: d("80000"), earningLines: [{ amount: d("640000"), quantity: d("8") }], monthlyEarnings: [] }] })
+    arrangePo({ lines: [{ id: "pl1", description: "Firewall", earnKind: "DELIVERY", quantity: d("10"), unitPrice: d("80000"), amount: d("800000"), earningLines: [{ amount: d("640000"), quantity: d("8") }], monthlyEarnings: [] }] })
     await expect(createEarningEvent(DELIVERY_INPUT as any, FINANCE)).rejects.toThrow("Only 2.00 of Firewall is left to deliver")
   })
 
