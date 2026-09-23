@@ -25,6 +25,7 @@ import invoiceRoutes from "./modules/receivables/invoice.routes"
 import receiptRoutes from "./modules/receivables/receipt.routes"
 import customerCreditNoteRoutes from "./modules/receivables/customerCreditNote.routes"
 import receivablesReportsRoutes from "./modules/receivables/receivablesReports.routes"
+import earningEventRoutes from "./modules/receivables/earningEvent.routes"
 import dashboardRoutes from "./modules/dashboard/dashboard.routes"
 import notificationRoutes from "./modules/notification/notification.routes"
 import salesRoutes from "./modules/sales/sales.routes"
@@ -96,6 +97,7 @@ app.use("/api/invoices", invoiceRoutes)
 app.use("/api/receipts", receiptRoutes)
 app.use("/api/customer-credit-notes", customerCreditNoteRoutes)
 app.use("/api/receivables", receivablesReportsRoutes)
+app.use("/api/earning-events", earningEventRoutes)
 app.use("/api/suppliers", supplierRoutes)
 
 app.use(errorHandler)
