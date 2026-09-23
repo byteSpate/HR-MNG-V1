@@ -17,6 +17,7 @@ vi.mock("./costRelease", () => ({ releaseCostForInvoice: vi.fn() }))
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { loadRules, resolveAccountCode } from "../posting/posting.rules"
+import type { PostingEvent, ResolvedRules } from "../posting/posting.types"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { releaseCostForInvoice } from "./costRelease"
 import { approveInvoice, buildInvoiceLines } from "./invoice.posting"
@@ -24,7 +25,7 @@ import { approveInvoice, buildInvoiceLines } from "./invoice.posting"
 const d = (v: string) => new Prisma.Decimal(v)
 const ADMIN = { sub: "admin-1", role: "SUPER_ADMIN", email: "a@b.com", mustChangePassword: false, salesRole: null } as any
 
-function rulesOf(event: string, map: Record<string, string>) {
+function rulesOf(event: PostingEvent, map: Record<string, string>): ResolvedRules {
   return { event, byKey: new Map(Object.entries(map)) }
 }
 const INVOICE_RULES = rulesOf("INVOICE", { RECEIVABLE: "1220", VAT: "2150", UNBILLED: "1221", UNEARNED: "2170" })
@@ -96,14 +97,18 @@ function arrangeDraft(over: {
     .mockResolvedValueOnce([poLine] as any)
     .mockResolvedValueOnce([{ ...poLine, invoiceLines: over.completesPo ? [{ amount: d("800000") }] : [{ amount: d("500000") }] }] as any)
 
-  vi.mocked(loadRules).mockImplementation(async (_tx: any, event: string) =>
+  vi.mocked(loadRules).mockImplementation(async (_tx: any, event: PostingEvent) =>
     event === "INVOICE" ? INVOICE_RULES : EARNED_RULES
   )
   vi.mocked(releaseCostForInvoice).mockResolvedValue(d("0"))
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  // resetAllMocks, not clearAllMocks: arrangeDraft queues two
+  // mockResolvedValueOnce values on customerPoLine.findMany, and a test
+  // that throws before consuming both must not leave them queued for the
+  // next test to pick up out of order.
+  vi.resetAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(resolveAccountCode).mockImplementation((rules: any, key: string) => rules.byKey.get(key))
 })
