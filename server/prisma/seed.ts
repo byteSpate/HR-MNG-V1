@@ -13,6 +13,7 @@ import { seedChartOfAccounts } from "../src/modules/accounting/accounting.seed"
 import { seedCostCategories } from "../src/modules/cost/cost.categories.seed"
 import { seedPolicyNotes } from "../src/modules/statements/statements.policy.seed"
 import { seedPostingRules } from "../src/modules/posting/posting.rules.seed"
+import { seedVatCodes } from "../src/modules/vatCode/vatCode.seed"
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
@@ -165,6 +166,7 @@ async function main() {
 
   await seedAssetCategories()
   await seedChartOfAccounts()
+  await seedVatCodes()
   await seedPolicyNotes()
   await seedPostingRules()
   // Last, not third: this one has a pre-existing bug (a P2002 on an
