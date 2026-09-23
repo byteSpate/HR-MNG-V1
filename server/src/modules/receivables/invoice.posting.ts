@@ -11,7 +11,7 @@ import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import type { ResolvedRules } from "../posting/posting.types"
 import { poLineRemaining } from "./customerPo.service"
 import { releaseCostForInvoice } from "./costRelease"
-import { lockDeal } from "./receivables.position"
+import { contractPosition, lockDeal, splitAgainst, type ContractPosition } from "./receivables.position"
 import { INVOICE_INCLUDE } from "./invoice.service"
 
 type Line = SystemJournalInput["lines"][number]
@@ -20,25 +20,39 @@ export interface InvoiceForPosting {
   id: string
   customerId: string
   opportunityId: string
+  trackDelivery: boolean
   lines: Array<{ amount: Prisma.Decimal; vatAmount: Prisma.Decimal; kind: SaleLineKind }>
 }
 
 /**
- * Delivery not tracked in 3a (spec §2, Track Delivery Off): one entry both
- * bills and earns, so no line ever touches 1221 Unbilled or 2170 Unearned.
- * Receivable and VAT keys come from the INVOICE rules; revenue comes from
- * the same EARNED rules a tracked delivery will use in 3b.
+ * Delivery not tracked (spec §2, Track Delivery Off): one entry both bills
+ * and earns, so no line ever touches 1221 Unbilled or 2170 Unearned.
+ * Tracked (§3.2): the net bills into Unbilled/Unearned, split by what the
+ * deal has already earned (`position`, read under the deal lock) — first
+ * clearing what is Unbilled, then holding the rest as Unearned. No revenue
+ * line: revenue is earned by a Delivery, an Acceptance or the monthly run.
+ * Receivable and VAT keys come from the INVOICE rules; revenue and the two
+ * position accounts come from the EARNED rules.
  */
-export function buildInvoiceLines(invoice: InvoiceForPosting, invoiceRules: ResolvedRules, earnedRules: ResolvedRules): Line[] {
+export function buildInvoiceLines(
+  invoice: InvoiceForPosting,
+  invoiceRules: ResolvedRules,
+  earnedRules: ResolvedRules,
+  position: ContractPosition
+): Line[] {
   const credits: Line[] = []
+  let net = new Prisma.Decimal(0)
   let gross = new Prisma.Decimal(0)
 
   for (const line of invoice.lines) {
-    credits.push({
-      accountCode: resolveAccountCode(earnedRules, line.kind),
-      credit: line.amount.toFixed(2),
-      opportunityId: invoice.opportunityId,
-    })
+    net = net.plus(line.amount)
+    if (!invoice.trackDelivery) {
+      credits.push({
+        accountCode: resolveAccountCode(earnedRules, line.kind),
+        credit: line.amount.toFixed(2),
+        opportunityId: invoice.opportunityId,
+      })
+    }
     if (!line.vatAmount.isZero()) {
       credits.push({
         accountCode: resolveAccountCode(invoiceRules, "VAT"),
@@ -47,6 +61,16 @@ export function buildInvoiceLines(invoice: InvoiceForPosting, invoiceRules: Reso
       })
     }
     gross = gross.plus(line.amount).plus(line.vatAmount)
+  }
+
+  if (invoice.trackDelivery) {
+    const { fromAvailable, rest } = splitAgainst(net, position.unbilled)
+    if (fromAvailable.greaterThan(0)) {
+      credits.push({ accountCode: resolveAccountCode(earnedRules, "UNBILLED"), credit: fromAvailable.toFixed(2), opportunityId: invoice.opportunityId })
+    }
+    if (rest.greaterThan(0)) {
+      credits.push({ accountCode: resolveAccountCode(earnedRules, "UNEARNED"), credit: rest.toFixed(2), opportunityId: invoice.opportunityId })
+    }
   }
 
   return [
@@ -72,7 +96,7 @@ export async function approveInvoice(id: string, actor: AccessTokenPayload) {
     const invoice = await tx.invoice.findUnique({
       where: { id },
       include: {
-        po: { select: { id: true, serial: true, opportunityId: true } },
+        po: { select: { id: true, serial: true, opportunityId: true, trackDelivery: true } },
         lines: { include: { poLine: true } },
       },
     })
@@ -101,17 +125,19 @@ export async function approveInvoice(id: string, actor: AccessTokenPayload) {
       include: INVOICE_INCLUDE,
     })
 
-    const [invoiceRules, earnedRules] = await Promise.all([loadRules(tx, "INVOICE"), loadRules(tx, "EARNED")])
+    const [invoiceRules, earnedRules, position] = await Promise.all([
+      loadRules(tx, "INVOICE"), loadRules(tx, "EARNED"), contractPosition(tx, invoice.po.opportunityId),
+    ])
     await postSystemJournal(tx, {
       date: toLedgerDate(invoice.date),
       narration: `${updated.customer.legalName}, invoice ${invoice.invoiceNumber}`,
       source: { module: "CUSTOMER", refId: id, event: "INVOICE" },
       lines: buildInvoiceLines(
         {
-          id, customerId: invoice.customerId, opportunityId: invoice.po.opportunityId,
+          id, customerId: invoice.customerId, opportunityId: invoice.po.opportunityId, trackDelivery: invoice.po.trackDelivery,
           lines: invoice.lines.map((l) => ({ amount: l.amount, vatAmount: l.vatAmount, kind: l.poLine.kind })),
         },
-        invoiceRules, earnedRules
+        invoiceRules, earnedRules, position
       ),
       createdBy: actor.sub,
     })

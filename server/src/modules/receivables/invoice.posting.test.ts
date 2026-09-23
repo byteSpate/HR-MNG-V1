@@ -13,7 +13,11 @@ vi.mock("../../config/prisma", () => ({
 vi.mock("../posting/posting.rules", () => ({ loadRules: vi.fn(), resolveAccountCode: vi.fn() }))
 vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() }))
 vi.mock("./costRelease", () => ({ releaseCostForInvoice: vi.fn() }))
-vi.mock("./receivables.position", () => ({ lockDeal: vi.fn(), contractPosition: vi.fn() }))
+vi.mock("./receivables.position", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./receivables.position")>()),
+  lockDeal: vi.fn(),
+  contractPosition: vi.fn(),
+}))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
