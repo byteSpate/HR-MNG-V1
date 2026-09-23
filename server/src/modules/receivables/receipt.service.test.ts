@@ -4,7 +4,7 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     customer: { findUnique: vi.fn() },
-    receipt: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
+    receipt: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -13,7 +13,7 @@ vi.mock("./receipt.allocation", () => ({ assertReceivable: vi.fn(), assertOpenin
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { assertOpeningReceivable, assertReceivable } from "./receipt.allocation"
-import { createReceipt, listReceipts, receiptPosition } from "./receipt.service"
+import { createReceipt, listReceipts, receiptPosition, updateReceiptCertificates } from "./receipt.service"
 
 const d = (v: string) => new Prisma.Decimal(v)
 const FINANCE = { sub: "u-f", role: "FINANCE_OFFICER", salesRole: null, email: "f@b.co", mustChangePassword: false } as any
@@ -91,6 +91,46 @@ describe("listReceipts", () => {
           { aitAmount: { gt: 0 }, aitCertificateRef: null },
         ],
       },
+    }))
+  })
+})
+
+describe("updateReceiptCertificates", () => {
+  it("records a certificate on an approved receipt, and audits it", async () => {
+    vi.mocked(prisma.receipt.findUnique).mockResolvedValue({
+      id: "r1", status: "APPROVED", vdsAmount: d("150000"), aitAmount: d("0"),
+      vdsCertificateRef: null, vdsCertificateDate: null, aitCertificateRef: null, aitCertificateDate: null,
+    } as any)
+
+    await updateReceiptCertificates("r1", { vdsCertificateRef: "M6.6-0192", vdsCertificateDate: "2026-09-25" } as any, FINANCE)
+
+    expect(prisma.receipt.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "r1" },
+      data: { vdsCertificateRef: "M6.6-0192", vdsCertificateDate: new Date("2026-09-25") },
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalled()
+  })
+
+  it("refuses an AIT certificate where no income tax was withheld", async () => {
+    vi.mocked(prisma.receipt.findUnique).mockResolvedValue({
+      id: "r1", status: "APPROVED", vdsAmount: d("0"), aitAmount: d("0"),
+      vdsCertificateRef: null, vdsCertificateDate: null, aitCertificateRef: null, aitCertificateDate: null,
+    } as any)
+
+    await expect(updateReceiptCertificates("r1", { aitCertificateRef: "A-1", aitCertificateDate: "2026-09-25" } as any, FINANCE))
+      .rejects.toThrow("This receipt has no income tax withheld, so it has no AIT certificate")
+  })
+
+  it("clears a certificate when the field is sent as null", async () => {
+    vi.mocked(prisma.receipt.findUnique).mockResolvedValue({
+      id: "r1", status: "APPROVED", vdsAmount: d("150000"), aitAmount: d("0"),
+      vdsCertificateRef: "M6.6-0192", vdsCertificateDate: new Date("2026-09-25"), aitCertificateRef: null, aitCertificateDate: null,
+    } as any)
+
+    await updateReceiptCertificates("r1", { vdsCertificateRef: null, vdsCertificateDate: null } as any, FINANCE)
+
+    expect(prisma.receipt.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { vdsCertificateRef: null, vdsCertificateDate: null },
     }))
   })
 })
