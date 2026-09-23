@@ -430,7 +430,7 @@ export function AccountingGuidePage() {
           <p className="mb-10">
             This follows one real transaction, July&apos;s payroll, through every stage the accounts
             go through, in order. Every other kind of entry, from a hand-typed correction to an
-            expense claim, goes through the exact same six steps; section 7 shows five of them
+            expense claim, goes through the exact same six steps; section 7 shows six of them
             with their own real numbers. Once this makes sense for payroll, it makes sense for the
             rest of the accounts too.
           </p>
