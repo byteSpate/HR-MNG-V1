@@ -13,14 +13,18 @@ vi.mock("../posting/posting.rules", async (importOriginal) => ({
   loadRules: vi.fn(),
 }))
 vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() }))
-vi.mock("./receivables.position", () => ({ lockDeal: vi.fn() }))
+vi.mock("./receivables.position", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./receivables.position")>()),
+  lockDeal: vi.fn(),
+  contractPosition: vi.fn(),
+}))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { loadRules } from "../posting/posting.rules"
 import type { PostingEvent, ResolvedRules } from "../posting/posting.types"
 import { postSystemJournal } from "../accounting/accounting.posting"
-import { lockDeal } from "./receivables.position"
+import { contractPosition, lockDeal } from "./receivables.position"
 import { approveCustomerCreditNote, buildCustomerCreditNoteLines } from "./customerCreditNote.posting"
 
 const d = (v: string) => new Prisma.Decimal(v)
@@ -37,12 +41,15 @@ function expectBalanced(lines: ReturnType<typeof buildCustomerCreditNoteLines>) 
   expect(debit.toFixed(2)).toBe(credit.toFixed(2))
 }
 
+const NO_POSITION = { unbilled: d("0"), unearned: d("0") }
+const NOTE = { id: "cn1", customerId: "c1", opportunityId: "opp-1" }
+
 describe("buildCustomerCreditNoteLines", () => {
   it("debits revenue and VAT per line and credits the receivable gross", () => {
     const lines = buildCustomerCreditNoteLines({
-      id: "cn1", customerId: "c1", opportunityId: "opp-1",
+      ...NOTE, trackDelivery: false,
       lines: [{ amount: d("160000"), vatAmount: d("24000"), kind: "GOODS" }],
-    }, RULES)
+    }, RULES, NO_POSITION)
 
     expect(lines).toEqual([
       { accountCode: "4130", debit: "160000.00", opportunityId: "opp-1" },
@@ -50,6 +57,29 @@ describe("buildCustomerCreditNoteLines", () => {
       { accountCode: "1220", credit: "184000.00", customerId: "c1", opportunityId: "opp-1" },
     ])
     expectBalanced(lines)
+  })
+
+  it("debits 2170 first on a tracked PO invoiced ahead of delivery", () => {
+    const lines = buildCustomerCreditNoteLines({
+      ...NOTE, trackDelivery: true,
+      lines: [{ amount: d("160000"), vatAmount: d("24000"), kind: "GOODS" }],
+    }, RULES, { unbilled: d("0"), unearned: d("100000") })
+
+    expect(lines).toEqual([
+      { accountCode: "2170", debit: "100000.00", opportunityId: "opp-1" },
+      { accountCode: "4130", debit: "60000.00", opportunityId: "opp-1" },
+      { accountCode: "2150", debit: "24000.00", opportunityId: "opp-1" },
+      { accountCode: "1220", credit: "184000.00", customerId: "c1", opportunityId: "opp-1" },
+    ])
+    expectBalanced(lines)
+  })
+
+  it("leaves an untracked PO's credit note as all revenue", () => {
+    const lines = buildCustomerCreditNoteLines({
+      ...NOTE, trackDelivery: false,
+      lines: [{ amount: d("160000"), vatAmount: d("24000"), kind: "GOODS" }],
+    }, RULES, { unbilled: d("0"), unearned: d("100000") })
+    expect(lines.map((l) => l.accountCode)).not.toContain("2170")
   })
 })
 
@@ -59,7 +89,7 @@ function arrangeDraftNote(over: Record<string, unknown> = {}) {
     customerId: "c1", customer: { legalName: "Bengal Group" },
     invoice: {
       id: "inv1", invoiceNumber: "INV-1", customerId: "c1", status: "APPROVED",
-      po: { opportunityId: "opp-1" },
+      po: { opportunityId: "opp-1", trackDelivery: false },
       lines: [{ amount: d("1000000"), vatAmount: d("150000") }], allocations: [], creditNotes: [],
     },
     lines: [{ amount: d("160000"), vatAmount: d("24000"), invoiceLine: { poLine: { kind: "GOODS" } } }],
@@ -68,6 +98,7 @@ function arrangeDraftNote(over: Record<string, unknown> = {}) {
   vi.mocked(prisma.customerCreditNote.findUnique).mockResolvedValue(note as any)
   vi.mocked(prisma.customerCreditNote.update).mockResolvedValue(note as any)
   vi.mocked(loadRules).mockResolvedValue(RULES)
+  vi.mocked(contractPosition).mockResolvedValue(NO_POSITION)
 }
 
 beforeEach(() => {
