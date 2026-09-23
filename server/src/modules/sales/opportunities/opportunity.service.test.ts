@@ -20,9 +20,12 @@ vi.mock("../../../config/prisma", () => ({
   },
 }))
 
+vi.mock("../../customer/customer.link", () => ({ ensureCustomerForAccount: vi.fn() }))
+
 import prisma from "../../../config/prisma"
 import { AppError } from "../../../middleware/errorHandler"
 import { dec } from "../../payroll/payroll.money"
+import { ensureCustomerForAccount } from "../../customer/customer.link"
 import {
   changeOpportunityNextStep,
   changeOpportunityStage,
@@ -481,6 +484,16 @@ describe("stage, status, and next step", () => {
     }))
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
+  })
+
+  it("creates or links the account's customer when the deal is Won", async () => {
+    await changeOpportunityStatus("opp-1", { status: "WON" }, USER)
+    expect(ensureCustomerForAccount).toHaveBeenCalledWith(expect.anything(), "account-1", "skip-on-conflict", USER.sub)
+  })
+
+  it("leaves customers alone when the deal is Lost", async () => {
+    await changeOpportunityStatus("opp-1", { status: "LOST", statusReason: "Price" }, USER)
+    expect(ensureCustomerForAccount).not.toHaveBeenCalled()
   })
 
   it("preserves closedAt when correcting one closed status to another", async () => {
