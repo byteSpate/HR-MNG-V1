@@ -9,7 +9,10 @@ vi.mock("../../config/prisma", () => ({
     auditLog: { create: vi.fn() },
   },
 }))
-vi.mock("./receivables.vat", () => ({ loadActiveVatRates: vi.fn(), vatFor: vi.fn() }))
+vi.mock("./receivables.vat", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./receivables.vat")>()),
+  loadActiveVatRates: vi.fn(),
+}))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
