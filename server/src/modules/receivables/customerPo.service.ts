@@ -6,10 +6,11 @@ import { ensureCustomerForAccount } from "../customer/customer.link"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { assertDealAccess, isFinance } from "./receivables.access"
 import { loadActiveVatRates } from "./receivables.vat"
-import type {
-  CancelCustomerPoInput,
-  CreateCustomerPoInput,
-  UpdateCustomerPoInput,
+import {
+  assertLineKinds,
+  type CancelCustomerPoInput,
+  type CreateCustomerPoInput,
+  type UpdateCustomerPoInput,
 } from "./customerPo.validators"
 
 const ZERO = new Prisma.Decimal(0)
@@ -80,6 +81,9 @@ function lineRows(lines: CreateCustomerPoInput["lines"]) {
     unitPrice: new Prisma.Decimal(l.unitPrice).toFixed(2),
     amount: new Prisma.Decimal(l.quantity).times(l.unitPrice).toFixed(2),
     vatCodeId: l.vatCodeId,
+    earnKind: l.earnKind ?? null,
+    contractStart: l.contractStart ? new Date(l.contractStart) : null,
+    contractEnd: l.contractEnd ? new Date(l.contractEnd) : null,
     order: i,
   }))
 }
@@ -118,6 +122,7 @@ export async function createCustomerPo(input: CreateCustomerPoInput, actor: Acce
           customerPoNumber: input.customerPoNumber.trim(),
           date: new Date(input.date),
           invoiceTo: input.invoiceTo?.trim() || null,
+          trackDelivery: input.trackDelivery,
           createdBy: actor.sub,
           lines: { create: lines },
           schedule: { create: schedule },
@@ -151,6 +156,9 @@ export async function updateCustomerPo(id: string, input: UpdateCustomerPoInput,
     return await prisma.$transaction(async (tx) => {
       const existing = await loadEditable(tx, id, actor)
       if (existing.status !== "OPEN") throw new AppError(409, "Only an open PO can be edited")
+
+      const kindMessage = assertLineKinds(existing.trackDelivery, input.lines)
+      if (kindMessage) throw new AppError(400, kindMessage)
 
       await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
       const lines = lineRows(input.lines)

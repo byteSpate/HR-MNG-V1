@@ -37,7 +37,7 @@ const FINANCE = { sub: "u-f", role: "FINANCE_OFFICER", salesRole: null, email: "
 const SALES_USER = { sub: "u-s", role: "EMPLOYEE", salesRole: "SALES_USER", email: "s@b.co", mustChangePassword: false } as any
 
 const PO_INPUT = {
-  opportunityId: "opp-1", customerPoNumber: "PO-778", date: "2026-09-23",
+  opportunityId: "opp-1", customerPoNumber: "PO-778", date: "2026-09-23", trackDelivery: false,
   lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15" }],
   schedule: [] as Array<{ plannedDate: string; amount: string; note?: string }>,
 }
