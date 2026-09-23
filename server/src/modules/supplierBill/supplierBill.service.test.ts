@@ -6,6 +6,7 @@ vi.mock("../../config/prisma", () => ({
     supplierBill: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     supplierBillLine: { deleteMany: vi.fn() },
     vatCode: { findMany: vi.fn() },
+    opportunity: { findMany: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -15,7 +16,7 @@ vi.mock("../payroll/payroll.fx", () => ({
 
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
-import { createSupplierBill, getSupplierBill, updateSupplierBill } from "./supplierBill.service"
+import { createSupplierBill, getSupplierBill, listBillableOpportunities, updateSupplierBill } from "./supplierBill.service"
 
 const ACTOR = { sub: "u1", role: "FINANCE_OFFICER", email: "f@byte.spate", mustChangePassword: false, salesRole: null } as any
 
@@ -34,6 +35,32 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.vatCode.findMany).mockResolvedValue([{ id: "vat-std", ratePercent: "15.00" }] as any)
+  vi.mocked(prisma.opportunity.findMany).mockResolvedValue([{ id: "opp-1", status: "WON", serial: "BS-OPP-00001" }] as any)
+})
+
+describe("bill lines and deals", () => {
+  it("refuses a line tagged to a deal that is not Won", async () => {
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([{ id: "opp-1", status: "ONGOING", serial: "BS-OPP-00001" }] as any)
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("BS-OPP-00001 is not a Won deal")
+  })
+
+  it("refuses a line tagged to a deal that does not exist", async () => {
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([])
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("A bill line names a deal that does not exist")
+  })
+})
+
+describe("listBillableOpportunities", () => {
+  it("lists only Won deals, with their account name", async () => {
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([
+      { id: "opp-1", serial: "BS-OPP-00001", name: "Core refresh", salesAccount: { name: "Acme" } },
+    ] as any)
+
+    const result = await listBillableOpportunities()
+
+    expect(prisma.opportunity.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "WON" } }))
+    expect(result).toEqual([{ id: "opp-1", serial: "BS-OPP-00001", name: "Core refresh", accountName: "Acme" }])
+  })
 })
 
 describe("createSupplierBill", () => {

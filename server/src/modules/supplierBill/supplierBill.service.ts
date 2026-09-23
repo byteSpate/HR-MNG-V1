@@ -28,6 +28,20 @@ async function toLineRows(
   const codes = await tx.vatCode.findMany({ where: { id: { in: vatIds }, isActive: true } })
   const rateById = new Map(codes.map((c) => [c.id, new Prisma.Decimal(c.ratePercent)]))
 
+  // Goods are bought only after the customer's PO, and a PO exists only on a
+  // Won deal (design §2), which is also what account 1214's name promises.
+  const oppIds = [...new Set(input.lines.map((l) => l.opportunityId))]
+  const opps = await tx.opportunity.findMany({
+    where: { id: { in: oppIds } },
+    select: { id: true, status: true, serial: true },
+  })
+  const oppById = new Map(opps.map((o) => [o.id, o]))
+  for (const id of oppIds) {
+    const opp = oppById.get(id)
+    if (!opp) throw new AppError(400, "A bill line names a deal that does not exist")
+    if (opp.status !== "WON") throw new AppError(409, `${opp.serial} is not a Won deal, so nothing can be bought for it yet`)
+  }
+
   return input.lines.map((line) => {
     const rate = rateById.get(line.vatCodeId)
     if (!rate) throw new AppError(400, "Unknown or inactive VAT code on a bill line")
@@ -46,6 +60,18 @@ async function toLineRows(
       opportunityId: line.opportunityId,
     }
   })
+}
+
+/** The deals a bill line can be tagged to. Read here rather than through
+ *  /api/sales/opportunities, which a Finance Officer without a Sales Hub
+ *  role cannot open. Won deals only, the same rule toLineRows enforces. */
+export async function listBillableOpportunities() {
+  const rows = await prisma.opportunity.findMany({
+    where: { status: "WON" },
+    select: { id: true, serial: true, name: true, salesAccount: { select: { name: true } } },
+    orderBy: { serial: "desc" },
+  })
+  return rows.map((o) => ({ id: o.id, serial: o.serial, name: o.name, accountName: o.salesAccount.name }))
 }
 
 export async function listSupplierBills() {

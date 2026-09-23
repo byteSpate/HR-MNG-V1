@@ -7,6 +7,7 @@ vi.mock("../../config/prisma", () => ({
     supplierBill: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
     auditLog: { create: vi.fn() },
     journal: { create: vi.fn() },
+    opportunity: { findMany: vi.fn() },
   },
 }))
 
@@ -47,6 +48,20 @@ describe("GET /api/supplier-bills/reports/ageing", () => {
     expect(res.status).toBe(200)
     expect(res.body).toEqual([])
     expect(prisma.supplierBill.findUnique).not.toHaveBeenCalled()
+  })
+})
+
+describe("GET /api/supplier-bills/opportunities", () => {
+  it("lets a Finance Officer with no Sales Hub role list Won deals", async () => {
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([])
+    const res = await request(app).get("/api/supplier-bills/opportunities").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+    expect(res.status).toBe(200)
+    expect(prisma.supplierBill.findUnique).not.toHaveBeenCalled()
+  })
+
+  it("refuses an Employee with 403", async () => {
+    const res = await request(app).get("/api/supplier-bills/opportunities").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
   })
 })
 
