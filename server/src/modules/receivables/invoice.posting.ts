@@ -12,6 +12,7 @@ import type { ResolvedRules } from "../posting/posting.types"
 import { poLineRemaining } from "./customerPo.service"
 import { releaseCostForInvoice } from "./costRelease"
 import { contractPosition, lockDeal, splitAgainst, type ContractPosition } from "./receivables.position"
+import { refreshPoStatus } from "./receivables.poStatus"
 import { INVOICE_INCLUDE } from "./invoice.service"
 
 type Line = SystemJournalInput["lines"][number]
@@ -142,15 +143,7 @@ export async function approveInvoice(id: string, actor: AccessTokenPayload) {
       createdBy: actor.sub,
     })
     await releaseCostForInvoice(tx, id, actor.sub)
-
-    // Complete when approved invoices (this one included) cover every line.
-    const approved = await tx.customerPoLine.findMany({
-      where: { poId: invoice.poId },
-      include: { invoiceLines: { where: { invoice: { status: "APPROVED" } }, select: { amount: true } } },
-    })
-    if (approved.every((l) => poLineRemaining(l).lessThanOrEqualTo(0))) {
-      await tx.customerPo.update({ where: { id: invoice.poId }, data: { status: "COMPLETE" } })
-    }
+    await refreshPoStatus(tx, invoice.poId)
 
     await writeAudit(tx, { entity: "INVOICE", entityId: id, action: "APPROVE", changedBy: actor.sub })
     return updated
