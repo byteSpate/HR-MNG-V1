@@ -91,6 +91,9 @@ export type AuditEntity =
   | "INVOICE"
   | "RECEIPT"
   | "CUSTOMER_CREDIT_NOTE"
+  // Receivables & payables, Phase 3b (Earned revenue).
+  | "EARNING_EVENT"
+  | "EARNING_RUN"
 
 export type AuditAction =
   | "CREATE"

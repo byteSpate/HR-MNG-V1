@@ -1880,6 +1880,7 @@ model Journal {
   attachments JournalAttachment[]
 
   depreciationRuns DepreciationRun[]
+  earningRuns      EarningRun[]
 
   // The idempotency guard, and the reason the payroll seam needs no new
   // schema in slice 3. Postgres permits unlimited all-null rows under a
@@ -2271,6 +2272,19 @@ enum ReceivableDocStatus {
   APPROVED
 }
 
+/// How a line on a tracked PO counts as earned (spec §2).
+enum EarnKind {
+  DELIVERY
+  ACCEPTANCE
+  MONTHLY
+}
+
+enum EarningRunStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
 model CustomerPo {
   id     String @id @default(uuid())
   /// BS-CPO-00001, IdCounter "CPO" — our reference. The customer's own PO
@@ -2290,13 +2304,18 @@ model CustomerPo {
   status       CustomerPoStatus @default(OPEN)
   cancelReason String?
 
+  /// Set at creation, never changed (spec §2). Off: the invoice bills and
+  /// earns. On: earning is its own event (Delivery, Acceptance, monthly run).
+  trackDelivery Boolean @default(false)
+
   createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lines    CustomerPoLine[]
-  schedule BillingScheduleRow[]
-  invoices Invoice[]
+  lines         CustomerPoLine[]
+  schedule      BillingScheduleRow[]
+  invoices      Invoice[]
+  earningEvents EarningEvent[]
 
   @@unique([customerId, customerPoNumber])
   @@index([opportunityId])
@@ -2318,9 +2337,96 @@ model CustomerPoLine {
   vatCode     VatCode      @relation(fields: [vatCodeId], references: [id])
   order       Int          @default(0)
 
-  invoiceLines InvoiceLine[]
+  /// Required on every line of a tracked PO, absent on an untracked one.
+  earnKind      EarnKind?
+  /// MONTHLY lines only: the contract the amount is earned evenly across.
+  contractStart DateTime?
+  contractEnd   DateTime?
+
+  invoiceLines    InvoiceLine[]
+  earningLines    EarningEventLine[]
+  monthlyEarnings MonthlyEarning[]
 
   @@index([poId, order])
+}
+
+/// A Delivery (goods, with a signed challan) or an Acceptance (a milestone
+/// the customer signed off). Posts EARNED, and COST_RELEASE for goods.
+model EarningEvent {
+  id   String     @id @default(uuid())
+  poId String
+  po   CustomerPo @relation(fields: [poId], references: [id])
+  /// DELIVERY or ACCEPTANCE. MONTHLY earnings are made by the run.
+  kind EarnKind
+  date DateTime
+
+  /// Challan number or acceptance note reference. Required: an earning
+  /// nobody can point to is the defect this record exists to prevent.
+  evidenceRef String
+  note        String?
+
+  status     ReceivableDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines EarningEventLine[]
+
+  @@index([poId])
+  @@index([status])
+}
+
+model EarningEventLine {
+  id       String         @id @default(uuid())
+  eventId  String
+  event    EarningEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  poLineId String
+  poLine   CustomerPoLine @relation(fields: [poLineId], references: [id])
+  /// Units delivered. Null for an acceptance.
+  quantity Decimal?       @db.Decimal(14, 2)
+  /// Net earned, before VAT. Worked out by the server for a delivery.
+  amount   Decimal        @db.Decimal(14, 2)
+
+  @@index([poLineId])
+}
+
+model EarningRun {
+  id     String           @id @default(uuid())
+  /// BS-ER-2026-10
+  runNo  String           @unique
+  year   Int
+  month  Int
+  status EarningRunStatus @default(DRAFT)
+
+  journalId String?
+  journal   Journal? @relation(fields: [journalId], references: [id])
+
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  postedBy   String?
+  postedAt   DateTime?
+  reversedBy String?
+  reversedAt DateTime?
+
+  charges MonthlyEarning[]
+
+  @@unique([year, month])
+  @@index([status])
+}
+
+model MonthlyEarning {
+  id       String         @id @default(uuid())
+  runId    String
+  run      EarningRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  poLineId String
+  poLine   CustomerPoLine @relation(fields: [poLineId], references: [id])
+  amount   Decimal        @db.Decimal(14, 2)
+
+  @@unique([runId, poLineId])
+  @@index([poLineId])
 }
 
 /// A plan, not a promise (spec §2). Posts nothing and changes no balance.
