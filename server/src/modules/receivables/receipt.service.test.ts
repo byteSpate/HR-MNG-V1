@@ -5,6 +5,7 @@ vi.mock("../../config/prisma", () => ({
     $transaction: vi.fn(),
     customer: { findUnique: vi.fn() },
     receipt: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
   },
 }))
 vi.mock("./receipt.allocation", () => ({ assertReceivable: vi.fn(), assertOpeningReceivable: vi.fn() }))
