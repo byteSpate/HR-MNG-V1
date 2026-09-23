@@ -8,6 +8,8 @@
  * documents, only as different allocation states of one.
  */
 
+import { Prisma } from "../../generated/prisma/client"
+import type { Prisma as PrismaNamespace } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
@@ -32,32 +34,69 @@ export async function getSupplierPayment(id: string) {
   return payment
 }
 
+/**
+ * Each allocation's taka figure is what it clears from 2111. For a taka
+ * payment that is the amount typed. For a USD payment it is the USD
+ * principal at the bill's own frozen rate, the figure the bill put into
+ * 2111; the gap to what the bank paid is the exchange difference, posted on
+ * approval (supplierPayment.posting.ts).
+ */
+async function toStoredAllocations(tx: PrismaNamespace.TransactionClient, input: CreateSupplierPaymentInput) {
+  if (input.currency === "BDT") {
+    return input.allocations.map((a) => ({
+      billId: a.billId,
+      amount: new Prisma.Decimal(a.amount).toFixed(2),
+      amountUsd: null,
+    }))
+  }
+
+  const bills = await tx.supplierBill.findMany({
+    where: { id: { in: input.allocations.map((a) => a.billId) } },
+    select: { id: true, billNumber: true, currency: true, fxRateToBdt: true },
+  })
+  const byId = new Map(bills.map((b) => [b.id, b]))
+
+  return input.allocations.map((a) => {
+    const bill = byId.get(a.billId)
+    if (!bill) throw new AppError(404, "A bill being paid does not exist")
+    if (bill.currency !== "USD" || !bill.fxRateToBdt) {
+      throw new AppError(400, `A USD payment can only settle a USD bill. Bill ${bill.billNumber} is in taka.`)
+    }
+    return {
+      billId: a.billId,
+      amount: new Prisma.Decimal(a.amount).times(bill.fxRateToBdt).toFixed(2),
+      amountUsd: a.amount,
+    }
+  })
+}
+
 export async function createSupplierPayment(input: CreateSupplierPaymentInput, actor: AccessTokenPayload) {
-  const allocatedTotal = input.allocations.reduce((sum, a) => sum + Number(a.amount), 0)
-  if (allocatedTotal > Number(input.amount)) {
+  const allocatedTotal = input.allocations.reduce((sum, a) => sum.plus(a.amount), new Prisma.Decimal(0))
+  if (allocatedTotal.greaterThan(input.amount)) {
     throw new AppError(400, "Allocations cannot add up to more than the payment amount")
   }
 
   return prisma.$transaction(async (tx) => {
-    await assertAllocatable(tx, input.supplierId, input.allocations)
+    const rate =
+      input.currency === "BDT"
+        ? null
+        : new Prisma.Decimal((await resolveRateOrThrow("USD", new Date(input.date))).toString())
 
-    const fxRateToBdt =
-      input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)
+    const allocations = await toStoredAllocations(tx, input)
+    await assertAllocatable(tx, input.supplierId, allocations)
 
     const payment = await tx.supplierPayment.create({
       data: {
         supplierId: input.supplierId,
         date: new Date(input.date),
-        amount: input.amount,
-        sourceAmount: input.currency === "BDT" ? null : (input.sourceAmount ?? input.amount),
+        amount: rate ? new Prisma.Decimal(input.amount).times(rate).toFixed(2) : new Prisma.Decimal(input.amount).toFixed(2),
+        sourceAmount: rate ? input.amount : null,
         currency: input.currency,
-        fxRateToBdt,
+        fxRateToBdt: rate ? rate.toFixed(6) : null,
         reference: input.reference ?? null,
         status: "DRAFT",
         createdBy: actor.sub,
-        allocations: {
-          create: input.allocations.map((a) => ({ billId: a.billId, amount: a.amount })),
-        },
+        allocations: { create: allocations },
       },
       include: { allocations: true },
     })

@@ -16,61 +16,72 @@ type Line = SystemJournalInput["lines"][number]
 
 interface AllocationForPosting {
   billId: string
+  /** BDT this allocation clears from 2111: for a USD bill, its USD
+   *  principal at the bill's own frozen rate, the figure 2111 was credited
+   *  with when the bill was approved. */
   amount: Prisma.Decimal
   amountUsd: Prisma.Decimal | null
   matchedAt: Date | null
-  bill: { fxRateToBdt: Prisma.Decimal | null }
 }
 
 interface PaymentForPosting {
   id: string
   supplierId: string
+  /** BDT that left the bank. For a USD payment, sourceAmount x fxRateToBdt. */
   amount: Prisma.Decimal
+  sourceAmount: Prisma.Decimal | null
   currency: "BDT" | "USD"
   fxRateToBdt: Prisma.Decimal | null
   allocations: AllocationForPosting[]
 }
 
-export function buildSupplierPaymentLines(payment: PaymentForPosting, rules: ResolvedRules): Line[] {
-  // Only allocations chosen at draft time split PAYABLE/ADVANCE. One
-  // matched later (matchAdvance, below) posts its own small reclass
-  // journal instead, once, at the moment it is matched, never twice.
-  const upfront = payment.allocations.filter((a) => a.matchedAt === null)
-  const allocated = upfront.reduce((sum, a) => sum.plus(a.amount), new Prisma.Decimal(0))
-  const unallocated = payment.amount.minus(allocated)
+const ZERO = new Prisma.Decimal(0)
 
-  const lines: Line[] = []
-  if (!allocated.isZero()) {
-    lines.push({ accountCode: resolveAccountCode(rules, "PAYABLE"), debit: allocated.toFixed(2), supplierId: payment.supplierId })
+/**
+ * design §3.1: Dr 2111 for what the bills recorded, Dr 1232 for what is
+ * left as an advance, Cr bank for what actually left it. On a USD payment
+ * the bills were recorded at their own rates and the bank paid at today's,
+ * and that gap is design §3.1's "Payment at a different rate".
+ *
+ * The exchange difference is taken as the balancing figure,
+ * bank - cleared - advance, rather than summed line by line: per-line
+ * rounding would otherwise leave a paisa the journal refuses.
+ */
+export function buildSupplierPaymentLines(
+  payment: PaymentForPosting,
+  rules: ResolvedRules,
+  fxRules: ResolvedRules
+): Line[] {
+  // Only allocations chosen at draft time belong to this journal. One
+  // matched later (matchAdvance) posts its own reclass, once.
+  const upfront = payment.allocations.filter((a) => a.matchedAt === null)
+  const cleared = upfront.reduce((sum, a) => sum.plus(a.amount), ZERO)
+
+  let advance: Prisma.Decimal
+  let exchange = ZERO
+  if (payment.currency === "USD" && payment.fxRateToBdt && payment.sourceAmount) {
+    const allocatedUsd = upfront.reduce((sum, a) => sum.plus(a.amountUsd ?? ZERO), ZERO)
+    advance = new Prisma.Decimal(payment.sourceAmount.minus(allocatedUsd).times(payment.fxRateToBdt).toFixed(2))
+    exchange = payment.amount.minus(cleared).minus(advance)
+  } else {
+    advance = payment.amount.minus(cleared)
   }
-  if (!unallocated.isZero()) {
-    lines.push({ accountCode: resolveAccountCode(rules, "ADVANCE"), debit: unallocated.toFixed(2), supplierId: payment.supplierId })
+
+  const dims = { supplierId: payment.supplierId }
+  const lines: Line[] = []
+  if (!cleared.isZero()) {
+    lines.push({ accountCode: resolveAccountCode(rules, "PAYABLE"), debit: cleared.toFixed(2), ...dims })
+  }
+  if (exchange.greaterThan(0)) {
+    lines.push({ accountCode: resolveAccountCode(fxRules, "LOSS"), debit: exchange.toFixed(2), ...dims })
+  } else if (exchange.lessThan(0)) {
+    lines.push({ accountCode: resolveAccountCode(fxRules, "GAIN"), credit: exchange.abs().toFixed(2), ...dims })
+  }
+  if (!advance.isZero()) {
+    lines.push({ accountCode: resolveAccountCode(rules, "ADVANCE"), debit: advance.toFixed(2), ...dims })
   }
   lines.push({ accountCode: resolveAccountCode(rules, "BANK"), credit: payment.amount.toFixed(2) })
 
-  return lines
-}
-
-/** design §3.1 "Payment at a different rate": the gap between what a USD
- *  bill recorded (its own frozen rate) and what was actually paid for the
- *  same USD principal (the payment's frozen rate), on every upfront
- *  allocation against a USD bill. */
-export function buildFxVarianceLines(payment: PaymentForPosting, fxRules: ResolvedRules): Line[] {
-  if (payment.currency !== "USD" || !payment.fxRateToBdt) return []
-
-  const lines: Line[] = []
-  for (const a of payment.allocations.filter((x) => x.matchedAt === null)) {
-    if (!a.amountUsd || !a.bill.fxRateToBdt) continue
-    const billBdt = a.amountUsd.times(a.bill.fxRateToBdt)
-    const paidBdt = a.amountUsd.times(payment.fxRateToBdt)
-    const variance = paidBdt.minus(billBdt)
-    if (variance.isZero()) continue
-    if (variance.greaterThan(0)) {
-      lines.push({ accountCode: resolveAccountCode(fxRules, "LOSS"), debit: variance.toFixed(2), supplierId: payment.supplierId })
-    } else {
-      lines.push({ accountCode: resolveAccountCode(fxRules, "GAIN"), credit: variance.abs().toFixed(2), supplierId: payment.supplierId })
-    }
-  }
   return lines
 }
 
@@ -78,10 +89,8 @@ async function loadPaymentForPosting(tx: PrismaNamespace.TransactionClient, id: 
   return tx.supplierPayment.findUniqueOrThrow({
     where: { id },
     select: {
-      id: true, supplierId: true, amount: true, currency: true, fxRateToBdt: true,
-      allocations: {
-        select: { billId: true, amount: true, amountUsd: true, matchedAt: true, bill: { select: { fxRateToBdt: true } } },
-      },
+      id: true, supplierId: true, amount: true, sourceAmount: true, currency: true, fxRateToBdt: true,
+      allocations: { select: { billId: true, amount: true, amountUsd: true, matchedAt: true } },
     },
   })
 }
@@ -95,7 +104,7 @@ export async function postSupplierPayment(tx: PrismaNamespace.TransactionClient,
     date: toLedgerDate(new Date()),
     narration: `Payment — ${supplier.name}`,
     source: { module: "SUPPLIER", refId: paymentId, event: "PAYMENT" },
-    lines: [...buildSupplierPaymentLines(payment, rules), ...buildFxVarianceLines(payment, fxRules)],
+    lines: buildSupplierPaymentLines(payment, rules, fxRules),
     createdBy: actorUserId,
   })
 }
@@ -135,6 +144,15 @@ export async function matchAdvance(paymentId: string, input: MatchAdvanceInput, 
   const payment = await prisma.supplierPayment.findUnique({ where: { id: paymentId }, include: { allocations: true } })
   if (!payment) throw new AppError(404, "Supplier payment not found")
   if (payment.status !== "APPROVED") throw new AppError(409, "Only an approved payment carries a matchable advance")
+  // A USD advance sits in 1232 at the payment's rate and the bill in 2111 at
+  // the bill's; matching them needs an exchange difference this reclass does
+  // not work out. Refused rather than posted wrong.
+  if (payment.currency === "USD") {
+    throw new AppError(
+      409,
+      "A USD advance cannot be matched here yet. Record the match as a manual journal, with the exchange difference."
+    )
+  }
 
   const allocated = payment.allocations.reduce((sum, a) => sum.plus(a.amount), new Prisma.Decimal(0))
   const available = payment.amount.minus(allocated)

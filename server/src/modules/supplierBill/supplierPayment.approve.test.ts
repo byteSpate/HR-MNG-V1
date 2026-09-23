@@ -43,6 +43,17 @@ describe("approveSupplierPayment", () => {
 })
 
 describe("matchAdvance", () => {
+  it("refuses to match a USD advance, which needs an exchange difference this does not work out", async () => {
+    vi.mocked(prisma.supplierPayment.findUnique).mockResolvedValue({
+      id: "p3", supplierId: "sup-1", status: "APPROVED", currency: "USD", amount: d("125000"), allocations: [],
+    } as any)
+
+    await expect(matchAdvance("p3", { billId: "b1", amount: "1000" }, ADMIN)).rejects.toThrow(
+      "A USD advance cannot be matched here yet"
+    )
+    expect(prisma.supplierPaymentAllocation.create).not.toHaveBeenCalled()
+  })
+
   it("refuses to match more than the bill still owes", async () => {
     vi.mocked(prisma.supplierPayment.findUnique).mockResolvedValue({
       id: "p2", supplierId: "sup-1", status: "APPROVED", amount: d("500000"), allocations: [],

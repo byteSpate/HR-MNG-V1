@@ -1,11 +1,12 @@
 import { apiFetch } from "./client"
 import type { SupplierPayment } from "./types"
 
+/** Amount and allocations are in the payment's own currency; the server
+ *  converts a USD payment to taka at the payment-date rate. */
 export interface SupplierPaymentInput {
   supplierId: string
   date: string
   amount: string
-  sourceAmount?: string
   currency: "BDT" | "USD"
   reference?: string
   allocations: Array<{ billId: string; amount: string }>
