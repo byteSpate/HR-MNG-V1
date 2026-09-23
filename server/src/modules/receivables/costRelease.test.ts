@@ -8,10 +8,14 @@ vi.mock("../../config/prisma", () => ({
     invoiceLine: { findMany: vi.fn() },
   },
 }))
+vi.mock("../posting/posting.rules", () => ({ loadRules: vi.fn(), resolveAccountCode: vi.fn() }))
+vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() }))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
-import { computeCostRelease, dealInvoicing, heldGoodsCost } from "./costRelease"
+import { loadRules, resolveAccountCode } from "../posting/posting.rules"
+import { postSystemJournal } from "../accounting/accounting.posting"
+import { computeCostRelease, dealInvoicing, heldGoodsCost, releaseLateCost } from "./costRelease"
 
 const d = (v: string) => new Prisma.Decimal(v)
 
@@ -108,5 +112,51 @@ describe("dealInvoicing", () => {
         invoice: expect.objectContaining({ id: { not: "inv-being-approved" } }),
       }),
     }))
+  })
+})
+
+describe("releaseLateCost", () => {
+  const RULES = { event: "COST_RELEASE" as const, byKey: new Map([["GOODS", "1214"], ["DELIVERED", "5121"]]) }
+
+  function arrangeDealPosition(o: { basis: string; invoiced: string; held: string }) {
+    vi.mocked(prisma.customerPoLine.findMany).mockResolvedValue([{ kind: "GOODS", amount: d(o.basis) }] as any)
+    vi.mocked(prisma.invoiceLine.findMany).mockResolvedValue(
+      o.invoiced === "0" ? [] : ([{ amount: d(o.invoiced), poLine: { kind: "GOODS" } }] as any)
+    )
+    vi.mocked(prisma.account.findUniqueOrThrow).mockResolvedValue({ id: "acc-1214" } as any)
+    vi.mocked(prisma.journalLine.aggregate).mockResolvedValue({ _sum: { debit: d(o.held), credit: d("0") } } as any)
+    vi.mocked(loadRules).mockResolvedValue(RULES)
+    vi.mocked(resolveAccountCode).mockImplementation((rules: any, key: string) => rules.byKey.get(key))
+  }
+
+  it("releases everything held for a deal that is already fully invoiced", async () => {
+    arrangeDealPosition({ basis: "1000000", invoiced: "1000000", held: "80000" })
+
+    const total = await releaseLateCost(prisma as any, "bill-9", ["opp-1"], "admin-1")
+
+    expect(total.toFixed(2)).toBe("80000.00")
+    expect(postSystemJournal).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      source: { module: "CUSTOMER", refId: "bill:bill-9", event: "COST_RELEASE" },
+      lines: [
+        { accountCode: "5121", debit: "80000.00", opportunityId: "opp-1" },
+        { accountCode: "1214", credit: "80000.00", opportunityId: "opp-1" },
+      ],
+    }))
+  })
+
+  it("leaves a deal that is still being invoiced for its next invoice", async () => {
+    arrangeDealPosition({ basis: "1000000", invoiced: "400000", held: "80000" })
+
+    await releaseLateCost(prisma as any, "bill-9", ["opp-1"], "admin-1")
+
+    expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("leaves a deal with no PO yet", async () => {
+    arrangeDealPosition({ basis: "0", invoiced: "0", held: "80000" })
+
+    await releaseLateCost(prisma as any, "bill-9", ["opp-1"], "admin-1")
+
+    expect(postSystemJournal).not.toHaveBeenCalled()
   })
 })
