@@ -13,6 +13,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { assertAllocatable } from "./supplierBill.allocation"
 import type { CreateSupplierPaymentInput } from "./supplierPayment.validators"
 
 export async function listSupplierPayments() {
@@ -38,6 +39,8 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
   }
 
   return prisma.$transaction(async (tx) => {
+    await assertAllocatable(tx, input.supplierId, input.allocations)
+
     const fxRateToBdt =
       input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)
 

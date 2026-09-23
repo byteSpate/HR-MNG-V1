@@ -9,6 +9,7 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { assertAllocatable } from "./supplierBill.allocation"
 import type { MatchAdvanceInput } from "./supplierPayment.validators"
 
 type Line = SystemJournalInput["lines"][number]
@@ -100,12 +101,20 @@ export async function postSupplierPayment(tx: PrismaNamespace.TransactionClient,
 }
 
 export async function approveSupplierPayment(id: string, actor: AccessTokenPayload) {
-  const payment = await prisma.supplierPayment.findUnique({ where: { id } })
+  const payment = await prisma.supplierPayment.findUnique({ where: { id }, include: { allocations: true } })
   if (!payment) throw new AppError(404, "Supplier payment not found")
   if (payment.status !== "DRAFT") throw new AppError(409, `This payment is already ${payment.status.toLowerCase()}`)
   if (payment.createdBy === actor.sub) throw new AppError(403, "You prepared this payment and cannot also approve it")
 
   return prisma.$transaction(async (tx) => {
+    // Re-checked here, not only at draft time: another payment against the
+    // same bill may have been approved in between.
+    await assertAllocatable(
+      tx,
+      payment.supplierId,
+      payment.allocations.filter((a) => a.matchedAt === null).map((a) => ({ billId: a.billId, amount: a.amount.toString() }))
+    )
+
     const updated = await tx.supplierPayment.update({
       where: { id },
       data: { status: "APPROVED", approvedBy: actor.sub, approvedAt: new Date() },
@@ -134,6 +143,8 @@ export async function matchAdvance(paymentId: string, input: MatchAdvanceInput, 
   }
 
   return prisma.$transaction(async (tx) => {
+    await assertAllocatable(tx, payment.supplierId, [{ billId: input.billId, amount: input.amount }])
+
     await tx.supplierPaymentAllocation.create({
       data: { paymentId, billId: input.billId, amount: input.amount, matchedAt: new Date() },
     })
