@@ -7,6 +7,8 @@
  * sourceAmount x that rate becomes its amount — never re-derived later.
  */
 
+import { Prisma } from "../../generated/prisma/client"
+import type { Prisma as PrismaNamespace } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
@@ -14,8 +16,22 @@ import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { CreateSupplierBillInput, UpdateSupplierBillInput } from "./supplierBill.validators"
 
-async function toLineRows(input: CreateSupplierBillInput, fxRateToBdt: string | null) {
+// VAT is frozen per line when the line is written, from its VAT code's rate
+// at that moment, rounded to the paisa (design §3.2). A later change to the
+// code's rate never moves a bill already entered.
+async function toLineRows(
+  tx: PrismaNamespace.TransactionClient,
+  input: CreateSupplierBillInput,
+  fxRateToBdt: string | null
+) {
+  const vatIds = [...new Set(input.lines.map((l) => l.vatCodeId))]
+  const codes = await tx.vatCode.findMany({ where: { id: { in: vatIds }, isActive: true } })
+  const rateById = new Map(codes.map((c) => [c.id, new Prisma.Decimal(c.ratePercent)]))
+
   return input.lines.map((line) => {
+    const rate = rateById.get(line.vatCodeId)
+    if (!rate) throw new AppError(400, "Unknown or inactive VAT code on a bill line")
+
     const amount =
       input.currency === "BDT" || !line.sourceAmount
         ? line.amount
@@ -26,10 +42,7 @@ async function toLineRows(input: CreateSupplierBillInput, fxRateToBdt: string | 
       amount,
       sourceAmount: input.currency === "BDT" ? null : (line.sourceAmount ?? line.amount),
       vatCodeId: line.vatCodeId,
-      // Computed from the VAT code's own rate at write time, in
-      // supplierBill.posting.ts's approval step, not here. Stored as 0 on
-      // creation and frozen once the VAT code's rate is read at approval.
-      vatAmount: "0",
+      vatAmount: new Prisma.Decimal(amount).times(rate).dividedBy(100).toFixed(2),
       opportunityId: line.opportunityId,
     }
   })
@@ -70,7 +83,7 @@ export async function createSupplierBill(input: CreateSupplierBillInput, actor: 
         fxRateToBdt,
         status: "DRAFT",
         createdBy: actor.sub,
-        lines: { create: await toLineRows(input, fxRateToBdt) },
+        lines: { create: await toLineRows(tx, input, fxRateToBdt) },
       },
       include: { lines: true },
     })
@@ -110,7 +123,7 @@ export async function updateSupplierBill(
         dueDate: new Date(input.dueDate),
         currency: input.currency,
         fxRateToBdt,
-        lines: { create: await toLineRows(input, fxRateToBdt) },
+        lines: { create: await toLineRows(tx, input, fxRateToBdt) },
       },
       include: { lines: true },
     })

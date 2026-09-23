@@ -5,6 +5,7 @@ vi.mock("../../config/prisma", () => ({
     $transaction: vi.fn(),
     supplierBill: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     supplierBillLine: { deleteMany: vi.fn() },
+    vatCode: { findMany: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -32,6 +33,7 @@ const INPUT = {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+  vi.mocked(prisma.vatCode.findMany).mockResolvedValue([{ id: "vat-std", ratePercent: "15.00" }] as any)
 })
 
 describe("createSupplierBill", () => {
@@ -58,6 +60,27 @@ describe("createSupplierBill", () => {
       expect.objectContaining({ data: expect.objectContaining({ entity: "SUPPLIER_BILL", action: "CREATE" }) })
     )
     expect(result).toEqual({ id: "b1", status: "DRAFT" })
+  })
+})
+
+describe("createSupplierBill VAT", () => {
+  it("freezes each line's VAT from its VAT code's rate", async () => {
+    vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1" } as any)
+
+    await createSupplierBill(INPUT, ACTOR)
+
+    expect(prisma.supplierBill.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          lines: { create: [expect.objectContaining({ amount: "800000", vatAmount: "120000.00" })] },
+        }),
+      })
+    )
+  })
+
+  it("refuses a VAT code that does not exist or is inactive", async () => {
+    vi.mocked(prisma.vatCode.findMany).mockResolvedValue([])
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("Unknown or inactive VAT code")
   })
 })
 
