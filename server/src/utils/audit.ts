@@ -82,6 +82,9 @@ export type AuditEntity =
   // Receivables & payables master data.
   | "CUSTOMER"
   | "SUPPLIER"
+  // Receivables & payables, Phase 2 (Buying).
+  | "SUPPLIER_BILL"
+  | "SUPPLIER_PAYMENT"
 
 export type AuditAction =
   | "CREATE"

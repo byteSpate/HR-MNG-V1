@@ -2021,6 +2021,8 @@ model Supplier {
 
   journalLines   JournalLine[]
   openingBalance SupplierOpeningBalance?
+  bills          SupplierBill[]
+  payments       SupplierPayment[]
 
   @@index([name])
 }
@@ -2047,6 +2049,144 @@ model SupplierOpeningBalance {
   asOf       DateTime
   importedBy String
   createdAt  DateTime @default(now())
+}
+
+// ── RECEIVABLES & PAYABLES — Phase 2 (Buying) ───────────────────────────────
+
+// Master data (design §2). Three seeded rows cover today's needs; more can
+// be added later from a settings screen this phase does not build.
+model VatCode {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  ratePercent Decimal @db.Decimal(5, 2)
+  isActive    Boolean @default(true)
+
+  billLines SupplierBillLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+enum SupplierDocStatus {
+  DRAFT
+  APPROVED
+}
+
+enum BillLineKind {
+  GOODS
+  SERVICE
+}
+
+model SupplierBill {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  // The supplier's own bill number, not this system's id.
+  billNumber String
+  date       DateTime
+  dueDate    DateTime
+  currency   Currency @default(BDT)
+  // Frozen at the bill date, resolveRateOrThrow(currency, date). Null for
+  // a BDT bill, which needs no rate.
+  fxRateToBdt Decimal? @db.Decimal(18, 6)
+
+  status     SupplierDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  lines       SupplierBillLine[]
+  allocations SupplierPaymentAllocation[]
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model SupplierBillLine {
+  id          String       @id @default(uuid())
+  billId      String
+  bill        SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  description String
+  kind        BillLineKind
+
+  // Always BDT, what actually posts. On a USD bill this is
+  // sourceAmount x the bill's frozen fxRateToBdt.
+  amount Decimal @db.Decimal(14, 2)
+  // The foreign-currency figure, memo only, set only when the bill's
+  // currency is not BDT, same pattern as JournalLine.sourceAmount.
+  sourceAmount Decimal? @db.Decimal(14, 2)
+
+  vatCodeId String
+  vatCode   VatCode @relation(fields: [vatCodeId], references: [id])
+  vatAmount Decimal @db.Decimal(14, 2)
+
+  // Required. "There are no untagged lines" — design §2.
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@index([billId])
+  @@index([opportunityId])
+}
+
+model SupplierPayment {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  date       DateTime
+
+  // Always BDT, what actually posts to the bank/cash account.
+  amount Decimal @db.Decimal(14, 2)
+  // The foreign-currency figure, memo only, set only when currency is not
+  // BDT, same pattern as SupplierBillLine.sourceAmount.
+  sourceAmount Decimal? @db.Decimal(14, 2)
+  currency     Currency @default(BDT)
+  fxRateToBdt  Decimal? @db.Decimal(18, 6)
+
+  // Cheque number, bank reference, bKash transaction id, same field as
+  // OperatingCost.paymentRef.
+  reference String?
+
+  status     SupplierDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  allocations SupplierPaymentAllocation[]
+
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([supplierId])
+  @@index([status])
+}
+
+// "This much of this payment settles this bill." Created for the bills
+// picked when the payment is drafted (matchedAt null), and appended to
+// later when an advance's unallocated balance is matched to a bill that
+// arrives afterward (matchedAt set).
+model SupplierPaymentAllocation {
+  id        String          @id @default(uuid())
+  paymentId String
+  payment   SupplierPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  billId    String
+  bill      SupplierBill    @relation(fields: [billId], references: [id])
+
+  // Always BDT, the amount this row actually clears against the bill.
+  amount Decimal @db.Decimal(14, 2)
+  // The USD principal this row settles, set only when the bill is a USD
+  // bill, what FX variance is computed against: this same principal at
+  // the bill's frozen rate versus the payment's frozen rate.
+  amountUsd Decimal?  @db.Decimal(14, 2)
+  matchedAt DateTime?
+
+  @@index([paymentId])
+  @@index([billId])
 }
 
 model JournalAttachment {
@@ -2419,6 +2559,9 @@ model Opportunity {
   // Receivables & payables, Phase 1: the back-relation for
   // JournalLine.opportunityId. Empty until Phase 2/3 post against a deal.
   journalLines JournalLine[]
+  // Receivables & payables, Phase 2: every Supplier Bill line bought for
+  // this deal. "There are no untagged lines" — design §2.
+  supplierBillLines SupplierBillLine[]
 
   @@index([salesAccountId])
   @@index([status, expectedCloseDate])
