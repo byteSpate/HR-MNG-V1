@@ -2023,6 +2023,7 @@ model Supplier {
   openingBalance SupplierOpeningBalance?
   bills          SupplierBill[]
   payments       SupplierPayment[]
+  creditNotes    SupplierCreditNote[]
 
   @@index([name])
 }
@@ -2099,6 +2100,7 @@ model SupplierBill {
 
   lines       SupplierBillLine[]
   allocations SupplierPaymentAllocation[]
+  creditNotes SupplierCreditNote[]
 
   createdBy String
   createdAt DateTime @default(now())
@@ -2130,6 +2132,8 @@ model SupplierBillLine {
   // Required. "There are no untagged lines" — design §2.
   opportunityId String
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  creditNoteLines SupplierCreditNoteLine[]
 
   @@index([billId])
   @@index([opportunityId])
@@ -2187,6 +2191,45 @@ model SupplierPaymentAllocation {
 
   @@index([paymentId])
   @@index([billId])
+}
+
+model SupplierCreditNote {
+  id         String       @id @default(uuid())
+  billId     String
+  bill       SupplierBill @relation(fields: [billId], references: [id])
+  supplierId String
+  supplier   Supplier     @relation(fields: [supplierId], references: [id])
+  date       DateTime
+  // Required — design §2, "required reason".
+  reason     String
+
+  status     SupplierDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  lines SupplierCreditNoteLine[]
+
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([billId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+model SupplierCreditNoteLine {
+  id           String             @id @default(uuid())
+  creditNoteId String
+  creditNote   SupplierCreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  billLineId   String
+  billLine     SupplierBillLine   @relation(fields: [billLineId], references: [id])
+
+  // Always BDT, the gross reduction against 2111 for this line.
+  amount    Decimal @db.Decimal(14, 2)
+  vatAmount Decimal @db.Decimal(14, 2)
+
+  @@index([creditNoteId])
+  @@index([billLineId])
 }
 
 model JournalAttachment {

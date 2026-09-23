@@ -85,6 +85,7 @@ export type AuditEntity =
   // Receivables & payables, Phase 2 (Buying).
   | "SUPPLIER_BILL"
   | "SUPPLIER_PAYMENT"
+  | "SUPPLIER_CREDIT_NOTE"
 
 export type AuditAction =
   | "CREATE"
