@@ -4,6 +4,7 @@ import prisma from "../../config/prisma"
 import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { toLedgerDate } from "../accounting/accounting.utils"
+import { balanceOn } from "./receivables.position"
 
 const ZERO = new Prisma.Decimal(0)
 
@@ -18,12 +19,7 @@ export async function heldGoodsCost(
   opportunityId: string,
   goodsAccountCode: string
 ): Promise<Prisma.Decimal> {
-  const account = await client.account.findUniqueOrThrow({ where: { code: goodsAccountCode }, select: { id: true } })
-  const agg = await client.journalLine.aggregate({
-    where: { accountId: account.id, opportunityId, journal: { status: { in: ["POSTED", "REVERSED"] } } },
-    _sum: { debit: true, credit: true },
-  })
-  return (agg._sum.debit ?? ZERO).minus(agg._sum.credit ?? ZERO)
+  return balanceOn(client, goodsAccountCode, opportunityId)
 }
 
 export interface CostReleaseInput {

@@ -13,12 +13,14 @@ vi.mock("../posting/posting.rules", async (importOriginal) => ({
   loadRules: vi.fn(),
 }))
 vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() }))
+vi.mock("./receivables.position", () => ({ lockDeal: vi.fn() }))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { loadRules } from "../posting/posting.rules"
 import type { PostingEvent, ResolvedRules } from "../posting/posting.types"
 import { postSystemJournal } from "../accounting/accounting.posting"
+import { lockDeal } from "./receivables.position"
 import { approveCustomerCreditNote, buildCustomerCreditNoteLines } from "./customerCreditNote.posting"
 
 const d = (v: string) => new Prisma.Decimal(v)
@@ -91,13 +93,14 @@ describe("approveCustomerCreditNote", () => {
     expect(postSystemJournal).not.toHaveBeenCalled()
   })
 
-  it("posts on the credit note's date, locking the invoice's PO row first", async () => {
+  it("posts on the credit note's date, locking the deal first", async () => {
     arrangeDraftNote({})
     await approveCustomerCreditNote("cn1", ADMIN)
     expect(postSystemJournal).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       date: new Date("2026-09-22"), source: { module: "CUSTOMER", refId: "cn1", event: "CREDIT_NOTE" },
     }))
-    const lockAt = vi.mocked(prisma.$queryRaw).mock.invocationCallOrder[0]
+    expect(lockDeal).toHaveBeenCalledWith(expect.anything(), "opp-1")
+    const lockAt = vi.mocked(lockDeal).mock.invocationCallOrder[0]
     const postAt = vi.mocked(postSystemJournal).mock.invocationCallOrder[0]
     expect(lockAt).toBeLessThan(postAt)
   })

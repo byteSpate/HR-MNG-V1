@@ -11,6 +11,7 @@ import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import type { ResolvedRules } from "../posting/posting.types"
 import { poLineRemaining } from "./customerPo.service"
 import { releaseCostForInvoice } from "./costRelease"
+import { lockDeal } from "./receivables.position"
 import { INVOICE_INCLUDE } from "./invoice.service"
 
 type Line = SystemJournalInput["lines"][number]
@@ -61,12 +62,12 @@ export function buildInvoiceLines(invoice: InvoiceForPosting, invoiceRules: Reso
 
 export async function approveInvoice(id: string, actor: AccessTokenPayload) {
   return prisma.$transaction(async (tx: PrismaNamespace.TransactionClient) => {
-    const head = await tx.invoice.findUnique({ where: { id }, select: { poId: true } })
+    const head = await tx.invoice.findUnique({ where: { id }, select: { poId: true, po: { select: { opportunityId: true } } } })
     if (!head) throw new AppError(404, "Invoice not found")
 
-    // Spec §3.5: events on one PO are serialised. Everything below reads
-    // what earlier approvals on this PO left behind.
-    await tx.$queryRaw`SELECT "id" FROM "CustomerPo" WHERE "id" = ${head.poId} FOR UPDATE`
+    // Spec §3.5: events on one deal are serialised. Everything below reads
+    // what earlier approvals on this deal left behind.
+    await lockDeal(tx, head.po.opportunityId)
 
     const invoice = await tx.invoice.findUnique({
       where: { id },

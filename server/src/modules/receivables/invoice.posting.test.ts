@@ -13,6 +13,7 @@ vi.mock("../../config/prisma", () => ({
 vi.mock("../posting/posting.rules", () => ({ loadRules: vi.fn(), resolveAccountCode: vi.fn() }))
 vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() }))
 vi.mock("./costRelease", () => ({ releaseCostForInvoice: vi.fn() }))
+vi.mock("./receivables.position", () => ({ lockDeal: vi.fn() }))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
@@ -20,6 +21,7 @@ import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import type { PostingEvent, ResolvedRules } from "../posting/posting.types"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { releaseCostForInvoice } from "./costRelease"
+import { lockDeal } from "./receivables.position"
 import { approveInvoice, buildInvoiceLines } from "./invoice.posting"
 
 const d = (v: string) => new Prisma.Decimal(v)
@@ -76,7 +78,7 @@ function arrangeDraft(over: {
   poLineAlreadyInvoicedByOthers?: string
   completesPo?: boolean
 } = {}) {
-  const lockHead = { poId: "po1" }
+  const lockHead = { poId: "po1", po: { opportunityId: "opp-1" } }
   const full = {
     id: "inv1", poId: "po1", status: "DRAFT", createdBy: over.createdBy ?? "finance-1",
     customerId: "c1", invoiceNumber: "INV-1", date: over.date ?? new Date("2026-09-23"),
@@ -120,12 +122,12 @@ describe("approveInvoice", () => {
     expect(postSystemJournal).not.toHaveBeenCalled()
   })
 
-  it("locks the PO row before reading anything it will decide on", async () => {
+  it("locks the deal before reading anything it will decide on", async () => {
     arrangeDraft({})
     await approveInvoice("inv1", ADMIN)
-    const lockAt = vi.mocked(prisma.$queryRaw).mock.invocationCallOrder[0]
-    const reloadAt = vi.mocked(prisma.invoice.findUnique).mock.invocationCallOrder.at(-1)!
-    expect(lockAt).toBeLessThan(reloadAt)
+    expect(lockDeal).toHaveBeenCalledWith(expect.anything(), "opp-1")
+    expect(vi.mocked(lockDeal).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(prisma.invoice.findUnique).mock.invocationCallOrder.at(-1)!)
   })
 
   it("re-checks what is left on each PO line at approval, since two drafts may have been created at once", async () => {

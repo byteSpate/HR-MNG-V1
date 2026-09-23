@@ -22,12 +22,12 @@ function arrangeRules(map: Record<string, string>) {
 }
 
 function arrangeBalances(byCode: Record<string, { debit: string; credit: string }>) {
-  vi.mocked(prisma.account.findUniqueOrThrow).mockImplementation(async ({ where }: any) => ({ id: `acc-${where.code}` }) as any)
-  vi.mocked(prisma.journalLine.aggregate).mockImplementation(async ({ where }: any) => {
+  vi.mocked(prisma.account.findUniqueOrThrow).mockImplementation((async ({ where }: any) => ({ id: `acc-${where.code}` })) as any)
+  vi.mocked(prisma.journalLine.aggregate).mockImplementation((async ({ where }: any) => {
     const code = String(where.accountId).replace(/^acc-/, "")
     const bal = byCode[code] ?? { debit: "0", credit: "0" }
-    return { _sum: { debit: d(bal.debit), credit: d(bal.credit) } } as any
-  })
+    return { _sum: { debit: d(bal.debit), credit: d(bal.credit) } }
+  }) as any)
 }
 
 beforeEach(() => vi.clearAllMocks())

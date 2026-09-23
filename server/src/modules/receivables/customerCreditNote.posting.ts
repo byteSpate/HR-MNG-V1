@@ -10,6 +10,7 @@ import { toLedgerDate } from "../accounting/accounting.utils"
 import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import type { ResolvedRules } from "../posting/posting.types"
 import { assertWithinOutstanding, CREDIT_NOTE_INCLUDE } from "./customerCreditNote.service"
+import { lockDeal } from "./receivables.position"
 
 type Line = SystemJournalInput["lines"][number]
 
@@ -59,13 +60,13 @@ export async function approveCustomerCreditNote(id: string, actor: AccessTokenPa
   return prisma.$transaction(async (tx) => {
     const head = await tx.customerCreditNote.findUnique({
       where: { id },
-      select: { invoice: { select: { poId: true } } },
+      select: { invoice: { select: { po: { select: { opportunityId: true } } } } },
     })
     if (!head) throw new AppError(404, "Customer credit note not found")
 
-    // Spec §3.5: events on one PO are serialised, and a credit note moves
+    // Spec §3.5: events on one deal are serialised, and a credit note moves
     // the same Unbilled/Unearned position an invoice does.
-    await tx.$queryRaw`SELECT "id" FROM "CustomerPo" WHERE "id" = ${head.invoice.poId} FOR UPDATE`
+    await lockDeal(tx, head.invoice.po.opportunityId)
 
     const note = await tx.customerCreditNote.findUnique({
       where: { id },
