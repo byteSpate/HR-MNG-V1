@@ -396,11 +396,11 @@ export const HELP: Record<string, HelpEntry> = {
 
   "accounting/suppliers": {
     title: "Suppliers",
-    lede: "Every company we buy from, and what we owe them. The Supplier record itself, not yet a bill or a payment.",
+    lede: "Every company we buy from. The Supplier record itself; what we owe them is on Supplier ageing.",
     step: "setup",
     connects: {
       fedBy: ["Added by hand here, or by a one-time opening-balance import for suppliers we already owed before this system went live"],
-      feeds: ["Every bill and payment, once buying is built"],
+      feeds: ["Supplier bills", "Supplier payments", "Supplier credit notes", "Supplier ageing"],
     },
     reading: [
       {
@@ -435,7 +435,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "The deal needs firewalls from Smart Technologies, a supplier we have not used before.",
           "Add them here with a thirty-day payment term, before the purchase order goes out.",
-          "The bill, once that feature exists, is entered against this record rather than a name typed fresh each time.",
+          "The bill is then entered on Supplier bills against this record, rather than a name typed fresh each time.",
         ],
       },
     ],
@@ -1511,6 +1511,191 @@ export const HELP: Record<string, HelpEntry> = {
     watchFor: [
       "Bills in foreign currency are refused. Company expenses do not freeze an exchange rate, so the bill and the payment would convert at different rates and leave a residue on the payables account that never clears and that no account exists to absorb. Record it in taka.",
       "Editing a bill after it has posted is refused for the figures the entry was built from — the amount, the category and the currency. Correcting those is a reversal.",
+    ],
+  },
+
+  // ── Payables: what we owe suppliers ───────────────────────────────────────
+  "accounting/supplier-bills": {
+    title: "Supplier bills",
+    lede: "What a supplier charges us for goods or services bought for a Won deal. A bill is entered as a draft and posts nothing until a Super Admin approves it.",
+    step: "record",
+    connects: {
+      fedBy: ["Suppliers", "Won deals in the Sales Hub", "VAT codes"],
+      feeds: ["Goods Bought for Won Deals", "Subcontract & Resold Services", "Input VAT", "Trade Payables, Suppliers", "Supplier ageing"],
+    },
+    reading: [
+      {
+        name: "Draft and Approved",
+        body: "A draft can still be edited and has not reached the ledger. Approved means it has posted, and from then on it can only be paid or reduced by a credit note.",
+      },
+      {
+        name: "Goods and Service lines",
+        body: "Goods are held against the deal until they are delivered to the customer. A service is a cost of the deal straight away.",
+      },
+      {
+        name: "The net, VAT and total shown while typing",
+        body: "A preview. The figures that count are worked out by the server when the bill is saved, from the VAT code on each line.",
+      },
+    ],
+    does: [
+      {
+        name: "Enter a bill",
+        body: "Supplier, bill number, dates, currency, and one line per item. Every line names the Won deal it was bought for, so the deal's margin can be read later.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Edit a draft",
+        body: "Any field, until it is approved.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Approve",
+        body: "Posts the bill. Refused for the person who entered it: someone else has to check it.",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Firewalls bought for a Won deal",
+        steps: [
+          "Finance enters Smart Technologies' bill: one Goods line of 8,00,000.00 against the deal, VAT code 15%.",
+          "The bill saves as a draft with 1,20,000.00 of VAT and a total of 9,20,000.00. Nothing has posted.",
+          "A Super Admin approves it. Goods Bought for Won Deals and Input VAT are debited, and Trade Payables is credited with 9,20,000.00.",
+          "The bill now appears on Supplier ageing, and can be picked on Supplier payments.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Only Won deals can be chosen. A deal still being negotiated has nothing to buy for yet.",
+      "A bill in dollars converts to taka at the rate for the bill date, and that rate is frozen on the bill.",
+      "Attaching the supplier's own bill as a file is not built yet.",
+    ],
+  },
+
+  "accounting/supplier-payments": {
+    title: "Supplier payments",
+    lede: "Money paid to a supplier, split across the bills it settles. Anything not matched to a bill is an advance, held until a bill arrives.",
+    step: "record",
+    connects: {
+      fedBy: ["Approved supplier bills"],
+      feeds: ["Trade Payables, Suppliers", "Advance to Suppliers", "The bank", "Exchange Gain or Exchange Loss"],
+    },
+    reading: [
+      {
+        name: "Allocations",
+        body: "Which bills this payment clears, and by how much. They are typed in the payment's own currency.",
+      },
+      {
+        name: "Advance",
+        body: "The part of the payment not allocated to any bill. It sits in Advance to Suppliers until it is matched.",
+      },
+    ],
+    does: [
+      {
+        name: "Record a payment",
+        body: "Supplier, date, amount and currency, and how much of it goes to each open bill. A payment cannot be allocated past what a bill still owes, or to another supplier's bill.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Approve",
+        body: "Posts the payment, after checking the allocations again in case another payment cleared the same bill meanwhile. Refused for the person who recorded it.",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        name: "Match an advance",
+        body: "Once the bill for an advance arrives and is approved, moves the advance onto it: Debit Trade Payables, Credit Advance to Suppliers.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Paying part up front",
+        steps: [
+          "Smart Technologies asks for 3,00,000.00 before shipping. Nothing has been billed yet, so the payment is recorded with no allocations.",
+          "Once approved, the bank drops and Advance to Suppliers holds 3,00,000.00.",
+          "The bill arrives and is approved. Match the advance to it, and the bill's balance falls by 3,00,000.00.",
+        ],
+      },
+    ],
+    watchFor: [
+      "A dollar payment can only settle dollar bills. The difference between the bill's rate and the payment's rate posts to Exchange Gain or Exchange Loss.",
+      "A dollar advance cannot be matched on this page yet. Record that match as a hand-typed journal, with its exchange difference.",
+      "Paying a dollar bill in taka leaves any exchange difference to a hand-typed journal.",
+    ],
+  },
+
+  "accounting/supplier-credit-notes": {
+    title: "Supplier credit notes",
+    lede: "A supplier reducing a bill it has already sent, for goods returned or a price corrected. It runs the bill backwards for the part credited.",
+    step: "record",
+    connects: {
+      fedBy: ["Approved supplier bills"],
+      feeds: ["Trade Payables, Suppliers", "Goods Bought for Won Deals", "Subcontract & Resold Services", "Input VAT", "Supplier ageing"],
+    },
+    does: [
+      {
+        name: "Raise a credit note",
+        body: "Against one approved bill, line by line. Each line can be credited only up to what is left on it after earlier credit notes, drafts included.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Approve",
+        body: "Posts it: Debit Trade Payables, Credit the bill line's own account and Input VAT. Refused for the person who raised it.",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Two firewalls sent back",
+        steps: [
+          "Two of ten firewalls arrive damaged and go back. The supplier issues a credit note for 1,60,000.00 plus 24,000.00 VAT.",
+          "Raise it against the original bill's firewall line, and have it approved.",
+          "The bill now owes 1,84,000.00 less, and Supplier ageing shows the lower figure.",
+        ],
+      },
+    ],
+    watchFor: [
+      "A draft bill cannot be credited. Edit the draft instead.",
+      "Goods already delivered to the customer are credited as if still held; that case arrives with the selling side.",
+    ],
+  },
+
+  "accounting/supplier-ageing": {
+    title: "Supplier ageing",
+    lede: "What is still owed on every approved bill, grouped by how far past its due date it is. It is also where the payables account is checked against the bills behind it.",
+    step: "read",
+    connects: {
+      fedBy: ["Supplier bills", "Supplier payments", "Supplier credit notes"],
+      feeds: ["Supplier payments, which offers these bills to pay"],
+    },
+    reading: [
+      NUMBER_CONVENTIONS,
+      {
+        name: "The buckets",
+        body: "Not due, 1 to 30 days late, 31 to 60, 61 to 90, and over 90, counted from each bill's due date to today.",
+      },
+      {
+        name: "The tie-out",
+        body: "The balance on Trade Payables, Suppliers compared with the total still owed on bills. When they differ, a warning prints both figures. The usual cause is a hand-typed journal posted straight to the payables account, or an opening balance with no bill behind it.",
+      },
+    ],
+    does: [
+      {
+        name: "Read what is owed",
+        body: "Per bill, with its supplier, due date and bucket. Nothing is changed from here.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "Deciding what to pay this week",
+        steps: [
+          "Open Supplier ageing and read the over-90 and 61 to 90 buckets first.",
+          "Note the bills, then record the payment on Supplier payments, where the same bills are offered.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Draft bills and draft payments are left out. Only what has posted counts.",
     ],
   },
 }

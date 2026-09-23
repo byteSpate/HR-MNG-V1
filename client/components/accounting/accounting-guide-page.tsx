@@ -254,7 +254,8 @@ const STEPS: Step[] = [
 /**
  * Every debit/credit pair below is taken straight from the posting code that
  * actually runs — `expense.posting.ts`, `settlement.posting.ts`,
- * `cost.posting.ts`, `asset.capitalise.ts`, `depreciation.posting.ts` — not
+ * `cost.posting.ts`, `asset.capitalise.ts`, `depreciation.posting.ts`,
+ * `supplierBill.posting.ts` — not
  * inferred from account names. Amounts are illustrative; the accounts and
  * which side each lands on are real.
  */
@@ -358,11 +359,35 @@ const MODULES: ModuleEntry[] = [
     note: (
       <>
         Nothing posts yet. Adding a Customer or Supplier is master data, the same as adding a
-        department or an account. The first real entry is a bill or an invoice, once buying and
-        selling are built.
+        department or an account. The first real entry against a supplier is a bill, below.
+        Invoices to customers arrive with the selling side, which is not built yet.
       </>
     ),
     also: "Customers · Suppliers",
+  },
+  {
+    id: "supplier-bill",
+    title: "A Supplier Bill",
+    trigger: (
+      <>
+        Smart Technologies bills ৳8,00,000 of firewalls bought for a Won deal, plus 15% VAT.
+        Finance enters the bill against the deal; a Super Admin other than the person who
+        entered it approves it, and only then does it post:
+      </>
+    ),
+    lines: [
+      { side: "Debit", account: "Goods Bought for Won Deals", amount: "৳8,00,000" },
+      { side: "Debit", account: "Input VAT", amount: "৳1,20,000" },
+      { side: "Credit", account: "Trade Payables, Suppliers", amount: "৳9,20,000" },
+    ],
+    note: (
+      <>
+        Paying it is Debit Trade Payables, Credit Bank, for what is cleared. Money paid before
+        any bill exists waits in Advance to Suppliers until it is matched to one. A credit note
+        for returned goods runs the bill backwards for the part returned.
+      </>
+    ),
+    also: "Supplier bills · Supplier payments · Supplier credit notes · Supplier ageing",
   },
   {
     id: "manual-journal",
