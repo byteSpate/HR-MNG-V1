@@ -6,6 +6,7 @@ vi.mock("../../config/prisma", () => ({
     receipt: { findUnique: vi.fn(), update: vi.fn() },
     receiptAllocation: { create: vi.fn() },
     receiptOpeningAllocation: { create: vi.fn() },
+    auditLog: { create: vi.fn() },
   },
 }))
 vi.mock("./receipt.allocation", () => ({ assertReceivable: vi.fn(), assertOpeningReceivable: vi.fn() }))
@@ -86,7 +87,7 @@ function arrangeReceipt(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
 })
 
