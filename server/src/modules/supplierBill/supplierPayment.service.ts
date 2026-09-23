@@ -15,7 +15,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { assertAllocatable } from "./supplierBill.allocation"
+import { assertAllocatable, assertOpeningPayable } from "./supplierBill.allocation"
 import type { CreateSupplierPaymentInput } from "./supplierPayment.validators"
 
 export async function listSupplierPayments() {
@@ -72,8 +72,16 @@ async function toStoredAllocations(tx: PrismaNamespace.TransactionClient, input:
 
 export async function createSupplierPayment(input: CreateSupplierPaymentInput, actor: AccessTokenPayload) {
   const allocatedTotal = input.allocations.reduce((sum, a) => sum.plus(a.amount), new Prisma.Decimal(0))
-  if (allocatedTotal.greaterThan(input.amount)) {
+  const openingAmount = input.openingAllocation ? new Prisma.Decimal(input.openingAllocation.amount) : null
+  const totalAllocated = openingAmount ? allocatedTotal.plus(openingAmount) : allocatedTotal
+  if (totalAllocated.greaterThan(input.amount)) {
     throw new AppError(400, "Allocations cannot add up to more than the payment amount")
+  }
+  // The opening balance is always taka, recorded once at go-live; a USD
+  // payment against it would need an exchange difference this reclass does
+  // not work out, the same reason matchAdvance refuses a USD advance.
+  if (openingAmount && input.currency === "USD") {
+    throw new AppError(400, "A USD payment cannot settle the opening balance, which is in taka")
   }
 
   return prisma.$transaction(async (tx) => {
@@ -84,6 +92,10 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
 
     const allocations = await toStoredAllocations(tx, input)
     await assertAllocatable(tx, input.supplierId, allocations)
+
+    const openingAllocation = openingAmount
+      ? await assertOpeningPayable(tx, input.supplierId, openingAmount)
+      : null
 
     const payment = await tx.supplierPayment.create({
       data: {
@@ -97,6 +109,9 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
         status: "DRAFT",
         createdBy: actor.sub,
         allocations: { create: allocations },
+        ...(openingAllocation
+          ? { openingAllocations: { create: [{ openingBalanceId: openingAllocation.openingBalanceId, amount: openingAmount!.toFixed(2) }] } }
+          : {}),
       },
       include: { allocations: true },
     })

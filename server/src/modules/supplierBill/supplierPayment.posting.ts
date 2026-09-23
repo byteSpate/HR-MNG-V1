@@ -9,7 +9,7 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { assertAllocatable } from "./supplierBill.allocation"
+import { assertAllocatable, assertOpeningPayable } from "./supplierBill.allocation"
 import type { MatchAdvanceInput } from "./supplierPayment.validators"
 
 type Line = SystemJournalInput["lines"][number]
@@ -24,6 +24,11 @@ interface AllocationForPosting {
   matchedAt: Date | null
 }
 
+interface OpeningAllocationForPosting {
+  amount: Prisma.Decimal
+  matchedAt: Date | null
+}
+
 interface PaymentForPosting {
   id: string
   supplierId: string
@@ -33,6 +38,7 @@ interface PaymentForPosting {
   currency: "BDT" | "USD"
   fxRateToBdt: Prisma.Decimal | null
   allocations: AllocationForPosting[]
+  openingAllocations: OpeningAllocationForPosting[]
 }
 
 const ZERO = new Prisma.Decimal(0)
@@ -53,9 +59,12 @@ export function buildSupplierPaymentLines(
   fxRules: ResolvedRules
 ): Line[] {
   // Only allocations chosen at draft time belong to this journal. One
-  // matched later (matchAdvance) posts its own reclass, once.
+  // matched later (matchAdvance) posts its own reclass, once. The opening
+  // balance clears the same way a bill does, so it is counted alongside it
+  // rather than sitting in 1232 as an advance.
   const upfront = payment.allocations.filter((a) => a.matchedAt === null)
-  const cleared = upfront.reduce((sum, a) => sum.plus(a.amount), ZERO)
+  const upfrontOpening = payment.openingAllocations.filter((a) => a.matchedAt === null)
+  const cleared = [...upfront, ...upfrontOpening].reduce((sum, a) => sum.plus(a.amount), ZERO)
 
   let advance: Prisma.Decimal
   let exchange = ZERO
@@ -91,6 +100,7 @@ async function loadPaymentForPosting(tx: PrismaNamespace.TransactionClient, id: 
     select: {
       id: true, supplierId: true, amount: true, sourceAmount: true, currency: true, fxRateToBdt: true,
       allocations: { select: { billId: true, amount: true, amountUsd: true, matchedAt: true } },
+      openingAllocations: { select: { amount: true, matchedAt: true } },
     },
   })
 }
@@ -110,24 +120,31 @@ export async function postSupplierPayment(tx: PrismaNamespace.TransactionClient,
 }
 
 export async function approveSupplierPayment(id: string, actor: AccessTokenPayload) {
-  const payment = await prisma.supplierPayment.findUnique({ where: { id }, include: { allocations: true } })
+  const payment = await prisma.supplierPayment.findUnique({
+    where: { id },
+    include: { allocations: true, openingAllocations: true },
+  })
   if (!payment) throw new AppError(404, "Supplier payment not found")
   if (payment.status !== "DRAFT") throw new AppError(409, `This payment is already ${payment.status.toLowerCase()}`)
   if (payment.createdBy === actor.sub) throw new AppError(403, "You prepared this payment and cannot also approve it")
 
   return prisma.$transaction(async (tx) => {
     // Re-checked here, not only at draft time: another payment against the
-    // same bill may have been approved in between.
+    // same bill (or the same opening balance) may have been approved in
+    // between.
     await assertAllocatable(
       tx,
       payment.supplierId,
       payment.allocations.filter((a) => a.matchedAt === null).map((a) => ({ billId: a.billId, amount: a.amount.toString() }))
     )
+    for (const oa of (payment.openingAllocations ?? []).filter((a) => a.matchedAt === null)) {
+      await assertOpeningPayable(tx, payment.supplierId, oa.amount)
+    }
 
     const updated = await tx.supplierPayment.update({
       where: { id },
       data: { status: "APPROVED", approvedBy: actor.sub, approvedAt: new Date() },
-      include: { allocations: true },
+      include: { allocations: true, openingAllocations: true },
     })
     await postSupplierPayment(tx, id, actor.sub)
     await writeAudit(tx, { entity: "SUPPLIER_PAYMENT", entityId: id, action: "APPROVE", changedBy: actor.sub })
@@ -141,7 +158,10 @@ export async function approveSupplierPayment(id: string, actor: AccessTokenPaylo
  * Cr 1232, for exactly the amount matched now, never the whole payment.
  */
 export async function matchAdvance(paymentId: string, input: MatchAdvanceInput, actor: AccessTokenPayload) {
-  const payment = await prisma.supplierPayment.findUnique({ where: { id: paymentId }, include: { allocations: true } })
+  const payment = await prisma.supplierPayment.findUnique({
+    where: { id: paymentId },
+    include: { allocations: true, openingAllocations: true },
+  })
   if (!payment) throw new AppError(404, "Supplier payment not found")
   if (payment.status !== "APPROVED") throw new AppError(409, "Only an approved payment carries a matchable advance")
   // A USD advance sits in 1232 at the payment's rate and the bill in 2111 at
@@ -154,28 +174,64 @@ export async function matchAdvance(paymentId: string, input: MatchAdvanceInput, 
     )
   }
 
-  const allocated = payment.allocations.reduce((sum, a) => sum.plus(a.amount), new Prisma.Decimal(0))
+  const allocated = [...payment.allocations, ...(payment.openingAllocations ?? [])].reduce(
+    (sum, a) => sum.plus(a.amount),
+    new Prisma.Decimal(0)
+  )
   const available = payment.amount.minus(allocated)
   if (new Prisma.Decimal(input.amount).greaterThan(available)) {
     throw new AppError(400, `Only ${available.toFixed(2)} is still unmatched on this payment`)
   }
 
   return prisma.$transaction(async (tx) => {
-    await assertAllocatable(tx, payment.supplierId, [{ billId: input.billId, amount: input.amount }])
+    if (input.billId) {
+      await assertAllocatable(tx, payment.supplierId, [{ billId: input.billId, amount: input.amount }])
 
-    await tx.supplierPaymentAllocation.create({
-      data: { paymentId, billId: input.billId, amount: input.amount, matchedAt: new Date() },
+      await tx.supplierPaymentAllocation.create({
+        data: { paymentId, billId: input.billId, amount: input.amount, matchedAt: new Date() },
+      })
+
+      const [rules, bill] = await Promise.all([
+        loadRules(tx, "SUPPLIER_PAYMENT"),
+        tx.supplierBill.findUniqueOrThrow({ where: { id: input.billId }, select: { billNumber: true } }),
+      ])
+
+      const result = await postSystemJournal(tx, {
+        date: toLedgerDate(new Date()),
+        narration: `Advance matched — bill ${bill.billNumber}`,
+        source: { module: "SUPPLIER", refId: `${paymentId}:${input.billId}`, event: "ADVANCE_MATCH" },
+        lines: [
+          { accountCode: resolveAccountCode(rules, "PAYABLE"), debit: input.amount, supplierId: payment.supplierId },
+          { accountCode: resolveAccountCode(rules, "ADVANCE"), credit: input.amount, supplierId: payment.supplierId },
+        ],
+        createdBy: actor.sub,
+      })
+
+      await writeAudit(tx, {
+        entity: "SUPPLIER_PAYMENT",
+        entityId: paymentId,
+        action: "UPDATE",
+        changedBy: actor.sub,
+        after: { matchedBillId: input.billId, amount: input.amount },
+      })
+
+      return result
+    }
+
+    // Otherwise the opening balance (input.openingBalanceId): matchAdvanceSchema's
+    // refine guarantees exactly one of the two is set.
+    const { openingBalanceId } = await assertOpeningPayable(tx, payment.supplierId, new Prisma.Decimal(input.amount))
+
+    await tx.supplierOpeningAllocation.create({
+      data: { paymentId, openingBalanceId, amount: input.amount, matchedAt: new Date() },
     })
 
-    const [rules, bill] = await Promise.all([
-      loadRules(tx, "SUPPLIER_PAYMENT"),
-      tx.supplierBill.findUniqueOrThrow({ where: { id: input.billId }, select: { billNumber: true } }),
-    ])
+    const rules = await loadRules(tx, "SUPPLIER_PAYMENT")
 
     const result = await postSystemJournal(tx, {
       date: toLedgerDate(new Date()),
-      narration: `Advance matched — bill ${bill.billNumber}`,
-      source: { module: "SUPPLIER", refId: `${paymentId}:${input.billId}`, event: "ADVANCE_MATCH" },
+      narration: "Advance matched — opening balance",
+      source: { module: "SUPPLIER", refId: `${paymentId}:ob:${openingBalanceId}`, event: "ADVANCE_MATCH" },
       lines: [
         { accountCode: resolveAccountCode(rules, "PAYABLE"), debit: input.amount, supplierId: payment.supplierId },
         { accountCode: resolveAccountCode(rules, "ADVANCE"), credit: input.amount, supplierId: payment.supplierId },
@@ -188,7 +244,7 @@ export async function matchAdvance(paymentId: string, input: MatchAdvanceInput, 
       entityId: paymentId,
       action: "UPDATE",
       changedBy: actor.sub,
-      after: { matchedBillId: input.billId, amount: input.amount },
+      after: { matchedOpeningBalanceId: openingBalanceId, amount: input.amount },
     })
 
     return result
