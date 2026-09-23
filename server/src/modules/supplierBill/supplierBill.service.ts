@@ -78,7 +78,7 @@ export async function listSupplierBills() {
   return prisma.supplierBill.findMany({
     select: {
       id: true, supplierId: true, billNumber: true, date: true, dueDate: true,
-      currency: true, status: true, createdBy: true,
+      currency: true, fxRateToBdt: true, status: true, createdBy: true,
       lines: true,
     },
     orderBy: { date: "desc" },
