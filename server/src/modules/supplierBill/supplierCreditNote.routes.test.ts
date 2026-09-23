@@ -24,6 +24,17 @@ describe("GET /api/supplier-credit-notes", () => {
   })
 })
 
+describe("GET /api/supplier-credit-notes (read gate)", () => {
+  it("refuses an employee with 403: supplier credit notes are Finance and Admin only", async () => {
+    const res = await request(app).get("/api/supplier-credit-notes").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+  it("refuses an employee reading one credit note with 403", async () => {
+    const res = await request(app).get("/api/supplier-credit-notes/cn1").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+})
+
 describe("POST /api/supplier-credit-notes", () => {
   it("refuses a non-Finance, non-Admin role with 403", async () => {
     const res = await request(app)

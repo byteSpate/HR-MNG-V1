@@ -26,6 +26,17 @@ describe("GET /api/supplier-payments", () => {
   })
 })
 
+describe("GET /api/supplier-payments (read gate)", () => {
+  it("refuses an employee with 403: supplier payments are Finance and Admin only", async () => {
+    const res = await request(app).get("/api/supplier-payments").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+  it("refuses an employee reading one payment with 403", async () => {
+    const res = await request(app).get("/api/supplier-payments/p1").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+})
+
 describe("POST /api/supplier-payments", () => {
   it("refuses a non-Finance, non-Admin role with 403", async () => {
     const res = await request(app)
