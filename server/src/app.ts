@@ -20,6 +20,7 @@ import vatCodeRoutes from "./modules/vatCode/vatCode.routes"
 import supplierBillRoutes from "./modules/supplierBill/supplierBill.routes"
 import supplierPaymentRoutes from "./modules/supplierBill/supplierPayment.routes"
 import supplierCreditNoteRoutes from "./modules/supplierBill/supplierCreditNote.routes"
+import customerPoRoutes from "./modules/receivables/customerPo.routes"
 import dashboardRoutes from "./modules/dashboard/dashboard.routes"
 import notificationRoutes from "./modules/notification/notification.routes"
 import salesRoutes from "./modules/sales/sales.routes"
@@ -86,6 +87,7 @@ app.use("/api/vat-codes", vatCodeRoutes)
 app.use("/api/supplier-bills", supplierBillRoutes)
 app.use("/api/supplier-payments", supplierPaymentRoutes)
 app.use("/api/supplier-credit-notes", supplierCreditNoteRoutes)
+app.use("/api/customer-pos", customerPoRoutes)
 app.use("/api/suppliers", supplierRoutes)
 
 app.use(errorHandler)
