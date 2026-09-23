@@ -51,6 +51,15 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    // Receivables & payables, Phase 2 (Buying): what we owe suppliers.
+    // Its own group rather than more rows under Ledger, which would take
+    // that group back to the crowding the split was made to fix.
+    label: "Payables",
+    items: [
+      { label: "Supplier bills", href: "/finance/accounting/supplier-bills", icon: "RiBillLine" },
+    ],
+  },
+  {
     // The guide's "Report" step: what gets filed.
     label: "Statements",
     items: [
