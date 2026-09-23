@@ -9,6 +9,7 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { heldGoodsCost } from "../receivables/costRelease"
 
 type Line = SystemJournalInput["lines"][number]
 
@@ -24,14 +25,20 @@ interface BillLineForCredit {
   opportunityId: string
 }
 
-/** Every GOODS line still credits 1214 in Phase 2, never 5121, because
- *  Phase 3's delivery event (COST_RELEASE) is what would ever move a
- *  line's cost out of 1214, and it has no caller yet. See the note in the
- *  Phase 2 plan, Task 15. */
+const ZERO = new Prisma.Decimal(0)
+
+/** A GOODS line credits 1214 up to what its deal still holds there — once
+ *  Phase 3a's invoice releases cost to 5121, a credit note that still
+ *  credited 1214 in full would push the deal's held balance negative — and
+ *  5121 for whatever is left, matching design §3.1's "1214, or 5121 if
+ *  already delivered". `heldByDeal` is read once, under the credit note's
+ *  own lock, and decremented here so two GOODS lines on the same deal split
+ *  correctly. */
 export function buildSupplierCreditNoteLines(
   note: CreditNoteForPosting,
   billLines: BillLineForCredit[],
-  rules: ResolvedRules
+  rules: ResolvedRules,
+  heldByDeal: Map<string, Prisma.Decimal>
 ): Line[] {
   const byId = new Map(billLines.map((l) => [l.id, l]))
   const lines: Line[] = []
@@ -41,8 +48,17 @@ export function buildSupplierCreditNoteLines(
     const billLine = byId.get(line.billLineId)
     if (!billLine) throw new AppError(400, `Credit note line references a bill line that does not exist: ${line.billLineId}`)
 
-    const key = billLine.kind === "GOODS" ? "GOODS" : "SERVICE"
-    lines.push({ accountCode: resolveAccountCode(rules, key), credit: line.amount.toFixed(2), opportunityId: billLine.opportunityId })
+    if (billLine.kind === "GOODS") {
+      const opp = billLine.opportunityId
+      const held = Prisma.Decimal.max(heldByDeal.get(opp) ?? ZERO, ZERO)
+      const toGoods = Prisma.Decimal.min(line.amount, held)
+      const toDelivered = line.amount.minus(toGoods)
+      if (!toGoods.isZero()) lines.push({ accountCode: resolveAccountCode(rules, "GOODS"), credit: toGoods.toFixed(2), opportunityId: opp })
+      if (!toDelivered.isZero()) lines.push({ accountCode: resolveAccountCode(rules, "DELIVERED"), credit: toDelivered.toFixed(2), opportunityId: opp })
+      heldByDeal.set(opp, held.minus(toGoods))
+    } else {
+      lines.push({ accountCode: resolveAccountCode(rules, "SERVICE"), credit: line.amount.toFixed(2), opportunityId: billLine.opportunityId })
+    }
     gross = gross.plus(line.amount)
 
     if (!line.vatAmount.isZero()) {
@@ -71,12 +87,21 @@ export async function postSupplierCreditNote(tx: PrismaNamespace.TransactionClie
     select: { id: true, kind: true, opportunityId: true },
   })
   const rules = await loadRules(tx, "SUPPLIER_CREDIT")
+  const goodsCode = resolveAccountCode(rules, "GOODS")
+
+  // One read per distinct deal a GOODS line touches, done once before the
+  // lines are built, so two lines on the same deal split against the same
+  // starting balance rather than each re-reading it fresh.
+  const goodsDeals = [...new Set(billLines.filter((l) => l.kind === "GOODS").map((l) => l.opportunityId))]
+  const heldByDeal = new Map(
+    await Promise.all(goodsDeals.map(async (opp) => [opp, await heldGoodsCost(tx, opp, goodsCode)] as const))
+  )
 
   return postSystemJournal(tx, {
     date: toLedgerDate(new Date()),
     narration: `Credit note — ${note.supplier.name} — Bill ${note.bill.billNumber}`,
     source: { module: "SUPPLIER", refId: noteId, event: "CREDIT" },
-    lines: buildSupplierCreditNoteLines(note, billLines, rules),
+    lines: buildSupplierCreditNoteLines(note, billLines, rules, heldByDeal),
     createdBy: actorUserId,
   })
 }
