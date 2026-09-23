@@ -11,6 +11,7 @@ vi.mock("../../config/prisma", () => ({
 }))
 
 import app from "../../app"
+import prisma from "../../config/prisma"
 import { signAccessToken } from "../auth/auth.utils"
 
 function tokenFor(role: "EMPLOYEE" | "FINANCE_OFFICER" | "SUPER_ADMIN") {
@@ -31,6 +32,21 @@ describe("POST /api/supplier-bills", () => {
       .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
       .send({})
     expect(res.status).toBe(403)
+  })
+})
+
+describe("GET /api/supplier-bills/reports/ageing", () => {
+  it("refuses an Employee with 403", async () => {
+    const res = await request(app).get("/api/supplier-bills/reports/ageing").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+
+  it("returns the report to Finance, not a bill looked up by the id 'reports'", async () => {
+    vi.mocked(prisma.supplierBill.findMany).mockResolvedValue([])
+    const res = await request(app).get("/api/supplier-bills/reports/ageing").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual([])
+    expect(prisma.supplierBill.findUnique).not.toHaveBeenCalled()
   })
 })
 
