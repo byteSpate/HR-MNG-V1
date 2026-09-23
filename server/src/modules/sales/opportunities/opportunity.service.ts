@@ -21,6 +21,7 @@ import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.pr
 import { presentChanges, resolveNames } from "../accounts/history.present"
 import { createTaskIn } from "../tasks/task.service"
 import { stampOfferedOn } from "../funnel/funnel.edit"
+import { ensureCustomerForAccount } from "../../customer/customer.link"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
@@ -376,6 +377,10 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
         ? { wonBy: { connect: { id: current.ownerEmployeeId } } } : {}),
     }
     const updated = await tx.opportunity.update({ where: { id }, data, include: INCLUDE })
+    // Spec §2: a Customer exists from the day the account's first deal is
+    // Won. Never blocks the Won: a name clash is resolved on Customers, and
+    // Task 6's customerPo.service refuses a PO until it is.
+    if (body.status === "WON") await ensureCustomerForAccount(tx, current.salesAccountId, "skip-on-conflict", actor.sub)
     await writeAudit(tx, {
       entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
       before: { status: current.status }, after: { status: body.status }, note: body.statusReason,
