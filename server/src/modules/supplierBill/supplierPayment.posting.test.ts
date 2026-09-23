@@ -29,10 +29,15 @@ function expectBalanced(lines: Line[]) {
   expect(debit.toFixed(2)).toBe(credit.toFixed(2))
 }
 
-function bdtPayment(amount: string, allocations: Array<{ amount: string; matchedAt?: Date }>) {
+function bdtPayment(
+  amount: string,
+  allocations: Array<{ amount: string; matchedAt?: Date }>,
+  openingAllocations: Array<{ amount: string; matchedAt?: Date }> = []
+) {
   return {
     id: "p", supplierId: "sup-1", amount: d(amount), sourceAmount: null, currency: "BDT" as const, fxRateToBdt: null,
     allocations: allocations.map((a) => ({ billId: "b1", amount: d(a.amount), amountUsd: null, matchedAt: a.matchedAt ?? null })),
+    openingAllocations: openingAllocations.map((a) => ({ amount: d(a.amount), matchedAt: a.matchedAt ?? null })),
   }
 }
 
@@ -81,6 +86,43 @@ describe("buildSupplierPaymentLines, taka", () => {
     expect(lines).toEqual(expect.arrayContaining([expect.objectContaining({ accountCode: "1232", debit: "200000.00" })]))
     expectBalanced(lines)
   })
+
+  it("debits 2111 for an opening-balance allocation instead of treating it as an advance", () => {
+    const lines = buildSupplierPaymentLines(bdtPayment("40000", [], [{ amount: "40000" }]), RULES, FX_RULES)
+
+    expect(lines.map((l) => l.accountCode)).not.toContain("1232")
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ accountCode: "2111", debit: "40000.00" }),
+        expect.objectContaining({ accountCode: "1242", credit: "40000.00" }),
+      ])
+    )
+    expectBalanced(lines)
+  })
+
+  it("splits between 2111 and 1232 when the opening-balance allocation is less than the payment", () => {
+    const lines = buildSupplierPaymentLines(bdtPayment("100000", [], [{ amount: "40000" }]), RULES, FX_RULES)
+
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ accountCode: "2111", debit: "40000.00" }),
+        expect.objectContaining({ accountCode: "1232", debit: "60000.00" }),
+      ])
+    )
+    expectBalanced(lines)
+  })
+
+  it("ignores an opening-balance allocation matched later", () => {
+    const lines = buildSupplierPaymentLines(
+      bdtPayment("50000", [], [{ amount: "50000", matchedAt: new Date("2026-11-01") }]),
+      RULES,
+      FX_RULES
+    )
+
+    expect(lines.find((l) => l.accountCode === "2111")).toBeUndefined()
+    expect(lines).toEqual(expect.arrayContaining([expect.objectContaining({ accountCode: "1232", debit: "50000.00" })]))
+    expectBalanced(lines)
+  })
 })
 
 describe("buildSupplierPaymentLines, USD", () => {
@@ -93,6 +135,7 @@ describe("buildSupplierPaymentLines, USD", () => {
       allocations: allocatedUsd
         ? [{ billId: "b2", amount: d(allocatedUsd).times("122.5"), amountUsd: d(allocatedUsd), matchedAt: null }]
         : [],
+      openingAllocations: [],
     }
   }
 
@@ -115,6 +158,7 @@ describe("buildSupplierPaymentLines, USD", () => {
     const payment = {
       id: "p", supplierId: "sup-1", currency: "USD" as const, fxRateToBdt: rate, amount: d("10000").times(rate), sourceAmount: d("10000"),
       allocations: [{ billId: "b2", amount: d("1225000"), amountUsd: d("10000"), matchedAt: null }],
+      openingAllocations: [],
     }
     const lines = buildSupplierPaymentLines(payment, RULES, FX_RULES)
 
