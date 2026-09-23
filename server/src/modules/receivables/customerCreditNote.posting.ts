@@ -10,7 +10,7 @@ import { toLedgerDate } from "../accounting/accounting.utils"
 import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import type { ResolvedRules } from "../posting/posting.types"
 import { assertWithinOutstanding, CREDIT_NOTE_INCLUDE } from "./customerCreditNote.service"
-import { lockDeal } from "./receivables.position"
+import { contractPosition, lockDeal, splitAgainst, type ContractPosition } from "./receivables.position"
 
 type Line = SystemJournalInput["lines"][number]
 
@@ -18,23 +18,43 @@ export interface CreditNoteForPosting {
   id: string
   customerId: string
   opportunityId: string
+  trackDelivery: boolean
   lines: Array<{ amount: Prisma.Decimal; vatAmount: Prisma.Decimal; kind: SaleLineKind }>
 }
 
-/** design §3.3: "2170 first, then Revenue; 2150 for the VAT / Cr 1220".
- *  With delivery not tracked in 3a, 2170 is always nil, so this debits
- *  revenue directly, mirroring buildInvoiceLines the same way its credit
- *  mirrors that debit. */
-export function buildCustomerCreditNoteLines(note: CreditNoteForPosting, rules: ResolvedRules): Line[] {
+/**
+ * spec §3.3: "2170 first, then Revenue; 2150 for the VAT / Cr 1220". With
+ * delivery not tracked, 2170 is always nil, so this debits revenue
+ * directly, mirroring buildInvoiceLines the same way its credit mirrors
+ * that debit. Tracked: the net is debited as splitAgainst(net,
+ * position.unearned) — what is Unearned clears first, and whatever is left
+ * comes out of revenue, taken from the lines in line order so the reversal
+ * still says which revenue account it reverses.
+ */
+export function buildCustomerCreditNoteLines(note: CreditNoteForPosting, rules: ResolvedRules, position: ContractPosition): Line[] {
   const debits: Line[] = []
+  let net = new Prisma.Decimal(0)
   let gross = new Prisma.Decimal(0)
+  for (const line of note.lines) {
+    net = net.plus(line.amount)
+    gross = gross.plus(line.amount).plus(line.vatAmount)
+  }
+
+  let revenueLeft = net
+  if (note.trackDelivery) {
+    const { fromAvailable, rest } = splitAgainst(net, position.unearned)
+    if (fromAvailable.greaterThan(0)) {
+      debits.push({ accountCode: resolveAccountCode(rules, "UNEARNED"), debit: fromAvailable.toFixed(2), opportunityId: note.opportunityId })
+    }
+    revenueLeft = rest
+  }
 
   for (const line of note.lines) {
-    debits.push({
-      accountCode: resolveAccountCode(rules, line.kind),
-      debit: line.amount.toFixed(2),
-      opportunityId: note.opportunityId,
-    })
+    const take = Prisma.Decimal.min(line.amount, revenueLeft)
+    if (take.greaterThan(0)) {
+      debits.push({ accountCode: resolveAccountCode(rules, line.kind), debit: take.toFixed(2), opportunityId: note.opportunityId })
+    }
+    revenueLeft = revenueLeft.minus(take)
     if (!line.vatAmount.isZero()) {
       debits.push({
         accountCode: resolveAccountCode(rules, "VAT"),
@@ -42,7 +62,6 @@ export function buildCustomerCreditNoteLines(note: CreditNoteForPosting, rules: 
         opportunityId: note.opportunityId,
       })
     }
-    gross = gross.plus(line.amount).plus(line.vatAmount)
   }
 
   return [
@@ -75,7 +94,7 @@ export async function approveCustomerCreditNote(id: string, actor: AccessTokenPa
         invoice: {
           select: {
             id: true, invoiceNumber: true, customerId: true, status: true,
-            po: { select: { opportunityId: true } },
+            po: { select: { opportunityId: true, trackDelivery: true } },
             lines: { select: { amount: true, vatAmount: true } },
             allocations: { where: { receipt: { status: "APPROVED" } }, select: { amount: true } },
             creditNotes: { where: { status: "APPROVED" }, select: { lines: { select: { amount: true, vatAmount: true } } } },
@@ -97,17 +116,19 @@ export async function approveCustomerCreditNote(id: string, actor: AccessTokenPa
       include: CREDIT_NOTE_INCLUDE,
     })
 
-    const rules = await loadRules(tx, "CUSTOMER_CREDIT")
+    const [rules, position] = await Promise.all([
+      loadRules(tx, "CUSTOMER_CREDIT"), contractPosition(tx, note.invoice.po.opportunityId),
+    ])
     await postSystemJournal(tx, {
       date: toLedgerDate(note.date),
       narration: `${note.customer.legalName}, credit note on invoice ${note.invoice.invoiceNumber}`,
       source: { module: "CUSTOMER", refId: id, event: "CREDIT_NOTE" },
       lines: buildCustomerCreditNoteLines(
         {
-          id, customerId: note.customerId, opportunityId: note.invoice.po.opportunityId,
+          id, customerId: note.customerId, opportunityId: note.invoice.po.opportunityId, trackDelivery: note.invoice.po.trackDelivery,
           lines: note.lines.map((l) => ({ amount: l.amount, vatAmount: l.vatAmount, kind: l.invoiceLine.poLine.kind })),
         },
-        rules
+        rules, position
       ),
       createdBy: actor.sub,
     })
