@@ -1732,6 +1732,106 @@ export interface Supplier {
   createdAt: string
 }
 
+export interface VatCode {
+  id: string
+  code: string
+  name: string
+  ratePercent: string
+  isActive: boolean
+}
+
+export type SupplierDocStatus = "DRAFT" | "APPROVED"
+
+export interface SupplierBillLine {
+  id: string
+  description: string
+  kind: "GOODS" | "SERVICE"
+  amount: string
+  sourceAmount: string | null
+  vatCodeId: string
+  vatAmount: string
+  opportunityId: string
+}
+
+export interface SupplierBill {
+  id: string
+  supplierId: string
+  billNumber: string
+  date: string
+  dueDate: string
+  currency: "BDT" | "USD"
+  fxRateToBdt?: string | null
+  status: SupplierDocStatus
+  createdBy?: string
+  approvedBy?: string | null
+  approvedAt?: string | null
+  lines: SupplierBillLine[]
+}
+
+export interface BillableOpportunity {
+  id: string
+  serial: string
+  name: string
+  accountName: string
+}
+
+export interface SupplierPaymentAllocation {
+  id: string
+  billId: string
+  amount: string
+  amountUsd: string | null
+  matchedAt: string | null
+}
+
+export interface SupplierPayment {
+  id: string
+  supplierId: string
+  date: string
+  amount: string
+  sourceAmount: string | null
+  currency: "BDT" | "USD"
+  fxRateToBdt: string | null
+  reference: string | null
+  status: SupplierDocStatus
+  createdBy: string
+  allocations: SupplierPaymentAllocation[]
+}
+
+export interface SupplierCreditNoteLine {
+  id: string
+  billLineId: string
+  amount: string
+  vatAmount: string
+}
+
+export interface SupplierCreditNote {
+  id: string
+  billId: string
+  supplierId: string
+  date: string
+  reason: string
+  status: SupplierDocStatus
+  createdBy: string
+  lines: SupplierCreditNoteLine[]
+}
+
+export type AgeingBucket = "Not due" | "1-30" | "31-60" | "61-90" | "Over 90"
+
+export interface SupplierAgeingRow {
+  billId: string
+  supplierId: string
+  supplierName: string
+  dueDate: string
+  outstanding: string
+  bucket: AgeingBucket
+}
+
+export interface SupplierControlTieOut {
+  subledgerTotal: string
+  glBalance: string
+  ties: boolean
+}
+
 export interface AccountingPeriod {
   id: string
   financialYearId: string
