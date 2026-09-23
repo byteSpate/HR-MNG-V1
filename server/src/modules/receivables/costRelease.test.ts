@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("../../config/prisma", () => ({
   default: {
@@ -18,6 +18,8 @@ import { postSystemJournal } from "../accounting/accounting.posting"
 import { computeCostRelease, dealInvoicing, heldGoodsCost, releaseLateCost } from "./costRelease"
 
 const d = (v: string) => new Prisma.Decimal(v)
+
+beforeEach(() => vi.clearAllMocks())
 
 describe("heldGoodsCost", () => {
   it("is posted debits minus credits on the goods account, for this deal only", async () => {

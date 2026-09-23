@@ -23,7 +23,7 @@ function arrangeCustomer(o: {
     id: "c1", legalName: "Bengal Group", billingAddress: null, bin: null,
   } as any)
   vi.mocked(prisma.customerOpeningBalance.findUnique).mockResolvedValue(
-    o.opening ? { amount: o.opening.amount, asOf: new Date(o.opening.asOf) } : null
+    (o.opening ? { amount: o.opening.amount, asOf: new Date(o.opening.asOf) } : null) as any
   )
   vi.mocked(prisma.invoice.findMany).mockResolvedValue(
     o.invoices.map((i, idx) => ({
