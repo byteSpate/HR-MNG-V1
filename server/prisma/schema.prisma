@@ -1998,6 +1998,11 @@ model Customer {
 
   journalLines   JournalLine[]
   openingBalance CustomerOpeningBalance?
+  // Receivables & payables, Phase 3a.
+  pos         CustomerPo[]
+  invoices    Invoice[]
+  receipts    Receipt[]
+  creditNotes CustomerCreditNote[]
 
   @@index([legalName])
 }
@@ -2040,6 +2045,9 @@ model CustomerOpeningBalance {
   asOf       DateTime
   importedBy String
   createdAt  DateTime @default(now())
+
+  // Receivables & payables, Phase 3a.
+  allocations ReceiptOpeningAllocation[]
 }
 
 model SupplierOpeningBalance {
@@ -2050,6 +2058,9 @@ model SupplierOpeningBalance {
   asOf       DateTime
   importedBy String
   createdAt  DateTime @default(now())
+
+  // Receivables & payables, Phase 3a (Phase 2 fix).
+  allocations SupplierOpeningAllocation[]
 }
 
 // ── RECEIVABLES & PAYABLES — Phase 2 (Buying) ───────────────────────────────
@@ -2064,6 +2075,9 @@ model VatCode {
   isActive    Boolean @default(true)
 
   billLines SupplierBillLine[]
+  // Receivables & payables, Phase 3a.
+  poLines      CustomerPoLine[]
+  invoiceLines InvoiceLine[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2162,6 +2176,9 @@ model SupplierPayment {
   approvedAt DateTime?
 
   allocations SupplierPaymentAllocation[]
+  // Receivables & payables, Phase 3a (Phase 2 fix): allocations against the
+  // supplier's opening balance rather than a bill.
+  openingAllocations SupplierOpeningAllocation[]
 
   createdBy String
   createdAt DateTime @default(now())
@@ -2230,6 +2247,255 @@ model SupplierCreditNoteLine {
 
   @@index([creditNoteId])
   @@index([billLineId])
+}
+
+// ── Receivables & payables, Phase 3a: selling ─────────────────────────────
+
+enum CustomerPoStatus {
+  OPEN
+  /// Every line fully invoiced. Set by invoice approval, never by hand.
+  COMPLETE
+  /// Only while nothing has been invoiced against it. Requires a reason.
+  CANCELLED
+}
+
+/// Which revenue account a line earns into (4130 goods, 4120 services), and
+/// whether it counts toward the goods value that releases held cost.
+enum SaleLineKind {
+  GOODS
+  SERVICE
+}
+
+enum ReceivableDocStatus {
+  DRAFT
+  APPROVED
+}
+
+model CustomerPo {
+  id     String @id @default(uuid())
+  /// BS-CPO-00001, IdCounter "CPO" — our reference. The customer's own PO
+  /// number is `customerPoNumber`.
+  serial String @unique
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  customerId    String
+  customer      Customer    @relation(fields: [customerId], references: [id])
+
+  customerPoNumber String
+  date             DateTime
+  /// A different company to invoice, when the customer asks for one.
+  invoiceTo        String?
+
+  status       CustomerPoStatus @default(OPEN)
+  cancelReason String?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines    CustomerPoLine[]
+  schedule BillingScheduleRow[]
+  invoices Invoice[]
+
+  @@unique([customerId, customerPoNumber])
+  @@index([opportunityId])
+  @@index([status])
+}
+
+model CustomerPoLine {
+  id   String     @id @default(uuid())
+  poId String
+  po   CustomerPo @relation(fields: [poId], references: [id], onDelete: Cascade)
+
+  description String
+  kind        SaleLineKind
+  quantity    Decimal      @db.Decimal(14, 2)
+  unitPrice   Decimal      @db.Decimal(14, 2)
+  /// quantity × unitPrice, net of VAT, worked out by the server at write.
+  amount      Decimal      @db.Decimal(14, 2)
+  vatCodeId   String
+  vatCode     VatCode      @relation(fields: [vatCodeId], references: [id])
+  order       Int          @default(0)
+
+  invoiceLines InvoiceLine[]
+
+  @@index([poId, order])
+}
+
+/// A plan, not a promise (spec §2). Posts nothing and changes no balance.
+model BillingScheduleRow {
+  id          String     @id @default(uuid())
+  poId        String
+  po          CustomerPo @relation(fields: [poId], references: [id], onDelete: Cascade)
+  plannedDate DateTime
+  amount      Decimal    @db.Decimal(14, 2)
+  note        String?
+  order       Int        @default(0)
+
+  @@index([poId, order])
+}
+
+model Invoice {
+  id            String @id @default(uuid())
+  /// The number on the invoice Finance issued elsewhere (Tally, Word).
+  /// Recorded, not generated — decision of 2026-09-23.
+  invoiceNumber String @unique
+
+  poId       String
+  po         CustomerPo @relation(fields: [poId], references: [id])
+  customerId String
+  customer   Customer   @relation(fields: [customerId], references: [id])
+
+  date    DateTime
+  dueDate DateTime
+
+  status     ReceivableDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines       InvoiceLine[]
+  allocations ReceiptAllocation[]
+  creditNotes CustomerCreditNote[]
+
+  @@index([customerId, status])
+  @@index([poId])
+}
+
+model InvoiceLine {
+  id        String         @id @default(uuid())
+  invoiceId String
+  invoice   Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  poLineId  String
+  poLine    CustomerPoLine @relation(fields: [poLineId], references: [id])
+
+  description String
+  /// Net of VAT. Capped by what is left to invoice on the PO line.
+  amount      Decimal @db.Decimal(14, 2)
+  vatCodeId   String
+  vatCode     VatCode @relation(fields: [vatCodeId], references: [id])
+  vatAmount   Decimal @db.Decimal(14, 2)
+
+  creditNoteLines CustomerCreditNoteLine[]
+
+  @@index([invoiceId])
+  @@index([poLineId])
+}
+
+model Receipt {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  date       DateTime
+
+  /// Cash that reached the bank.
+  amount Decimal @db.Decimal(14, 2)
+
+  /// Tax the customer kept (spec §3.3). The certificate fields are memo:
+  /// editable after approval, because the certificate arrives days later.
+  vdsAmount          Decimal   @default(0) @db.Decimal(14, 2)
+  vdsCertificateRef  String?
+  vdsCertificateDate DateTime?
+  aitAmount          Decimal   @default(0) @db.Decimal(14, 2)
+  aitCertificateRef  String?
+  aitCertificateDate DateTime?
+
+  reference String?
+
+  status     ReceivableDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  allocations        ReceiptAllocation[]
+  openingAllocations ReceiptOpeningAllocation[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+/// "This much of this receipt settles this invoice", gross: cash plus the
+/// share of withheld tax. `matchedAt` set = an advance matched later.
+model ReceiptAllocation {
+  id        String    @id @default(uuid())
+  receiptId String
+  receipt   Receipt   @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   Invoice   @relation(fields: [invoiceId], references: [id])
+  amount    Decimal   @db.Decimal(14, 2)
+  matchedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([invoiceId])
+}
+
+/// The same, against what the customer owed on go-live. A separate table
+/// rather than a nullable invoiceId, so every invoice allocation keeps a
+/// non-null invoice and no "exactly one of" check is needed.
+model ReceiptOpeningAllocation {
+  id               String                 @id @default(uuid())
+  receiptId        String
+  receipt          Receipt                @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  openingBalanceId String
+  openingBalance   CustomerOpeningBalance @relation(fields: [openingBalanceId], references: [id])
+  amount           Decimal                @db.Decimal(14, 2)
+  matchedAt        DateTime?
+  createdAt        DateTime               @default(now())
+
+  @@index([openingBalanceId])
+}
+
+model CustomerCreditNote {
+  id         String   @id @default(uuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  date       DateTime
+  reason     String
+
+  status     ReceivableDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines CustomerCreditNoteLine[]
+
+  @@index([invoiceId])
+}
+
+model CustomerCreditNoteLine {
+  id            String             @id @default(uuid())
+  creditNoteId  String
+  creditNote    CustomerCreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  invoiceLineId String
+  invoiceLine   InvoiceLine        @relation(fields: [invoiceLineId], references: [id])
+  amount        Decimal            @db.Decimal(14, 2)
+  vatAmount     Decimal            @db.Decimal(14, 2)
+}
+
+/// Phase 2 fix: a supplier payment settling what we owed on go-live.
+model SupplierOpeningAllocation {
+  id               String                 @id @default(uuid())
+  paymentId        String
+  payment          SupplierPayment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  openingBalanceId String
+  openingBalance   SupplierOpeningBalance @relation(fields: [openingBalanceId], references: [id])
+  amount           Decimal                @db.Decimal(14, 2)
+  matchedAt        DateTime?
+  createdAt        DateTime               @default(now())
+
+  @@index([openingBalanceId])
 }
 
 model JournalAttachment {
@@ -2605,6 +2871,8 @@ model Opportunity {
   // Receivables & payables, Phase 2: every Supplier Bill line bought for
   // this deal. "There are no untagged lines" — design §2.
   supplierBillLines SupplierBillLine[]
+  // Receivables & payables, Phase 3a.
+  customerPos CustomerPo[]
 
   @@index([salesAccountId])
   @@index([status, expectedCloseDate])
