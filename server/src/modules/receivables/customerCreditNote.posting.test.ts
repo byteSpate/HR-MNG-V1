@@ -16,7 +16,7 @@ vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() 
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
-import { loadRules, resolveAccountCode } from "../posting/posting.rules"
+import { loadRules } from "../posting/posting.rules"
 import type { PostingEvent, ResolvedRules } from "../posting/posting.types"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { approveCustomerCreditNote, buildCustomerCreditNoteLines } from "./customerCreditNote.posting"
@@ -36,8 +36,6 @@ function expectBalanced(lines: ReturnType<typeof buildCustomerCreditNoteLines>) 
 }
 
 describe("buildCustomerCreditNoteLines", () => {
-  beforeEach(() => vi.mocked(resolveAccountCode).mockImplementation((rules: any, key: string) => rules.byKey.get(key)))
-
   it("debits revenue and VAT per line and credits the receivable gross", () => {
     const lines = buildCustomerCreditNoteLines({
       id: "cn1", customerId: "c1", opportunityId: "opp-1",
@@ -73,7 +71,6 @@ function arrangeDraftNote(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
-  vi.mocked(resolveAccountCode).mockImplementation((rules: any, key: string) => rules.byKey.get(key))
 })
 
 describe("approveCustomerCreditNote", () => {
@@ -87,7 +84,7 @@ describe("approveCustomerCreditNote", () => {
     arrangeDraftNote({
       invoice: {
         id: "inv1", invoiceNumber: "INV-1", customerId: "c1", status: "APPROVED", po: { opportunityId: "opp-1" },
-        lines: [{ amount: d("1000000"), vatAmount: d("150000") }], allocations: [{ amount: d("1134000") }], creditNotes: [],
+        lines: [{ amount: d("1000000"), vatAmount: d("150000") }], allocations: [{ amount: d("1100000") }], creditNotes: [],
       },
     })
     await expect(approveCustomerCreditNote("cn1", ADMIN)).rejects.toThrow(/only has 50000.00 left to collect/)
