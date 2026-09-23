@@ -128,6 +128,8 @@ describe("updateCustomerPo / cancelCustomerPo", () => {
 
 describe("listCustomerPos", () => {
   it("makes a sales user name the deal when listing", async () => {
+    const { isFinance } = await import("./receivables.access")
+    vi.mocked(isFinance).mockReturnValue(false)
     await expect(listCustomerPos({}, SALES_USER)).rejects.toThrow("Choose a deal to list its customer POs")
   })
 })
