@@ -31,9 +31,8 @@ vi.mock("../depreciation/depreciation.service", async (importOriginal) => ({
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { postSystemJournal } from "../accounting/accounting.posting"
-import { resolveOpenPeriod } from "../accounting/accounting.period.service"
 import { draftReversal } from "../accounting/accounting.reversal"
-import { loadRules, resolveAccountCode } from "../posting/posting.rules"
+import { loadRules } from "../posting/posting.rules"
 import type { PostingEvent, ResolvedRules } from "../posting/posting.types"
 import { contractPosition, lockDeals } from "./receivables.position"
 import { releaseCostForProgress } from "./costRelease"
@@ -57,7 +56,6 @@ const EARNED_RULES = rulesOf("EARNED", { GOODS: "4130", SERVICE: "4120", UNBILLE
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
-  vi.mocked(resolveAccountCode).mockImplementation((rules: any, key: string) => rules.byKey.get(key))
   vi.mocked(loadRules).mockResolvedValue(EARNED_RULES)
   vi.mocked(fyForMonth).mockResolvedValue({ startDate: new Date("2026-07-01") } as any)
   vi.mocked(releaseCostForProgress).mockResolvedValue(d("0"))
