@@ -132,3 +132,46 @@ export async function releaseCostForInvoice(
   })
   return release
 }
+
+/**
+ * Review Focus 1: a supplier often bills after the customer has already
+ * been invoiced. By then no future invoice is left to release the goods
+ * cost, so a bill approved for a deal that is already fully invoiced
+ * releases everything it holds at once, in one journal covering every
+ * such deal on the bill. A deal still being invoiced is left alone — its
+ * next invoice (Task 10) releases the new cost pro rata, same as any other.
+ */
+export async function releaseLateCost(
+  tx: PrismaNamespace.TransactionClient,
+  billId: string,
+  opportunityIds: string[],
+  actorUserId: string
+): Promise<Prisma.Decimal> {
+  const rules = await loadRules(tx, "COST_RELEASE")
+  const goodsCode = resolveAccountCode(rules, "GOODS")
+  const deliveredCode = resolveAccountCode(rules, "DELIVERED")
+
+  const lines: Array<{ accountCode: string; debit?: string; credit?: string; opportunityId: string }> = []
+  let total = ZERO
+  for (const opportunityId of opportunityIds) {
+    const { basis, invoiced } = await dealInvoicing(tx, opportunityId)
+    if (basis.lessThanOrEqualTo(0) || invoiced.lessThan(basis)) continue
+
+    const held = await heldGoodsCost(tx, opportunityId, goodsCode)
+    if (held.lessThanOrEqualTo(0)) continue
+
+    lines.push({ accountCode: deliveredCode, debit: held.toFixed(2), opportunityId })
+    lines.push({ accountCode: goodsCode, credit: held.toFixed(2), opportunityId })
+    total = total.plus(held)
+  }
+  if (lines.length === 0) return total
+
+  await postSystemJournal(tx, {
+    date: toLedgerDate(new Date()),
+    narration: "Cost of goods sold, bill received after the deal was fully invoiced",
+    source: { module: "CUSTOMER", refId: `bill:${billId}`, event: "COST_RELEASE" },
+    lines,
+    createdBy: actorUserId,
+  })
+  return total
+}

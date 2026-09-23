@@ -9,6 +9,7 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { releaseLateCost } from "../receivables/costRelease"
 
 type Line = SystemJournalInput["lines"][number]
 
@@ -96,6 +97,13 @@ export async function approveSupplierBill(id: string, actor: AccessTokenPayload)
       include: { lines: true },
     })
     await postSupplierBillAccrual(tx, id, actor.sub)
+
+    // Review Focus 1: a bill can arrive after its deal is already fully
+    // invoiced, with no future invoice left to release the cost it just
+    // put into 1214. Offered once per distinct goods deal on the bill.
+    const goodsDeals = [...new Set(updated.lines.filter((l) => l.kind === "GOODS").map((l) => l.opportunityId))]
+    if (goodsDeals.length > 0) await releaseLateCost(tx, id, goodsDeals, actor.sub)
+
     await writeAudit(tx, {
       entity: "SUPPLIER_BILL",
       entityId: id,
