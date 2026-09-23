@@ -18,6 +18,7 @@ vi.mock("./receivables.position", async (importOriginal) => ({
   lockDeal: vi.fn(),
   contractPosition: vi.fn(),
 }))
+vi.mock("./receivables.poStatus", () => ({ refreshPoStatus: vi.fn() }))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
@@ -26,6 +27,7 @@ import type { PostingEvent, ResolvedRules } from "../posting/posting.types"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { releaseCostForInvoice } from "./costRelease"
 import { contractPosition, lockDeal } from "./receivables.position"
+import { refreshPoStatus } from "./receivables.poStatus"
 import { approveInvoice, buildInvoiceLines } from "./invoice.posting"
 
 const d = (v: string) => new Prisma.Decimal(v)
@@ -123,7 +125,6 @@ function arrangeDraft(over: {
   createdBy?: string
   date?: Date
   poLineAlreadyInvoicedByOthers?: string
-  completesPo?: boolean
   trackDelivery?: boolean
 } = {}) {
   const lockHead = { poId: "po1", po: { opportunityId: "opp-1" } }
@@ -143,9 +144,8 @@ function arrangeDraft(over: {
     id: "pl1", description: "Firewall", amount: d("800000"),
     invoiceLines: otherAmount === "0" ? [] : [{ amount: d(otherAmount) }],
   }
-  vi.mocked(prisma.customerPoLine.findMany)
-    .mockResolvedValueOnce([poLine] as any)
-    .mockResolvedValueOnce([{ ...poLine, invoiceLines: over.completesPo ? [{ amount: d("800000") }] : [{ amount: d("500000") }] }] as any)
+  vi.mocked(prisma.customerPoLine.findMany).mockResolvedValueOnce([poLine] as any)
+  vi.mocked(refreshPoStatus).mockResolvedValue("OPEN")
 
   vi.mocked(loadRules).mockImplementation(async (_tx: any, event: PostingEvent) =>
     event === "INVOICE" ? INVOICE_RULES : EARNED_RULES
@@ -200,15 +200,9 @@ describe("approveInvoice", () => {
     expect(prisma.auditLog.create).toHaveBeenCalled()
   })
 
-  it("marks the PO complete when every line is fully invoiced by approved invoices", async () => {
-    arrangeDraft({ completesPo: true })
+  it("refreshes the PO's status after posting, leaving the completion rule itself to refreshPoStatus", async () => {
+    arrangeDraft({})
     await approveInvoice("inv1", ADMIN)
-    expect(prisma.customerPo.update).toHaveBeenCalledWith({ where: { id: "po1" }, data: { status: "COMPLETE" } })
-  })
-
-  it("leaves the PO open while something is still to invoice", async () => {
-    arrangeDraft({ completesPo: false })
-    await approveInvoice("inv1", ADMIN)
-    expect(prisma.customerPo.update).not.toHaveBeenCalled()
+    expect(refreshPoStatus).toHaveBeenCalledWith(expect.anything(), "po1")
   })
 })
