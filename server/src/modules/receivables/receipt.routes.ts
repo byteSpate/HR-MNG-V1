@@ -7,7 +7,6 @@ import {
   createReceiptHandler,
   getReceiptHandler,
   listReceiptsHandler,
-  matchCustomerAdvanceHandler,
   updateReceiptCertificatesHandler,
 } from "./receipt.controller"
 
@@ -19,6 +18,5 @@ router.get("/:id", requireAuth, requireRole(...WRITE_ROLES), getReceiptHandler)
 router.post("/", requireAuth, requireRole(...WRITE_ROLES), createReceiptHandler)
 router.patch("/:id/certificates", requireAuth, requireRole(...WRITE_ROLES), updateReceiptCertificatesHandler)
 router.post("/:id/approve", requireAuth, requireRole(Role.SUPER_ADMIN), approveReceiptHandler)
-router.post("/:id/match-advance", requireAuth, requireRole(...WRITE_ROLES), matchCustomerAdvanceHandler)
 
 export default router

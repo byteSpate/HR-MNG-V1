@@ -4,8 +4,7 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     supplierPayment: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
-    supplierBill: { findMany: vi.fn() },
-    supplierOpeningBalance: { findUnique: vi.fn() },
+    supplierBill: { findMany: vi.fn(), findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -38,6 +37,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.supplierBill.findMany).mockResolvedValue([BDT_BILL] as any)
+  vi.mocked(prisma.supplierBill.findUnique).mockResolvedValue({ opportunityId: "opp-1" } as any)
 })
 
 describe("createSupplierPayment", () => {
@@ -61,17 +61,10 @@ describe("createSupplierPayment", () => {
     )
   })
 
-  it("creates a pure advance with no allocations", async () => {
-    vi.mocked(prisma.supplierPayment.create).mockResolvedValue({ id: "p2", status: "DRAFT" } as any)
-
-    await createSupplierPayment(
-      { supplierId: "sup-1", date: "2026-10-10", amount: "200000", currency: "BDT", allocations: [] },
-      ACTOR
-    )
-
-    expect(prisma.supplierPayment.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ allocations: { create: [] } }) })
-    )
+  it("refuses a payment with no allocations", async () => {
+    await expect(
+      createSupplierPayment({ supplierId: "sup-1", date: "2026-10-10", amount: "200000", currency: "BDT", allocations: [] }, ACTOR)
+    ).rejects.toThrow("A payment must be allocated to at least one bill")
   })
 
   it("refuses an allocation larger than what the bill still owes", async () => {
@@ -93,33 +86,6 @@ describe("createSupplierPayment", () => {
     ).rejects.toThrow("Allocations cannot add up to more than the payment amount")
   })
 
-  it("settles the opening balance instead of leaving the payment as an advance", async () => {
-    vi.mocked(prisma.supplierOpeningBalance.findUnique).mockResolvedValue({ id: "ob1", amount: d("40000"), allocations: [] } as any)
-    vi.mocked(prisma.supplierPayment.create).mockResolvedValue({ id: "p4", status: "DRAFT" } as any)
-
-    await createSupplierPayment(
-      { supplierId: "sup-1", date: "2026-10-10", amount: "40000", currency: "BDT", allocations: [], openingAllocation: { amount: "40000" } } as any,
-      ACTOR
-    )
-
-    expect(prisma.supplierPayment.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          openingAllocations: { create: [expect.objectContaining({ openingBalanceId: "ob1", amount: "40000.00" })] },
-        }),
-      })
-    )
-  })
-
-  it("refuses a USD payment against the opening balance, which is in taka", async () => {
-    await expect(
-      createSupplierPayment(
-        { supplierId: "sup-1", date: "2026-10-10", amount: "1000", currency: "USD", allocations: [], openingAllocation: { amount: "500" } } as any,
-        ACTOR
-      )
-    ).rejects.toThrow("A USD payment cannot settle the opening balance, which is in taka")
-    expect(prisma.supplierPayment.create).not.toHaveBeenCalled()
-  })
 })
 
 describe("createSupplierPayment in USD", () => {

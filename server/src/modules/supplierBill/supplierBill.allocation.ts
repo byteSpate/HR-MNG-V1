@@ -1,10 +1,9 @@
 import { Prisma } from "../../generated/prisma/client"
 import type { Prisma as PrismaNamespace } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
-import { getBillOutstanding, getOpeningOutstanding } from "./supplierBill.reports"
+import { getBillOutstanding } from "./supplierBill.reports"
 
 type Client = Pick<PrismaNamespace.TransactionClient, "supplierBill">
-type OpeningClient = Pick<PrismaNamespace.TransactionClient, "supplierOpeningBalance">
 
 /**
  * Every allocation must settle a real, approved bill of the same supplier,
@@ -47,27 +46,4 @@ export async function assertAllocatable(
       throw new AppError(400, `Bill ${bill.billNumber} only has ${outstanding.toFixed(2)} left to pay`)
     }
   }
-}
-
-/**
- * Phase 2 gap, fixed here: a supplier's opening balance (what we owed on
- * go-live) has no bill behind it, so a payment against it needs its own
- * guard rather than assertAllocatable's bill lookup.
- */
-export async function assertOpeningPayable(
-  client: OpeningClient,
-  supplierId: string,
-  amount: Prisma.Decimal
-): Promise<{ openingBalanceId: string }> {
-  const ob = await client.supplierOpeningBalance.findUnique({
-    where: { supplierId },
-    include: { allocations: { where: { payment: { status: "APPROVED" } }, select: { amount: true } } },
-  })
-  if (!ob) throw new AppError(400, "This supplier has no opening balance")
-
-  const left = getOpeningOutstanding(ob)
-  if (amount.greaterThan(left)) {
-    throw new AppError(400, `The opening balance only has ${left.toFixed(2)} left to pay`)
-  }
-  return { openingBalanceId: ob.id }
 }

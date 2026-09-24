@@ -7,7 +7,6 @@ import {
   createSupplierPaymentHandler,
   getSupplierPaymentHandler,
   listSupplierPaymentsHandler,
-  matchAdvanceHandler,
 } from "./supplierPayment.controller"
 
 const router = Router()
@@ -17,6 +16,5 @@ router.get("/", requireAuth, requireRole(...WRITE_ROLES), listSupplierPaymentsHa
 router.get("/:id", requireAuth, requireRole(...WRITE_ROLES), getSupplierPaymentHandler)
 router.post("/", requireAuth, requireRole(...WRITE_ROLES), createSupplierPaymentHandler)
 router.post("/:id/approve", requireAuth, requireRole(Role.SUPER_ADMIN), approveSupplierPaymentHandler)
-router.post("/:id/match-advance", requireAuth, requireRole(...WRITE_ROLES), matchAdvanceHandler)
 
 export default router

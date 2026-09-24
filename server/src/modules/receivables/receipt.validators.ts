@@ -18,7 +18,6 @@ export const createReceiptSchema = z.object({
   aitCertificateDate: dateString.optional(),
   reference: z.string().trim().max(200).optional(),
   allocations: z.array(z.object({ invoiceId: z.string().uuid(), amount: positiveMoney })).default([]),
-  openingAllocation: z.object({ amount: positiveMoney }).optional(),
 })
 
 export const certificatesSchema = z.object({
@@ -28,16 +27,5 @@ export const certificatesSchema = z.object({
   aitCertificateDate: dateString.nullable().optional(),
 })
 
-export const matchCustomerAdvanceSchema = z
-  .object({
-    invoiceId: z.string().uuid().optional(),
-    openingBalanceId: z.string().uuid().optional(),
-    amount: positiveMoney,
-  })
-  .refine((v) => Boolean(v.invoiceId) !== Boolean(v.openingBalanceId), {
-    message: "Choose an invoice or the opening balance, not both",
-  })
-
 export type CreateReceiptInput = z.infer<typeof createReceiptSchema>
 export type CertificatesInput = z.infer<typeof certificatesSchema>
-export type MatchCustomerAdvanceInput = z.infer<typeof matchCustomerAdvanceSchema>

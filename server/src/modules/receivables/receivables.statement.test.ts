@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../config/prisma", () => ({
   default: {
     customer: { findUnique: vi.fn() },
-    customerOpeningBalance: { findUnique: vi.fn() },
     invoice: { findMany: vi.fn() },
     receipt: { findMany: vi.fn() },
     customerCreditNote: { findMany: vi.fn() },
@@ -14,7 +13,6 @@ import prisma from "../../config/prisma"
 import { buildCustomerStatementHtml, getCustomerStatement } from "./receivables.statement"
 
 function arrangeCustomer(o: {
-  opening: { amount: string; asOf: string } | null
   invoices: Array<{ invoiceNumber: string; date: string; gross: string }>
   receipts: Array<{ reference: string; date: string; settled: string }>
   creditNotes: Array<{ invoiceNumber: string; date: string; gross: string }>
@@ -22,9 +20,6 @@ function arrangeCustomer(o: {
   vi.mocked(prisma.customer.findUnique).mockResolvedValue({
     id: "c1", legalName: "Bengal Group", billingAddress: null, bin: null,
   } as any)
-  vi.mocked(prisma.customerOpeningBalance.findUnique).mockResolvedValue(
-    (o.opening ? { amount: o.opening.amount, asOf: new Date(o.opening.asOf) } : null) as any
-  )
   vi.mocked(prisma.invoice.findMany).mockResolvedValue(
     o.invoices.map((i, idx) => ({
       id: `inv${idx}`, invoiceNumber: i.invoiceNumber, date: new Date(i.date),
@@ -47,7 +42,6 @@ beforeEach(() => vi.clearAllMocks())
 describe("getCustomerStatement", () => {
   it("carries in what was owed before the range and runs a balance through it", async () => {
     arrangeCustomer({
-      opening: { amount: "200000", asOf: "2026-07-01" },
       invoices: [
         { invoiceNumber: "INV-0", date: "2026-08-15", gross: "50000" },
         { invoiceNumber: "INV-1", date: "2026-09-05", gross: "1150000" },
@@ -58,26 +52,17 @@ describe("getCustomerStatement", () => {
 
     const s = await getCustomerStatement("c1", { from: new Date("2026-09-01"), to: new Date("2026-09-30") })
 
-    expect(s.openingBalance).toBe("250000.00")
+    expect(s.openingBalance).toBe("50000.00")
     expect(s.entries.map((e) => [e.kind, e.reference, e.debit, e.credit, e.balance])).toEqual([
-      ["Invoice", "INV-1", "1150000.00", null, "1400000.00"],
-      ["Receipt", "Receipt TT-4471", null, "1150000.00", "250000.00"],
-      ["Credit note", "Credit note on INV-1", null, "23000.00", "227000.00"],
+      ["Invoice", "INV-1", "1150000.00", null, "1200000.00"],
+      ["Receipt", "Receipt TT-4471", null, "1150000.00", "50000.00"],
+      ["Credit note", "Credit note on INV-1", null, "23000.00", "27000.00"],
     ])
-    expect(s.closingBalance).toBe("227000.00")
-  })
-
-  it("shows the opening balance as the first entry when go-live falls inside the range", async () => {
-    arrangeCustomer({ opening: { amount: "200000", asOf: "2026-07-01" }, invoices: [], receipts: [], creditNotes: [] })
-
-    const s = await getCustomerStatement("c1", { from: new Date("2026-07-01"), to: new Date("2026-07-31") })
-
-    expect(s.openingBalance).toBe("0.00")
-    expect(s.entries[0]).toMatchObject({ kind: "Opening balance", debit: "200000.00", balance: "200000.00" })
+    expect(s.closingBalance).toBe("27000.00")
   })
 
   it("counts approved documents only", async () => {
-    arrangeCustomer({ opening: null, invoices: [], receipts: [], creditNotes: [] })
+    arrangeCustomer({ invoices: [], receipts: [], creditNotes: [] })
 
     await getCustomerStatement("c1", { from: new Date("2026-09-01"), to: new Date("2026-09-30") })
 

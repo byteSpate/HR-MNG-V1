@@ -16,12 +16,15 @@ type Line = SystemJournalInput["lines"][number]
 interface BillForPosting {
   id: string
   supplierId: string
+  // Every line named its own deal until Task 2's migration; now the bill
+  // belongs to one deal (spec: "every document belongs to one deal"), so
+  // every line posts with the bill's opportunityId.
+  opportunityId: string
   lines: Array<{
     id: string
     kind: "GOODS" | "SERVICE"
     amount: Prisma.Decimal
     vatAmount: Prisma.Decimal
-    opportunityId: string
   }>
 }
 
@@ -39,7 +42,7 @@ export function buildSupplierBillLines(bill: BillForPosting, rules: ResolvedRule
     lines.push({
       accountCode: resolveAccountCode(rules, key),
       debit: line.amount.toFixed(2),
-      opportunityId: line.opportunityId,
+      opportunityId: bill.opportunityId,
     })
     gross = gross.plus(line.amount)
 
@@ -47,7 +50,7 @@ export function buildSupplierBillLines(bill: BillForPosting, rules: ResolvedRule
       lines.push({
         accountCode: resolveAccountCode(rules, "VAT"),
         debit: line.vatAmount.toFixed(2),
-        opportunityId: line.opportunityId,
+        opportunityId: bill.opportunityId,
       })
       gross = gross.plus(line.vatAmount)
     }
@@ -65,7 +68,7 @@ export function buildSupplierBillLines(bill: BillForPosting, rules: ResolvedRule
 async function loadBillForPosting(tx: PrismaNamespace.TransactionClient, id: string): Promise<BillForPosting> {
   return tx.supplierBill.findUniqueOrThrow({
     where: { id },
-    select: { id: true, supplierId: true, lines: { select: { id: true, kind: true, amount: true, vatAmount: true, opportunityId: true } } },
+    select: { id: true, supplierId: true, opportunityId: true, lines: { select: { id: true, kind: true, amount: true, vatAmount: true } } },
   })
 }
 
@@ -100,9 +103,9 @@ export async function approveSupplierBill(id: string, actor: AccessTokenPayload)
 
     // Review Focus 1: a bill can arrive after its deal is already fully
     // invoiced, with no future invoice left to release the cost it just
-    // put into 1214. Offered once per distinct goods deal on the bill.
-    const goodsDeals = [...new Set(updated.lines.filter((l) => l.kind === "GOODS").map((l) => l.opportunityId))]
-    if (goodsDeals.length > 0) await releaseLateCost(tx, id, goodsDeals, actor.sub)
+    // put into 1214. Offered once for the bill's deal, if it has a GOODS line.
+    const hasGoodsLine = updated.lines.some((l) => l.kind === "GOODS")
+    if (hasGoodsLine) await releaseLateCost(tx, id, [updated.opportunityId], actor.sub)
 
     await writeAudit(tx, {
       entity: "SUPPLIER_BILL",

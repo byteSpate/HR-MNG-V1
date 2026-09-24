@@ -5,7 +5,6 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     supplierBill: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
-    supplierOpeningBalance: { findMany: vi.fn() },
     auditLog: { create: vi.fn() },
     journal: { create: vi.fn() },
     opportunity: { findMany: vi.fn() },
@@ -56,7 +55,6 @@ describe("GET /api/supplier-bills/reports/ageing", () => {
 
   it("returns the report to Finance, not a bill looked up by the id 'reports'", async () => {
     vi.mocked(prisma.supplierBill.findMany).mockResolvedValue([])
-    vi.mocked(prisma.supplierOpeningBalance.findMany).mockResolvedValue([])
     const res = await request(app).get("/api/supplier-bills/reports/ageing").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
     expect(res.status).toBe(200)
     expect(res.body).toEqual([])

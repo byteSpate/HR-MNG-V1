@@ -3,7 +3,7 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { assertOpeningReceivable, assertReceivable } from "./receipt.allocation"
+import { assertReceivable } from "./receipt.allocation"
 import type { CertificatesInput, CreateReceiptInput } from "./receipt.validators"
 
 const ZERO = new Prisma.Decimal(0)
@@ -11,21 +11,18 @@ const ZERO = new Prisma.Decimal(0)
 export const RECEIPT_INCLUDE = {
   customer: { select: { id: true, legalName: true } },
   allocations: { include: { invoice: { select: { id: true, invoiceNumber: true } } } },
-  openingAllocations: true,
 } satisfies Prisma.ReceiptInclude
 
-/** Settled (cash plus tax withheld), allocated (invoices plus the opening
- *  balance, upfront allocations only), and the advance left over. */
+/** Settled (cash plus tax withheld) and allocated (invoices only). */
 export function receiptPosition(r: {
   amount: Prisma.Decimal
   vdsAmount: Prisma.Decimal
   aitAmount: Prisma.Decimal
   allocations: Array<{ amount: Prisma.Decimal }>
-  openingAllocations: Array<{ amount: Prisma.Decimal }>
 }) {
   const settled = new Prisma.Decimal(r.amount).plus(r.vdsAmount).plus(r.aitAmount)
-  const allocated = [...r.allocations, ...r.openingAllocations].reduce((s, a) => s.plus(a.amount), ZERO)
-  return { settled, allocated, advance: settled.minus(allocated) }
+  const allocated = r.allocations.reduce((s, a) => s.plus(a.amount), ZERO)
+  return { settled, allocated }
 }
 
 function assertCertificates(input: {
@@ -53,12 +50,8 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
   const vds = new Prisma.Decimal(input.vdsAmount ?? "0")
   const ait = new Prisma.Decimal(input.aitAmount ?? "0")
   const allocations = (input.allocations ?? []).map((a) => ({ invoiceId: a.invoiceId, amount: new Prisma.Decimal(a.amount) }))
-  const opening = input.openingAllocation ? new Prisma.Decimal(input.openingAllocation.amount) : null
 
-  const { settled, allocated } = receiptPosition({
-    amount, vdsAmount: vds, aitAmount: ait, allocations,
-    openingAllocations: opening ? [{ amount: opening }] : [],
-  })
+  const { settled, allocated } = receiptPosition({ amount, vdsAmount: vds, aitAmount: ait, allocations })
   if (allocated.greaterThan(settled)) {
     throw new AppError(400, `Allocations cannot add up to more than this receipt settles, ${settled.toFixed(2)} with the tax withheld`)
   }
@@ -66,8 +59,11 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
   if (allocated.lessThan(withheld)) {
     throw new AppError(
       400,
-      `Tax withheld is always withheld from an invoice. Allocate at least ${withheld.toFixed(2)} of this receipt to invoices or the opening balance.`
+      `Tax withheld is always withheld from an invoice. Allocate at least ${withheld.toFixed(2)} of this receipt to invoices.`
     )
+  }
+  if (allocations.length === 0) {
+    throw new AppError(400, "A receipt must be allocated to at least one invoice")
   }
 
   return prisma.$transaction(async (tx) => {
@@ -75,11 +71,20 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
     if (!customer) throw new AppError(404, "Customer not found")
 
     await assertReceivable(tx, customer.id, allocations)
-    const openingRow = opening ? { ...(await assertOpeningReceivable(tx, customer.id, opening)), amount: opening.toFixed(2) } : null
+
+    // The deal this receipt belongs to, from the invoice it pays (Task 6
+    // gives the caller an opportunityId directly; until then, the first
+    // allocation's invoice names it, same as the migration's backfill).
+    const invoice = await tx.invoice.findUnique({
+      where: { id: allocations[0].invoiceId },
+      select: { po: { select: { opportunityId: true } } },
+    })
+    if (!invoice) throw new AppError(404, "An invoice being collected does not exist")
 
     const receipt = await tx.receipt.create({
       data: {
         customerId: customer.id,
+        opportunityId: invoice.po.opportunityId,
         date: new Date(input.date),
         amount: amount.toFixed(2),
         vdsAmount: vds.toFixed(2),
@@ -91,7 +96,6 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
         reference: input.reference ?? null,
         createdBy: actor.sub,
         allocations: { create: allocations.map((a) => ({ invoiceId: a.invoiceId, amount: a.amount.toFixed(2) })) },
-        ...(openingRow ? { openingAllocations: { create: [openingRow] } } : {}),
       },
       include: RECEIPT_INCLUDE,
     })

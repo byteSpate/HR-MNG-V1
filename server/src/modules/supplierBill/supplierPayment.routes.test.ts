@@ -5,7 +5,6 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     supplierPayment: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn() },
-    supplierPaymentAllocation: { create: vi.fn() },
     supplierBill: { findUniqueOrThrow: vi.fn() },
     auditLog: { create: vi.fn() },
     journal: { create: vi.fn() },
@@ -56,12 +55,3 @@ describe("POST /api/supplier-payments/:id/approve", () => {
   })
 })
 
-describe("POST /api/supplier-payments/:id/match-advance", () => {
-  it("refuses a non-Finance, non-Admin role with 403", async () => {
-    const res = await request(app)
-      .post("/api/supplier-payments/p1/match-advance")
-      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
-      .send({ billId: "b1", amount: "1000" })
-    expect(res.status).toBe(403)
-  })
-})

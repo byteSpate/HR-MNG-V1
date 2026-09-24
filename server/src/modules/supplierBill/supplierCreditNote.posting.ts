@@ -16,13 +16,15 @@ type Line = SystemJournalInput["lines"][number]
 interface CreditNoteForPosting {
   id: string
   supplierId: string
+  // The credit note's bill belongs to one deal (spec: every document
+  // belongs to one deal), and every line posts with it.
+  opportunityId: string
   lines: Array<{ billLineId: string; amount: Prisma.Decimal; vatAmount: Prisma.Decimal }>
 }
 
 interface BillLineForCredit {
   id: string
   kind: "GOODS" | "SERVICE"
-  opportunityId: string
 }
 
 const ZERO = new Prisma.Decimal(0)
@@ -49,7 +51,7 @@ export function buildSupplierCreditNoteLines(
     if (!billLine) throw new AppError(400, `Credit note line references a bill line that does not exist: ${line.billLineId}`)
 
     if (billLine.kind === "GOODS") {
-      const opp = billLine.opportunityId
+      const opp = note.opportunityId
       const held = Prisma.Decimal.max(heldByDeal.get(opp) ?? ZERO, ZERO)
       const toGoods = Prisma.Decimal.min(line.amount, held)
       const toDelivered = line.amount.minus(toGoods)
@@ -57,12 +59,12 @@ export function buildSupplierCreditNoteLines(
       if (!toDelivered.isZero()) lines.push({ accountCode: resolveAccountCode(rules, "DELIVERED"), credit: toDelivered.toFixed(2), opportunityId: opp })
       heldByDeal.set(opp, held.minus(toGoods))
     } else {
-      lines.push({ accountCode: resolveAccountCode(rules, "SERVICE"), credit: line.amount.toFixed(2), opportunityId: billLine.opportunityId })
+      lines.push({ accountCode: resolveAccountCode(rules, "SERVICE"), credit: line.amount.toFixed(2), opportunityId: note.opportunityId })
     }
     gross = gross.plus(line.amount)
 
     if (!line.vatAmount.isZero()) {
-      lines.push({ accountCode: resolveAccountCode(rules, "VAT"), credit: line.vatAmount.toFixed(2), opportunityId: billLine.opportunityId })
+      lines.push({ accountCode: resolveAccountCode(rules, "VAT"), credit: line.vatAmount.toFixed(2), opportunityId: note.opportunityId })
       gross = gross.plus(line.vatAmount)
     }
   }
@@ -79,29 +81,29 @@ export async function postSupplierCreditNote(tx: PrismaNamespace.TransactionClie
       id: true, supplierId: true, billId: true,
       lines: { select: { billLineId: true, amount: true, vatAmount: true } },
       supplier: { select: { name: true } },
-      bill: { select: { billNumber: true } },
+      bill: { select: { billNumber: true, opportunityId: true } },
     },
   })
   const billLines = await tx.supplierBillLine.findMany({
     where: { id: { in: note.lines.map((l) => l.billLineId) } },
-    select: { id: true, kind: true, opportunityId: true },
+    select: { id: true, kind: true },
   })
   const rules = await loadRules(tx, "SUPPLIER_CREDIT")
   const goodsCode = resolveAccountCode(rules, "GOODS")
 
-  // One read per distinct deal a GOODS line touches, done once before the
-  // lines are built, so two lines on the same deal split against the same
-  // starting balance rather than each re-reading it fresh.
-  const goodsDeals = [...new Set(billLines.filter((l) => l.kind === "GOODS").map((l) => l.opportunityId))]
+  // The bill (and so this credit note) belongs to one deal. One read, done
+  // once before the lines are built, so two GOODS lines split against the
+  // same starting balance rather than each re-reading it fresh.
+  const hasGoodsLine = billLines.some((l) => l.kind === "GOODS")
   const heldByDeal = new Map(
-    await Promise.all(goodsDeals.map(async (opp) => [opp, await heldGoodsCost(tx, opp, goodsCode)] as const))
+    hasGoodsLine ? [[note.bill.opportunityId, await heldGoodsCost(tx, note.bill.opportunityId, goodsCode)] as const] : []
   )
 
   return postSystemJournal(tx, {
     date: toLedgerDate(new Date()),
     narration: `Credit note — ${note.supplier.name} — Bill ${note.bill.billNumber}`,
     source: { module: "SUPPLIER", refId: noteId, event: "CREDIT" },
-    lines: buildSupplierCreditNoteLines(note, billLines, rules, heldByDeal),
+    lines: buildSupplierCreditNoteLines({ ...note, opportunityId: note.bill.opportunityId }, billLines, rules, heldByDeal),
     createdBy: actorUserId,
   })
 }

@@ -35,21 +35,13 @@ function bucketFor(daysPastDue: number): AgeingBucket {
 }
 
 export interface AgeingRow {
-  billId: string | null
-  openingBalanceId: string | null
+  billId: string
   label: string
   supplierId: string
   supplierName: string
   dueDate: Date
   outstanding: string
   bucket: AgeingBucket
-}
-
-/** The opening balance less approved payments' allocations against it —
- *  same shape as getBillOutstanding, for the go-live debt that has no bill
- *  behind it (Phase 2 gap, fixed in Phase 3a). */
-export function getOpeningOutstanding(ob: { amount: Prisma.Decimal; allocations: Array<{ amount: Prisma.Decimal }> }): Prisma.Decimal {
-  return ob.allocations.reduce((left, a) => left.minus(a.amount), new Prisma.Decimal(ob.amount))
 }
 
 export async function getSupplierAgeing(asOf: Date = new Date()): Promise<AgeingRow[]> {
@@ -76,35 +68,10 @@ export async function getSupplierAgeing(asOf: Date = new Date()): Promise<Ageing
     const daysPastDue = Math.floor((asOf.getTime() - bill.dueDate.getTime()) / DAY_MS)
     rows.push({
       billId: bill.id,
-      openingBalanceId: null,
       label: `Bill ${bill.billNumber}`,
       supplierId: bill.supplierId,
       supplierName: bill.supplier.name,
       dueDate: bill.dueDate,
-      outstanding: outstanding.toFixed(2),
-      bucket: bucketFor(daysPastDue),
-    })
-  }
-
-  const openings = await prisma.supplierOpeningBalance.findMany({
-    select: {
-      id: true, supplierId: true, amount: true, asOf: true,
-      supplier: { select: { name: true } },
-      allocations: { where: { payment: { status: "APPROVED" } }, select: { amount: true } },
-    },
-  })
-  for (const ob of openings) {
-    const outstanding = getOpeningOutstanding(ob)
-    if (outstanding.lessThanOrEqualTo(0)) continue
-
-    const daysPastDue = Math.floor((asOf.getTime() - ob.asOf.getTime()) / DAY_MS)
-    rows.push({
-      billId: null,
-      openingBalanceId: ob.id,
-      label: "Opening balance",
-      supplierId: ob.supplierId,
-      supplierName: ob.supplier.name,
-      dueDate: ob.asOf,
       outstanding: outstanding.toFixed(2),
       bucket: bucketFor(daysPastDue),
     })

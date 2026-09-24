@@ -26,7 +26,6 @@ const VALID_BODY = {
   customerPoNumber: "PO-778",
   date: "2026-09-23",
   lines: [{ description: "Firewall", kind: "GOODS", quantity: "10", unitPrice: "80000", vatCodeId: "8b0f1c1e-1111-4a4a-9999-000000000002" }],
-  schedule: [],
 }
 
 describe("/api/customer-pos", () => {

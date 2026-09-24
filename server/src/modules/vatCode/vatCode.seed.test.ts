@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest"
 import { VAT_CODES } from "./vatCode.seed"
 
 describe("VAT_CODES", () => {
-  it("includes the three seeded rates", () => {
+  it("includes only the standard rate", () => {
     const codes = VAT_CODES.map((c) => c.code)
-    expect(codes).toEqual(["STD15", "ZERO", "EXEMPT"])
+    expect(codes).toEqual(["STD15"])
   })
 
   it("STD15 is fifteen percent", () => {

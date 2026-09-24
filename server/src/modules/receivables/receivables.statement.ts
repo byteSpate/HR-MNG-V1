@@ -11,7 +11,7 @@ const longDate = (d: Date) => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.
 
 export interface StatementEntry {
   date: Date
-  kind: "Opening balance" | "Invoice" | "Receipt" | "Credit note"
+  kind: "Invoice" | "Receipt" | "Credit note"
   reference: string
   debit: string | null
   credit: string | null
@@ -35,23 +35,17 @@ interface RawMovement {
   sign: 1 | -1
 }
 
-const KIND_ORDER: Record<StatementEntry["kind"], number> = { "Opening balance": 0, Invoice: 1, Receipt: 2, "Credit note": 3 }
+const KIND_ORDER: Record<StatementEntry["kind"], number> = { Invoice: 1, Receipt: 2, "Credit note": 3 }
 
 /** A plain account statement for one customer: what they owed at the start
  *  of the period, every approved invoice, receipt and credit note in it,
- *  and what they owe at the end. Not a tax document — see spec §4. The
- *  balance is net of advances (a receipt is credited with everything it
- *  settled, whether it cleared an invoice or sat as an advance), which is
- *  what a customer expects a statement to say; a later advance match moves
- *  money between two of our own accounts and does not appear here. */
+ *  and what they owe at the end. Not a tax document — see spec §4. */
 export async function getCustomerStatement(customerId: string, range: { from: Date; to: Date }): Promise<CustomerStatement> {
   const customer = await prisma.customer.findUnique({
     where: { id: customerId },
     select: { legalName: true, billingAddress: true, bin: true },
   })
   if (!customer) throw new AppError(404, "Customer not found")
-
-  const opening = await prisma.customerOpeningBalance.findUnique({ where: { customerId } })
 
   const [invoices, receipts, creditNotes] = await Promise.all([
     prisma.invoice.findMany({
@@ -69,9 +63,6 @@ export async function getCustomerStatement(customerId: string, range: { from: Da
   ])
 
   const movements: RawMovement[] = []
-  if (opening) {
-    movements.push({ date: opening.asOf, kind: "Opening balance", reference: "Opening balance", amount: new Prisma.Decimal(opening.amount), sign: 1 })
-  }
   for (const inv of invoices) {
     const gross = inv.lines.reduce((s, l) => s.plus(l.amount).plus(l.vatAmount), ZERO)
     movements.push({ date: inv.date, kind: "Invoice", reference: inv.invoiceNumber, amount: gross, sign: 1 })

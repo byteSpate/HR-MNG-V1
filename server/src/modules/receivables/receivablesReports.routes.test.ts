@@ -37,7 +37,7 @@ describe("/api/receivables/reports", () => {
   })
 
   it("returns the tie-out to Finance", async () => {
-    vi.mocked(getCustomerControlTieOut).mockResolvedValue({ subledgerTotal: "0.00", glBalance: "0.00", ties: true, advancesHeld: "0.00" })
+    vi.mocked(getCustomerControlTieOut).mockResolvedValue({ subledgerTotal: "0.00", glBalance: "0.00", ties: true })
     const res = await request(app).get("/api/receivables/reports/tie-out").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
     expect(res.status).toBe(200)
   })

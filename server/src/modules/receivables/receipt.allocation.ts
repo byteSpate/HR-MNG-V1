@@ -1,10 +1,9 @@
 import { Prisma } from "../../generated/prisma/client"
 import type { Prisma as PrismaNamespace } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
-import { getCustomerOpeningOutstanding, getInvoiceOutstanding, OUTSTANDING_SELECT } from "./receivables.reports"
+import { getInvoiceOutstanding, OUTSTANDING_SELECT } from "./receivables.reports"
 
 type InvoiceClient = Pick<PrismaNamespace.TransactionClient, "invoice">
-type OpeningClient = Pick<PrismaNamespace.TransactionClient, "customerOpeningBalance">
 
 /**
  * Every allocation must settle a real, approved invoice of the same
@@ -40,23 +39,4 @@ export async function assertReceivable(
       throw new AppError(400, `Invoice ${invoice.invoiceNumber} only has ${left.toFixed(2)} left to collect`)
     }
   }
-}
-
-/** Phase 2's assertOpeningPayable, mirrored for the customer side. */
-export async function assertOpeningReceivable(
-  client: OpeningClient,
-  customerId: string,
-  amount: Prisma.Decimal
-): Promise<{ openingBalanceId: string }> {
-  const ob = await client.customerOpeningBalance.findUnique({
-    where: { customerId },
-    include: { allocations: { where: { receipt: { status: "APPROVED" } }, select: { amount: true } } },
-  })
-  if (!ob) throw new AppError(400, "This customer has no opening balance")
-
-  const left = getCustomerOpeningOutstanding(ob)
-  if (amount.greaterThan(left)) {
-    throw new AppError(400, `The opening balance only has ${left.toFixed(2)} left to collect`)
-  }
-  return { openingBalanceId: ob.id }
 }

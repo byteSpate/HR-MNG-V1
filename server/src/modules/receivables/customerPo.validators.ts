@@ -11,19 +11,12 @@ export const poLineSchema = z.object({
   vatCodeId: z.string().uuid(),
 })
 
-export const scheduleRowSchema = z.object({
-  plannedDate: dateString,
-  amount: positiveMoney,
-  note: z.string().trim().max(300).optional(),
-})
-
 export const createCustomerPoSchema = z.object({
   opportunityId: z.string().uuid(),
   customerPoNumber: z.string().trim().min(1, "A PO number is required").max(100),
   date: dateString,
   invoiceTo: z.string().trim().max(300).optional(),
   lines: z.array(poLineSchema).min(1, "At least one line is required"),
-  schedule: z.array(scheduleRowSchema).default([]),
 })
 
 export const updateCustomerPoSchema = createCustomerPoSchema.omit({ opportunityId: true })

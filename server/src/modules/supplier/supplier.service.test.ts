@@ -65,6 +65,9 @@ describe("createSupplier", () => {
 
     const result = await createSupplier({ name: "Star Tech" }, ACTOR)
 
+    expect(prisma.supplier.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: "Star Tech", nameKey: "startech" }) })
+    )
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ entity: "SUPPLIER", entityId: "s1", action: "CREATE" }),

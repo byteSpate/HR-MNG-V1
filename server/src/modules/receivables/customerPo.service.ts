@@ -12,7 +12,6 @@ import type {
   UpdateCustomerPoInput,
 } from "./customerPo.validators"
 
-const ZERO = new Prisma.Decimal(0)
 const LOCKED = "This PO already has an invoice, so it can no longer be edited or cancelled. Raise a credit note on the invoice instead."
 
 function isUniqueViolation(err: unknown): boolean {
@@ -29,7 +28,6 @@ export const PO_INCLUDE = {
       invoiceLines: { where: { invoice: { status: { in: ["DRAFT", "APPROVED"] } } }, select: { amount: true } },
     },
   },
-  schedule: { orderBy: { order: "asc" } },
 } satisfies Prisma.CustomerPoInclude
 
 /** Net left to invoice on a PO line: its amount less every draft or
@@ -84,20 +82,6 @@ function lineRows(lines: CreateCustomerPoInput["lines"]) {
   }))
 }
 
-function scheduleRows(schedule: CreateCustomerPoInput["schedule"], lines: ReturnType<typeof lineRows>) {
-  const net = lines.reduce((s, r) => s.plus(r.amount), ZERO)
-  const planned = schedule.reduce((s, r) => s.plus(r.amount), ZERO)
-  if (planned.greaterThan(net)) {
-    throw new AppError(400, `The billing schedule adds up to ${planned.toFixed(2)}, more than the PO's ${net.toFixed(2)} before VAT`)
-  }
-  return schedule.map((s, i) => ({
-    plannedDate: new Date(s.plannedDate),
-    amount: new Prisma.Decimal(s.amount).toFixed(2),
-    note: s.note?.trim() || null,
-    order: i,
-  }))
-}
-
 export async function createCustomerPo(input: CreateCustomerPoInput, actor: AccessTokenPayload) {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -108,7 +92,6 @@ export async function createCustomerPo(input: CreateCustomerPoInput, actor: Acce
       await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
 
       const lines = lineRows(input.lines)
-      const schedule = scheduleRows(input.schedule, lines)
 
       const po = await tx.customerPo.create({
         data: {
@@ -120,7 +103,6 @@ export async function createCustomerPo(input: CreateCustomerPoInput, actor: Acce
           invoiceTo: input.invoiceTo?.trim() || null,
           createdBy: actor.sub,
           lines: { create: lines },
-          schedule: { create: schedule },
         },
         include: PO_INCLUDE,
       })
@@ -154,10 +136,8 @@ export async function updateCustomerPo(id: string, input: UpdateCustomerPoInput,
 
       await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
       const lines = lineRows(input.lines)
-      const schedule = scheduleRows(input.schedule, lines)
 
       await tx.customerPoLine.deleteMany({ where: { poId: id } })
-      await tx.billingScheduleRow.deleteMany({ where: { poId: id } })
 
       const po = await tx.customerPo.update({
         where: { id },
@@ -166,7 +146,6 @@ export async function updateCustomerPo(id: string, input: UpdateCustomerPoInput,
           date: new Date(input.date),
           invoiceTo: input.invoiceTo?.trim() || null,
           lines: { create: lines },
-          schedule: { create: schedule },
         },
         include: PO_INCLUDE,
       })

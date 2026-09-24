@@ -31,13 +31,6 @@ export function getInvoiceOutstanding(invoice: OutstandingInput): Prisma.Decimal
   return gross.minus(collected).minus(credited)
 }
 
-/** The customer's go-live opening balance less approved receipts against
- *  it — the same shape as getInvoiceOutstanding, for the debt that has no
- *  invoice behind it. */
-export function getCustomerOpeningOutstanding(ob: { amount: Prisma.Decimal; allocations: Array<{ amount: Prisma.Decimal }> }): Prisma.Decimal {
-  return ob.allocations.reduce((left, a) => left.minus(a.amount), new Prisma.Decimal(ob.amount))
-}
-
 export type AgeingBucket = "Not due" | "1-30" | "31-60" | "61-90" | "Over 90"
 
 function bucketFor(daysPastDue: number): AgeingBucket {
@@ -49,8 +42,7 @@ function bucketFor(daysPastDue: number): AgeingBucket {
 }
 
 export interface CustomerAgeingRow {
-  invoiceId: string | null
-  openingBalanceId: string | null
+  invoiceId: string
   label: string
   customerId: string
   customerName: string
@@ -60,9 +52,9 @@ export interface CustomerAgeingRow {
   bucket: AgeingBucket
 }
 
-/** design §4: what customers owe on approved invoices, plus what they still
- *  owed on go-live (Review Focus 3), aged from each row's due date. Mirrors
- *  Phase 2's getSupplierAgeing exactly, on the receivables side. */
+/** design §4: what customers owe on approved invoices, aged from each row's
+ *  due date. Mirrors Phase 2's getSupplierAgeing exactly, on the
+ *  receivables side. */
 export async function getCustomerAgeing(asOf: Date = new Date()): Promise<CustomerAgeingRow[]> {
   const invoices = await prisma.invoice.findMany({
     where: { status: "APPROVED" },
@@ -82,37 +74,11 @@ export async function getCustomerAgeing(asOf: Date = new Date()): Promise<Custom
     const daysPastDue = Math.floor((asOf.getTime() - invoice.dueDate.getTime()) / DAY_MS)
     rows.push({
       invoiceId: invoice.id,
-      openingBalanceId: null,
       label: `Invoice ${invoice.invoiceNumber}`,
       customerId: invoice.customerId,
       customerName: invoice.customer.legalName,
       dealSerial: invoice.po.opportunity.serial,
       dueDate: invoice.dueDate,
-      outstanding: outstanding.toFixed(2),
-      bucket: bucketFor(daysPastDue),
-    })
-  }
-
-  const openings = await prisma.customerOpeningBalance.findMany({
-    select: {
-      id: true, customerId: true, amount: true, asOf: true,
-      customer: { select: { legalName: true } },
-      allocations: { where: { receipt: { status: "APPROVED" } }, select: { amount: true } },
-    },
-  })
-  for (const ob of openings) {
-    const outstanding = getCustomerOpeningOutstanding(ob)
-    if (outstanding.lessThanOrEqualTo(0)) continue
-
-    const daysPastDue = Math.floor((asOf.getTime() - ob.asOf.getTime()) / DAY_MS)
-    rows.push({
-      invoiceId: null,
-      openingBalanceId: ob.id,
-      label: "Opening balance",
-      customerId: ob.customerId,
-      customerName: ob.customer.legalName,
-      dealSerial: null,
-      dueDate: ob.asOf,
       outstanding: outstanding.toFixed(2),
       bucket: bucketFor(daysPastDue),
     })
@@ -126,21 +92,17 @@ export interface CustomerTieOut {
   subledgerTotal: string
   glBalance: string
   ties: boolean
-  advancesHeld: string
 }
 
 /** design §4: sum of customer balances must equal account 1220. Reads the
- *  account codes through the RECEIPT posting rules rather than hard-coding
- *  them, so a re-pointed rule moves the tie-out with it. 2160 (customer
- *  advances not yet matched) is shown beside the tie-out, never netted
- *  into it — they are different accounts. */
+ *  account code through the RECEIPT posting rules rather than hard-coding
+ *  it, so a re-pointed rule moves the tie-out with it. */
 export async function getCustomerControlTieOut(): Promise<CustomerTieOut> {
   const ageing = await getCustomerAgeing()
   const subledgerTotal = ageing.reduce((sum, row) => sum.plus(row.outstanding), ZERO)
 
   const rules = await loadRules(prisma, "RECEIPT")
   const receivableCode = resolveAccountCode(rules, "RECEIVABLE")
-  const advanceCode = resolveAccountCode(rules, "ADVANCE")
 
   const receivableAccount = await prisma.account.findUniqueOrThrow({ where: { code: receivableCode }, select: { id: true } })
   const receivableAgg = await prisma.journalLine.aggregate({
@@ -150,18 +112,9 @@ export async function getCustomerControlTieOut(): Promise<CustomerTieOut> {
   // An asset's normal balance is a debit, so the GL figure is debit minus credit.
   const glBalance = (receivableAgg._sum.debit ?? ZERO).minus(receivableAgg._sum.credit ?? ZERO)
 
-  const advanceAccount = await prisma.account.findUniqueOrThrow({ where: { code: advanceCode }, select: { id: true } })
-  const advanceAgg = await prisma.journalLine.aggregate({
-    where: { accountId: advanceAccount.id, journal: { status: { in: ["POSTED", "REVERSED"] } } },
-    _sum: { debit: true, credit: true },
-  })
-  // A liability's normal balance is a credit.
-  const advancesHeld = (advanceAgg._sum.credit ?? ZERO).minus(advanceAgg._sum.debit ?? ZERO)
-
   return {
     subledgerTotal: subledgerTotal.toFixed(2),
     glBalance: glBalance.toFixed(2),
     ties: subledgerTotal.equals(glBalance),
-    advancesHeld: advancesHeld.toFixed(2),
   }
 }

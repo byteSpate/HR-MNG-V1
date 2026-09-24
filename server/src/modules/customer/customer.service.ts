@@ -3,8 +3,7 @@
  *
  * A Sales Account becomes a Customer the day its first Opportunity is Won
  * (design §2) — that hook is Phase 3, wired from the Sales Hub, not here.
- * This module only covers the record itself: created by hand for now, or
- * by the opening-balance import (customer.opening-balance.import.ts).
+ * This module only covers the record itself, created by hand for now.
  */
 
 import prisma from "../../config/prisma"

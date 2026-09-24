@@ -1,14 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 import { Prisma } from "../../generated/prisma/client"
-import { assertOpeningReceivable, assertReceivable } from "./receipt.allocation"
+import { assertReceivable } from "./receipt.allocation"
 
 const d = (v: string) => new Prisma.Decimal(v)
 
 function invClient(invoices: unknown[]) {
   return { invoice: { findMany: vi.fn().mockResolvedValue(invoices) } } as any
-}
-function obClient(ob: unknown) {
-  return { customerOpeningBalance: { findUnique: vi.fn().mockResolvedValue(ob) } } as any
 }
 
 const INV = (over: Record<string, unknown> = {}) => ({
@@ -43,21 +40,5 @@ describe("assertReceivable", () => {
   it("accepts an allocation up to what the invoice still owes", async () => {
     await expect(assertReceivable(invClient([INV()]), "c1", [{ invoiceId: "inv1", amount: d("1150000") }]))
       .resolves.toBeUndefined()
-  })
-})
-
-describe("assertOpeningReceivable", () => {
-  it("refuses the opening balance of a customer who has none", async () => {
-    await expect(assertOpeningReceivable(obClient(null), "c1", d("1"))).rejects.toThrow("This customer has no opening balance")
-  })
-
-  it("refuses more than is left on the opening balance", async () => {
-    const client = obClient({ id: "ob1", amount: d("200000"), allocations: [{ amount: d("150000") }] })
-    await expect(assertOpeningReceivable(client, "c1", d("60000"))).rejects.toThrow("The opening balance only has 50000.00 left to collect")
-  })
-
-  it("returns the opening balance id when the amount fits", async () => {
-    const client = obClient({ id: "ob1", amount: d("200000"), allocations: [] })
-    await expect(assertOpeningReceivable(client, "c1", d("200000"))).resolves.toEqual({ openingBalanceId: "ob1" })
   })
 })

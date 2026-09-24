@@ -17,6 +17,13 @@ function isUniqueViolation(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002"
 }
 
+// The name lower-cased with everything but letters and digits removed, so
+// "Star Tech" and "StarTech" are the same supplier — must match the
+// migration SQL's regexp_replace(lower(name), '[^a-z0-9]', '', 'g') exactly.
+function nameKeyFor(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "")
+}
+
 export async function listSuppliers() {
   return prisma.supplier.findMany({
     select: {
@@ -39,6 +46,7 @@ export async function createSupplier(input: CreateSupplierInput, actor: AccessTo
       const supplier = await tx.supplier.create({
         data: {
           name: input.name,
+          nameKey: nameKeyFor(input.name),
           contactName: input.contactName ?? null,
           contactPhone: input.contactPhone ?? null,
           contactEmail: input.contactEmail ?? null,
@@ -77,6 +85,7 @@ export async function updateSupplier(
         where: { id },
         data: {
           name: input.name,
+          nameKey: nameKeyFor(input.name),
           contactName: input.contactName ?? null,
           contactPhone: input.contactPhone ?? null,
           contactEmail: input.contactEmail ?? null,

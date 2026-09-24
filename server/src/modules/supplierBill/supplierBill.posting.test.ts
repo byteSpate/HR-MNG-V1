@@ -43,10 +43,11 @@ describe("buildSupplierBillLines", () => {
     const bill = {
       id: "b1",
       supplierId: "sup-1",
+      opportunityId: "opp-1",
       lines: [
         {
           id: "l1", kind: "GOODS" as const, amount: new Prisma.Decimal("800000"),
-          vatAmount: new Prisma.Decimal("120000"), opportunityId: "opp-1",
+          vatAmount: new Prisma.Decimal("120000"),
         },
       ],
     }
@@ -65,10 +66,11 @@ describe("buildSupplierBillLines", () => {
     const bill = {
       id: "b2",
       supplierId: "sup-1",
+      opportunityId: "opp-2",
       lines: [
         {
           id: "l2", kind: "SERVICE" as const, amount: new Prisma.Decimal("50000"),
-          vatAmount: new Prisma.Decimal("0"), opportunityId: "opp-2",
+          vatAmount: new Prisma.Decimal("0"),
         },
       ],
     }
@@ -84,11 +86,12 @@ describe("buildSupplierBillLines", () => {
 })
 
 describe("approveSupplierBill", () => {
-  function arrangeDraftBill(over: { lines: Array<{ kind: "GOODS" | "SERVICE"; opportunityId: string }> }) {
+  function arrangeDraftBill(over: { opportunityId: string; lines: Array<{ kind: "GOODS" | "SERVICE" }> }) {
     const bill = {
       id: "b1", supplierId: "sup-1", status: "DRAFT", createdBy: "finance-1", billNumber: "INV-1",
+      opportunityId: over.opportunityId,
       lines: over.lines.map((l, i) => ({
-        id: `l${i}`, kind: l.kind, opportunityId: l.opportunityId,
+        id: `l${i}`, kind: l.kind,
         amount: new Prisma.Decimal("1000"), vatAmount: new Prisma.Decimal("0"),
       })),
     }
@@ -100,13 +103,10 @@ describe("approveSupplierBill", () => {
     vi.mocked(loadRules).mockResolvedValue(RULES)
   }
 
-  it("offers the bill's goods deals to the late cost release, once each", async () => {
+  it("offers the bill's deal to the late cost release when it has a goods line", async () => {
     arrangeDraftBill({
-      lines: [
-        { kind: "GOODS", opportunityId: "opp-1" },
-        { kind: "GOODS", opportunityId: "opp-1" },
-        { kind: "SERVICE", opportunityId: "opp-2" },
-      ],
+      opportunityId: "opp-1",
+      lines: [{ kind: "GOODS" }, { kind: "GOODS" }, { kind: "SERVICE" }],
     })
 
     await approveSupplierBill("b1", ADMIN)
@@ -115,7 +115,7 @@ describe("approveSupplierBill", () => {
   })
 
   it("does not call the late cost release when the bill has no goods lines", async () => {
-    arrangeDraftBill({ lines: [{ kind: "SERVICE", opportunityId: "opp-2" }] })
+    arrangeDraftBill({ opportunityId: "opp-2", lines: [{ kind: "SERVICE" }] })
 
     await approveSupplierBill("b1", ADMIN)
 

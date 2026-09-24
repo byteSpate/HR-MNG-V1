@@ -1,11 +1,6 @@
 /**
  * Supplier Payment: DRAFT while Finance drafts it, APPROVED once Super Admin
  * signs off, approval is what posts (supplierPayment.posting.ts).
- *
- * An allocation chosen at creation time settles a specific bill; an amount
- * left unallocated becomes an advance. Both are the same record, design
- * §3.1 never distinguishes "a payment" from "an advance" as different
- * documents, only as different allocation states of one.
  */
 
 import { Prisma } from "../../generated/prisma/client"
@@ -15,7 +10,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { assertAllocatable, assertOpeningPayable } from "./supplierBill.allocation"
+import { assertAllocatable } from "./supplierBill.allocation"
 import type { CreateSupplierPaymentInput } from "./supplierPayment.validators"
 
 export async function listSupplierPayments() {
@@ -72,16 +67,11 @@ async function toStoredAllocations(tx: PrismaNamespace.TransactionClient, input:
 
 export async function createSupplierPayment(input: CreateSupplierPaymentInput, actor: AccessTokenPayload) {
   const allocatedTotal = input.allocations.reduce((sum, a) => sum.plus(a.amount), new Prisma.Decimal(0))
-  const openingAmount = input.openingAllocation ? new Prisma.Decimal(input.openingAllocation.amount) : null
-  const totalAllocated = openingAmount ? allocatedTotal.plus(openingAmount) : allocatedTotal
-  if (totalAllocated.greaterThan(input.amount)) {
+  if (allocatedTotal.greaterThan(input.amount)) {
     throw new AppError(400, "Allocations cannot add up to more than the payment amount")
   }
-  // The opening balance is always taka, recorded once at go-live; a USD
-  // payment against it would need an exchange difference this reclass does
-  // not work out, the same reason matchAdvance refuses a USD advance.
-  if (openingAmount && input.currency === "USD") {
-    throw new AppError(400, "A USD payment cannot settle the opening balance, which is in taka")
+  if (input.allocations.length === 0) {
+    throw new AppError(400, "A payment must be allocated to at least one bill")
   }
 
   return prisma.$transaction(async (tx) => {
@@ -93,13 +83,19 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
     const allocations = await toStoredAllocations(tx, input)
     await assertAllocatable(tx, input.supplierId, allocations)
 
-    const openingAllocation = openingAmount
-      ? await assertOpeningPayable(tx, input.supplierId, openingAmount)
-      : null
+    // The deal this payment belongs to, from the bill it pays (Task 7 gives
+    // the caller an opportunityId directly; until then, the first
+    // allocation's bill names it, same as the migration's backfill).
+    const bill = await tx.supplierBill.findUnique({
+      where: { id: input.allocations[0].billId },
+      select: { opportunityId: true },
+    })
+    if (!bill) throw new AppError(404, "A bill being paid does not exist")
 
     const payment = await tx.supplierPayment.create({
       data: {
         supplierId: input.supplierId,
+        opportunityId: bill.opportunityId,
         date: new Date(input.date),
         amount: rate ? new Prisma.Decimal(input.amount).times(rate).toFixed(2) : new Prisma.Decimal(input.amount).toFixed(2),
         sourceAmount: rate ? input.amount : null,
@@ -109,9 +105,6 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
         status: "DRAFT",
         createdBy: actor.sub,
         allocations: { create: allocations },
-        ...(openingAllocation
-          ? { openingAllocations: { create: [{ openingBalanceId: openingAllocation.openingBalanceId, amount: openingAmount!.toFixed(2) }] } }
-          : {}),
       },
       include: { allocations: true },
     })

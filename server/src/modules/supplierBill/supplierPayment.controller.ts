@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express"
-import { approveSupplierPayment, matchAdvance } from "./supplierPayment.posting"
+import { approveSupplierPayment } from "./supplierPayment.posting"
 import { createSupplierPayment, getSupplierPayment, listSupplierPayments } from "./supplierPayment.service"
-import { createSupplierPaymentSchema, matchAdvanceSchema } from "./supplierPayment.validators"
+import { createSupplierPaymentSchema } from "./supplierPayment.validators"
 
 type RequestWithId = Request<{ id: string }>
 
@@ -33,15 +33,6 @@ export async function createSupplierPaymentHandler(req: Request, res: Response, 
 export async function approveSupplierPaymentHandler(req: RequestWithId, res: Response, next: NextFunction) {
   try {
     return res.json(await approveSupplierPayment(req.params.id, req.user!))
-  } catch (err) {
-    return next(err)
-  }
-}
-
-export async function matchAdvanceHandler(req: RequestWithId, res: Response, next: NextFunction) {
-  try {
-    const body = matchAdvanceSchema.parse(req.body)
-    return res.status(201).json(await matchAdvance(req.params.id, body, req.user!))
   } catch (err) {
     return next(err)
   }

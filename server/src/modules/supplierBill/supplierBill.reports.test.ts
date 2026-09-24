@@ -4,7 +4,6 @@ import { Prisma } from "../../generated/prisma/client"
 vi.mock("../../config/prisma", () => ({
   default: {
     supplierBill: { findMany: vi.fn() },
-    supplierOpeningBalance: { findMany: vi.fn() },
     account: { findUniqueOrThrow: vi.fn() },
     journalLine: { aggregate: vi.fn() },
   },
@@ -27,8 +26,6 @@ function bill(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // No opening balances unless a test says otherwise.
-  vi.mocked(prisma.supplierOpeningBalance.findMany).mockResolvedValue([])
 })
 
 describe("getSupplierAgeing", () => {
@@ -78,26 +75,12 @@ describe("getSupplierAgeing", () => {
     )
   })
 
-  it("lists an unpaid opening balance as a row due on its go-live date", async () => {
-    vi.mocked(prisma.supplierBill.findMany).mockResolvedValue([])
-    vi.mocked(prisma.supplierOpeningBalance.findMany).mockResolvedValue([
-      { id: "ob1", supplierId: "sup-1", amount: d("50000"), asOf: new Date("2026-07-01"),
-        supplier: { name: "Star Tech" }, allocations: [{ amount: d("20000") }] },
-    ] as any)
-
-    const rows = await getSupplierAgeing(new Date("2026-09-23"))
-
-    expect(rows).toEqual([expect.objectContaining({
-      billId: null, openingBalanceId: "ob1", label: "Opening balance", outstanding: "30000.00", bucket: "61-90",
-    })])
-  })
-
   it("labels a bill row with its own bill number", async () => {
     vi.mocked(prisma.supplierBill.findMany).mockResolvedValue([bill()] as any)
 
     const rows = await getSupplierAgeing(new Date("2026-11-15"))
 
-    expect(rows).toEqual([expect.objectContaining({ billId: "b1", openingBalanceId: null, label: "Bill INV-1" })])
+    expect(rows).toEqual([expect.objectContaining({ billId: "b1", label: "Bill INV-1" })])
   })
 })
 

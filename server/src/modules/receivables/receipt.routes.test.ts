@@ -7,7 +7,7 @@ vi.mock("./receipt.service", () => ({
   createReceipt: vi.fn(),
   updateReceiptCertificates: vi.fn(),
 }))
-vi.mock("./receipt.posting", () => ({ approveReceipt: vi.fn(), matchCustomerAdvance: vi.fn() }))
+vi.mock("./receipt.posting", () => ({ approveReceipt: vi.fn() }))
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"

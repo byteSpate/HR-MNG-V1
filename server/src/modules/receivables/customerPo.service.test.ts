@@ -7,7 +7,6 @@ vi.mock("../../config/prisma", () => ({
     opportunityLine: { findMany: vi.fn() },
     customerPo: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
     customerPoLine: { deleteMany: vi.fn() },
-    billingScheduleRow: { deleteMany: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -39,7 +38,6 @@ const SALES_USER = { sub: "u-s", role: "EMPLOYEE", salesRole: "SALES_USER", emai
 const PO_INPUT = {
   opportunityId: "opp-1", customerPoNumber: "PO-778", date: "2026-09-23",
   lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15" }],
-  schedule: [] as Array<{ plannedDate: string; amount: string; note?: string }>,
 }
 
 function arrangeDeal(over: Partial<{ status: string; serial: string }> = {}) {
@@ -91,13 +89,6 @@ describe("createCustomerPo", () => {
         lines: { create: [expect.objectContaining({ quantity: "10.00", unitPrice: "80000.00", amount: "800000.00", order: 0 })] },
       }),
     }))
-  })
-
-  it("refuses a billing schedule that adds up to more than the PO", async () => {
-    arrangeDeal()
-    await expect(
-      createCustomerPo({ ...PO_INPUT, schedule: [{ plannedDate: "2026-10-01", amount: "900000" }] }, FINANCE)
-    ).rejects.toThrow("The billing schedule adds up to 900000.00, more than the PO's 800000.00 before VAT")
   })
 
   it("says plainly when the PO number is already taken for this customer", async () => {

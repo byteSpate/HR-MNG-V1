@@ -57,9 +57,16 @@ async function toLineRows(
       sourceAmount: input.currency === "BDT" ? null : (line.sourceAmount ?? line.amount),
       vatCodeId: line.vatCodeId,
       vatAmount: new Prisma.Decimal(amount).times(rate).dividedBy(100).toFixed(2),
-      opportunityId: line.opportunityId,
     }
   })
+}
+
+// The bill belongs to one deal (spec: every document belongs to one deal).
+// Every line still names an opportunityId in the input until Task 5 moves
+// the field to the bill in the validator; until then, the bill's deal is
+// its first line's.
+function billOpportunityId(input: CreateSupplierBillInput): string {
+  return input.lines[0].opportunityId
 }
 
 /** The deals a bill line can be tagged to. Read here rather than through
@@ -109,6 +116,7 @@ export async function createSupplierBill(input: CreateSupplierBillInput, actor: 
         fxRateToBdt,
         status: "DRAFT",
         createdBy: actor.sub,
+        opportunityId: billOpportunityId(input),
         lines: { create: await toLineRows(tx, input, fxRateToBdt) },
       },
       include: { lines: true },
@@ -149,6 +157,7 @@ export async function updateSupplierBill(
         dueDate: new Date(input.dueDate),
         currency: input.currency,
         fxRateToBdt,
+        opportunityId: billOpportunityId(input),
         lines: { create: await toLineRows(tx, input, fxRateToBdt) },
       },
       include: { lines: true },
