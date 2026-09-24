@@ -88,6 +88,22 @@ describe("createInvoice", () => {
     await expect(createInvoice(INPUT, FINANCE)).rejects.toThrow("An invoice numbered INV-2026-041 is already recorded")
   })
 
+  it("computes VAT at the code's current rate, 7.5%, on a new draft (Review Focus 3)", async () => {
+    vi.mocked(loadActiveVatRates).mockResolvedValue(new Map([["vat-15", d("7.5")]]))
+    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue({
+      ...PO, lines: [{ ...PO.lines[0], amount: d("2000000"), invoiceLines: [] }],
+    } as any)
+    vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv2" } as any)
+
+    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "1000000" }] }, FINANCE)
+
+    expect(prisma.invoice.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        lines: { create: [expect.objectContaining({ amount: "1000000.00", vatAmount: "75000.00" })] },
+      }),
+    }))
+  })
+
   it("refuses an invoice while the customer has no billing address", async () => {
     vi.mocked(prisma.customerPo.findUnique).mockResolvedValue({
       ...PO, customer: { ...PO.customer, billingAddress: null },

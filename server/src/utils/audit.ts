@@ -91,6 +91,9 @@ export type AuditEntity =
   | "INVOICE"
   | "RECEIPT"
   | "CUSTOMER_CREDIT_NOTE"
+  // Reference data editable from Settings (Task 15): a rate change is
+  // audited the same way DEPARTMENT or SHIFT already are.
+  | "VAT_CODE"
 
 export type AuditAction =
   | "CREATE"
