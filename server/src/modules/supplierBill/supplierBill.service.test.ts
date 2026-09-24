@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("../../config/env", () => ({ env: { SALES_GO_LIVE: "2026-11-01" } }))
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
@@ -32,10 +33,12 @@ const INPUT = {
   ],
 }
 
-// The one deal a bill names must exist and be Won before anything on the
-// bill can be created or updated.
-function arrangeWonDeal(opp: { id: string; serial: string }) {
-  vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ id: opp.id, status: "WON", serial: opp.serial } as any)
+// The one deal a bill names must exist, be Won, and have been Won on or
+// after go-live before anything on the bill can be created or updated.
+function arrangeWonDeal(opp: { id: string; serial: string; closedAt?: Date }) {
+  vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({
+    id: opp.id, status: "WON", serial: opp.serial, closedAt: opp.closedAt ?? new Date("2026-11-10"),
+  } as any)
 }
 
 beforeEach(() => {
@@ -47,8 +50,15 @@ beforeEach(() => {
 
 describe("bill and deals", () => {
   it("refuses a bill tagged to a deal that is not Won", async () => {
-    vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ id: "opp-1", status: "ONGOING", serial: "BS-OPP-00001" } as any)
-    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("BS-OPP-00001 is not a Won deal")
+    vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ id: "opp-1", status: "ONGOING", serial: "BS-OPP-00001", closedAt: null } as any)
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("BS-OPP-00001 is not won yet. Money can be recorded only on a won deal.")
+  })
+
+  it("refuses a bill tagged to a deal Won before go-live", async () => {
+    arrangeWonDeal({ id: "opp-1", serial: "BS-OPP-00001", closedAt: new Date("2026-10-20") })
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow(
+      "BS-OPP-00001 was won before this app started (2026-11-01), so its money is not recorded here."
+    )
   })
 
   it("refuses a bill tagged to a deal that does not exist", async () => {

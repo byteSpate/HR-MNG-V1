@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("../../config/env", () => ({ env: { SALES_GO_LIVE: "2026-11-01" } }))
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
@@ -40,8 +41,10 @@ const PO_INPUT = {
   lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15" }],
 }
 
-function arrangeDeal(over: Partial<{ status: string; serial: string }> = {}) {
-  vi.mocked(assertDealAccess).mockResolvedValue({ id: "opp-1", serial: "BS-OPP-00002", status: "WON", salesAccountId: "acc-1", ...over } as any)
+function arrangeDeal(over: Partial<{ status: string; serial: string; closedAt: Date | null }> = {}) {
+  vi.mocked(assertDealAccess).mockResolvedValue({
+    id: "opp-1", serial: "BS-OPP-00002", status: "WON", salesAccountId: "acc-1", closedAt: new Date("2026-11-10"), ...over,
+  } as any)
   vi.mocked(ensureCustomerForAccount).mockResolvedValue({ id: "c1", legalName: "Bengal Group" } as any)
   vi.mocked(loadActiveVatRates).mockResolvedValue(new Map([["vat-15", d("15")]]))
   vi.mocked(prisma.idCounter.upsert).mockResolvedValue({ id: "CPO", value: 1 } as any)
@@ -73,7 +76,14 @@ describe("createCustomerPo", () => {
   it("refuses a PO on a deal that is not Won", async () => {
     arrangeDeal({ status: "ONGOING", serial: "BS-OPP-00003" })
     await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow(
-      "BS-OPP-00003 is not a Won deal, so it cannot have a customer PO yet"
+      "BS-OPP-00003 is not won yet. Money can be recorded only on a won deal."
+    )
+  })
+
+  it("refuses a PO on a deal Won before go-live", async () => {
+    arrangeDeal({ serial: "BS-OPP-00004", closedAt: new Date("2026-10-20") })
+    await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow(
+      "BS-OPP-00004 was won before this app started (2026-11-01), so its money is not recorded here."
     )
   })
 

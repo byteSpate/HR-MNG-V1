@@ -10,23 +10,26 @@
 import { Prisma } from "../../generated/prisma/client"
 import type { Prisma as PrismaNamespace } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
+import { env } from "../../config/env"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { assertMoneyAllowed } from "../dealMoney/dealMoney.goLive"
 import type { CreateSupplierBillInput, UpdateSupplierBillInput } from "./supplierBill.validators"
 
 // Goods are bought only after the customer's PO, and a PO exists only on a
 // Won deal (design §2), which is also what account 1214's name promises.
 // The bill belongs to one deal (spec: every document belongs to one deal),
-// so this is checked once per bill, not once per line.
-async function assertBillDealIsWon(tx: PrismaNamespace.TransactionClient, opportunityId: string): Promise<void> {
+// so this is checked once per bill, not once per line. Task 9: only a deal
+// Won on or after go-live can have money recorded against it.
+async function assertBillDealAllowed(tx: PrismaNamespace.TransactionClient, opportunityId: string): Promise<void> {
   const opp = await tx.opportunity.findUnique({
     where: { id: opportunityId },
-    select: { id: true, status: true, serial: true },
+    select: { id: true, status: true, serial: true, closedAt: true },
   })
   if (!opp) throw new AppError(400, "A bill names a deal that does not exist")
-  if (opp.status !== "WON") throw new AppError(409, `${opp.serial} is not a Won deal, so nothing can be bought for it yet`)
+  assertMoneyAllowed(opp, env.SALES_GO_LIVE)
 }
 
 // VAT is frozen per line when the line is written, from its VAT code's rate
@@ -82,7 +85,7 @@ export async function getSupplierBill(id: string) {
 
 export async function createSupplierBill(input: CreateSupplierBillInput, actor: AccessTokenPayload) {
   return prisma.$transaction(async (tx) => {
-    await assertBillDealIsWon(tx, input.opportunityId)
+    await assertBillDealAllowed(tx, input.opportunityId)
 
     const fxRateToBdt =
       input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)
@@ -125,7 +128,7 @@ export async function updateSupplierBill(
   if (existing.status !== "DRAFT") throw new AppError(409, "Only a draft bill can be edited")
 
   return prisma.$transaction(async (tx) => {
-    await assertBillDealIsWon(tx, input.opportunityId)
+    await assertBillDealAllowed(tx, input.opportunityId)
 
     const fxRateToBdt =
       input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)

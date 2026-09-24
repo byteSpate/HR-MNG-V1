@@ -1,9 +1,11 @@
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
+import { env } from "../../config/env"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { ensureCustomerForAccount } from "../customer/customer.link"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { assertMoneyAllowed } from "../dealMoney/dealMoney.goLive"
 import { assertDealAccess, isFinance } from "./receivables.access"
 import { loadActiveVatRates } from "./receivables.vat"
 import type {
@@ -86,7 +88,7 @@ export async function createCustomerPo(input: CreateCustomerPoInput, actor: Acce
   try {
     return await prisma.$transaction(async (tx) => {
       const deal = await assertDealAccess(tx, actor, input.opportunityId)
-      if (deal.status !== "WON") throw new AppError(400, `${deal.serial} is not a Won deal, so it cannot have a customer PO yet`)
+      assertMoneyAllowed(deal, env.SALES_GO_LIVE)
 
       const customer = await ensureCustomerForAccount(tx, deal.salesAccountId, "throw-on-conflict", actor.sub)
       await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
