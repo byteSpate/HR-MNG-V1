@@ -13,7 +13,7 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 const PO_FOR_INVOICING = {
-  customer: { select: { id: true, legalName: true, paymentDays: true } },
+  customer: { select: { id: true, legalName: true, paymentDays: true, billingAddress: true } },
   lines: {
     orderBy: { order: "asc" },
     include: { invoiceLines: { where: { invoice: { status: { in: ["DRAFT", "APPROVED"] } } }, select: { amount: true } } },
@@ -72,6 +72,12 @@ export async function createInvoice(input: CreateInvoiceInput, actor: AccessToke
   try {
     return await prisma.$transaction(async (tx) => {
       const po = await loadOpenPo(tx, input.poId)
+      // The billing address is printed on the invoice PDF. The client shows
+      // a small form before this call so this is a safety net, not the only
+      // check (spec: "The customer's billing details before an invoice").
+      if (!po.customer.billingAddress) {
+        throw new AppError(400, `Add ${po.customer.legalName}'s billing address first. It is printed on the invoice.`)
+      }
       const date = new Date(input.date)
       const invoice = await tx.invoice.create({
         data: {

@@ -24,7 +24,7 @@ const FINANCE = { sub: "u-f", role: "FINANCE_OFFICER", salesRole: null, email: "
 
 const PO = {
   id: "po1", serial: "BS-CPO-00001", status: "OPEN", customerId: "c1",
-  customer: { id: "c1", legalName: "Bengal Group", paymentDays: 30 },
+  customer: { id: "c1", legalName: "Bengal Group", paymentDays: 30, billingAddress: "House 12, Road 5, Gulshan, Dhaka" },
   lines: [
     { id: "pl1", description: "Firewall", kind: "GOODS", amount: d("800000"), vatCodeId: "vat-15", invoiceLines: [{ amount: d("300000") }] },
     { id: "pl2", description: "Installation", kind: "SERVICE", amount: d("100000"), vatCodeId: "vat-15", invoiceLines: [] },
@@ -86,6 +86,15 @@ describe("createInvoice", () => {
   it("says plainly when the invoice number is already taken", async () => {
     vi.mocked(prisma.invoice.create).mockRejectedValue(uniqueViolation())
     await expect(createInvoice(INPUT, FINANCE)).rejects.toThrow("An invoice numbered INV-2026-041 is already recorded")
+  })
+
+  it("refuses an invoice while the customer has no billing address", async () => {
+    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue({
+      ...PO, customer: { ...PO.customer, billingAddress: null },
+    } as any)
+    await expect(createInvoice(INPUT, FINANCE)).rejects.toThrow(
+      "Add Bengal Group's billing address first. It is printed on the invoice."
+    )
   })
 })
 
