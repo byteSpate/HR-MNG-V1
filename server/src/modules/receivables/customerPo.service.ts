@@ -28,6 +28,8 @@ export const PO_INCLUDE = {
     include: {
       vatCode: true,
       invoiceLines: { where: { invoice: { status: { in: ["DRAFT", "APPROVED"] } } }, select: { amount: true } },
+      earningLines: { where: { event: { status: "APPROVED" } }, select: { amount: true, quantity: true } },
+      monthlyEarnings: { where: { run: { status: "POSTED" } }, select: { amount: true } },
     },
   },
   schedule: { orderBy: { order: "asc" } },

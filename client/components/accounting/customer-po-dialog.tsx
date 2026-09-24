@@ -13,9 +13,10 @@ import {
 } from "@/lib/api/customerPo"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
-import type { CustomerPo, SaleLineKind, VatCode } from "@/lib/api/types"
+import type { CustomerPo, EarnKind, SaleLineKind, VatCode } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import {
+  CheckboxField,
   DialogActions,
   Field,
   FormError,
@@ -46,10 +47,17 @@ interface LineDraft {
   quantity: string
   unitPrice: string
   vatCodeId: string
+  /** Set only on a tracked PO's line, fixed at creation (spec §2). */
+  earnKind?: EarnKind
+  contractStart?: string
+  contractEnd?: string
 }
 
-function blankLine(vatCodes: VatCode[]): LineDraft {
-  return { description: "", kind: "GOODS", quantity: "1", unitPrice: "", vatCodeId: vatCodes[0]?.id ?? "" }
+function blankLine(vatCodes: VatCode[], trackDelivery: boolean): LineDraft {
+  return {
+    description: "", kind: "GOODS", quantity: "1", unitPrice: "", vatCodeId: vatCodes[0]?.id ?? "",
+    ...(trackDelivery ? { earnKind: "DELIVERY" as EarnKind } : {}),
+  }
 }
 
 function lineTotal(l: LineDraft): string | null {
@@ -98,10 +106,17 @@ export function CustomerPoDialog({
   const [customerPoNumber, setCustomerPoNumber] = useState(po?.customerPoNumber ?? "")
   const [date, setDate] = useState(po ? po.date.slice(0, 10) : today())
   const [invoiceTo, setInvoiceTo] = useState(po?.invoiceTo ?? "")
+  // Fixed at creation and never changed (spec §2) — only a new PO offers the switch.
+  const [trackDelivery, setTrackDelivery] = useState(po?.trackDelivery ?? false)
   const [lines, setLines] = useState<LineDraft[]>(
     po
-      ? po.lines.map((l) => ({ description: l.description, kind: l.kind, quantity: l.quantity, unitPrice: l.unitPrice, vatCodeId: l.vatCodeId }))
-      : [blankLine([])]
+      ? po.lines.map((l) => ({
+          description: l.description, kind: l.kind, quantity: l.quantity, unitPrice: l.unitPrice, vatCodeId: l.vatCodeId,
+          earnKind: l.earnKind ?? undefined,
+          contractStart: l.contractStart?.slice(0, 10),
+          contractEnd: l.contractEnd?.slice(0, 10),
+        }))
+      : [blankLine([], false)]
   )
   const [schedule, setSchedule] = useState<ScheduleDraft[]>(
     po ? po.schedule.map((s) => ({ plannedDate: s.plannedDate.slice(0, 10), amount: s.amount, note: s.note ?? "" })) : []
@@ -110,10 +125,37 @@ export function CustomerPoDialog({
   const update = (i: number, patch: Partial<LineDraft>) =>
     setLines((all) => all.map((l, j) => (j === i ? { ...l, ...patch } : l)))
 
+  /** Switching kind resets the earning kind: Goods is always Delivery; a
+   *  Service line needs a person to choose Acceptance or Monthly. */
+  const updateKind = (i: number, kind: SaleLineKind) =>
+    setLines((all) =>
+      all.map((l, j) =>
+        j === i
+          ? {
+              ...l, kind,
+              earnKind: trackDelivery ? (kind === "GOODS" ? "DELIVERY" : undefined) : undefined,
+              contractStart: undefined, contractEnd: undefined,
+            }
+          : l
+      )
+    )
+
+  const toggleTrackDelivery = (next: boolean) => {
+    setTrackDelivery(next)
+    setLines((all) =>
+      all.map((l) => (next ? { ...l, earnKind: l.kind === "GOODS" ? "DELIVERY" : l.earnKind } : { ...l, earnKind: undefined, contractStart: undefined, contractEnd: undefined }))
+    )
+  }
+
   const copyFromDeal = useMutation({
     mutationFn: () => prefillPoLines(accessToken!, opportunityId),
     onSuccess: (result) => {
-      setLines(result.lines.map((p) => ({ description: p.description, kind: p.kind, quantity: p.quantity, unitPrice: p.unitPrice ?? "", vatCodeId: codes[0]?.id ?? "" })))
+      setLines(result.lines.map((p) => ({
+        description: p.description, kind: p.kind, quantity: p.quantity, unitPrice: p.unitPrice ?? "", vatCodeId: codes[0]?.id ?? "",
+        // prefillPoLines only ever returns GOODS lines, so Delivery is the
+        // only earning kind a copied line can have.
+        ...(trackDelivery ? { earnKind: "DELIVERY" as EarnKind } : {}),
+      })))
     },
     onError: (err) => setError(toMessage(err)),
   })
@@ -130,7 +172,13 @@ export function CustomerPoDialog({
   const net = lines.reduce((s, l) => s + Number(lineTotal(l) ?? "0"), 0)
   const planned = schedule.reduce((s, r) => s + (Number(r.amount) || 0), 0)
 
-  const linesComplete = lines.every((l) => l.description.trim() && Number(l.quantity) > 0 && Number(l.unitPrice) > 0 && (l.vatCodeId || codes[0]))
+  const linesComplete = lines.every((l) => {
+    if (!l.description.trim() || !(Number(l.quantity) > 0) || !(Number(l.unitPrice) > 0) || !(l.vatCodeId || codes[0])) return false
+    if (!trackDelivery) return true
+    if (!l.earnKind) return false
+    if (l.earnKind === "MONTHLY") return Boolean(l.contractStart && l.contractEnd)
+    return true
+  })
   const canSubmit = Boolean(opportunityId && customerPoNumber.trim() && date && lines.length > 0 && linesComplete)
 
   const submit = () =>
@@ -139,13 +187,16 @@ export function CustomerPoDialog({
       customerPoNumber: customerPoNumber.trim(),
       date,
       invoiceTo: invoiceTo.trim() || undefined,
-      ...(po ? {} : { trackDelivery: false }),
+      ...(po ? {} : { trackDelivery }),
       lines: lines.map((l) => ({
         description: l.description.trim(),
         kind: l.kind,
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         vatCodeId: l.vatCodeId || codes[0]?.id || "",
+        ...(trackDelivery
+          ? { earnKind: l.earnKind, contractStart: l.earnKind === "MONTHLY" ? l.contractStart : undefined, contractEnd: l.earnKind === "MONTHLY" ? l.contractEnd : undefined }
+          : {}),
       })),
       schedule: schedule.map((r) => ({ plannedDate: r.plannedDate, amount: r.amount, note: r.note.trim() || undefined })),
     })
@@ -192,9 +243,19 @@ export function CustomerPoDialog({
             <PanelAlert>There are no Won deals yet. A customer PO must belong to a Won deal.</PanelAlert>
           ) : null}
 
-          <p className={`text-[12px] ${TONE.muted}`}>
-            Delivery is not tracked on this PO: it counts as earned when invoiced. Tracked deliveries are not built yet.
-          </p>
+          {po ? (
+            <p className={`text-[12px] ${TONE.muted}`}>
+              {po.trackDelivery ? "Tracks delivery" : "Earned when invoiced"}
+            </p>
+          ) : (
+            <div>
+              <CheckboxField label="Track delivery" checked={trackDelivery} onChange={toggleTrackDelivery} />
+              <p className={`text-[11.5px] ${TONE.muted}`}>
+                Turn on when revenue is earned on delivery, sign-off or month by month rather than on the invoice. It
+                cannot be changed after the PO is saved.
+              </p>
+            </div>
+          )}
 
           <section className="space-y-2">
             <div className="flex items-center justify-between">
@@ -216,7 +277,7 @@ export function CustomerPoDialog({
                     placeholder="Fortinet FortiGate 100F"
                   />
                 </div>
-                <select aria-label={`Line ${i + 1} kind`} className={`${SELECT} sm:col-span-2`} value={line.kind} onChange={(e) => update(i, { kind: e.target.value as SaleLineKind })}>
+                <select aria-label={`Line ${i + 1} kind`} className={`${SELECT} sm:col-span-2`} value={line.kind} onChange={(e) => updateKind(i, e.target.value as SaleLineKind)}>
                   <option value="GOODS">Goods</option>
                   <option value="SERVICE">Service</option>
                 </select>
@@ -259,10 +320,50 @@ export function CustomerPoDialog({
                 >
                   <RiDeleteBinLine className="size-4" aria-hidden />
                 </Button>
+
+                {trackDelivery ? (
+                  <div className="grid grid-cols-1 gap-2 sm:col-span-12 sm:grid-cols-12">
+                    <select
+                      aria-label={`Line ${i + 1} earned by`}
+                      className={`${SELECT} sm:col-span-3`}
+                      value={line.earnKind ?? ""}
+                      disabled={line.kind === "GOODS"}
+                      onChange={(e) => update(i, { earnKind: e.target.value as EarnKind, contractStart: undefined, contractEnd: undefined })}
+                    >
+                      {line.kind === "GOODS" ? (
+                        <option value="DELIVERY">Delivery</option>
+                      ) : (
+                        <>
+                          <option value="">Choose when this is earned</option>
+                          <option value="ACCEPTANCE">Acceptance</option>
+                          <option value="MONTHLY">Monthly</option>
+                        </>
+                      )}
+                    </select>
+                    {line.earnKind === "MONTHLY" ? (
+                      <>
+                        <Input
+                          aria-label={`Line ${i + 1} contract start`}
+                          className="sm:col-span-3"
+                          type="date"
+                          value={line.contractStart ?? ""}
+                          onChange={(e) => update(i, { contractStart: e.target.value })}
+                        />
+                        <Input
+                          aria-label={`Line ${i + 1} contract end`}
+                          className="sm:col-span-3"
+                          type="date"
+                          value={line.contractEnd ?? ""}
+                          onChange={(e) => update(i, { contractEnd: e.target.value })}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ))}
 
-            <Button type="button" variant="outline" size="sm" onClick={() => setLines((all) => [...all, blankLine(codes)])}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setLines((all) => [...all, blankLine(codes, trackDelivery)])}>
               <RiAddLine className="size-4" aria-hidden /> Add line
             </Button>
 
