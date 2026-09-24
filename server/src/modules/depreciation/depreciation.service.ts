@@ -51,7 +51,7 @@ function monthEnd(year: number, month: number): Date {
  * caller resolves `fyStartMonth` from it so a catch-up spanning a year-end
  * computes the two halves at their own rates.
  */
-export async function fyForMonth(
+async function fyForMonth(
   tx: Prisma.TransactionClient,
   year: number,
   month: number

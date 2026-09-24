@@ -1841,9 +1841,6 @@ export interface SupplierControlTieOut {
 export type SaleLineKind = "GOODS" | "SERVICE"
 export type CustomerPoStatus = "OPEN" | "COMPLETE" | "CANCELLED"
 export type ReceivableDocStatus = "DRAFT" | "APPROVED"
-/** How a line on a tracked PO counts as earned (spec §2). */
-export type EarnKind = "DELIVERY" | "ACCEPTANCE" | "MONTHLY"
-export type EarningRunStatus = "DRAFT" | "POSTED" | "REVERSED"
 
 export interface CustomerPoLine {
   id: string
@@ -1855,16 +1852,8 @@ export interface CustomerPoLine {
   vatCodeId: string
   vatCode: VatCode
   order: number
-  /** Set only on a tracked PO's line. Fixed at creation (spec §2). */
-  earnKind: EarnKind | null
-  contractStart: string | null
-  contractEnd: string | null
   /** Draft and approved invoice lines, for working out what is left to invoice. */
   invoiceLines: Array<{ amount: string }>
-  /** Draft and approved earning-event lines, for working out what is left to deliver or accept. */
-  earningLines: Array<{ amount: string; quantity: string | null }>
-  /** Posted monthly-run earnings already recorded on this line. */
-  monthlyEarnings: Array<{ amount: string }>
 }
 export interface BillingScheduleRow { id: string; plannedDate: string; amount: string; note: string | null; order: number }
 export interface CustomerPo {
@@ -1876,8 +1865,6 @@ export interface CustomerPo {
   status: CustomerPoStatus
   cancelReason: string | null
   createdBy: string
-  /** Set at creation, never changed (spec §2). Off: the invoice bills and earns. */
-  trackDelivery: boolean
   customer: { id: string; legalName: string }
   opportunity: { id: string; serial: string; name: string }
   lines: CustomerPoLine[]
@@ -1911,7 +1898,7 @@ export interface Invoice {
   status: ReceivableDocStatus
   createdBy: string
   customer: { id: string; legalName: string }
-  po: { id: string; serial: string; customerPoNumber: string; trackDelivery: boolean; opportunity: { id: string; serial: string; name: string } }
+  po: { id: string; serial: string; customerPoNumber: string; opportunity: { id: string; serial: string; name: string } }
   lines: InvoiceLine[]
 }
 
@@ -1972,44 +1959,6 @@ export interface CustomerStatement {
   openingBalance: string
   entries: StatementEntry[]
   closingBalance: string
-}
-
-/** A Delivery (goods, with a signed challan) or an Acceptance (a milestone the
- *  customer signed off), against a tracked PO. */
-export interface EarningEvent {
-  id: string
-  kind: "DELIVERY" | "ACCEPTANCE"
-  date: string
-  evidenceRef: string
-  note: string | null
-  status: ReceivableDocStatus
-  createdBy: string
-  po: {
-    id: string
-    serial: string
-    customer: { legalName: string }
-    opportunity: { id: string; serial: string; name: string }
-  }
-  lines: Array<{ id: string; poLineId: string; quantity: string | null; amount: string; poLine: { description: string } }>
-}
-
-export interface MonthlyEarningCharge {
-  id: string
-  amount: string
-  poLine: { description: string; po: { serial: string; customer: { legalName: string } } }
-}
-export interface EarningRun {
-  id: string
-  runNo: string
-  year: number
-  month: number
-  status: EarningRunStatus
-  journalId: string | null
-  journal?: { journalNo: string } | null
-  createdBy: string
-  postedBy: string | null
-  reversedBy: string | null
-  charges: MonthlyEarningCharge[]
 }
 
 export interface AccountingPeriod {

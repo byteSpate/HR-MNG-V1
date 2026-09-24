@@ -11,8 +11,6 @@ import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import type { ResolvedRules } from "../posting/posting.types"
 import { poLineRemaining } from "./customerPo.service"
 import { releaseCostForInvoice } from "./costRelease"
-import { contractPosition, lockDeal, splitAgainst, type ContractPosition } from "./receivables.position"
-import { refreshPoStatus } from "./receivables.poStatus"
 import { INVOICE_INCLUDE } from "./invoice.service"
 
 type Line = SystemJournalInput["lines"][number]
@@ -21,39 +19,25 @@ export interface InvoiceForPosting {
   id: string
   customerId: string
   opportunityId: string
-  trackDelivery: boolean
   lines: Array<{ amount: Prisma.Decimal; vatAmount: Prisma.Decimal; kind: SaleLineKind }>
 }
 
 /**
- * Delivery not tracked (spec §2, Track Delivery Off): one entry both bills
- * and earns, so no line ever touches 1221 Unbilled or 2170 Unearned.
- * Tracked (§3.2): the net bills into Unbilled/Unearned, split by what the
- * deal has already earned (`position`, read under the deal lock) — first
- * clearing what is Unbilled, then holding the rest as Unearned. No revenue
- * line: revenue is earned by a Delivery, an Acceptance or the monthly run.
- * Receivable and VAT keys come from the INVOICE rules; revenue and the two
- * position accounts come from the EARNED rules.
+ * Delivery not tracked in 3a (spec §2, Track Delivery Off): one entry both
+ * bills and earns, so no line ever touches 1221 Unbilled or 2170 Unearned.
+ * Receivable and VAT keys come from the INVOICE rules; revenue comes from
+ * the same EARNED rules a tracked delivery will use in 3b.
  */
-export function buildInvoiceLines(
-  invoice: InvoiceForPosting,
-  invoiceRules: ResolvedRules,
-  earnedRules: ResolvedRules,
-  position: ContractPosition
-): Line[] {
+export function buildInvoiceLines(invoice: InvoiceForPosting, invoiceRules: ResolvedRules, earnedRules: ResolvedRules): Line[] {
   const credits: Line[] = []
-  let net = new Prisma.Decimal(0)
   let gross = new Prisma.Decimal(0)
 
   for (const line of invoice.lines) {
-    net = net.plus(line.amount)
-    if (!invoice.trackDelivery) {
-      credits.push({
-        accountCode: resolveAccountCode(earnedRules, line.kind),
-        credit: line.amount.toFixed(2),
-        opportunityId: invoice.opportunityId,
-      })
-    }
+    credits.push({
+      accountCode: resolveAccountCode(earnedRules, line.kind),
+      credit: line.amount.toFixed(2),
+      opportunityId: invoice.opportunityId,
+    })
     if (!line.vatAmount.isZero()) {
       credits.push({
         accountCode: resolveAccountCode(invoiceRules, "VAT"),
@@ -62,16 +46,6 @@ export function buildInvoiceLines(
       })
     }
     gross = gross.plus(line.amount).plus(line.vatAmount)
-  }
-
-  if (invoice.trackDelivery) {
-    const { fromAvailable, rest } = splitAgainst(net, position.unbilled)
-    if (fromAvailable.greaterThan(0)) {
-      credits.push({ accountCode: resolveAccountCode(earnedRules, "UNBILLED"), credit: fromAvailable.toFixed(2), opportunityId: invoice.opportunityId })
-    }
-    if (rest.greaterThan(0)) {
-      credits.push({ accountCode: resolveAccountCode(earnedRules, "UNEARNED"), credit: rest.toFixed(2), opportunityId: invoice.opportunityId })
-    }
   }
 
   return [
@@ -87,17 +61,17 @@ export function buildInvoiceLines(
 
 export async function approveInvoice(id: string, actor: AccessTokenPayload) {
   return prisma.$transaction(async (tx: PrismaNamespace.TransactionClient) => {
-    const head = await tx.invoice.findUnique({ where: { id }, select: { poId: true, po: { select: { opportunityId: true } } } })
+    const head = await tx.invoice.findUnique({ where: { id }, select: { poId: true } })
     if (!head) throw new AppError(404, "Invoice not found")
 
-    // Spec §3.5: events on one deal are serialised. Everything below reads
-    // what earlier approvals on this deal left behind.
-    await lockDeal(tx, head.po.opportunityId)
+    // Spec §3.5: events on one PO are serialised. Everything below reads
+    // what earlier approvals on this PO left behind.
+    await tx.$queryRaw`SELECT "id" FROM "CustomerPo" WHERE "id" = ${head.poId} FOR UPDATE`
 
     const invoice = await tx.invoice.findUnique({
       where: { id },
       include: {
-        po: { select: { id: true, serial: true, opportunityId: true, trackDelivery: true } },
+        po: { select: { id: true, serial: true, opportunityId: true } },
         lines: { include: { poLine: true } },
       },
     })
@@ -126,24 +100,30 @@ export async function approveInvoice(id: string, actor: AccessTokenPayload) {
       include: INVOICE_INCLUDE,
     })
 
-    const [invoiceRules, earnedRules, position] = await Promise.all([
-      loadRules(tx, "INVOICE"), loadRules(tx, "EARNED"), contractPosition(tx, invoice.po.opportunityId),
-    ])
+    const [invoiceRules, earnedRules] = await Promise.all([loadRules(tx, "INVOICE"), loadRules(tx, "EARNED")])
     await postSystemJournal(tx, {
       date: toLedgerDate(invoice.date),
       narration: `${updated.customer.legalName}, invoice ${invoice.invoiceNumber}`,
       source: { module: "CUSTOMER", refId: id, event: "INVOICE" },
       lines: buildInvoiceLines(
         {
-          id, customerId: invoice.customerId, opportunityId: invoice.po.opportunityId, trackDelivery: invoice.po.trackDelivery,
+          id, customerId: invoice.customerId, opportunityId: invoice.po.opportunityId,
           lines: invoice.lines.map((l) => ({ amount: l.amount, vatAmount: l.vatAmount, kind: l.poLine.kind })),
         },
-        invoiceRules, earnedRules, position
+        invoiceRules, earnedRules
       ),
       createdBy: actor.sub,
     })
     await releaseCostForInvoice(tx, id, actor.sub)
-    await refreshPoStatus(tx, invoice.poId)
+
+    // Complete when approved invoices (this one included) cover every line.
+    const approved = await tx.customerPoLine.findMany({
+      where: { poId: invoice.poId },
+      include: { invoiceLines: { where: { invoice: { status: "APPROVED" } }, select: { amount: true } } },
+    })
+    if (approved.every((l) => poLineRemaining(l).lessThanOrEqualTo(0))) {
+      await tx.customerPo.update({ where: { id: invoice.poId }, data: { status: "COMPLETE" } })
+    }
 
     await writeAudit(tx, { entity: "INVOICE", entityId: id, action: "APPROVE", changedBy: actor.sub })
     return updated

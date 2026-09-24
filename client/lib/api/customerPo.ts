@@ -1,22 +1,17 @@
 import { apiFetch } from "./client"
-import type { CustomerPo, EarnKind, PrefillLine, SaleLineKind } from "./types"
+import type { CustomerPo, PrefillLine, SaleLineKind } from "./types"
 
 export interface CustomerPoInput {
   opportunityId: string
   customerPoNumber: string
   date: string
   invoiceTo?: string
-  /** Set only on create; never sent on an update. */
-  trackDelivery?: boolean
   lines: Array<{
     description: string
     kind: SaleLineKind
     quantity: string
     unitPrice: string
     vatCodeId: string
-    earnKind?: EarnKind
-    contractStart?: string
-    contractEnd?: string
   }>
   schedule: Array<{ plannedDate: string; amount: string; note?: string }>
 }
@@ -44,7 +39,7 @@ export function createCustomerPo(accessToken: string, input: CustomerPoInput): P
   return apiFetch<CustomerPo>("/api/customer-pos", { method: "POST", accessToken, body: JSON.stringify(input) })
 }
 
-export function updateCustomerPo(accessToken: string, id: string, input: Omit<CustomerPoInput, "opportunityId" | "trackDelivery">): Promise<CustomerPo> {
+export function updateCustomerPo(accessToken: string, id: string, input: Omit<CustomerPoInput, "opportunityId">): Promise<CustomerPo> {
   return apiFetch<CustomerPo>(`/api/customer-pos/${id}`, { method: "PATCH", accessToken, body: JSON.stringify(input) })
 }
 

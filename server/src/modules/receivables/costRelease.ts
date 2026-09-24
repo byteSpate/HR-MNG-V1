@@ -4,7 +4,6 @@ import prisma from "../../config/prisma"
 import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { toLedgerDate } from "../accounting/accounting.utils"
-import { balanceOn } from "./receivables.position"
 
 const ZERO = new Prisma.Decimal(0)
 
@@ -19,7 +18,12 @@ export async function heldGoodsCost(
   opportunityId: string,
   goodsAccountCode: string
 ): Promise<Prisma.Decimal> {
-  return balanceOn(client, goodsAccountCode, opportunityId)
+  const account = await client.account.findUniqueOrThrow({ where: { code: goodsAccountCode }, select: { id: true } })
+  const agg = await client.journalLine.aggregate({
+    where: { accountId: account.id, opportunityId, journal: { status: { in: ["POSTED", "REVERSED"] } } },
+    _sum: { debit: true, credit: true },
+  })
+  return (agg._sum.debit ?? ZERO).minus(agg._sum.credit ?? ZERO)
 }
 
 export interface CostReleaseInput {
@@ -43,28 +47,24 @@ export function computeCostRelease({ held, basis, invoicedBefore, invoicedNow }:
   return new Prisma.Decimal(held.times(invoicedNow).dividedBy(restOfBasis).toFixed(2))
 }
 
-export type ProgressExclusion = { invoiceId?: string; eventId?: string; runId?: string }
-
-export interface DealProgress {
+export interface DealInvoicing {
   basis: Prisma.Decimal
-  progressed: Prisma.Decimal
+  invoiced: Prisma.Decimal
   basisKinds: SaleLineKind[]
 }
 
 /**
  * The deal's basis (the goods value cost release is measured against — every
  * GOODS line on its POs, or every line at all when the deal has no goods
- * line, Review Focus 2) and how far it has progressed against that basis:
- * what has been invoiced on its UNTRACKED POs, plus what has been earned
- * (approved Deliveries/Acceptances, posted monthly runs) on its TRACKED
- * POs — one figure, so a deal mixing both kinds of PO is measured the same
- * way (decision B2). `exclude` leaves out the document being approved.
+ * line, Review Focus 2) and what has been invoiced against that basis so
+ * far. `excludeInvoiceId` leaves one invoice's lines out, for the approval
+ * about to add them back on top.
  */
-export async function dealProgress(
+export async function dealInvoicing(
   tx: PrismaNamespace.TransactionClient | typeof prisma,
   opportunityId: string,
-  exclude?: ProgressExclusion
-): Promise<DealProgress> {
+  excludeInvoiceId?: string
+): Promise<DealInvoicing> {
   const poLines = await tx.customerPoLine.findMany({
     where: { po: { opportunityId, status: { in: ["OPEN", "COMPLETE"] } } },
     select: { kind: true, amount: true },
@@ -72,87 +72,25 @@ export async function dealProgress(
   const basisKinds: SaleLineKind[] = poLines.some((l) => l.kind === "GOODS") ? ["GOODS"] : ["GOODS", "SERVICE"]
   const basis = poLines.filter((l) => basisKinds.includes(l.kind)).reduce((s, l) => s.plus(l.amount), ZERO)
 
-  const [untrackedInvoiced, trackedEarned, monthlyEarned] = await Promise.all([
-    tx.invoiceLine.findMany({
-      where: {
-        invoice: {
-          status: "APPROVED",
-          po: { opportunityId, trackDelivery: false },
-          ...(exclude?.invoiceId ? { id: { not: exclude.invoiceId } } : {}),
-        },
+  const invoicedLines = await tx.invoiceLine.findMany({
+    where: {
+      invoice: {
+        status: "APPROVED",
+        po: { opportunityId },
+        ...(excludeInvoiceId ? { id: { not: excludeInvoiceId } } : {}),
       },
-      select: { amount: true, poLine: { select: { kind: true } } },
-    }),
-    tx.earningEventLine.findMany({
-      where: {
-        event: {
-          status: "APPROVED",
-          po: { opportunityId, trackDelivery: true },
-          ...(exclude?.eventId ? { id: { not: exclude.eventId } } : {}),
-        },
-      },
-      select: { amount: true, poLine: { select: { kind: true } } },
-    }),
-    tx.monthlyEarning.findMany({
-      where: {
-        run: { status: "POSTED", ...(exclude?.runId ? { id: { not: exclude.runId } } : {}) },
-        poLine: { po: { opportunityId } },
-      },
-      select: { amount: true, poLine: { select: { kind: true } } },
-    }),
-  ])
-  const progressed = [...untrackedInvoiced, ...trackedEarned, ...monthlyEarned]
-    .filter((l) => basisKinds.includes(l.poLine.kind))
-    .reduce((s, l) => s.plus(l.amount), ZERO)
+    },
+    select: { amount: true, poLine: { select: { kind: true } } },
+  })
+  const invoiced = invoicedLines.filter((l) => basisKinds.includes(l.poLine.kind)).reduce((s, l) => s.plus(l.amount), ZERO)
 
-  return { basis, progressed, basisKinds }
+  return { basis, invoiced, basisKinds }
 }
 
 /**
- * Posts Dr DELIVERED / Cr GOODS for `progressNow` of the deal's remaining
- * basis (3a's computeCostRelease). Returns what was released; posts
- * nothing, and returns zero, when there is nothing to release.
- */
-export async function releaseCostForProgress(
-  tx: PrismaNamespace.TransactionClient,
-  args: {
-    opportunityId: string
-    progressNow: Prisma.Decimal
-    exclude: ProgressExclusion
-    date: Date
-    narration: string
-    refId: string
-    actorUserId: string
-  }
-): Promise<Prisma.Decimal> {
-  const rules = await loadRules(tx, "COST_RELEASE")
-  const goodsCode = resolveAccountCode(rules, "GOODS")
-
-  const { basis, progressed } = await dealProgress(tx, args.opportunityId, args.exclude)
-  const release = computeCostRelease({
-    held: await heldGoodsCost(tx, args.opportunityId, goodsCode),
-    basis, invoicedBefore: progressed, invoicedNow: args.progressNow,
-  })
-  if (release.isZero()) return release
-
-  await postSystemJournal(tx, {
-    date: args.date,
-    narration: args.narration,
-    source: { module: "CUSTOMER", refId: args.refId, event: "COST_RELEASE" },
-    lines: [
-      { accountCode: resolveAccountCode(rules, "DELIVERED"), debit: release.toFixed(2), opportunityId: args.opportunityId },
-      { accountCode: goodsCode, credit: release.toFixed(2), opportunityId: args.opportunityId },
-    ],
-    createdBy: args.actorUserId,
-  })
-  return release
-}
-
-/**
- * Called from approveInvoice: posts Dr 5121 / Cr 1214 for this invoice's
- * share of the deal's held goods cost, tagged with the deal. A tracked PO's
- * invoice releases nothing here — its goods cost releases when delivered
- * (Task 8), not when billed.
+ * Called from approveInvoice (Task 10): posts Dr 5121 / Cr 1214 for this
+ * invoice's share of the deal's held goods cost, tagged with the deal.
+ * Posts nothing, and returns zero, when there is nothing to release.
  */
 export async function releaseCostForInvoice(
   tx: PrismaNamespace.TransactionClient,
@@ -163,22 +101,36 @@ export async function releaseCostForInvoice(
     where: { id: invoiceId },
     select: {
       id: true, date: true, invoiceNumber: true,
-      po: { select: { opportunityId: true, trackDelivery: true } },
+      po: { select: { opportunityId: true } },
       lines: { select: { amount: true, poLine: { select: { kind: true } } } },
     },
   })
   const opportunityId = invoice.po.opportunityId
-  if (invoice.po.trackDelivery) return ZERO
+  const rules = await loadRules(tx, "COST_RELEASE")
+  const goodsCode = resolveAccountCode(rules, "GOODS")
 
-  const { basisKinds } = await dealProgress(tx, opportunityId, { invoiceId })
-  const progressNow = invoice.lines.filter((l) => basisKinds.includes(l.poLine.kind)).reduce((s, l) => s.plus(l.amount), ZERO)
+  const { basis, invoiced, basisKinds } = await dealInvoicing(tx, opportunityId, invoiceId)
+  const invoicedNow = invoice.lines
+    .filter((l) => basisKinds.includes(l.poLine.kind))
+    .reduce((s, l) => s.plus(l.amount), ZERO)
 
-  return releaseCostForProgress(tx, {
-    opportunityId, progressNow, exclude: { invoiceId },
+  const release = computeCostRelease({
+    held: await heldGoodsCost(tx, opportunityId, goodsCode),
+    basis, invoicedBefore: invoiced, invoicedNow,
+  })
+  if (release.isZero()) return release
+
+  await postSystemJournal(tx, {
     date: toLedgerDate(invoice.date),
     narration: `Cost of goods sold, invoice ${invoice.invoiceNumber}`,
-    refId: invoiceId, actorUserId,
+    source: { module: "CUSTOMER", refId: invoiceId, event: "COST_RELEASE" },
+    lines: [
+      { accountCode: resolveAccountCode(rules, "DELIVERED"), debit: release.toFixed(2), opportunityId },
+      { accountCode: goodsCode, credit: release.toFixed(2), opportunityId },
+    ],
+    createdBy: actorUserId,
   })
+  return release
 }
 
 /**
@@ -202,8 +154,8 @@ export async function releaseLateCost(
   const lines: Array<{ accountCode: string; debit?: string; credit?: string; opportunityId: string }> = []
   let total = ZERO
   for (const opportunityId of opportunityIds) {
-    const { basis, progressed } = await dealProgress(tx, opportunityId)
-    if (basis.lessThanOrEqualTo(0) || progressed.lessThan(basis)) continue
+    const { basis, invoiced } = await dealInvoicing(tx, opportunityId)
+    if (basis.lessThanOrEqualTo(0) || invoiced.lessThan(basis)) continue
 
     const held = await heldGoodsCost(tx, opportunityId, goodsCode)
     if (held.lessThanOrEqualTo(0)) continue

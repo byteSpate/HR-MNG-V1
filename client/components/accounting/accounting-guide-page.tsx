@@ -256,7 +256,7 @@ const STEPS: Step[] = [
  * actually runs — `expense.posting.ts`, `settlement.posting.ts`,
  * `cost.posting.ts`, `asset.capitalise.ts`, `depreciation.posting.ts`,
  * `supplierBill.posting.ts`, `invoice.posting.ts`, `costRelease.ts`,
- * `receipt.posting.ts`, `earningEvent.posting.ts` — not
+ * `receipt.posting.ts` — not
  * inferred from account names. Amounts are illustrative; the accounts and
  * which side each lands on are real.
  */
@@ -416,30 +416,6 @@ const MODULES: ModuleEntry[] = [
     also: "Customer POs · Invoices · Receipts · Customer credit notes · Customer ageing",
   },
   {
-    id: "earned-before-invoiced",
-    title: "Earned before it is invoiced",
-    trigger: (
-      <>
-        A different customer PO tracks delivery. The same firewalls, worth ৳10,00,000 and bought
-        for ৳8,00,000, are delivered to the customer before any invoice is raised:
-      </>
-    ),
-    lines: [
-      { side: "Debit", account: "Unbilled Revenue", amount: "৳10,00,000" },
-      { side: "Credit", account: "Product Sales", amount: "৳10,00,000" },
-      { side: "Debit", account: "Hardware Purchase", amount: "৳8,00,000" },
-      { side: "Credit", account: "Goods Bought for Won Deals", amount: "৳8,00,000" },
-    ],
-    note: (
-      <>
-        The revenue and the goods&apos; cost both move on delivery, before any invoice exists. When
-        the invoice is later raised for ৳11,50,000, it clears the ৳10,00,000 sitting in Unbilled
-        Revenue instead of earning it a second time.
-      </>
-    ),
-    also: "Deliveries & acceptances · Monthly earnings",
-  },
-  {
     id: "manual-journal",
     title: "A Hand-Typed Journal",
     trigger: (
@@ -480,7 +456,7 @@ export function AccountingGuidePage() {
           <p className="mb-10">
             This follows one real transaction, July&apos;s payroll, through every stage the accounts
             go through, in order. Every other kind of entry, from a hand-typed correction to an
-            expense claim, goes through the exact same six steps; section 7 shows nine of them
+            expense claim, goes through the exact same six steps; section 7 shows seven of them
             with their own real numbers. Once this makes sense for payroll, it makes sense for the
             rest of the accounts too.
           </p>

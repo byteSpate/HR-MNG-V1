@@ -37,7 +37,7 @@ const FINANCE = { sub: "u-f", role: "FINANCE_OFFICER", salesRole: null, email: "
 const SALES_USER = { sub: "u-s", role: "EMPLOYEE", salesRole: "SALES_USER", email: "s@b.co", mustChangePassword: false } as any
 
 const PO_INPUT = {
-  opportunityId: "opp-1", customerPoNumber: "PO-778", date: "2026-09-23", trackDelivery: false,
+  opportunityId: "opp-1", customerPoNumber: "PO-778", date: "2026-09-23",
   lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15" }],
   schedule: [] as Array<{ plannedDate: string; amount: string; note?: string }>,
 }
@@ -105,35 +105,6 @@ describe("createCustomerPo", () => {
     vi.mocked(prisma.customerPo.create).mockRejectedValue({ code: "P2002" })
     await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow("This customer already has a PO numbered PO-778")
   })
-
-  it("stores trackDelivery and each line's earning kind and contract dates", async () => {
-    arrangeDeal()
-    vi.mocked(prisma.customerPo.create).mockResolvedValue({ id: "po1", serial: "BS-CPO-00001" } as any)
-
-    await createCustomerPo({
-      ...PO_INPUT,
-      trackDelivery: true,
-      lines: [
-        { description: "Firewall", kind: "GOODS", quantity: "10", unitPrice: "80000", vatCodeId: "vat-15", earnKind: "DELIVERY" },
-        {
-          description: "Support", kind: "SERVICE", quantity: "1", unitPrice: "100000", vatCodeId: "vat-15",
-          earnKind: "MONTHLY", contractStart: "2026-01-01", contractEnd: "2026-12-31",
-        },
-      ],
-    } as any, FINANCE)
-
-    expect(prisma.customerPo.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        trackDelivery: true,
-        lines: {
-          create: [
-            expect.objectContaining({ earnKind: "DELIVERY", contractStart: null, contractEnd: null }),
-            expect.objectContaining({ earnKind: "MONTHLY", contractStart: new Date("2026-01-01"), contractEnd: new Date("2026-12-31") }),
-          ],
-        },
-      }),
-    }))
-  })
 })
 
 describe("updateCustomerPo / cancelCustomerPo", () => {
@@ -143,16 +114,6 @@ describe("updateCustomerPo / cancelCustomerPo", () => {
     const msg = "This PO already has an invoice, so it can no longer be edited or cancelled. Raise a credit note on the invoice instead."
     await expect(updateCustomerPo("po1", PO_INPUT, FINANCE)).rejects.toThrow(msg)
     await expect(cancelCustomerPo("po1", { reason: "x" }, FINANCE)).rejects.toThrow(msg)
-  })
-
-  it("refuses a line with no earning kind when the PO tracks delivery", async () => {
-    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue({
-      id: "po1", opportunityId: "opp-1", status: "OPEN", trackDelivery: true, _count: { invoices: 0 },
-    } as any)
-    arrangeDeal()
-    await expect(updateCustomerPo("po1", PO_INPUT, FINANCE)).rejects.toThrow(
-      "Every line on a PO that tracks delivery needs to say how it is earned"
-    )
   })
 
   it("cancels an uninvoiced PO with its reason", async () => {

@@ -40,41 +40,8 @@ function poNet(po: CustomerPo): string {
   return po.lines.reduce((s, l) => s + Number(l.amount), 0).toFixed(2)
 }
 
-function poInvoiced(po: CustomerPo): number {
-  return po.lines.reduce((s, l) => s + l.invoiceLines.reduce((a, il) => a + Number(il.amount), 0), 0)
-}
-
-/** Approved event lines plus posted monthly earnings, per spec §3 — only
- *  meaningful on a tracked PO; an untracked PO earns on invoicing alone. */
-function poEarned(po: CustomerPo): number {
-  return po.lines.reduce(
-    (s, l) => s + l.earningLines.reduce((a, el) => a + Number(el.amount), 0) + l.monthlyEarnings.reduce((a, me) => a + Number(me.amount), 0),
-    0
-  )
-}
-
-/** Beside Invoiced: `—` for an untracked PO (its earned figure is the
- *  invoiced one, so showing it twice invites "why two?"); otherwise the
- *  earned amount, with a tag only when it differs from what is invoiced. */
-function earnedCell(po: CustomerPo): TableCell {
-  if (!po.trackDelivery) return { text: "—" }
-  const earned = poEarned(po)
-  const diff = earned - poInvoiced(po)
-  return {
-    node: (
-      <div className="min-w-0">
-        <div className="text-[13px]" style={{ color: "#1C2733" }}>{formatMoney(earned.toFixed(2), "BDT")}</div>
-        {diff !== 0 ? (
-          <div className="mt-0.5">
-            <Tag
-              label={diff > 0 ? `Unbilled ${formatMoney(diff.toFixed(2), "BDT")}` : `Unearned ${formatMoney((-diff).toFixed(2), "BDT")}`}
-              tone={diff > 0 ? "green" : "yellow"}
-            />
-          </div>
-        ) : null}
-      </div>
-    ),
-  }
+function poLeftToInvoice(po: CustomerPo): string {
+  return po.lines.reduce((s, l) => s + Number(l.amount) - l.invoiceLines.reduce((a, il) => a + Number(il.amount), 0), 0).toFixed(2)
 }
 
 // No "blue" tone exists in this design system (Tone is green/yellow/red/neutral).
@@ -134,8 +101,7 @@ export function CustomerPoPage() {
       { text: po.opportunity.serial },
       { text: formatDate(po.date) },
       { text: formatMoney(poNet(po), "BDT") },
-      { text: po.status === "CANCELLED" ? "—" : formatMoney(poInvoiced(po).toFixed(2), "BDT") },
-      po.status === "CANCELLED" ? { text: "—" } : earnedCell(po),
+      { text: po.status === "CANCELLED" ? "—" : formatMoney(poLeftToInvoice(po), "BDT") },
       { node: <Tag label={STATUS_LABEL[po.status]} tone={STATUS_TONE[po.status]} /> },
       { node: actions.length > 0 ? <RowActions actions={actions} /> : null },
     ]
@@ -171,8 +137,8 @@ export function CustomerPoPage() {
       ) : null}
 
       <PanelTable
-        cols="1.2fr 1.1fr 0.8fr 0.8fr 0.9fr 0.9fr 1fr 0.8fr 1fr"
-        headers={["PO", "Customer", "Deal", "Date", "Net", "Invoiced", "Earned", "Status", ""]}
+        cols="1.3fr 1.2fr 0.9fr 0.9fr 1fr 1fr 0.8fr 1fr"
+        headers={["PO", "Customer", "Deal", "Date", "Net", "Left to invoice", "Status", ""]}
         rows={rows}
         isLoading={pos.isPending}
         isError={pos.isError}
