@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express"
 import { AppError } from "../../middleware/errorHandler"
 import { createReceipt, getReceipt, listReceipts, updateReceiptCertificates } from "./receipt.service"
-import { approveReceipt } from "./receipt.posting"
-import { certificatesSchema, createReceiptSchema } from "./receipt.validators"
+import { reverseReceipt } from "./receipt.posting"
+import { certificatesSchema, createReceiptSchema, reverseReceiptSchema } from "./receipt.validators"
 
 type RequestWithId = Request<{ id: string }>
 
@@ -44,9 +44,10 @@ export async function updateReceiptCertificatesHandler(req: RequestWithId, res: 
   }
 }
 
-export async function approveReceiptHandler(req: RequestWithId, res: Response, next: NextFunction) {
+export async function reverseReceiptHandler(req: RequestWithId, res: Response, next: NextFunction) {
   try {
-    return res.status(200).json(await approveReceipt(req.params.id, req.user!))
+    const body = reverseReceiptSchema.parse(req.body)
+    return res.status(200).json(await reverseReceipt(req.params.id, body, req.user!))
   } catch (err) {
     return next(err)
   }

@@ -5,7 +5,10 @@ const nonNegativeMoney = z.string().refine((v) => Number(v) >= 0, "Cannot be neg
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD")
 
 export const createReceiptSchema = z.object({
-  customerId: z.string().uuid(),
+  // The one deal this receipt belongs to (spec: every document belongs to
+  // one deal). No customerId: it is derived from the deal's customer, never
+  // taken from the caller.
+  opportunityId: z.string().uuid(),
   date: dateString,
   // Cash that reached the bank. > 0: a receipt with no cash and no
   // withheld tax is not a receipt.
@@ -17,7 +20,7 @@ export const createReceiptSchema = z.object({
   aitCertificateRef: z.string().trim().min(1).optional(),
   aitCertificateDate: dateString.optional(),
   reference: z.string().trim().max(200).optional(),
-  allocations: z.array(z.object({ invoiceId: z.string().uuid(), amount: positiveMoney })).default([]),
+  allocations: z.array(z.object({ invoiceId: z.string().uuid(), amount: positiveMoney })).min(1, "A receipt must be allocated to at least one invoice"),
 })
 
 export const certificatesSchema = z.object({
@@ -27,5 +30,10 @@ export const certificatesSchema = z.object({
   aitCertificateDate: dateString.nullable().optional(),
 })
 
+export const reverseReceiptSchema = z.object({
+  reason: z.string().trim().min(1, "Write why this is being reversed."),
+})
+
 export type CreateReceiptInput = z.infer<typeof createReceiptSchema>
 export type CertificatesInput = z.infer<typeof certificatesSchema>
+export type ReverseReceiptInput = z.infer<typeof reverseReceiptSchema>
