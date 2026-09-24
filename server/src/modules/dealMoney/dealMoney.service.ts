@@ -1,0 +1,108 @@
+import { Prisma } from "../../generated/prisma/client"
+import prisma from "../../config/prisma"
+import type { AccessTokenPayload } from "../auth/auth.types"
+import { assertDealAccess, isFinance } from "../receivables/receivables.access"
+import { PO_INCLUDE } from "../receivables/customerPo.service"
+import { RECEIPT_INCLUDE } from "../receivables/receipt.service"
+import { getInvoiceOutstanding } from "../receivables/receivables.reports"
+import { DEAL_BILL_INCLUDE, DEAL_INVOICE_INCLUDE, DEAL_PAYMENT_INCLUDE } from "./dealMoney.types"
+import type { DealMoney } from "./dealMoney.types"
+
+const ZERO = new Prisma.Decimal(0)
+
+/**
+ * One payload for a deal's Money section, shown in two places (the deal
+ * page's Money section and the standalone deal money page). Access is
+ * checked before anything else is read (Review Focus 5): a sales user who
+ * cannot see the deal never causes a single money query to run, so no
+ * amount ever leaks. A sales user who can see the deal still sees no cost,
+ * profit, bills or payments — those queries are skipped entirely for them,
+ * not merely hidden in the response.
+ */
+export async function getDealMoney(opportunityId: string, actor: AccessTokenPayload): Promise<DealMoney> {
+  const deal = await assertDealAccess(prisma, actor, opportunityId)
+  const canSeeCost = isFinance(actor)
+  const canEdit = isFinance(actor)
+
+  const [customer, pos, invoices, receipts, productLines, bills, supplierPayments, costAgg] = await Promise.all([
+    prisma.customer.findUnique({
+      where: { salesAccountId: deal.salesAccountId },
+      select: { id: true, legalName: true, billingAddress: true, paymentDays: true },
+    }),
+    prisma.customerPo.findMany({ where: { opportunityId }, include: PO_INCLUDE, orderBy: { date: "desc" } }),
+    prisma.invoice.findMany({ where: { po: { opportunityId } }, include: DEAL_INVOICE_INCLUDE, orderBy: { date: "desc" } }),
+    prisma.receipt.findMany({ where: { opportunityId }, include: RECEIPT_INCLUDE, orderBy: { date: "desc" } }),
+    prisma.opportunityLine.findMany({
+      where: { opportunityId },
+      include: { supplier: { select: { id: true, name: true } } },
+      orderBy: { order: "asc" },
+    }),
+    canSeeCost
+      ? prisma.supplierBill.findMany({ where: { opportunityId }, include: DEAL_BILL_INCLUDE, orderBy: { date: "desc" } })
+      : Promise.resolve(null),
+    canSeeCost
+      ? prisma.supplierPayment.findMany({ where: { opportunityId }, include: DEAL_PAYMENT_INCLUDE, orderBy: { date: "desc" } })
+      : Promise.resolve(null),
+    canSeeCost
+      ? prisma.journalLine.aggregate({
+          where: { opportunityId, account: { type: "EXPENSE" }, journal: { status: { in: ["POSTED", "REVERSED"] } } },
+          _sum: { debit: true, credit: true },
+        })
+      : Promise.resolve(null),
+  ])
+
+  // The four numbers (spec, "The four numbers"). Drafts never count: an
+  // approved invoice or credit note is the only kind that moved the ledger.
+  const approvedInvoices = invoices.filter((i) => i.status === "APPROVED")
+  const sold = approvedInvoices.reduce((sum, inv) => {
+    const lineTotal = inv.lines.reduce((s, l) => s.plus(l.amount), ZERO)
+    const creditedTotal = inv.creditNotes
+      .filter((cn) => cn.status === "APPROVED")
+      .reduce((s, cn) => s.plus(cn.lines.reduce((s2, l) => s2.plus(l.amount), ZERO)), ZERO)
+    return sum.plus(lineTotal).minus(creditedTotal)
+  }, ZERO)
+  const stillOwed = approvedInvoices.reduce(
+    (sum, inv) =>
+      sum.plus(
+        getInvoiceOutstanding({
+          lines: inv.lines,
+          allocations: inv.allocations,
+          creditNotes: inv.creditNotes.filter((cn) => cn.status === "APPROVED"),
+        })
+      ),
+    ZERO
+  )
+  const cost = costAgg ? (costAgg._sum.debit ?? ZERO).minus(costAgg._sum.credit ?? ZERO) : null
+  const profit = cost !== null ? sold.minus(cost) : null
+
+  return {
+    deal: {
+      id: deal.id,
+      serial: deal.serial,
+      name: deal.name,
+      customer: customer
+        ? { id: customer.id, legalName: customer.legalName, billingAddress: customer.billingAddress, paymentDays: customer.paymentDays }
+        : null,
+    },
+    canSeeCost,
+    canEdit,
+    numbers: {
+      sold: sold.toFixed(2),
+      stillOwed: stillOwed.toFixed(2),
+      cost: cost !== null ? cost.toFixed(2) : null,
+      profit: profit !== null ? profit.toFixed(2) : null,
+    },
+    pos,
+    bills,
+    supplierPayments,
+    invoices,
+    receipts,
+    productLines: productLines.map((l) => ({
+      id: l.id,
+      product: l.product,
+      model: l.model,
+      quantity: l.quantity,
+      supplier: l.supplier ? { id: l.supplier.id, name: l.supplier.name } : null,
+    })),
+  }
+}

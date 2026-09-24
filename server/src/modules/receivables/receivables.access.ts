@@ -24,7 +24,7 @@ export async function assertDealAccess(
 
   const deal = await client.opportunity.findUnique({
     where: { id: opportunityId },
-    select: { id: true, serial: true, status: true, salesAccountId: true, closedAt: true },
+    select: { id: true, serial: true, name: true, status: true, salesAccountId: true, closedAt: true },
   })
   if (!deal) throw new AppError(404, "Deal not found")
   if (isFinance(actor)) return deal
