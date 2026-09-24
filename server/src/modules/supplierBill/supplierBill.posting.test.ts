@@ -62,6 +62,21 @@ describe("buildSupplierBillLines", () => {
     )
   })
 
+  it("tags every deal line of the journal with the bill's deal", () => {
+    const bill = {
+      id: "b3",
+      supplierId: "sup-1",
+      opportunityId: "opp-1",
+      lines: [
+        { id: "l1", kind: "GOODS" as const, amount: new Prisma.Decimal("800000"), vatAmount: new Prisma.Decimal("120000") },
+        { id: "l2", kind: "SERVICE" as const, amount: new Prisma.Decimal("50000"), vatAmount: new Prisma.Decimal("0") },
+      ],
+    }
+    const lines = buildSupplierBillLines(bill, RULES)
+
+    expect(lines.filter((l) => l.accountCode !== "2111").every((l) => l.opportunityId === "opp-1")).toBe(true)
+  })
+
   it("debits 5129 for a service line", () => {
     const bill = {
       id: "b2",

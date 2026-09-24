@@ -4,7 +4,6 @@ import { getSupplierAgeing, getSupplierControlTieOut } from "./supplierBill.repo
 import {
   createSupplierBill,
   getSupplierBill,
-  listBillableOpportunities,
   listSupplierBills,
   updateSupplierBill,
 } from "./supplierBill.service"
@@ -41,14 +40,6 @@ export async function updateSupplierBillHandler(req: RequestWithId, res: Respons
   try {
     const body = updateSupplierBillSchema.parse(req.body)
     return res.json(await updateSupplierBill(req.params.id, body, req.user!))
-  } catch (err) {
-    return next(err)
-  }
-}
-
-export async function billableOpportunitiesHandler(_req: Request, res: Response, next: NextFunction) {
-  try {
-    return res.status(200).json(await listBillableOpportunities())
   } catch (err) {
     return next(err)
   }

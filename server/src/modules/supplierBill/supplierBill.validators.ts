@@ -8,7 +8,6 @@ const billLineSchema = z.object({
   amount: z.string().refine((v) => Number(v) > 0, "Amount must be greater than zero"),
   sourceAmount: z.string().optional(),
   vatCodeId: z.string().uuid(),
-  opportunityId: z.string().uuid(),
 })
 
 export const createSupplierBillSchema = z.object({
@@ -17,6 +16,9 @@ export const createSupplierBillSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "dueDate must be YYYY-MM-DD"),
   currency: z.enum(["BDT", "USD"]).default("BDT"),
+  // The one deal this bill belongs to (spec: every document belongs to one
+  // deal) — set once, on the bill, not per line.
+  opportunityId: z.string().uuid(),
   lines: z.array(billLineSchema).min(1, "At least one line is required"),
 })
 

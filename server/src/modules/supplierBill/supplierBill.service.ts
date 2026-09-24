@@ -16,6 +16,19 @@ import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import type { CreateSupplierBillInput, UpdateSupplierBillInput } from "./supplierBill.validators"
 
+// Goods are bought only after the customer's PO, and a PO exists only on a
+// Won deal (design §2), which is also what account 1214's name promises.
+// The bill belongs to one deal (spec: every document belongs to one deal),
+// so this is checked once per bill, not once per line.
+async function assertBillDealIsWon(tx: PrismaNamespace.TransactionClient, opportunityId: string): Promise<void> {
+  const opp = await tx.opportunity.findUnique({
+    where: { id: opportunityId },
+    select: { id: true, status: true, serial: true },
+  })
+  if (!opp) throw new AppError(400, "A bill names a deal that does not exist")
+  if (opp.status !== "WON") throw new AppError(409, `${opp.serial} is not a Won deal, so nothing can be bought for it yet`)
+}
+
 // VAT is frozen per line when the line is written, from its VAT code's rate
 // at that moment, rounded to the paisa (design §3.2). A later change to the
 // code's rate never moves a bill already entered.
@@ -27,20 +40,6 @@ async function toLineRows(
   const vatIds = [...new Set(input.lines.map((l) => l.vatCodeId))]
   const codes = await tx.vatCode.findMany({ where: { id: { in: vatIds }, isActive: true } })
   const rateById = new Map(codes.map((c) => [c.id, new Prisma.Decimal(c.ratePercent)]))
-
-  // Goods are bought only after the customer's PO, and a PO exists only on a
-  // Won deal (design §2), which is also what account 1214's name promises.
-  const oppIds = [...new Set(input.lines.map((l) => l.opportunityId))]
-  const opps = await tx.opportunity.findMany({
-    where: { id: { in: oppIds } },
-    select: { id: true, status: true, serial: true },
-  })
-  const oppById = new Map(opps.map((o) => [o.id, o]))
-  for (const id of oppIds) {
-    const opp = oppById.get(id)
-    if (!opp) throw new AppError(400, "A bill line names a deal that does not exist")
-    if (opp.status !== "WON") throw new AppError(409, `${opp.serial} is not a Won deal, so nothing can be bought for it yet`)
-  }
 
   return input.lines.map((line) => {
     const rate = rateById.get(line.vatCodeId)
@@ -59,26 +58,6 @@ async function toLineRows(
       vatAmount: new Prisma.Decimal(amount).times(rate).dividedBy(100).toFixed(2),
     }
   })
-}
-
-// The bill belongs to one deal (spec: every document belongs to one deal).
-// Every line still names an opportunityId in the input until Task 5 moves
-// the field to the bill in the validator; until then, the bill's deal is
-// its first line's.
-function billOpportunityId(input: CreateSupplierBillInput): string {
-  return input.lines[0].opportunityId
-}
-
-/** The deals a bill line can be tagged to. Read here rather than through
- *  /api/sales/opportunities, which a Finance Officer without a Sales Hub
- *  role cannot open. Won deals only, the same rule toLineRows enforces. */
-export async function listBillableOpportunities() {
-  const rows = await prisma.opportunity.findMany({
-    where: { status: "WON" },
-    select: { id: true, serial: true, name: true, salesAccount: { select: { name: true } } },
-    orderBy: { serial: "desc" },
-  })
-  return rows.map((o) => ({ id: o.id, serial: o.serial, name: o.name, accountName: o.salesAccount.name }))
 }
 
 export async function listSupplierBills() {
@@ -103,6 +82,8 @@ export async function getSupplierBill(id: string) {
 
 export async function createSupplierBill(input: CreateSupplierBillInput, actor: AccessTokenPayload) {
   return prisma.$transaction(async (tx) => {
+    await assertBillDealIsWon(tx, input.opportunityId)
+
     const fxRateToBdt =
       input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)
 
@@ -116,7 +97,7 @@ export async function createSupplierBill(input: CreateSupplierBillInput, actor: 
         fxRateToBdt,
         status: "DRAFT",
         createdBy: actor.sub,
-        opportunityId: billOpportunityId(input),
+        opportunityId: input.opportunityId,
         lines: { create: await toLineRows(tx, input, fxRateToBdt) },
       },
       include: { lines: true },
@@ -144,6 +125,8 @@ export async function updateSupplierBill(
   if (existing.status !== "DRAFT") throw new AppError(409, "Only a draft bill can be edited")
 
   return prisma.$transaction(async (tx) => {
+    await assertBillDealIsWon(tx, input.opportunityId)
+
     const fxRateToBdt =
       input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)
 
@@ -157,7 +140,7 @@ export async function updateSupplierBill(
         dueDate: new Date(input.dueDate),
         currency: input.currency,
         fxRateToBdt,
-        opportunityId: billOpportunityId(input),
+        opportunityId: input.opportunityId,
         lines: { create: await toLineRows(tx, input, fxRateToBdt) },
       },
       include: { lines: true },

@@ -6,7 +6,6 @@ export interface SupplierBillLineSummary {
   sourceAmount: string | null
   vatCodeId: string
   vatAmount: string
-  opportunityId: string
 }
 
 export interface SupplierBillSummary {
@@ -18,6 +17,9 @@ export interface SupplierBillSummary {
   currency: "BDT" | "USD"
   status: "DRAFT" | "APPROVED"
   total: string
+  // The one deal this bill belongs to (spec: every document belongs to one
+  // deal) — set once, on the bill, not per line.
+  opportunityId: string
 }
 
 export interface SupplierBillDetail extends SupplierBillSummary {
