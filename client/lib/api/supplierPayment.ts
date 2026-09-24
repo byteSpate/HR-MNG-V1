@@ -10,6 +10,8 @@ export interface SupplierPaymentInput {
   currency: "BDT" | "USD"
   reference?: string
   allocations: Array<{ billId: string; amount: string }>
+  /** A USD payment cannot settle it: the opening balance is always in taka. */
+  openingAllocation?: { amount: string }
 }
 
 export function listSupplierPayments(accessToken: string): Promise<SupplierPayment[]> {
@@ -24,7 +26,11 @@ export function approveSupplierPayment(accessToken: string, id: string): Promise
   return apiFetch<SupplierPayment>(`/api/supplier-payments/${id}/approve`, { method: "POST", accessToken })
 }
 
-export function matchAdvance(accessToken: string, id: string, input: { billId: string; amount: string }): Promise<unknown> {
+export function matchAdvance(
+  accessToken: string,
+  id: string,
+  input: { billId?: string; openingBalanceId?: string; amount: string }
+): Promise<unknown> {
   return apiFetch<unknown>(`/api/supplier-payments/${id}/match-advance`, {
     method: "POST",
     accessToken,

@@ -1818,7 +1818,9 @@ export interface SupplierCreditNote {
 export type AgeingBucket = "Not due" | "1-30" | "31-60" | "61-90" | "Over 90"
 
 export interface SupplierAgeingRow {
-  billId: string
+  billId: string | null
+  openingBalanceId: string | null
+  label: string
   supplierId: string
   supplierName: string
   dueDate: string
@@ -1830,6 +1832,184 @@ export interface SupplierControlTieOut {
   subledgerTotal: string
   glBalance: string
   ties: boolean
+}
+
+/* -------------------------------------------------------------------------- */
+/* Receivables & payables, Phase 3a (Selling) and Phase 3b (Earned revenue)    */
+/* -------------------------------------------------------------------------- */
+
+export type SaleLineKind = "GOODS" | "SERVICE"
+export type CustomerPoStatus = "OPEN" | "COMPLETE" | "CANCELLED"
+export type ReceivableDocStatus = "DRAFT" | "APPROVED"
+/** How a line on a tracked PO counts as earned (spec §2). */
+export type EarnKind = "DELIVERY" | "ACCEPTANCE" | "MONTHLY"
+export type EarningRunStatus = "DRAFT" | "POSTED" | "REVERSED"
+
+export interface CustomerPoLine {
+  id: string
+  description: string
+  kind: SaleLineKind
+  quantity: string
+  unitPrice: string
+  amount: string
+  vatCodeId: string
+  vatCode: VatCode
+  order: number
+  /** Set only on a tracked PO's line. Fixed at creation (spec §2). */
+  earnKind: EarnKind | null
+  contractStart: string | null
+  contractEnd: string | null
+  /** Draft and approved invoice lines, for working out what is left to invoice. */
+  invoiceLines: Array<{ amount: string }>
+  /** Draft and approved earning-event lines, for working out what is left to deliver or accept. */
+  earningLines: Array<{ amount: string; quantity: string | null }>
+  /** Posted monthly-run earnings already recorded on this line. */
+  monthlyEarnings: Array<{ amount: string }>
+}
+export interface BillingScheduleRow { id: string; plannedDate: string; amount: string; note: string | null; order: number }
+export interface CustomerPo {
+  id: string
+  serial: string
+  customerPoNumber: string
+  date: string
+  invoiceTo: string | null
+  status: CustomerPoStatus
+  cancelReason: string | null
+  createdBy: string
+  /** Set at creation, never changed (spec §2). Off: the invoice bills and earns. */
+  trackDelivery: boolean
+  customer: { id: string; legalName: string }
+  opportunity: { id: string; serial: string; name: string }
+  lines: CustomerPoLine[]
+  schedule: BillingScheduleRow[]
+}
+export interface PrefillLine { description: string; kind: "GOODS"; quantity: string; unitPrice: string | null }
+
+export interface InvoiceablePo {
+  id: string
+  serial: string
+  customerPoNumber: string
+  customer: { id: string; legalName: string }
+  opportunity: { id: string; serial: string; name: string }
+  lines: Array<{ id: string; description: string; kind: SaleLineKind; amount: string; vatCodeId: string; remaining: string }>
+}
+export interface InvoiceLine {
+  id: string
+  poLineId: string
+  description: string
+  amount: string
+  vatCodeId: string
+  vatAmount: string
+  poLine: { kind: SaleLineKind }
+  vatCode: VatCode
+}
+export interface Invoice {
+  id: string
+  invoiceNumber: string
+  date: string
+  dueDate: string
+  status: ReceivableDocStatus
+  createdBy: string
+  customer: { id: string; legalName: string }
+  po: { id: string; serial: string; customerPoNumber: string; trackDelivery: boolean; opportunity: { id: string; serial: string; name: string } }
+  lines: InvoiceLine[]
+}
+
+export interface Receipt {
+  id: string
+  date: string
+  amount: string
+  reference: string | null
+  status: ReceivableDocStatus
+  createdBy: string
+  vdsAmount: string
+  vdsCertificateRef: string | null
+  vdsCertificateDate: string | null
+  aitAmount: string
+  aitCertificateRef: string | null
+  aitCertificateDate: string | null
+  customer: { id: string; legalName: string }
+  allocations: Array<{ id: string; amount: string; matchedAt: string | null; invoice: { id: string; invoiceNumber: string } }>
+  openingAllocations: Array<{ id: string; amount: string; matchedAt: string | null }>
+}
+
+export interface CustomerCreditNote {
+  id: string
+  date: string
+  reason: string
+  status: ReceivableDocStatus
+  createdBy: string
+  invoice: { id: string; invoiceNumber: string }
+  customer: { id: string; legalName: string }
+  lines: Array<{ id: string; invoiceLineId: string; amount: string; vatAmount: string }>
+}
+
+export interface CustomerAgeingRow {
+  invoiceId: string | null
+  openingBalanceId: string | null
+  label: string
+  customerId: string
+  customerName: string
+  dealSerial: string | null
+  dueDate: string
+  outstanding: string
+  bucket: AgeingBucket
+}
+export interface CustomerTieOut { subledgerTotal: string; glBalance: string; ties: boolean; advancesHeld: string }
+
+export interface StatementEntry {
+  date: string
+  kind: "Opening balance" | "Invoice" | "Receipt" | "Credit note"
+  reference: string
+  debit: string | null
+  credit: string | null
+  balance: string
+}
+export interface CustomerStatement {
+  customer: { legalName: string; billingAddress: string | null; bin: string | null }
+  from: string
+  to: string
+  openingBalance: string
+  entries: StatementEntry[]
+  closingBalance: string
+}
+
+/** A Delivery (goods, with a signed challan) or an Acceptance (a milestone the
+ *  customer signed off), against a tracked PO. */
+export interface EarningEvent {
+  id: string
+  kind: "DELIVERY" | "ACCEPTANCE"
+  date: string
+  evidenceRef: string
+  note: string | null
+  status: ReceivableDocStatus
+  createdBy: string
+  po: {
+    id: string
+    serial: string
+    customer: { legalName: string }
+    opportunity: { id: string; serial: string; name: string }
+  }
+  lines: Array<{ id: string; poLineId: string; quantity: string | null; amount: string; poLine: { description: string } }>
+}
+
+export interface MonthlyEarningCharge {
+  id: string
+  amount: string
+  poLine: { description: string; po: { serial: string; customer: { legalName: string } } }
+}
+export interface EarningRun {
+  id: string
+  runNo: string
+  year: number
+  month: number
+  status: EarningRunStatus
+  journalId: string | null
+  journal?: { journalNo: string } | null
+  createdBy: string
+  postedBy: string | null
+  reversedBy: string | null
+  charges: MonthlyEarningCharge[]
 }
 
 export interface AccountingPeriod {
