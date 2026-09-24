@@ -101,9 +101,15 @@ describe("buildSupplierBillLines", () => {
 })
 
 describe("approveSupplierBill", () => {
-  function arrangeDraftBill(over: { opportunityId: string; lines: Array<{ kind: "GOODS" | "SERVICE" }> }) {
+  function arrangeDraftBill(over: {
+    opportunityId: string
+    lines: Array<{ kind: "GOODS" | "SERVICE" }>
+    createdBy?: string
+    rejectionNote?: string | null
+  }) {
     const bill = {
-      id: "b1", supplierId: "sup-1", status: "DRAFT", createdBy: "finance-1", billNumber: "INV-1",
+      id: "b1", supplierId: "sup-1", status: "DRAFT", createdBy: over.createdBy ?? "finance-1", billNumber: "INV-1",
+      rejectionNote: over.rejectionNote ?? null,
       opportunityId: over.opportunityId,
       lines: over.lines.map((l, i) => ({
         id: `l${i}`, kind: l.kind,
@@ -135,5 +141,17 @@ describe("approveSupplierBill", () => {
     await approveSupplierBill("b1", ADMIN)
 
     expect(releaseLateCost).not.toHaveBeenCalled()
+  })
+
+  it("refuses the person who prepared it", async () => {
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: ADMIN.sub })
+    await expect(approveSupplierBill("b1", ADMIN)).rejects.toThrow("You prepared this bill, so someone else must approve it.")
+  })
+
+  it("refuses to approve a draft that was sent back and not saved again", async () => {
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], rejectionNote: "Wrong amount" })
+    await expect(approveSupplierBill("b1", ADMIN)).rejects.toThrow(
+      "This was sent back. The person who prepared it must save it again first."
+    )
   })
 })

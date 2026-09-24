@@ -115,6 +115,11 @@ export async function updateInvoice(id: string, input: UpdateInvoiceInput, actor
           date,
           dueDate: input.dueDate ? new Date(input.dueDate) : addDays(date, po.customer.paymentDays),
           lines: { create: await buildLineRows(tx, po, input.lines) },
+          // Saving a sent-back draft again clears the note (Task 8): the
+          // person who prepared it has had their chance to fix it.
+          rejectionNote: null,
+          sentBackBy: null,
+          sentBackAt: null,
         },
         include: INVOICE_INCLUDE,
       })

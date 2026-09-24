@@ -142,6 +142,11 @@ export async function updateSupplierBill(
         fxRateToBdt,
         opportunityId: input.opportunityId,
         lines: { create: await toLineRows(tx, input, fxRateToBdt) },
+        // Saving a sent-back draft again clears the note (Task 8): the
+        // person who prepared it has had their chance to fix it.
+        rejectionNote: null,
+        sentBackBy: null,
+        sentBackAt: null,
       },
       include: { lines: true },
     })

@@ -77,7 +77,10 @@ export async function approveInvoice(id: string, actor: AccessTokenPayload) {
     })
     if (!invoice) throw new AppError(404, "Invoice not found")
     if (invoice.status !== "DRAFT") throw new AppError(409, `This invoice is already ${invoice.status.toLowerCase()}`)
-    if (invoice.createdBy === actor.sub) throw new AppError(403, "You prepared this invoice and cannot also approve it")
+    if (invoice.rejectionNote) {
+      throw new AppError(409, "This was sent back. The person who prepared it must save it again first.")
+    }
+    if (invoice.createdBy === actor.sub) throw new AppError(403, "You prepared this invoice, so someone else must approve it.")
 
     const poLines = await tx.customerPoLine.findMany({
       where: { poId: invoice.poId },

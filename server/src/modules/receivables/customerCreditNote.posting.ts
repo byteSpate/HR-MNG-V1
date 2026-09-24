@@ -85,7 +85,10 @@ export async function approveCustomerCreditNote(id: string, actor: AccessTokenPa
     })
     if (!note) throw new AppError(404, "Customer credit note not found")
     if (note.status !== "DRAFT") throw new AppError(409, `This credit note is already ${note.status.toLowerCase()}`)
-    if (note.createdBy === actor.sub) throw new AppError(403, "You prepared this credit note and cannot also approve it")
+    if (note.rejectionNote) {
+      throw new AppError(409, "This was sent back. The person who prepared it must save it again first.")
+    }
+    if (note.createdBy === actor.sub) throw new AppError(403, "You prepared this credit note, so someone else must approve it.")
 
     const gross = note.lines.reduce((s, l) => s.plus(l.amount).plus(l.vatAmount), new Prisma.Decimal(0))
     assertWithinOutstanding(note.invoice, gross)

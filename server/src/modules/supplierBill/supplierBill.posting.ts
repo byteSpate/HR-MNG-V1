@@ -91,7 +91,10 @@ export async function approveSupplierBill(id: string, actor: AccessTokenPayload)
   const bill = await prisma.supplierBill.findUnique({ where: { id } })
   if (!bill) throw new AppError(404, "Supplier bill not found")
   if (bill.status !== "DRAFT") throw new AppError(409, `This bill is already ${bill.status.toLowerCase()}`)
-  if (bill.createdBy === actor.sub) throw new AppError(403, "You prepared this bill and cannot also approve it")
+  if (bill.rejectionNote) {
+    throw new AppError(409, "This was sent back. The person who prepared it must save it again first.")
+  }
+  if (bill.createdBy === actor.sub) throw new AppError(403, "You prepared this bill, so someone else must approve it.")
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.supplierBill.update({

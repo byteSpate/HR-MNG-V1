@@ -53,7 +53,7 @@ describe("buildCustomerCreditNoteLines", () => {
 
 function arrangeDraftNote(over: Record<string, unknown> = {}) {
   const note = {
-    id: "cn1", status: "DRAFT", createdBy: "finance-1", date: new Date("2026-09-22"), reason: "Two units returned",
+    id: "cn1", status: "DRAFT", createdBy: "finance-1", rejectionNote: null, date: new Date("2026-09-22"), reason: "Two units returned",
     customerId: "c1", customer: { legalName: "Bengal Group" },
     invoice: {
       id: "inv1", invoiceNumber: "INV-1", customerId: "c1", status: "APPROVED",
@@ -76,7 +76,15 @@ beforeEach(() => {
 describe("approveCustomerCreditNote", () => {
   it("refuses the person who prepared it", async () => {
     arrangeDraftNote({ createdBy: ADMIN.sub })
-    await expect(approveCustomerCreditNote("cn1", ADMIN)).rejects.toThrow("You prepared this credit note and cannot also approve it")
+    await expect(approveCustomerCreditNote("cn1", ADMIN)).rejects.toThrow("You prepared this credit note, so someone else must approve it.")
+    expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("refuses to approve a draft that was sent back and not saved again", async () => {
+    arrangeDraftNote({ rejectionNote: "Wrong amount" })
+    await expect(approveCustomerCreditNote("cn1", ADMIN)).rejects.toThrow(
+      "This was sent back. The person who prepared it must save it again first."
+    )
     expect(postSystemJournal).not.toHaveBeenCalled()
   })
 

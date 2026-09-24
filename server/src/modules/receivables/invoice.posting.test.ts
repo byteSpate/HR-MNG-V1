@@ -75,10 +75,12 @@ function arrangeDraft(over: {
   date?: Date
   poLineAlreadyInvoicedByOthers?: string
   completesPo?: boolean
+  rejectionNote?: string | null
 } = {}) {
   const lockHead = { poId: "po1" }
   const full = {
     id: "inv1", poId: "po1", status: "DRAFT", createdBy: over.createdBy ?? "finance-1",
+    rejectionNote: over.rejectionNote ?? null,
     customerId: "c1", invoiceNumber: "INV-1", date: over.date ?? new Date("2026-09-23"),
     po: { id: "po1", serial: "BS-CPO-00001", opportunityId: "opp-1" },
     lines: [{ poLineId: "pl1", amount: d("500000"), vatAmount: d("75000"), poLine: { id: "pl1", description: "Firewall", kind: "GOODS" } }],
@@ -116,8 +118,21 @@ beforeEach(() => {
 describe("approveInvoice", () => {
   it("refuses the person who prepared it", async () => {
     arrangeDraft({ createdBy: ADMIN.sub })
-    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You prepared this invoice and cannot also approve it")
+    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You prepared this invoice, so someone else must approve it.")
     expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("refuses to approve a draft that was sent back and not saved again", async () => {
+    arrangeDraft({ rejectionNote: "Wrong number" })
+    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow(
+      "This was sent back. The person who prepared it must save it again first."
+    )
+    expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("the preparer still cannot approve after a send-back and a new save (Review Focus 2)", async () => {
+    arrangeDraft({ createdBy: ADMIN.sub, rejectionNote: null })
+    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You prepared this invoice, so someone else must approve it.")
   })
 
   it("locks the PO row before reading anything it will decide on", async () => {

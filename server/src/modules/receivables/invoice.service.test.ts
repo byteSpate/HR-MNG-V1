@@ -104,6 +104,14 @@ describe("updateInvoice", () => {
     vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "APPROVED" } as any)
     await expect(updateInvoice("inv1", INPUT, FINANCE)).rejects.toThrow("Only a draft invoice can be edited")
   })
+
+  it("clears the sent-back note when the draft is saved again", async () => {
+    vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "DRAFT", rejectionNote: "Wrong number" } as any)
+    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: [{ poLineId: "pl1", amount: "500000" }] } as any, FINANCE)
+    expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ rejectionNote: null, sentBackBy: null, sentBackAt: null }),
+    }))
+  })
 })
 
 describe("listInvoiceablePos", () => {
