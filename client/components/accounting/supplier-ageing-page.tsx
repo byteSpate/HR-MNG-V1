@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 
-import { getSupplierAgeing, getSupplierControlTieOut, listSupplierBills } from "@/lib/api/supplierBill"
+import { getSupplierAgeing, getSupplierControlTieOut } from "@/lib/api/supplierBill"
 import { useSession } from "@/lib/auth/session-context"
 import type { AgeingBucket, SupplierAgeingRow } from "@/lib/api/types"
 import type { Tone } from "@/components/dashboard/types"
@@ -43,13 +43,6 @@ export function SupplierAgeingPage() {
     queryFn: () => getSupplierControlTieOut(accessToken!),
     enabled: Boolean(accessToken),
   })
-  const bills = useQuery({
-    queryKey: ["supplier-bills"],
-    queryFn: () => listSupplierBills(accessToken!),
-    enabled: Boolean(accessToken),
-  })
-
-  const billNumber = new Map((bills.data ?? []).map((b) => [b.id, b.billNumber]))
   const data: SupplierAgeingRow[] = ageing.data ?? []
 
   const totals = BUCKETS.map((bucket) => ({
@@ -58,7 +51,8 @@ export function SupplierAgeingPage() {
   }))
 
   const rows: TableCell[][] = data.map((r) => [
-    { text: r.supplierName, sub: billNumber.get(r.billId), weight: 600 },
+    { text: r.supplierName, weight: 600 },
+    { text: r.label },
     { text: formatDate(r.dueDate) },
     { text: formatMoney(r.outstanding, "BDT") },
     { node: <Tag label={bucketLabel(r.bucket)} tone={BUCKET_TONE[r.bucket]} /> },
@@ -103,8 +97,8 @@ export function SupplierAgeingPage() {
       ) : null}
 
       <PanelTable
-        cols="1.6fr 1fr 1fr 0.9fr"
-        headers={["Supplier", "Due", "Outstanding", "Overdue"]}
+        cols="1.4fr 1.2fr 0.9fr 1fr 0.9fr"
+        headers={["Supplier", "What", "Due", "Outstanding", "Overdue"]}
         rows={rows}
         isLoading={ageing.isPending}
         isError={ageing.isError}

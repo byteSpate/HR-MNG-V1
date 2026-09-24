@@ -127,8 +127,8 @@ export function SupplierPaymentPage() {
   })
 
   const match = useMutation({
-    mutationFn: ({ id, billId, amount }: { id: string; billId: string; amount: string }) =>
-      matchAdvance(accessToken!, id, { billId, amount }),
+    mutationFn: ({ id, billId, openingBalanceId, amount }: { id: string; billId?: string; openingBalanceId?: string; amount: string }) =>
+      matchAdvance(accessToken!, id, { billId, openingBalanceId, amount }),
     onSuccess: () => {
       setMatching(null)
       setError(null)
@@ -223,11 +223,16 @@ export function SupplierPaymentPage() {
           payment={matching}
           available={advanceLeft(matching)}
           openBills={(ageing.data ?? []).filter((r) => r.supplierId === matching.supplierId)}
-          bills={bills.data ?? []}
           pending={match.isPending}
           error={error}
           onClose={() => setMatching(null)}
-          onSave={(billId, amount) => match.mutate({ id: matching.id, billId, amount })}
+          onSave={(target, amount) =>
+            match.mutate(
+              target.billId
+                ? { id: matching.id, billId: target.billId, amount }
+                : { id: matching.id, openingBalanceId: target.openingBalanceId!, amount }
+            )
+          }
         />
       ) : null}
 
@@ -274,15 +279,20 @@ function PaymentDialog({
 
   const billById = useMemo(() => new Map(bills.map((b) => [b.id, b])), [bills])
 
-  // Open bills for this supplier. A USD payment settles USD bills only; a
-  // taka payment can settle any, in taka.
+  /** A row's allocation key: the bill id, or the opening-balance id when it
+   *  has no bill. Exactly one is set on every ageing row. */
+  const keyOf = (row: SupplierAgeingRow): string => row.billId ?? row.openingBalanceId!
+
+  // Open bills (and the opening balance) for this supplier. A USD payment
+  // cannot settle the opening balance — it is always in taka — and can only
+  // settle bills that were themselves entered in USD.
   const candidates = openBills
     .filter((r) => r.supplierId === supplierId)
-    .filter((r) => currency === "BDT" || billById.get(r.billId)?.currency === "USD")
+    .filter((r) => (currency === "BDT" ? true : r.billId !== null && billById.get(r.billId)?.currency === "USD"))
 
-  /** What is left on the bill, in the payment's currency. */
+  /** What is left on the row, in the payment's currency. */
   const leftOn = (row: SupplierAgeingRow): number => {
-    const bill = billById.get(row.billId)
+    const bill = row.billId ? billById.get(row.billId) : undefined
     if (currency === "USD" && bill?.fxRateToBdt) return Math.floor((Number(row.outstanding) / Number(bill.fxRateToBdt)) * 100) / 100
     return Number(row.outstanding)
   }
@@ -293,11 +303,12 @@ function PaymentDialog({
   const toggle = (row: SupplierAgeingRow, on: boolean) =>
     setPicked((all) => {
       const next = { ...all }
+      const key = keyOf(row)
       if (on) {
         const remaining = Math.max(0, (Number(amount) || 0) - allocated)
-        next[row.billId] = String(Math.min(leftOn(row), remaining || leftOn(row)))
+        next[key] = String(Math.min(leftOn(row), remaining || leftOn(row)))
       } else {
-        delete next[row.billId]
+        delete next[key]
       }
       return next
     })
@@ -365,27 +376,27 @@ function PaymentDialog({
               </p>
             ) : (
               candidates.map((row) => {
-                const bill = billById.get(row.billId)
-                const on = row.billId in picked
+                const key = keyOf(row)
+                const on = key in picked
                 return (
-                  <div key={row.billId} className="flex flex-wrap items-center gap-3 rounded-md border border-[#E4E9EF] px-3 py-2">
+                  <div key={key} className="flex flex-wrap items-center gap-3 rounded-md border border-[#E4E9EF] px-3 py-2">
                     <div className="min-w-0 flex-1">
                       <CheckboxField
-                        label={`${bill?.billNumber ?? "Bill"}, due ${formatDate(row.dueDate)}, ${formatMoney(leftOn(row).toFixed(2), currency)} left`}
+                        label={`${row.label}, due ${formatDate(row.dueDate)}, ${formatMoney(leftOn(row).toFixed(2), currency)} left`}
                         checked={on}
                         onChange={(next) => toggle(row, next)}
                       />
                     </div>
                     {on ? (
                       <Input
-                        aria-label={`Amount against ${bill?.billNumber ?? "bill"}`}
+                        aria-label={`Amount against ${row.label}`}
                         className="w-40"
                         type="number"
                         min={0}
                         max={leftOn(row)}
                         step="0.01"
-                        value={picked[row.billId]}
-                        onChange={(e) => setPicked((all) => ({ ...all, [row.billId]: e.target.value }))}
+                        value={picked[key]}
+                        onChange={(e) => setPicked((all) => ({ ...all, [key]: e.target.value }))}
                       />
                     ) : null}
                   </div>
@@ -412,16 +423,24 @@ function PaymentDialog({
             disabled={!canSubmit}
             submitLabel="Save as draft"
             onCancel={onClose}
-            onSubmit={() =>
+            onSubmit={() => {
+              const allocations: Array<{ billId: string; amount: string }> = []
+              let openingAllocation: { amount: string } | undefined
+              for (const [key, value] of Object.entries(picked)) {
+                const row = candidates.find((r) => keyOf(r) === key)
+                if (row?.billId) allocations.push({ billId: row.billId, amount: value })
+                else if (row?.openingBalanceId) openingAllocation = { amount: value }
+              }
               onSave({
                 supplierId,
                 date,
                 currency,
                 amount,
                 reference: reference.trim() || undefined,
-                allocations: Object.entries(picked).map(([billId, value]) => ({ billId, amount: value })),
+                allocations,
+                openingAllocation,
               })
-            }
+            }}
           />
         </DialogFooter>
       </DialogContent>
@@ -433,7 +452,6 @@ function MatchAdvanceDialog({
   payment,
   available,
   openBills,
-  bills,
   pending,
   error,
   onClose,
@@ -442,16 +460,15 @@ function MatchAdvanceDialog({
   payment: SupplierPayment
   available: number
   openBills: SupplierAgeingRow[]
-  bills: SupplierBill[]
   pending: boolean
   error: string | null
   onClose: () => void
-  onSave: (billId: string, amount: string) => void
+  onSave: (target: { billId?: string; openingBalanceId?: string }, amount: string) => void
 }) {
-  const [billId, setBillId] = useState("")
+  const [targetKey, setTargetKey] = useState("")
   const [amount, setAmount] = useState("")
-  const billNumber = (id: string) => bills.find((b) => b.id === id)?.billNumber ?? "Bill"
-  const row = openBills.find((r) => r.billId === billId)
+  const keyOf = (r: SupplierAgeingRow) => r.billId ?? r.openingBalanceId!
+  const row = openBills.find((r) => keyOf(r) === targetKey)
   const cap = row ? Math.min(available, Number(row.outstanding)) : available
 
   return (
@@ -461,7 +478,7 @@ function MatchAdvanceDialog({
           <DialogTitle>Match advance to a bill</DialogTitle>
           <DialogDescription>
             {formatMoney(available.toFixed(2), "BDT")} of the payment dated {formatDate(payment.date)} is held as an
-            advance. Matching moves part of it against a bill that has since arrived.
+            advance. Matching moves part of it against a bill that has since arrived, or the opening balance.
           </DialogDescription>
         </DialogHeader>
 
@@ -474,22 +491,22 @@ function MatchAdvanceDialog({
                 <select
                   id="match-bill"
                   className={SELECT}
-                  value={billId}
+                  value={targetKey}
                   onChange={(e) => {
-                    setBillId(e.target.value)
-                    const r = openBills.find((x) => x.billId === e.target.value)
+                    setTargetKey(e.target.value)
+                    const r = openBills.find((x) => keyOf(x) === e.target.value)
                     if (r) setAmount(Math.min(available, Number(r.outstanding)).toFixed(2))
                   }}
                 >
                   <option value="">Choose a bill</option>
                   {openBills.map((r) => (
-                    <option key={r.billId} value={r.billId}>
-                      {billNumber(r.billId)}, {formatMoney(r.outstanding, "BDT")} left
+                    <option key={keyOf(r)} value={keyOf(r)}>
+                      {r.label}, {formatMoney(r.outstanding, "BDT")} left
                     </option>
                   ))}
                 </select>
               </Field>
-              <Field label="Amount (BDT)" htmlFor="match-amount" hint={billId ? `At most ${formatMoney(cap.toFixed(2), "BDT")}.` : undefined}>
+              <Field label="Amount (BDT)" htmlFor="match-amount" hint={targetKey ? `At most ${formatMoney(cap.toFixed(2), "BDT")}.` : undefined}>
                 <Input id="match-amount" type="number" min={0} max={cap} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
               </Field>
             </>
@@ -500,10 +517,10 @@ function MatchAdvanceDialog({
         <DialogFooter>
           <DialogActions
             pending={pending}
-            disabled={!billId || !(Number(amount) > 0) || Number(amount) > cap + 0.001}
+            disabled={!targetKey || !(Number(amount) > 0) || Number(amount) > cap + 0.001}
             submitLabel="Match"
             onCancel={onClose}
-            onSubmit={() => onSave(billId, amount)}
+            onSubmit={() => row && onSave(row.billId ? { billId: row.billId } : { openingBalanceId: row.openingBalanceId! }, amount)}
           />
         </DialogFooter>
       </DialogContent>
