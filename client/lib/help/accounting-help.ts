@@ -354,7 +354,7 @@ export const HELP: Record<string, HelpEntry> = {
     step: "setup",
     connects: {
       fedBy: ["Added by hand here, or by a one-time opening-balance import for customers who already owed money before this system went live"],
-      feeds: ["Every invoice and receipt, once buying and selling are built"],
+      feeds: ["Customer POs", "Invoices", "Receipts", "Customer credit notes", "Customer ageing"],
     },
     reading: [
       {
@@ -390,7 +390,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
     ],
     watchFor: [
-      "A Customer being created automatically the moment a Sales Account's first deal is Won is planned, not built yet. Until then, add the record here by hand.",
+      "A Customer is created automatically the day a Sales Account's first deal is Won, or linked to an existing one with the same legal name.",
     ],
   },
 
@@ -1696,6 +1696,241 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     watchFor: [
       "Draft bills and draft payments are left out. Only what has posted counts.",
+    ],
+  },
+
+  "accounting/customer-pos": {
+    title: "Customer POs",
+    lede: "What a customer ordered on a Won deal, and what is left to invoice against it. Recorded by the deal's own sales person, or by Finance.",
+    step: "record",
+    connects: {
+      fedBy: ["Customers", "Won deals in the Sales Hub", "VAT codes"],
+      feeds: ["Invoices", "Customer ageing"],
+    },
+    reading: [
+      {
+        name: "Open, Complete and Cancelled",
+        body: "Open still has something left to invoice. Complete means every line has been invoiced in full. Cancelled can only happen before the first invoice, and always carries a reason.",
+      },
+      {
+        name: "Left to invoice",
+        body: "Each line's amount less every draft and approved invoice line against it.",
+      },
+      {
+        name: "The billing schedule",
+        body: "A plan of when amounts are expected to be invoiced. It posts nothing by itself; an invoice still has to be entered and approved when the date arrives.",
+      },
+    ],
+    does: [
+      {
+        name: "Record a customer PO",
+        body: "Deal, the customer's own PO number, date, and one line per item. Products can be copied from the deal's own Line Items with one button, never silently. Available to Finance, a Super Admin, or the deal's own sales person from the Sales Hub.",
+      },
+      {
+        name: "Edit or cancel",
+        body: "Only while nothing has been invoiced against it yet. Cancelling asks for a reason.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "Bengal Group orders firewalls on a Won deal",
+        steps: [
+          "A deal for firewalls worth 10,00,000.00 plus 15% VAT is Won.",
+          "The deal's own sales person records the customer PO from the Sales Hub, copying the products from the deal's Line Items with one button.",
+          "Finance sees the PO on Customer POs, with 10,00,000.00 left to invoice.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Delivery is not tracked on a customer PO yet: the whole amount counts as earned the moment it is invoiced, whichever order goods actually move in. Tracked deliveries are a later phase.",
+      "A PO cannot be edited or cancelled once it has an invoice against it. Raise a credit note on the invoice instead.",
+    ],
+  },
+
+  "accounting/invoices": {
+    title: "Invoices",
+    lede: "A sale billed against a customer PO, recorded here so it reaches the ledger. Approval posts the sale.",
+    step: "record",
+    connects: {
+      fedBy: ["Customer POs", "VAT codes"],
+      feeds: ["Trade and other Receivables", "Product Sales", "Service Revenue, Local", "VAT Payable", "Goods Bought for Won Deals", "Customer ageing"],
+    },
+    reading: [
+      {
+        name: "Draft and Approved",
+        body: "A draft can still be edited and has not reached the ledger. Approved means it posted; a mistake afterwards is corrected with a credit note, not an edit.",
+      },
+      {
+        name: "The net, VAT and total shown while typing",
+        body: "A preview. The figures that count are worked out by the server when the invoice is saved.",
+      },
+    ],
+    does: [
+      {
+        name: "Record an invoice",
+        body: "Pick the customer PO, an invoice number as printed on the invoice itself, and how much of each line is being billed. Never more than is left to invoice on that line.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Edit a draft",
+        body: "Any field, until it is approved.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Approve",
+        body: "Posts the sale and its VAT, and releases the matching share of the goods held for the deal. Refused for the person who recorded it.",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Bengal Group's firewalls, invoiced",
+        steps: [
+          "Bengal Group's firewalls, bought for 8,00,000.00 on the supplier bill, are invoiced at 10,00,000.00 plus 15% VAT.",
+          "Finance records the invoice; a different Super Admin approves it.",
+          "Trade and other Receivables is debited 11,50,000.00; Product Sales and VAT Payable are credited. In the same approval, 8,00,000.00 of held goods cost moves out to Subcontract & Resold Services.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Invoices are issued from your usual invoicing tool. This page records them so they reach the ledger; it does not print them.",
+      "Delivery is not tracked yet, so one invoice both bills the customer and earns the revenue in the same entry.",
+    ],
+  },
+
+  "accounting/receipts": {
+    title: "Receipts",
+    lede: "Money received from a customer, the tax it withheld, and what it settles.",
+    step: "record",
+    connects: {
+      fedBy: ["Approved invoices", "Customers"],
+      feeds: ["Trade and other Receivables", "Customer Advances", "The bank", "VAT Deducted at Source", "Advance Income Tax"],
+    },
+    reading: [
+      {
+        name: "Settles and Advance",
+        body: "Settles is what was allocated to invoices and the opening balance. Advance is whatever cash and withheld tax was left over, held until it is matched.",
+      },
+      {
+        name: "Certificates",
+        body: "A customer who withholds VAT or income tax owes a Mushak 6.6 certificate for it. Until that number and date are recorded, the receipt shows as certificate missing.",
+      },
+    ],
+    does: [
+      {
+        name: "Record a receipt",
+        body: "Customer, date, cash received, and any VAT or income tax the customer kept. Allocate the total against invoices and the opening balance; anything left becomes an advance.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Approve",
+        body: "Posts it, clearing what it settles. Refused for the person who recorded it.",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        name: "Record a certificate",
+        body: "The Mushak 6.6 number and date, added after the fact if it was not available when the receipt was recorded. Works on a receipt of any status.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Match an advance",
+        body: "Once an invoice or the opening balance is ready to take it, move part or all of the advance onto it.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Bengal Group pays, keeping tax withheld",
+        steps: [
+          "Bengal Group's 11,50,000.00 invoice is settled by 9,50,000.00 cash, 1,50,000.00 VAT withheld and 50,000.00 income tax withheld.",
+          "The receipt is recorded with all three amounts allocated to the invoice, and approved.",
+          "The two certificates arrive a few days later and are recorded against the same receipt.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Tax a customer withholds needs its own certificate before the record is complete; a receipt missing one shows on the Certificate missing filter until it is added.",
+      "The customer's opening balance can be settled by a receipt just like an invoice can.",
+    ],
+  },
+
+  "accounting/customer-credit-notes": {
+    title: "Customer credit notes",
+    lede: "Reducing what a customer owes on an approved invoice, for returned goods or a corrected price.",
+    step: "record",
+    connects: {
+      fedBy: ["Approved invoices"],
+      feeds: ["Trade and other Receivables", "Product Sales", "Service Revenue, Local", "VAT Payable", "Customer ageing"],
+    },
+    does: [
+      {
+        name: "Raise a credit note",
+        body: "Against one approved invoice, line by line. Each line can be credited only up to what is left on it after earlier credit notes, drafts included. A reason is required.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Approve",
+        body: "Posts it, reversing the sale and its VAT for the amount credited. Refused for the person who raised it.",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Two firewalls sent back",
+        steps: [
+          "Two of Bengal Group's firewalls arrive faulty and go back. A credit note for 1,60,000.00 plus 24,000.00 VAT is raised against the original invoice line.",
+          "It is approved by a different Super Admin.",
+          "The invoice now owes 1,84,000.00 less, and Customer ageing shows the lower figure.",
+        ],
+      },
+    ],
+    watchFor: [
+      "A credit note cannot put a customer in credit. Refunds are not recorded in this system yet, so the amount credited can never exceed what the invoice still has outstanding.",
+      "If the goods came back to us, also record a supplier credit note when the supplier takes them back. This page does not return goods to stock by itself.",
+    ],
+  },
+
+  "accounting/customer-ageing": {
+    title: "Customer ageing",
+    lede: "What is still owed by every customer, grouped by how far past its due date each invoice is. Also where the receivables account is checked against the invoices behind it, and where a customer statement is produced.",
+    step: "read",
+    connects: {
+      fedBy: ["Invoices", "Receipts", "Customer credit notes"],
+      feeds: ["Receipts, which offers these invoices to settle"],
+    },
+    reading: [
+      NUMBER_CONVENTIONS,
+      {
+        name: "The buckets",
+        body: "Not due, 1 to 30 days late, 31 to 60, 61 to 90, and over 90, counted from each invoice's due date to today.",
+      },
+      {
+        name: "The tie-out",
+        body: "The balance on Trade and other Receivables compared with the total still owed on invoices and opening balances. When they differ, a warning prints both figures. Advances customers have paid but not yet matched to an invoice are shown separately, since they sit in Customer Advances rather than in what is overdue.",
+      },
+    ],
+    does: [
+      {
+        name: "Read what is owed",
+        body: "Per invoice or opening balance, with the customer, deal, due date and bucket. Nothing is changed from here.",
+      },
+      {
+        name: "Download a statement",
+        body: "A dated account of one customer: the opening balance, every invoice, receipt and credit note in the period, and the running balance. Also downloadable as a PDF.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "Chasing what is overdue",
+        steps: [
+          "Open Customer ageing and read the over-90 and 61-to-90 buckets first.",
+          "Download a statement for the customer being chased, to send alongside the reminder.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Draft invoices and draft receipts are left out. Only what has posted counts.",
+      "Advances held but not yet matched to an invoice sit in Customer Advances, shown separately from what is overdue.",
     ],
   },
 }

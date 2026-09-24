@@ -255,7 +255,8 @@ const STEPS: Step[] = [
  * Every debit/credit pair below is taken straight from the posting code that
  * actually runs — `expense.posting.ts`, `settlement.posting.ts`,
  * `cost.posting.ts`, `asset.capitalise.ts`, `depreciation.posting.ts`,
- * `supplierBill.posting.ts` — not
+ * `supplierBill.posting.ts`, `invoice.posting.ts`, `costRelease.ts`,
+ * `receipt.posting.ts` — not
  * inferred from account names. Amounts are illustrative; the accounts and
  * which side each lands on are real.
  */
@@ -359,8 +360,8 @@ const MODULES: ModuleEntry[] = [
     note: (
       <>
         Nothing posts yet. Adding a Customer or Supplier is master data, the same as adding a
-        department or an account. The first real entry against a supplier is a bill, below.
-        Invoices to customers arrive with the selling side, which is not built yet.
+        department or an account. The first real entry against a supplier is a bill, below; the
+        first real entry against a customer is an invoice, next.
       </>
     ),
     also: "Customers · Suppliers",
@@ -388,6 +389,31 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     also: "Supplier bills · Supplier payments · Supplier credit notes · Supplier ageing",
+  },
+  {
+    id: "invoice",
+    title: "An Invoice",
+    trigger: (
+      <>
+        Bengal Group&apos;s firewalls, bought for ৳8,00,000 on the Supplier Bill above, are
+        invoiced at ৳10,00,000 plus 15% VAT. Finance records the invoice; a different Super Admin
+        approves it:
+      </>
+    ),
+    lines: [
+      { side: "Debit", account: "Trade and other Receivables", amount: "৳11,50,000" },
+      { side: "Credit", account: "Product Sales", amount: "৳10,00,000" },
+      { side: "Credit", account: "VAT Payable", amount: "৳1,50,000" },
+    ],
+    note: (
+      <>
+        In the same approval, the goods&apos; cost moves out of holding: Debit Hardware Purchase,
+        Credit Goods Bought for Won Deals, ৳8,00,000. When the customer pays ৳9,50,000 and keeps
+        ৳1,50,000 of VAT and ৳50,000 of income tax, the receipt clears all ৳11,50,000 and records
+        the two amounts withheld against their certificates.
+      </>
+    ),
+    also: "Customer POs · Invoices · Receipts · Customer credit notes · Customer ageing",
   },
   {
     id: "manual-journal",
@@ -430,7 +456,7 @@ export function AccountingGuidePage() {
           <p className="mb-10">
             This follows one real transaction, July&apos;s payroll, through every stage the accounts
             go through, in order. Every other kind of entry, from a hand-typed correction to an
-            expense claim, goes through the exact same six steps; section 7 shows six of them
+            expense claim, goes through the exact same six steps; section 7 shows seven of them
             with their own real numbers. Once this makes sense for payroll, it makes sense for the
             rest of the accounts too.
           </p>

@@ -105,7 +105,7 @@ export function CustomerAgeingPage() {
       {tieOut.data && !tieOut.data.ties ? (
         <PanelAlert>
           Customer balances do not agree with the ledger: the invoices add up to {formatMoney(tieOut.data.subledgerTotal, "BDT")},
-          but account 1220 Trade Receivables, Customers reads {formatMoney(tieOut.data.glBalance, "BDT")}. One of them is wrong,
+          but account 1220 Trade and other Receivables reads {formatMoney(tieOut.data.glBalance, "BDT")}. One of them is wrong,
           and it needs finding before these figures are relied on.
         </PanelAlert>
       ) : null}
