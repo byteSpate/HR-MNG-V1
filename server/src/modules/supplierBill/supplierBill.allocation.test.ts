@@ -29,7 +29,7 @@ describe("assertAllocatable", () => {
   it("refuses a bill belonging to another supplier", async () => {
     await expect(
       assertAllocatable(clientWith([{ ...OPEN_BILL, supplierId: "sup-2" }]), "sup-1", [{ billId: "b1", amount: "1" }])
-    ).rejects.toThrow("Bill INV-1 belongs to a different supplier")
+    ).rejects.toThrow("Bill INV-1 is from a different supplier.")
   })
 
   it("refuses a bill that is not approved yet", async () => {

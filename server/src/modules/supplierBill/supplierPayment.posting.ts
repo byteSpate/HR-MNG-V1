@@ -1,15 +1,13 @@
 import { Prisma } from "../../generated/prisma/client"
 import type { Prisma as PrismaNamespace } from "../../generated/prisma/client"
 import type { SystemJournalInput } from "../accounting/accounting.types"
-import { postSystemJournal } from "../accounting/accounting.posting"
-import { toLedgerDate } from "../accounting/accounting.utils"
-import { loadRules, resolveAccountCode } from "../posting/posting.rules"
+import { postReversalNow } from "../accounting/accounting.reversal"
+import { resolveAccountCode } from "../posting/posting.rules"
 import type { ResolvedRules } from "../posting/posting.types"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { assertAllocatable } from "./supplierBill.allocation"
 
 type Line = SystemJournalInput["lines"][number]
 
@@ -25,6 +23,9 @@ interface AllocationForPosting {
 interface PaymentForPosting {
   id: string
   supplierId: string
+  // The one deal this payment belongs to (Task 7). Every posted line
+  // carries it, the same rule the receipt already follows.
+  opportunityId: string
   /** BDT that left the bank. For a USD payment, sourceAmount x fxRateToBdt. */
   amount: Prisma.Decimal
   sourceAmount: Prisma.Decimal | null
@@ -59,7 +60,7 @@ export function buildSupplierPaymentLines(
     exchange = payment.amount.minus(cleared)
   }
 
-  const dims = { supplierId: payment.supplierId }
+  const dims = { supplierId: payment.supplierId, opportunityId: payment.opportunityId }
   const lines: Line[] = []
   if (!cleared.isZero()) {
     lines.push({ accountCode: resolveAccountCode(rules, "PAYABLE"), debit: cleared.toFixed(2), ...dims })
@@ -69,60 +70,50 @@ export function buildSupplierPaymentLines(
   } else if (exchange.lessThan(0)) {
     lines.push({ accountCode: resolveAccountCode(fxRules, "GAIN"), credit: exchange.abs().toFixed(2), ...dims })
   }
-  lines.push({ accountCode: resolveAccountCode(rules, "BANK"), credit: payment.amount.toFixed(2) })
+  lines.push({ accountCode: resolveAccountCode(rules, "BANK"), credit: payment.amount.toFixed(2), opportunityId: payment.opportunityId })
 
   return lines
 }
 
-async function loadPaymentForPosting(tx: PrismaNamespace.TransactionClient, id: string): Promise<PaymentForPosting> {
-  return tx.supplierPayment.findUniqueOrThrow({
-    where: { id },
-    select: {
-      id: true, supplierId: true, amount: true, sourceAmount: true, currency: true, fxRateToBdt: true,
-      allocations: { select: { billId: true, amount: true, amountUsd: true } },
-    },
-  })
-}
+const REVERSE_INCLUDE = {
+  supplier: { select: { id: true, name: true } },
+  allocations: { include: { bill: { select: { id: true, billNumber: true } } } },
+} satisfies Prisma.SupplierPaymentInclude
 
-export async function postSupplierPayment(tx: PrismaNamespace.TransactionClient, paymentId: string, actorUserId: string) {
-  const payment = await loadPaymentForPosting(tx, paymentId)
-  const [rules, fxRules] = await Promise.all([loadRules(tx, "SUPPLIER_PAYMENT"), loadRules(tx, "FX")])
-  const supplier = await tx.supplier.findUniqueOrThrow({ where: { id: payment.supplierId }, select: { name: true } })
+/**
+ * Super Admin only (spec: a supplier payment no longer has a separate
+ * approval step, so the only correction path left is a reversal). The
+ * payment's journal is found by the same source triple `postSystemJournal`
+ * used to post it — a payment carries no `journalId` column of its own.
+ */
+export async function reverseSupplierPayment(id: string, input: { reason: string }, actor: AccessTokenPayload) {
+  return prisma.$transaction(async (tx: PrismaNamespace.TransactionClient) => {
+    const payment = await tx.supplierPayment.findUnique({ where: { id } })
+    if (!payment) throw new AppError(404, "Supplier payment not found")
+    if (payment.status !== "APPROVED") {
+      throw new AppError(409, `This payment is ${payment.status.toLowerCase()}, so it cannot be reversed`)
+    }
 
-  return postSystemJournal(tx, {
-    date: toLedgerDate(new Date()),
-    narration: `Payment — ${supplier.name}`,
-    source: { module: "SUPPLIER", refId: paymentId, event: "PAYMENT" },
-    lines: buildSupplierPaymentLines(payment, rules, fxRules),
-    createdBy: actorUserId,
-  })
-}
+    const journal = await tx.journal.findFirst({
+      where: { sourceModule: "SUPPLIER", sourceRefId: id, sourceEvent: "PAYMENT" },
+      select: { id: true },
+    })
+    if (!journal) throw new AppError(409, "No posted journal was found for this payment")
 
-export async function approveSupplierPayment(id: string, actor: AccessTokenPayload) {
-  const payment = await prisma.supplierPayment.findUnique({
-    where: { id },
-    include: { allocations: true },
-  })
-  if (!payment) throw new AppError(404, "Supplier payment not found")
-  if (payment.status !== "DRAFT") throw new AppError(409, `This payment is already ${payment.status.toLowerCase()}`)
-  if (payment.createdBy === actor.sub) throw new AppError(403, "You prepared this payment and cannot also approve it")
-
-  return prisma.$transaction(async (tx) => {
-    // Re-checked here, not only at draft time: another payment against the
-    // same bill may have been approved in between.
-    await assertAllocatable(
-      tx,
-      payment.supplierId,
-      payment.allocations.map((a) => ({ billId: a.billId, amount: a.amount.toString() }))
-    )
+    const reversal = await postReversalNow(tx, journal.id, input.reason, actor.sub)
 
     const updated = await tx.supplierPayment.update({
       where: { id },
-      data: { status: "APPROVED", approvedBy: actor.sub, approvedAt: new Date() },
-      include: { allocations: true },
+      data: { status: "REVERSED", reversedBy: actor.sub, reversedAt: new Date(), reversalReason: input.reason },
+      include: REVERSE_INCLUDE,
     })
-    await postSupplierPayment(tx, id, actor.sub)
-    await writeAudit(tx, { entity: "SUPPLIER_PAYMENT", entityId: id, action: "APPROVE", changedBy: actor.sub })
+
+    await writeAudit(tx, {
+      entity: "SUPPLIER_PAYMENT", entityId: id, action: "REVERSE", changedBy: actor.sub,
+      before: { status: "APPROVED" }, after: { status: "REVERSED", reversedBy: reversal.journalNo },
+      note: input.reason,
+    })
+
     return updated
   })
 }
