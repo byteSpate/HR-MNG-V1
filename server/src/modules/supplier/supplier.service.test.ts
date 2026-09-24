@@ -40,14 +40,27 @@ beforeEach(() => {
 
 describe("listSuppliers", () => {
   it("returns every supplier ordered by name", async () => {
-    vi.mocked(prisma.supplier.findMany).mockResolvedValue([{ id: "s1", name: "Star Tech" }] as any)
+    vi.mocked(prisma.supplier.findMany).mockResolvedValue([
+      { id: "s1", name: "Star Tech", bin: "BIN-1", contactName: "Karim" },
+    ] as any)
 
     const result = await listSuppliers()
 
     expect(prisma.supplier.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: { name: "asc" } })
     )
-    expect(result).toEqual([{ id: "s1", name: "Star Tech" }])
+    expect(result).toEqual([{ id: "s1", name: "Star Tech", bin: "BIN-1", contactName: "Karim", detailsMissing: false }])
+  })
+
+  it("flags a supplier with no BIN or no contact name", async () => {
+    vi.mocked(prisma.supplier.findMany).mockResolvedValue([
+      { id: "s1", name: "Star Tech", bin: null, contactName: "Karim" },
+      { id: "s2", name: "Smart Technologies", bin: "BIN-2", contactName: null },
+    ] as any)
+
+    const result = await listSuppliers()
+
+    expect(result.map((s) => s.detailsMissing)).toEqual([true, true])
   })
 })
 

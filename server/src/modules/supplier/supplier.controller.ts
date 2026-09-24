@@ -8,13 +8,39 @@ import {
   reactivateSupplier,
   updateSupplier,
 } from "./supplier.service"
-import { createSupplierSchema, updateSupplierSchema } from "./supplier.validators"
+import { findSimilarSuppliers, listSupplierOptions, quickAddSupplier } from "./supplier.quick"
+import { createSupplierSchema, quickAddSupplierSchema, updateSupplierSchema } from "./supplier.validators"
 
 type RequestWithId = Request<{ id: string }>
 
 export async function listSuppliersHandler(_req: Request, res: Response, next: NextFunction) {
   try {
     return res.status(200).json(await listSuppliers())
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function quickAddSupplierHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = quickAddSupplierSchema.parse(req.body)
+    return res.status(201).json(await quickAddSupplier(body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function findSimilarSuppliersHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    return res.status(200).json(await findSimilarSuppliers(String(req.query.q ?? "")))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function listSupplierOptionsHandler(_req: Request, res: Response, next: NextFunction) {
+  try {
+    return res.status(200).json(await listSupplierOptions())
   } catch (err) {
     return next(err)
   }

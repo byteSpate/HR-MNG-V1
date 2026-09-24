@@ -30,7 +30,7 @@ describe("GET /api/suppliers", () => {
     vi.mocked(prisma.supplier.findMany).mockResolvedValue([{ id: "s1", name: "Star Tech" }] as any)
     const res = await request(app).get("/api/suppliers").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
     expect(res.status).toBe(200)
-    expect(res.body).toEqual([{ id: "s1", name: "Star Tech" }])
+    expect(res.body).toEqual([{ id: "s1", name: "Star Tech", detailsMissing: false }])
   })
 })
 
@@ -92,5 +92,39 @@ describe("POST /api/suppliers/:id/reactivate", () => {
       .set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
     expect(res.status).toBe(200)
     expect(res.body).toEqual({ id: "s1", isActive: true })
+  })
+})
+
+function salesToken() {
+  return signAccessToken({
+    sub: "sales-1", role: "EMPLOYEE" as any, email: "sales@b.com", mustChangePassword: false, salesRole: "SALES_USER" as any,
+  })
+}
+
+describe("quick add / similar / options", () => {
+  it("refuses an employee with no sales role on quick add", async () => {
+    const res = await request(app)
+      .post("/api/suppliers/quick")
+      .send({ name: "Smart Technologies" })
+      .set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+
+  it("lets a sales user quick-add a supplier", async () => {
+    vi.mocked(prisma.supplier.findUnique).mockResolvedValue(null)
+    vi.mocked(prisma.supplier.create).mockResolvedValue({ id: "s2", name: "Smart Technologies" } as any)
+    const res = await request(app)
+      .post("/api/suppliers/quick")
+      .send({ name: "Smart Technologies" })
+      .set("Authorization", `Bearer ${salesToken()}`)
+    expect(res.status).toBe(201)
+  })
+
+  it("lets a sales user list similar names and options", async () => {
+    vi.mocked(prisma.supplier.findMany).mockResolvedValue([])
+    const similar = await request(app).get("/api/suppliers/similar?q=star").set("Authorization", `Bearer ${salesToken()}`)
+    const options = await request(app).get("/api/suppliers/options").set("Authorization", `Bearer ${salesToken()}`)
+    expect(similar.status).toBe(200)
+    expect(options.status).toBe(200)
   })
 })

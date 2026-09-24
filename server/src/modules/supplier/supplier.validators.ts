@@ -11,5 +11,10 @@ export const createSupplierSchema = z.object({
 
 export const updateSupplierSchema = createSupplierSchema
 
+export const quickAddSupplierSchema = z.object({
+  name: z.string().trim().min(1, "Write a supplier name").max(200),
+})
+
 export type CreateSupplierInput = z.infer<typeof createSupplierSchema>
 export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>
+export type QuickAddSupplierInput = z.infer<typeof quickAddSupplierSchema>

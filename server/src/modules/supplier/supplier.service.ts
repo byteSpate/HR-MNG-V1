@@ -11,27 +11,25 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { supplierNameKey as nameKeyFor } from "./supplier.quick"
 import type { CreateSupplierInput, UpdateSupplierInput } from "./supplier.validators"
 
 function isUniqueViolation(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002"
 }
 
-// The name lower-cased with everything but letters and digits removed, so
-// "Star Tech" and "StarTech" are the same supplier — must match the
-// migration SQL's regexp_replace(lower(name), '[^a-z0-9]', '', 'g') exactly.
-function nameKeyFor(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, "")
-}
-
 export async function listSuppliers() {
-  return prisma.supplier.findMany({
+  const suppliers = await prisma.supplier.findMany({
     select: {
       id: true, name: true, contactName: true, contactPhone: true, contactEmail: true,
       bin: true, paymentDays: true, isActive: true, createdAt: true,
     },
     orderBy: { name: "asc" },
   })
+  // A supplier with no BIN or no contact name is missing what the bill and
+  // the payment need. Shown as a tag, not enforced, since a supplier can be
+  // entered from the deal page (Task 16's quick add) before either is known.
+  return suppliers.map((s) => ({ ...s, detailsMissing: s.bin === null || s.contactName === null }))
 }
 
 export async function getSupplier(id: string) {

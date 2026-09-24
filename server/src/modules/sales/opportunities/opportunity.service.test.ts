@@ -477,6 +477,19 @@ describe("stage, status, and next step", () => {
     expect(data.wonByEmployeeId).toBeUndefined()
   })
 
+  it("refuses Won while a product line has no supplier, naming the line (Review Focus 4)", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      status: "ONGOING",
+      lines: [
+        { id: "l1", product: "FortiGate 100F", supplierId: "s1" },
+        { id: "l2", product: "Installation", supplierId: null },
+      ],
+    }) as any)
+    await expect(changeOpportunityStatus("opp-1", { status: "WON" }, USER))
+      .rejects.toThrow("Pick a supplier for every product before marking this deal won. Missing: Installation.")
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+  })
+
   it("stamps the current owner as winner on the first win", async () => {
     await changeOpportunityStatus("opp-1", { status: "WON" }, USER)
     expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({

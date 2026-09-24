@@ -44,7 +44,7 @@ const INCLUDE = {
       assignments: { select: { employeeId: true } },
     },
   },
-  lines: { orderBy: { order: "asc" as const } },
+  lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
 } as const
 
 /** Whether `actor` may write to this deal, decided from its parent account. */
@@ -365,6 +365,15 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
     if (current.status === body.status) return presentOpportunity(current)
     if ((body.status === "LOST" || body.status === "CANCELLED") && !body.statusReason?.trim()) {
       throw new AppError(400, `${body.status === "LOST" ? "Lost" : "Cancelled"} Opportunities require a reason`)
+    }
+    // Task 16: a supplier bill is filled from the deal's product lines, so
+    // every line needs one before the deal can be Won. A deal with no
+    // lines at all is allowed, as today.
+    if (body.status === "WON") {
+      const missing = current.lines.filter((l) => !l.supplierId).map((l) => l.product)
+      if (missing.length > 0) {
+        throw new AppError(400, `Pick a supplier for every product before marking this deal won. Missing: ${missing.join(", ")}.`)
+      }
     }
     const now = new Date()
     const data: Prisma.OpportunityUpdateInput = {
