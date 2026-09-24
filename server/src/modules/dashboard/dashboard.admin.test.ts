@@ -17,9 +17,11 @@ vi.mock("../../config/prisma", () => ({
 }))
 
 vi.mock("../event/event.service", () => ({ listEvents: vi.fn() }))
+vi.mock("../dealMoney/dealMoney.approvals", () => ({ listWaitingForApproval: vi.fn() }))
 
 import prisma from "../../config/prisma"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { listWaitingForApproval } from "../dealMoney/dealMoney.approvals"
 import { listEvents } from "../event/event.service"
 import { parseDateOnly } from "../../utils/dates"
 import { Prisma } from "../../generated/prisma/client"
@@ -51,6 +53,7 @@ beforeEach(() => {
   vi.mocked(prisma.payrollRun.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.employee.findMany).mockResolvedValue([] as never)
   vi.mocked(listEvents).mockResolvedValue({ items: [], nextCursor: null })
+  vi.mocked(listWaitingForApproval).mockResolvedValue([])
 })
 
 afterEach(() => {
@@ -189,6 +192,25 @@ describe("attendance backlog", () => {
   })
 })
 
+describe("waiting for approval", () => {
+  it("reads Nothing is waiting when the queue is empty", async () => {
+    const card = cardBy(await buildAdminDashboard(actor), "Waiting for approval")
+    expect(card.value).toBe("0")
+    expect(card.sub).toBe("Nothing is waiting")
+    expect(card.tone).toBe("green")
+  })
+
+  it("counts the queue on the card and drives the approvals badge from the same count", async () => {
+    vi.mocked(listWaitingForApproval).mockResolvedValueOnce([
+      { kind: "SUPPLIER_BILL", id: "b1", number: "BILL-1", dealId: "d1", dealSerial: "BS-OPP-1", party: "Star Tech", amount: "500.00", preparedBy: "Admin One", preparedAt: "2026-11-01T00:00:00.000Z" },
+    ])
+    const payload = await buildAdminDashboard(actor)
+    const card = cardBy(payload, "Waiting for approval")
+    expect(card.value).toBe("1")
+    expect(payload.badges["/admin/accounting/approvals"]).toBe(1)
+  })
+})
+
 describe("chart and table", () => {
   it("draws six months of payroll, gaps included", async () => {
     const payload = await buildAdminDashboard(actor)
@@ -236,12 +258,12 @@ describe("chart and table", () => {
 })
 
 describe("card isolation", () => {
-  it("gives three good cards and one failure when a sub-query throws", async () => {
+  it("gives four good cards and one failure when a sub-query throws", async () => {
     vi.mocked(prisma.department.count).mockRejectedValue(new Error("db down"))
     vi.spyOn(console, "error").mockImplementation(() => {})
 
     const payload = await buildAdminDashboard(actor)
-    expect(payload.stats).toHaveLength(4)
+    expect(payload.stats).toHaveLength(5)
     expect(payload.stats.filter((s) => s.failed)).toHaveLength(1)
     expect(cardBy(payload, "Total employees").failed).toBe(true)
     expect(cardBy(payload, "This month's payroll").failed).toBeUndefined()

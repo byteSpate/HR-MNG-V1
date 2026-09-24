@@ -10,6 +10,7 @@ import prisma from "../../config/prisma"
 import { officeToday } from "../attendance/attendance.time"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { monthName } from "../payroll/payroll.events"
+import { listWaitingForApproval } from "../dealMoney/dealMoney.approvals"
 import { settleCards } from "./dashboard.cards"
 import { ageInDays, days, when } from "./dashboard.format"
 import { timeOfDayGreeting } from "./dashboard.greeting"
@@ -41,6 +42,17 @@ async function awaitingApprovalCard(count: number): Promise<DashboardStat> {
     tag: count === 0 ? "Clear" : "Action needed",
     tone: toneFor.blockers(count),
     href: "/admin/payroll",
+  }
+}
+
+function waitingForApprovalCard(count: number): DashboardStat {
+  return {
+    label: "Waiting for approval",
+    value: String(count),
+    sub: count === 0 ? "Nothing is waiting" : `${count} draft${count === 1 ? "" : "s"} to approve or send back`,
+    tag: count === 0 ? "Clear" : "Waiting",
+    tone: toneFor.queue(count),
+    href: "/admin/accounting/approvals",
   }
 }
 
@@ -152,7 +164,7 @@ async function approvalRows(): Promise<TableCell[][]> {
 export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<DashboardPayload> {
   // Counted once and used by both the card and the nav badge. Two sources
   // drift, and the one that drifts is always the one nobody is looking at.
-  const [queue, attendanceBacklog, assetQueue] = await Promise.all([
+  const [queue, attendanceBacklog, assetQueue, moneyWaiting] = await Promise.all([
     approvalQueue(),
     prisma.attendance.count({ where: { approval: "PENDING" } }),
     // Requests still waiting on somebody, plus handovers the holder has not
@@ -162,6 +174,7 @@ export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<Da
       prisma.assetRequest.count({ where: { status: { in: ["PENDING", "APPROVED", "ORDERED"] } } }),
       prisma.assetAssignment.count({ where: { returnedAt: null, acknowledgedAt: null } }),
     ]).then(([requests, unacknowledged]) => requests + unacknowledged),
+    listWaitingForApproval(),
   ])
 
   const [stats, bars, waiting] = await Promise.all([
@@ -170,6 +183,7 @@ export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<Da
       { label: "Total employees", build: () => headcountCard() },
       { label: "This month's payroll", build: () => currentPayrollCard("/admin/payroll") },
       { label: "Attendance backlog", build: () => attendanceBacklogCard(attendanceBacklog) },
+      { label: "Waiting for approval", build: async () => waitingForApprovalCard(moneyWaiting.length) },
     ]),
     payrollSeries(6),
     approvalRows(),
@@ -201,6 +215,7 @@ export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<Da
       // a nav item reads as "you have N to do", and putting the asset count
       // there would teach people the number is decoration.
       "/admin/assets": assetQueue,
+      "/admin/accounting/approvals": moneyWaiting.length,
     },
   }
 }
