@@ -1742,7 +1742,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
     ],
     watchFor: [
-      "Delivery is not tracked on a customer PO yet: the whole amount counts as earned the moment it is invoiced, whichever order goods actually move in. Tracked deliveries are a later phase.",
+      "Track Delivery is fixed when the PO is created and can never be turned on or off afterwards. With it off, the whole amount counts as earned the moment it is invoiced, whichever order goods actually move in. With it on, Deliveries & acceptances and Monthly earnings are what earns it.",
       "A PO cannot be edited or cancelled once it has an invoice against it. Raise a credit note on the invoice instead.",
     ],
   },
@@ -1794,7 +1794,109 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     watchFor: [
       "Invoices are issued from your usual invoicing tool. This page records them so they reach the ledger; it does not print them.",
-      "Delivery is not tracked yet, so one invoice both bills the customer and earns the revenue in the same entry.",
+      "On a PO that does not track delivery, one invoice both bills the customer and earns the revenue in the same entry. On a tracked PO the invoice only bills: Deliveries & acceptances or Monthly earnings is what earns it.",
+    ],
+  },
+
+  "accounting/deliveries": {
+    title: "Deliveries & acceptances",
+    lede: "When goods reached the customer or the customer signed work off, on a customer PO that tracks delivery. Approving one earns its revenue.",
+    step: "record",
+    connects: {
+      fedBy: ["Customer POs that track delivery"],
+      feeds: ["Unbilled Revenue", "Unearned Revenue", "Product Sales", "Service Revenue, Local", "Hardware Purchase", "Goods Bought for Won Deals"],
+    },
+    reading: [
+      {
+        name: "Draft and Approved",
+        body: "A draft can still be corrected and has not reached the ledger. Approved means it posted; revenue was earned and, on a goods line, its matching cost was released.",
+      },
+      {
+        name: "Left to deliver, left to accept",
+        body: "What is still outstanding on a line: quantity for a delivery, amount for an acceptance. Recording one only reduces what is left; it never lets a line be over-earned.",
+      },
+    ],
+    does: [
+      {
+        name: "Record a delivery or acceptance",
+        body: "Pick a tracked, open customer PO, then the challan number or the acceptance note, and how much of each line it covers. Available to Finance, a Super Admin, or the deal's own sales person from the Sales Hub.",
+      },
+      {
+        name: "Approve",
+        body: "Earns the revenue and, on a goods line, releases the matching share of the goods held for the deal. Refused for the person who recorded it.",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "Bengal Group's firewalls, delivered before they are invoiced",
+        steps: [
+          "A tracked customer PO for firewalls worth 10,00,000.00, bought for 8,00,000.00, is fully delivered before the invoice is raised.",
+          "Approving the delivery debits Unbilled Revenue 10,00,000.00 and credits Product Sales 10,00,000.00, in the same approval as Hardware Purchase 8,00,000.00 against Goods Bought for Won Deals 8,00,000.00.",
+          "The later invoice then clears the 10,00,000.00 sitting in Unbilled Revenue instead of earning it again.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Track Delivery is fixed when the PO is created and can never be turned on or off afterwards.",
+      "Unbilled and Unearned are read per deal from the ledger, not per PO, so two POs on the same deal can offset each other.",
+      "Keep the signed challan or acceptance note on paper for now: attachments are not built yet.",
+    ],
+  },
+
+  "accounting/monthly-earnings": {
+    title: "Monthly earnings",
+    lede: "Contract revenue on a Monthly line, earned month by month and posted in one run, modeled on the depreciation run.",
+    step: "record",
+    connects: {
+      fedBy: ["Customer POs with a Monthly line under contract"],
+      feeds: ["Unbilled Revenue", "Unearned Revenue", "Service Revenue, Local", "Journals"],
+    },
+    reading: [
+      {
+        name: "Draft, Posted and Reversed",
+        body: "A draft can be deleted and redrafted. Posted means the month's revenue reached the ledger. Reversed frees the month for a fresh run once its reversing journal is approved.",
+      },
+      {
+        name: "A skipped month",
+        body: "Nothing is lost. The next run charges each line the target for its own date less whatever is already posted, so one run catches up any month that was never drafted.",
+      },
+    ],
+    does: [
+      {
+        name: "Draft a run for last month",
+        body: "Works out this month's charge for every Monthly line under contract on an open, tracked PO.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Post",
+        body: "Earns the run's revenue in one journal, deal by deal.",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        name: "Reverse",
+        body: "Needs a reason. Drafts a reversing journal, which waits in the approval queue, and frees the month once approved.",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        name: "Delete a draft",
+        body: "Only before it is posted.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "A year-long support contract, earned month by month",
+        steps: [
+          "A tracked customer PO carries a Monthly line for a year of support, contracted from its start to end date.",
+          "Each month, Finance drafts and posts a run; the month's share debits Unearned Revenue (or Unbilled Revenue once that side is used up) and credits Service Revenue, Local.",
+          "A month nobody drafted is simply caught up by the next run, which charges it along with its own month.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Track Delivery is fixed when the PO is created and can never be turned on or off afterwards.",
+      "Unbilled and Unearned are read per deal from the ledger, not per PO.",
+      "A skipped month is caught up automatically by the next run; nothing needs to be drafted retroactively.",
     ],
   },
 

@@ -57,6 +57,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Customer POs", href: "/finance/accounting/customer-pos", icon: "RiShoppingBag3Line" },
       { label: "Invoices", href: "/finance/accounting/invoices", icon: "RiFileList2Line" },
+      { label: "Deliveries & acceptances", href: "/finance/accounting/deliveries", icon: "RiTruckLine" },
+      { label: "Monthly earnings", href: "/finance/accounting/monthly-earnings", icon: "RiCalendarCheckLine" },
       { label: "Receipts", href: "/finance/accounting/receipts", icon: "RiCoinsLine" },
       { label: "Customer credit notes", href: "/finance/accounting/customer-credit-notes", icon: "RiFileReduceLine" },
       { label: "Customer ageing", href: "/finance/accounting/customer-ageing", icon: "RiTimeLine" },
