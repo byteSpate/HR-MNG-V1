@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
 vi.mock("./invoice.service", () => ({
+  INVOICE_INCLUDE: {},
   listInvoices: vi.fn(),
   getInvoice: vi.fn(),
   listInvoiceablePos: vi.fn(),

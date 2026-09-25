@@ -60,12 +60,36 @@ describe("getVatSummary", () => {
     expect(call.where.journal.date).toEqual({ gte: new Date("2026-11-01T00:00:00.000Z"), lt: new Date("2026-12-01T00:00:00.000Z") })
   })
 
-  it("only counts CUSTOMER and SUPPLIER sourced journals, not a hand-typed VAT settlement", async () => {
+  it("only counts CUSTOMER and SUPPLIER sourced journals, not a hand-typed VAT settlement, and also their reversal journals", async () => {
     vi.mocked(prisma.journalLine.aggregate).mockResolvedValue({ _sum: { debit: d("0"), credit: d("0") } } as any)
 
     await getVatSummary("2026-11-01", "2026-11-30")
 
     const call = vi.mocked(prisma.journalLine.aggregate).mock.calls[0][0] as any
-    expect(call.where.journal.sourceModule).toEqual({ in: ["CUSTOMER", "SUPPLIER"] })
+    // A reversal journal (postReversalNow) carries no sourceModule of its
+    // own, so it is picked up through the journal it reverses instead —
+    // otherwise the offsetting entry drops out and a reversed amount never
+    // nets to zero (Critical 2).
+    expect(call.where.journal.OR).toEqual([
+      { sourceModule: { in: ["CUSTOMER", "SUPPLIER"] } },
+      { reverses: { sourceModule: { in: ["CUSTOMER", "SUPPLIER"] } } },
+    ])
+  })
+
+  it("nets a reversed receipt's withheld VAT to zero (Critical 2)", async () => {
+    // A receipt withheld 30,000 in VDS (account 1234, a debit) and was
+    // later reversed. The reversal journal has no sourceModule of its own,
+    // but the widened filter reaches it through `reverses`, so a real
+    // query's aggregate sums the original debit and the reversal's
+    // offsetting credit together.
+    vi.mocked(prisma.journalLine.aggregate).mockImplementation((async ({ where }: any) => {
+      const accountId = where.accountId
+      if (accountId === "acc-1234") return { _sum: { debit: d("30000"), credit: d("30000") } }
+      return { _sum: { debit: d("0"), credit: d("0") } }
+    }) as any)
+
+    const summary = await getVatSummary("2026-11-01", "2026-11-30")
+
+    expect(summary.withheldByCustomers).toBe("0.00")
   })
 })

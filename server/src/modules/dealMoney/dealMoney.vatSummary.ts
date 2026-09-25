@@ -13,7 +13,12 @@ export interface VatSummary {
 
 /** Posted debits minus credits for an account, over a date range, counting
  *  only journals CUSTOMER or SUPPLIER sourced — a hand-typed VAT
- *  settlement is not VAT on invoices or bills. */
+ *  settlement is not VAT on invoices or bills. A reversal journal carries
+ *  no `sourceModule` of its own (postReversalNow sets none), so it is
+ *  included by checking the journal it reverses instead — otherwise a
+ *  reversed receipt's original journal stays counted while its offsetting
+ *  reversal is silently dropped, and the reversed amount never nets to
+ *  zero. */
 async function debitLessCredit(accountCode: string, from: Date, to: Date): Promise<Prisma.Decimal> {
   const account = await prisma.account.findUniqueOrThrow({ where: { code: accountCode }, select: { id: true } })
   const agg = await prisma.journalLine.aggregate({
@@ -21,7 +26,10 @@ async function debitLessCredit(accountCode: string, from: Date, to: Date): Promi
       accountId: account.id,
       journal: {
         status: { in: ["POSTED", "REVERSED"] },
-        sourceModule: { in: ["CUSTOMER", "SUPPLIER"] },
+        OR: [
+          { sourceModule: { in: ["CUSTOMER", "SUPPLIER"] } },
+          { reverses: { sourceModule: { in: ["CUSTOMER", "SUPPLIER"] } } },
+        ],
         date: { gte: from, lt: to },
       },
     },
