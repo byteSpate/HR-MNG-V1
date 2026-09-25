@@ -82,14 +82,22 @@ describe("reverseReceipt", () => {
 
   it("refuses a receipt that is not approved", async () => {
     vi.mocked(prisma.receipt.findUnique).mockResolvedValue({ id: "r1", status: "REVERSED" } as any)
-    await expect(reverseReceipt("r1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("This receipt is reversed, so it cannot be reversed")
+    await expect(reverseReceipt("r1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("This receipt is already reversed.")
+    expect(postReversalNow).not.toHaveBeenCalled()
+  })
+
+  it("refuses a receipt that is still a draft", async () => {
+    vi.mocked(prisma.receipt.findUnique).mockResolvedValue({ id: "r1", status: "DRAFT" } as any)
+    await expect(reverseReceipt("r1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow(
+      "This receipt is still a draft. There is nothing posted to reverse yet."
+    )
     expect(postReversalNow).not.toHaveBeenCalled()
   })
 
   it("refuses when no posted journal can be found for the receipt", async () => {
     vi.mocked(prisma.receipt.findUnique).mockResolvedValue({ id: "r1", status: "APPROVED", customerId: "c1" } as any)
     vi.mocked(prisma.journal.findFirst).mockResolvedValue(null)
-    await expect(reverseReceipt("r1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("No posted journal was found for this receipt")
+    await expect(reverseReceipt("r1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("This receipt has no posted entry to reverse.")
   })
 })
 

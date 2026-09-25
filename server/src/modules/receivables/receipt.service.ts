@@ -79,7 +79,9 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
     for (const invoiceId of invoiceIds) {
       const invoice = byId.get(invoiceId)
       if (!invoice) throw new AppError(404, "An invoice being collected does not exist")
-      if (invoice.status !== "APPROVED") throw new AppError(409, `Invoice ${invoice.invoiceNumber} is not approved yet`)
+      if (invoice.status !== "APPROVED") {
+        throw new AppError(409, `Invoice ${invoice.invoiceNumber} is not approved yet. Approve it before recording a payment against it.`)
+      }
       // Review Focus 1: two invoices can share a customer while belonging to
       // different deals. A receipt settles one deal, so an invoice from any
       // other deal is refused even when the customer matches.

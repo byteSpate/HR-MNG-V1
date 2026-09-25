@@ -131,7 +131,7 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
     const [rules, fxRules] = await Promise.all([loadRules(tx, "SUPPLIER_PAYMENT"), loadRules(tx, "FX")])
     await postSystemJournal(tx, {
       date: toLedgerDate(payment.date),
-      narration: `Payment — ${payment.supplier.name}`,
+      narration: `Payment to ${payment.supplier.name}`,
       source: { module: "SUPPLIER", refId: payment.id, event: "PAYMENT" },
       lines: buildSupplierPaymentLines({ ...payment, opportunityId: deal.id }, rules, fxRules),
       createdBy: actor.sub,

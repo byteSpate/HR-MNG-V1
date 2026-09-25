@@ -91,14 +91,19 @@ export async function reverseSupplierPayment(id: string, input: { reason: string
     const payment = await tx.supplierPayment.findUnique({ where: { id } })
     if (!payment) throw new AppError(404, "Supplier payment not found")
     if (payment.status !== "APPROVED") {
-      throw new AppError(409, `This payment is ${payment.status.toLowerCase()}, so it cannot be reversed`)
+      throw new AppError(
+        409,
+        payment.status === "REVERSED"
+          ? "This payment is already reversed."
+          : "This payment is still a draft. There is nothing posted to reverse yet."
+      )
     }
 
     const journal = await tx.journal.findFirst({
       where: { sourceModule: "SUPPLIER", sourceRefId: id, sourceEvent: "PAYMENT" },
       select: { id: true },
     })
-    if (!journal) throw new AppError(409, "No posted journal was found for this payment")
+    if (!journal) throw new AppError(409, "This payment has no posted entry to reverse.")
 
     const reversal = await postReversalNow(tx, journal.id, input.reason, actor.sub)
 

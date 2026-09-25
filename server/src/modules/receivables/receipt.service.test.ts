@@ -104,7 +104,7 @@ describe("createReceipt", () => {
 
     await expect(createReceipt({
       opportunityId: "opp-1", date: "2026-11-10", amount: "100", allocations: [{ invoiceId: "inv-1", amount: "100" }],
-    } as any, FINANCE)).rejects.toThrow("Invoice INV-1 is not approved yet")
+    } as any, FINANCE)).rejects.toThrow("Invoice INV-1 is not approved yet. Approve it before recording a payment against it.")
   })
 
   it("refuses money that is not paying an invoice (no advances)", async () => {

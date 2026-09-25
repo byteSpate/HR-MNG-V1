@@ -89,14 +89,19 @@ export async function reverseReceipt(id: string, input: { reason: string }, acto
     const receipt = await tx.receipt.findUnique({ where: { id } })
     if (!receipt) throw new AppError(404, "Receipt not found")
     if (receipt.status !== "APPROVED") {
-      throw new AppError(409, `This receipt is ${receipt.status.toLowerCase()}, so it cannot be reversed`)
+      throw new AppError(
+        409,
+        receipt.status === "REVERSED"
+          ? "This receipt is already reversed."
+          : "This receipt is still a draft. There is nothing posted to reverse yet."
+      )
     }
 
     const journal = await tx.journal.findFirst({
       where: { sourceModule: "CUSTOMER", sourceRefId: id, sourceEvent: "RECEIPT" },
       select: { id: true },
     })
-    if (!journal) throw new AppError(409, "No posted journal was found for this receipt")
+    if (!journal) throw new AppError(409, "This receipt has no posted entry to reverse.")
 
     const reversal = await postReversalNow(tx, journal.id, input.reason, actor.sub)
 

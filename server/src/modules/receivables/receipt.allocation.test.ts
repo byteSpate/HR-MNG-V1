@@ -27,7 +27,7 @@ describe("assertReceivable", () => {
 
   it("refuses a draft invoice", async () => {
     await expect(assertReceivable(invClient([INV({ status: "DRAFT" })]), "c1", [{ invoiceId: "inv1", amount: d("1") }]))
-      .rejects.toThrow("Invoice INV-1 is not approved yet")
+      .rejects.toThrow("Invoice INV-1 is not approved yet. Approve it before recording a payment against it.")
   })
 
   it("refuses more than is left, adding duplicate lines together", async () => {

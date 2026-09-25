@@ -126,13 +126,21 @@ describe("reverseSupplierPayment", () => {
 
   it("refuses a payment that is not approved", async () => {
     vi.mocked(prisma.supplierPayment.findUnique).mockResolvedValue({ id: "p1", status: "REVERSED" } as any)
-    await expect(reverseSupplierPayment("p1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("This payment is reversed, so it cannot be reversed")
+    await expect(reverseSupplierPayment("p1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("This payment is already reversed.")
+    expect(postReversalNow).not.toHaveBeenCalled()
+  })
+
+  it("refuses a payment that is still a draft", async () => {
+    vi.mocked(prisma.supplierPayment.findUnique).mockResolvedValue({ id: "p1", status: "DRAFT" } as any)
+    await expect(reverseSupplierPayment("p1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow(
+      "This payment is still a draft. There is nothing posted to reverse yet."
+    )
     expect(postReversalNow).not.toHaveBeenCalled()
   })
 
   it("refuses when no posted journal can be found for the payment", async () => {
     vi.mocked(prisma.supplierPayment.findUnique).mockResolvedValue({ id: "p1", status: "APPROVED", supplierId: "sup-1" } as any)
     vi.mocked(prisma.journal.findFirst).mockResolvedValue(null)
-    await expect(reverseSupplierPayment("p1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("No posted journal was found for this payment")
+    await expect(reverseSupplierPayment("p1", { reason: "x" }, SUPER_ADMIN)).rejects.toThrow("This payment has no posted entry to reverse.")
   })
 })
