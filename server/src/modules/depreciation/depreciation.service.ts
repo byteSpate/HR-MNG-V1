@@ -16,7 +16,8 @@ import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { resolveOpenPeriod } from "../accounting/accounting.period.service"
-import { invertLines, toLedgerDate } from "../accounting/accounting.utils"
+import { toLedgerDate } from "../accounting/accounting.utils"
+import { draftReversal } from "../accounting/accounting.reversal"
 import { loadRules, resolveAccountCode } from "../posting/posting.rules"
 import { dec, round2, sum, ZERO } from "../payroll/payroll.money"
 import { computeCharges, type ComputedCharge, type DepreciableAsset } from "./depreciation.compute"
@@ -413,52 +414,14 @@ export async function reverseRun(id: string, body: { reason: string }, actor: Ac
       throw new AppError(400, "Give a reason for the reversal")
     }
 
-    const run = await tx.depreciationRun.findUnique({
-      where: { id },
-      include: { journal: { include: { lines: { orderBy: { sortOrder: "asc" } } } } },
-    })
+    const run = await tx.depreciationRun.findUnique({ where: { id } })
     if (!run) throw new AppError(404, "Depreciation run not found")
-    if (run.status !== "POSTED" || !run.journal) {
+    if (run.status !== "POSTED" || !run.journalId) {
       throw new AppError(409, `${run.runNo} is ${run.status.toLowerCase()}; only a POSTED run with a journal can be reversed.`)
     }
-    if (run.journal.status !== "POSTED") {
-      throw new AppError(409, `${run.journal.journalNo} is not posted, so it cannot be reversed.`)
-    }
 
-    const original = run.journal
-    const invertedLines = invertLines(original.lines).map((l, i) => ({
-      accountId: l.accountId,
-      debit: l.debit,
-      credit: l.credit,
-      narration: l.narration,
-      departmentId: l.departmentId,
-      employeeId: l.employeeId,
-      sourceCurrency: l.sourceCurrency,
-      sourceAmount: l.sourceAmount,
-      fxRateToBdt: l.fxRateToBdt,
-      sortOrder: i,
-    }))
+    const reversal = await draftReversal(tx, run.journalId, body.reason, actor.sub)
 
-    const reversal = await tx.journal.create({
-      data: {
-        journalNo: await tx.idCounter.upsert({
-          where: { id: "JV" },
-          update: { value: { increment: 1 } },
-          create: { id: "JV", value: 1 },
-        }).then((c) => `BS-JV-${String(c.value).padStart(5, "0")}`),
-        date: original.date,
-        periodId: original.periodId,
-        type: "REVERSAL",
-        status: "DRAFT",
-        narration: `Reversal of ${original.journalNo} — ${original.narration}`,
-        reversesId: original.id,
-        reversalReason: body.reason,
-        createdBy: actor.sub,
-        lines: { createMany: { data: invertedLines } },
-      },
-    })
-
-    await tx.journal.update({ where: { id: original.id }, data: { status: "REVERSED" } })
     await tx.depreciationRun.update({
       where: { id },
       data: { status: "REVERSED", reversedBy: actor.sub, reversedAt: new Date() },

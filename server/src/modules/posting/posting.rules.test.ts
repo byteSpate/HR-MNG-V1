@@ -67,3 +67,32 @@ describe("asset recovery posting rules", () => {
     expect(rule?.account).not.toBe("1250")
   })
 })
+
+describe("receivables & payables posting rules, Phase 1", () => {
+  it("resolves every new event's documented keys", () => {
+    const byEventKey = new Map(POSTING_RULES.map((r) => [`${r.event}:${r.key}`, r.account]))
+    expect(byEventKey.get("SUPPLIER_BILL:PAYABLE")).toBe("2111")
+    expect(byEventKey.get("SUPPLIER_BILL:GOODS")).toBe("1214")
+    expect(byEventKey.get("SUPPLIER_PAYMENT:BANK")).toBe("1242")
+    expect(byEventKey.get("INVOICE:RECEIVABLE")).toBe("1220")
+    expect(byEventKey.get("INVOICE:VAT")).toBe("2150")
+    expect(byEventKey.get("EARNED:GOODS")).toBe("4130")
+    expect(byEventKey.get("EARNED:SERVICE")).toBe("4120")
+    expect(byEventKey.get("COST_RELEASE:DELIVERED")).toBe("5121")
+    expect(byEventKey.get("RECEIPT:BANK")).toBe("1242")
+    expect(byEventKey.get("RECEIPT:VDS")).toBe("1234")
+    expect(byEventKey.get("RECEIPT:AIT")).toBe("1235")
+    expect(byEventKey.get("CUSTOMER_CREDIT:RECEIVABLE")).toBe("1220")
+    expect(byEventKey.get("FX:LOSS")).toBe("5320")
+    expect(byEventKey.get("FX:GAIN")).toBe("4220")
+  })
+
+  it("keeps 2110 untouched by every new event, so Operating Costs and Assets keep crediting it", () => {
+    const newEvents: string[] = [
+      "SUPPLIER_BILL", "SUPPLIER_PAYMENT", "SUPPLIER_CREDIT",
+      "INVOICE", "EARNED", "COST_RELEASE", "RECEIPT", "CUSTOMER_CREDIT", "FX",
+    ]
+    const accounts = POSTING_RULES.filter((r) => newEvents.includes(r.event)).map((r) => r.account)
+    expect(accounts).not.toContain("2110")
+  })
+})

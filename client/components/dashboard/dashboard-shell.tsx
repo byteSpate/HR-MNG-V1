@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils"
 import { Header } from "@/components/dashboard/header"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
-import { HelpProvider } from "@/components/help/help-provider"
 import type { NavGroup } from "@/components/dashboard/types"
 
 export function DashboardShell({
@@ -54,27 +53,23 @@ export function DashboardShell({
     // spread after the defaults — is the override point. Editing the vendored
     // constant would be undone by the next `shadcn add`.
     <SidebarProvider style={{ "--sidebar-width": "236px" } as React.CSSProperties}>
-      {/* HelpProvider wraps every role dashboard via this shared shell: the
-          panel renders once above the page, and the header trigger opens it. */}
-      <HelpProvider>
-        <Sidebar
-          navGroups={navGroups}
-          rootHref={rootHref}
-          profileHref={profileHref}
-          tone={tone}
-          systemLabel={systemLabel}
-          accessLabel={accessLabel}
-          externalBadges={badges}
-        />
-        {/* Deliberately not SidebarInset: that renders its own <main>, and the
-            content area below already is one. Nested <main> is invalid. */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Header profileHref={profileHref} />
-          <main className={cn("mx-auto flex w-full flex-1 flex-col px-4 pb-8 sm:px-6 lg:px-7", mainClassName)}>
-            {children}
-          </main>
-        </div>
-      </HelpProvider>
+      <Sidebar
+        navGroups={navGroups}
+        rootHref={rootHref}
+        profileHref={profileHref}
+        tone={tone}
+        systemLabel={systemLabel}
+        accessLabel={accessLabel}
+        externalBadges={badges}
+      />
+      {/* Deliberately not SidebarInset: that renders its own <main>, and the
+          content area below already is one. Nested <main> is invalid. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header profileHref={profileHref} />
+        <main className={cn("mx-auto flex w-full flex-1 flex-col px-4 pb-8 sm:px-6 lg:px-7", mainClassName)}>
+          {children}
+        </main>
+      </div>
     </SidebarProvider>
   )
 }

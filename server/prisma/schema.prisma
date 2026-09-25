@@ -13,29 +13,29 @@ datasource db {
 
 // ── AUTH & USERS ──────────────────────────────
 model User {
-  id                  String               @id @default(uuid())
-  email               String               @unique
-  passwordHash        String
-  role                Role
-  salesRole           SalesRole?
-  isActive            Boolean              @default(true)
-  mustChangePassword  Boolean              @default(false)
+  id                    String               @id @default(uuid())
+  email                 String               @unique
+  passwordHash          String
+  role                  Role
+  salesRole             SalesRole?
+  isActive              Boolean              @default(true)
+  mustChangePassword    Boolean              @default(false)
   // Identity for an account with no Employee row — Super Admin, HR Admin and
   // Finance Officer, who otherwise have no name and no face anywhere in the
   // product and appear as a raw email address.
   //
   // Deliberately NOT used for staff: their name lives on Employee and is
   // HR's to change, which is the existing rule and not one this relaxes.
-  displayName         String?
+  displayName           String?
   /// Packed "publicId:version", exactly as Employee.profilePicture is.
-  avatarUrl           String?
-  employee            Employee?
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  emailChangeRequests EmailChangeRequest[]
+  avatarUrl             String?
+  employee              Employee?
+  refreshTokens         RefreshToken[]
+  passwordResetTokens   PasswordResetToken[]
+  emailChangeRequests   EmailChangeRequest[]
   salesCommentsAuthored SalesComment[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 }
 
 enum Role {
@@ -76,16 +76,16 @@ model RefreshToken {
   //
   // Carried forward by `refresh()` onto the replacement row, along with
   // startedAt and userAgent. Only ever one live row per sessionId.
-  sessionId String   @default(uuid())
+  sessionId  String   @default(uuid())
   /// When the session began — NOT when this token was written.
-  startedAt DateTime @default(now())
+  startedAt  DateTime @default(now())
   /// Bumped on every rotation. The honest reading of "last active".
   lastUsedAt DateTime @default(now())
   /// Frozen at login: the browser does not change mid-session.
-  userAgent String?
+  userAgent  String?
   /// Updated on rotation, unlike userAgent — a laptop moves, and where it is
   /// *now* is what makes an unfamiliar entry worth noticing.
-  ipAddress String?
+  ipAddress  String?
 
   @@index([userId, sessionId])
 }
@@ -224,24 +224,24 @@ model Employee {
   assetRequests    AssetRequest[]
   assetRecoveries  AssetRecovery[]
 
-  journalLines    JournalLine[]
-  changeRequests  EmployeeChangeRequest[]
+  journalLines   JournalLine[]
+  changeRequests EmployeeChangeRequest[]
 
-  salesAccountsOwned      SalesAccount[]           @relation("SalesAccountOwner")
-  salesAccountAssignments SalesAccountAssignment[] @relation("SalesAccountAssignee")
-  salesCommunications     SalesCommunication[]
-  opportunitiesOwned      Opportunity[]            @relation("OpportunityOwner")
-  weeklyReports           WeeklyReport[]
-  opportunitiesWon        Opportunity[]            @relation("OpportunityWonBy")
-  salesComments           SalesComment[]
-  salesTargets            SalesTarget[]
-  salesMeetingAttendances SalesMeetingAttendee[]
-  salesTasksAssigned      SalesTask[]              @relation("SalesTaskAssignee")
-  salesTasksGiven         SalesTask[]              @relation("SalesTaskAssigner")
-  salesMinutesPrepared    SalesMinutesPreparer[]
-  funnelMeetingsRan       FunnelMeeting[]          @relation("FunnelMeetingRanBy")
-  funnelMeetingAttendances FunnelMeetingAttendee[] @relation("FunnelMeetingAttendee")
-  funnelReviews            FunnelMeetingReview[]   @relation("FunnelMeetingReviewSubject")
+  salesAccountsOwned       SalesAccount[]           @relation("SalesAccountOwner")
+  salesAccountAssignments  SalesAccountAssignment[] @relation("SalesAccountAssignee")
+  salesCommunications      SalesCommunication[]
+  opportunitiesOwned       Opportunity[]            @relation("OpportunityOwner")
+  weeklyReports            WeeklyReport[]
+  opportunitiesWon         Opportunity[]            @relation("OpportunityWonBy")
+  salesComments            SalesComment[]
+  salesTargets             SalesTarget[]
+  salesMeetingAttendances  SalesMeetingAttendee[]
+  salesTasksAssigned       SalesTask[]              @relation("SalesTaskAssignee")
+  salesTasksGiven          SalesTask[]              @relation("SalesTaskAssigner")
+  salesMinutesPrepared     SalesMinutesPreparer[]
+  funnelMeetingsRan        FunnelMeeting[]          @relation("FunnelMeetingRanBy")
+  funnelMeetingAttendances FunnelMeetingAttendee[]  @relation("FunnelMeetingAttendee")
+  funnelReviews            FunnelMeetingReview[]    @relation("FunnelMeetingReviewSubject")
 }
 
 enum EmployeeChangeField {
@@ -330,7 +330,7 @@ model Department {
   assets        Asset[]
 
   journalLines JournalLine[]
-  costNature CostNature @default(ADMINISTRATIVE)
+  costNature   CostNature    @default(ADMINISTRATIVE)
 }
 
 enum DocumentType {
@@ -899,12 +899,12 @@ model EmailDispatch {
 }
 
 model ExpenseClaim {
-  id          String        @id @default(uuid())
-  employeeId  String
-  employee    Employee      @relation(fields: [employeeId], references: [id])
-  amount      Decimal       @db.Decimal(14, 2)
-  categoryId  String
-  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  id                 String          @id @default(uuid())
+  employeeId         String
+  employee           Employee        @relation(fields: [employeeId], references: [id])
+  amount             Decimal         @db.Decimal(14, 2)
+  categoryId         String
+  category           ExpenseCategory @relation(fields: [categoryId], references: [id])
   legacyCategoryText String?
   /// What this claim is, in a few words — "Water jar", "Taxi to Motijheel".
   ///
@@ -915,14 +915,14 @@ model ExpenseClaim {
   /// Nullable only because claims already exist. The create validator requires
   /// it, and the migration backfills the column from `description`, which is
   /// exactly what people had been putting there.
-  name        String?
-  description String?
+  name               String?
+  description        String?
   /// Superseded by `ExpenseAttachment`. Kept because claims already carry
   /// links people pasted, and dropping the column would erase the only
   /// evidence behind an approved claim. Write path is closed; reads still
   /// show it.
-  receiptUrl  String?
-  status      ExpenseStatus @default(PENDING)
+  receiptUrl         String?
+  status             ExpenseStatus   @default(PENDING)
 
   /// Where a journey started and ended. Nullable and free text, because only
   /// travel and conveyance claims have a route at all, and "Gulshan 1 to
@@ -1051,7 +1051,7 @@ model Settlement {
   emailedAt   DateTime?
   generatedAt DateTime  @default(now())
 
-  claims ExpenseClaim[]
+  claims            ExpenseClaim[]
   assetRecoveryRows AssetRecovery[]
 
   @@index([employeeId])
@@ -1182,10 +1182,10 @@ model AssetCategory {
 
   // A laptop has a serial; a chair does not. Enforced at create rather than
   // being a nullable field everyone forgets.
-  requiresSerial   Boolean @default(true)
+  requiresSerial Boolean             @default(true)
   // Issued and never expected back — a mouse, a keyboard, a headset. Excluded
   // from the exit checklist.
-  isConsumable     Boolean @default(false)
+  isConsumable   Boolean             @default(false)
   // IT or non-IT, stated once per category. A property of the kind of thing,
   // never of a single asset and never of a request — a chair is non-IT no
   // matter who asks for it or why. Non-null deliberately: a nullable column
@@ -1200,7 +1200,7 @@ model AssetCategory {
   // Straight-line life. Unused in phase 1; the book-value report is phase 2.
   // The column exists now so the importer can carry it and there is no second
   // migration to backfill it later.
-  usefulLifeMonths Int?
+  usefulLifeMonths   Int?
 
   assets   Asset[]
   requests AssetRequest[]
@@ -1256,12 +1256,12 @@ model Asset {
   retiredBy      String? // User id
   retirementNote String?
 
-  assignments AssetAssignment[]
-  repairs     AssetRepair[]
-  requests          AssetRequest[] @relation("RequestTarget")
-  fulfilledRequests AssetRequest[] @relation("RequestFulfilment")
-  attachments AssetAttachment[]
-  recoveries  AssetRecovery[]
+  assignments       AssetAssignment[]
+  repairs           AssetRepair[]
+  requests          AssetRequest[]    @relation("RequestTarget")
+  fulfilledRequests AssetRequest[]    @relation("RequestFulfilment")
+  attachments       AssetAttachment[]
+  recoveries        AssetRecovery[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1276,10 +1276,10 @@ model Asset {
 // Operating costs lack this column, which is exactly why USD costs cannot
 // post at all.
 model DepreciationRun {
-  id     String @id @default(uuid())
+  id     String                @id @default(uuid())
   // IdCounter key "DEP" — the mechanism already issuing journal and employee
   // numbers. "BS-DEP-00007".
-  runNo  String @unique
+  runNo  String                @unique
   year   Int
   month  Int
   status DepreciationRunStatus @default(DRAFT)
@@ -1289,10 +1289,10 @@ model DepreciationRun {
   journalId String?
   journal   Journal? @relation(fields: [journalId], references: [id])
 
-  createdBy String
-  createdAt DateTime  @default(now())
-  postedBy  String?
-  postedAt  DateTime?
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  postedBy   String?
+  postedAt   DateTime?
   reversedBy String?
   reversedAt DateTime?
 
@@ -1305,11 +1305,11 @@ model DepreciationRun {
 }
 
 model AssetDepreciation {
-  id    String @id @default(uuid())
-  runId String
-  run   DepreciationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  id      String          @id @default(uuid())
+  runId   String
+  run     DepreciationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id])
+  asset   Asset           @relation(fields: [assetId], references: [id])
 
   // Always BDT. A USD asset is converted once, at capitalisation, and never
   // again — see spec Decision 7.
@@ -1347,26 +1347,26 @@ enum AssetRecoveryStatus {
 }
 
 model AssetRecovery {
-  id         String   @id @default(uuid())
-  assetId    String
-  asset      Asset    @relation(fields: [assetId], references: [id])
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  id           String           @id @default(uuid())
+  assetId      String
+  asset        Asset            @relation(fields: [assetId], references: [id])
+  employeeId   String
+  employee     Employee         @relation(fields: [employeeId], references: [id])
   // The custody episode it arose under. Nullable because an asset can go
   // missing with nobody holding it, and because a recovery may be raised
   // after the assignment has been closed out.
   assignmentId String?
   assignment   AssetAssignment? @relation(fields: [assignmentId], references: [id])
 
-  kind AssetRecoveryKind
+  kind     AssetRecoveryKind
   // Typed by a person, never computed. Book value, replacement cost and
   // original cost are three defensible answers and the system cannot see
   // which one applies.
-  amount   Decimal  @db.Decimal(14, 2)
-  currency Currency @default(BDT)
+  amount   Decimal           @db.Decimal(14, 2)
+  currency Currency          @default(BDT)
   // Required, and required non-empty. An unexplained deduction from
   // somebody's pay is a dispute waiting.
-  reason String
+  reason   String
 
   status AssetRecoveryStatus @default(PENDING)
 
@@ -1382,7 +1382,7 @@ model AssetRecovery {
   adjustment   PayrollAdjustment? @relation(fields: [adjustmentId], references: [id])
   // Not unique: one settlement legitimately clears several recoveries.
   settlementId String?
-  settlement   Settlement? @relation(fields: [settlementId], references: [id])
+  settlement   Settlement?        @relation(fields: [settlementId], references: [id])
 
   createdBy String
   createdAt DateTime @default(now())
@@ -1710,7 +1710,7 @@ enum CashFlowKind {
 }
 
 model Account {
-  id String @id @default(uuid())
+  id   String      @id @default(uuid())
   // Four digits. The first digit is fixed by `type`: 1 ASSET, 2 LIABILITY,
   // 3 EQUITY, 4 INCOME, 5 EXPENSE — validated on write. This is why the
   // trial balance sorts into statement order on `code` alone, and why an
@@ -1751,17 +1751,17 @@ model Account {
 
   description String?
 
-  noteRef String?
-  cashFlowKind CashFlowKind @default(NONE)
-  depreciationRate Decimal? @db.Decimal(5, 2)
-  contraAccountId String? @unique
-  contra          Account? @relation("AccountContra", fields: [contraAccountId], references: [id])
-  contraOf        Account? @relation("AccountContra")
+  noteRef          String?
+  cashFlowKind     CashFlowKind @default(NONE)
+  depreciationRate Decimal?     @db.Decimal(5, 2)
+  contraAccountId  String?      @unique
+  contra           Account?     @relation("AccountContra", fields: [contraAccountId], references: [id])
+  contraOf         Account?     @relation("AccountContra")
 
-  lines     JournalLine[]
+  lines        JournalLine[]
   postingRules PostingRule[]
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([type, code])
   @@index([parentId])
@@ -1772,8 +1772,8 @@ model Account {
 model FinancialYear {
   id        String              @id @default(uuid())
   name      String              @unique // "FY 2026-27"
-  startDate DateTime            // 1 Jul, UTC midnight
-  endDate   DateTime            // 30 Jun
+  startDate DateTime // 1 Jul, UTC midnight
+  endDate   DateTime // 30 Jun
   status    FinancialYearStatus @default(OPEN)
 
   periods AccountingPeriod[]
@@ -1806,10 +1806,10 @@ model AccountingPeriod {
 
   status PeriodStatus @default(OPEN)
 
-  closedBy   String?
-  closedAt   DateTime?
-  reopenedBy String?
-  reopenedAt DateTime?
+  closedBy     String?
+  closedAt     DateTime?
+  reopenedBy   String?
+  reopenedAt   DateTime?
   // Required on reopen. An unexplained reopen of a closed month is the first
   // thing an auditor asks about.
   reopenReason String?
@@ -1827,7 +1827,7 @@ enum PeriodStatus {
 }
 
 model Journal {
-  id String @id @default(uuid())
+  id        String @id @default(uuid())
   // "BS-JV-00123", issued from IdCounter with key "JV" — the same mechanism
   // that issues employee codes and asset tags.
   journalNo String @unique
@@ -1856,7 +1856,7 @@ model Journal {
   // Which event on that record. One payroll run legitimately produces two
   // journals — the accrual and the payment — and this is what keeps them
   // distinct while each stays individually idempotent.
-  sourceEvent String?
+  sourceEvent  String?
 
   createdBy     String
   createdAt     DateTime  @default(now())
@@ -1895,11 +1895,11 @@ model Journal {
 }
 
 enum JournalType {
-  OPENING  // the one opening-balance journal per financial year
-  MANUAL   // typed by a human
-  SYSTEM   // generated by another module — slice 3 onward
+  OPENING // the one opening-balance journal per financial year
+  MANUAL // typed by a human
+  SYSTEM // generated by another module — slice 3 onward
   REVERSAL
-  CLOSING  // year-end: P&L accounts → Retained Earnings
+  CLOSING // year-end: P&L accounts → Retained Earnings
 }
 
 // REJECTED is deliberately absent. A rejection returns the journal to DRAFT
@@ -1945,12 +1945,528 @@ model JournalLine {
   sourceAmount   Decimal?  @db.Decimal(14, 2)
   fxRateToBdt    Decimal?  @db.Decimal(18, 6)
 
+  // ── deal-based dimensions, added for receivables & payables ──
+  // Same pattern as departmentId/employeeId above: optional, so nothing
+  // that already posts has to change. A line carries at most one of
+  // customerId/supplierId in practice, never both, but nothing here
+  // enforces that — the posting builders that create these lines are
+  // what guarantee it (Phase 2/3), the same way nothing on this model
+  // enforces "exactly one of debit/credit is non-zero" either.
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  customerId    String?
+  customer      Customer?    @relation(fields: [customerId], references: [id])
+  supplierId    String?
+  supplier      Supplier?    @relation(fields: [supplierId], references: [id])
+
   sortOrder Int @default(0)
 
   @@index([accountId])
   @@index([journalId])
   @@index([employeeId])
   @@index([departmentId])
+  @@index([opportunityId])
+  @@index([customerId])
+  @@index([supplierId])
+}
+
+// ── RECEIVABLES & PAYABLES — Phase 1 ────────────────────────────────────────
+
+model Customer {
+  id String @id @default(uuid())
+
+  // Optional: set when a Customer is created from a Won Opportunity
+  // (Phase 3).
+  salesAccountId String?       @unique
+  salesAccount   SalesAccount? @relation(fields: [salesAccountId], references: [id])
+
+  // Required before the first invoice is approved (Phase 3 enforces this,
+  // not this model) — a Mushak 6.3 tax invoice needs both parties' names.
+  legalName      String  @unique
+  billingAddress String?
+  bin            String?
+  // Days until an invoice is due. 30 is the ordinary default; Finance can
+  // set a different figure per customer.
+  paymentDays    Int     @default(30)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  journalLines JournalLine[]
+  // Receivables & payables, Phase 3a.
+  pos          CustomerPo[]
+  invoices     Invoice[]
+  receipts     Receipt[]
+  creditNotes  CustomerCreditNote[]
+
+  @@index([legalName])
+}
+
+model Supplier {
+  id String @id @default(uuid())
+
+  name         String  @unique
+  // The name lower-cased with everything but letters and digits removed, so
+  // "Star Tech" and "StarTech" are the same supplier.
+  nameKey      String  @unique
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+  bin          String?
+  paymentDays  Int     @default(30)
+
+  // Retired, not deleted, once it carries a bill — same posture as
+  // Account and AssetCategory.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  journalLines     JournalLine[]
+  bills            SupplierBill[]
+  payments         SupplierPayment[]
+  creditNotes      SupplierCreditNote[]
+  opportunityLines OpportunityLine[]
+
+  @@index([name])
+}
+
+// ── RECEIVABLES & PAYABLES — Phase 2 (Buying) ───────────────────────────────
+
+// Master data (design §2). Three seeded rows cover today's needs; more can
+// be added later from a settings screen this phase does not build.
+model VatCode {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  ratePercent Decimal @db.Decimal(5, 2)
+  isActive    Boolean @default(true)
+
+  billLines    SupplierBillLine[]
+  // Receivables & payables, Phase 3a.
+  poLines      CustomerPoLine[]
+  invoiceLines InvoiceLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+enum SupplierDocStatus {
+  DRAFT
+  APPROVED
+  /// A Super Admin reversed an approved document.
+  REVERSED
+}
+
+enum BillLineKind {
+  GOODS
+  SERVICE
+}
+
+model SupplierBill {
+  id          String   @id @default(uuid())
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  // The supplier's own bill number, not this system's id.
+  billNumber  String
+  date        DateTime
+  dueDate     DateTime
+  currency    Currency @default(BDT)
+  // Frozen at the bill date, resolveRateOrThrow(currency, date). Null for
+  // a BDT bill, which needs no rate.
+  fxRateToBdt Decimal? @db.Decimal(18, 6)
+
+  status     SupplierDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  /// The one deal this belongs to (spec: every document belongs to one deal).
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  /// Set by "Send back". While set, the draft is not on Waiting for approval.
+  /// Cleared when the person who prepared it saves it again.
+  rejectionNote String?
+  sentBackBy    String?
+  sentBackAt    DateTime?
+
+  lines       SupplierBillLine[]
+  allocations SupplierPaymentAllocation[]
+  creditNotes SupplierCreditNote[]
+
+  /// Who last saved this draft. Null until it is edited after creation.
+  /// Approval refuses this person as well as the creator (spec: "The
+  /// person who prepared a draft cannot approve it").
+  updatedBy String?
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([opportunityId])
+}
+
+model SupplierBillLine {
+  id          String       @id @default(uuid())
+  billId      String
+  bill        SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  description String
+  kind        BillLineKind
+
+  // Always BDT, what actually posts. On a USD bill this is
+  // sourceAmount x the bill's frozen fxRateToBdt.
+  amount       Decimal  @db.Decimal(14, 2)
+  // The foreign-currency figure, memo only, set only when the bill's
+  // currency is not BDT, same pattern as JournalLine.sourceAmount.
+  sourceAmount Decimal? @db.Decimal(14, 2)
+
+  vatCodeId String
+  vatCode   VatCode @relation(fields: [vatCodeId], references: [id])
+  vatAmount Decimal @db.Decimal(14, 2)
+
+  creditNoteLines SupplierCreditNoteLine[]
+
+  @@index([billId])
+}
+
+model SupplierPayment {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  date       DateTime
+
+  // Always BDT, what actually posts to the bank/cash account.
+  amount       Decimal  @db.Decimal(14, 2)
+  // The foreign-currency figure, memo only, set only when currency is not
+  // BDT, same pattern as SupplierBillLine.sourceAmount.
+  sourceAmount Decimal? @db.Decimal(14, 2)
+  currency     Currency @default(BDT)
+  fxRateToBdt  Decimal? @db.Decimal(18, 6)
+
+  // Cheque number, bank reference, bKash transaction id, same field as
+  // OperatingCost.paymentRef.
+  reference String?
+
+  status     SupplierDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  /// The one deal this belongs to (spec: every document belongs to one deal).
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  // A Super Admin can reverse an approved payment.
+  reversedBy     String?
+  reversedAt     DateTime?
+  reversalReason String?
+
+  allocations SupplierPaymentAllocation[]
+
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([opportunityId])
+}
+
+// "This much of this payment settles this bill."
+model SupplierPaymentAllocation {
+  id        String          @id @default(uuid())
+  paymentId String
+  payment   SupplierPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  billId    String
+  bill      SupplierBill    @relation(fields: [billId], references: [id])
+
+  // Always BDT, the amount this row actually clears against the bill.
+  amount    Decimal  @db.Decimal(14, 2)
+  // The USD principal this row settles, set only when the bill is a USD
+  // bill, what FX variance is computed against: this same principal at
+  // the bill's frozen rate versus the payment's frozen rate.
+  amountUsd Decimal? @db.Decimal(14, 2)
+
+  @@index([paymentId])
+  @@index([billId])
+}
+
+model SupplierCreditNote {
+  id         String       @id @default(uuid())
+  billId     String
+  bill       SupplierBill @relation(fields: [billId], references: [id])
+  supplierId String
+  supplier   Supplier     @relation(fields: [supplierId], references: [id])
+  date       DateTime
+  // Required — design §2, "required reason".
+  reason     String
+
+  status     SupplierDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  /// Set by "Send back". While set, the draft is not on Waiting for approval.
+  /// Cleared when the person who prepared it saves it again.
+  rejectionNote String?
+  sentBackBy    String?
+  sentBackAt    DateTime?
+
+  lines SupplierCreditNoteLine[]
+
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([billId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+model SupplierCreditNoteLine {
+  id           String             @id @default(uuid())
+  creditNoteId String
+  creditNote   SupplierCreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  billLineId   String
+  billLine     SupplierBillLine   @relation(fields: [billLineId], references: [id])
+
+  // Always BDT, the gross reduction against 2111 for this line.
+  amount    Decimal @db.Decimal(14, 2)
+  vatAmount Decimal @db.Decimal(14, 2)
+
+  @@index([creditNoteId])
+  @@index([billLineId])
+}
+
+// ── Receivables & payables, Phase 3a: selling ─────────────────────────────
+
+enum CustomerPoStatus {
+  OPEN
+  /// Every line fully invoiced. Set by invoice approval, never by hand.
+  COMPLETE
+  /// Only while nothing has been invoiced against it. Requires a reason.
+  CANCELLED
+}
+
+/// Which revenue account a line earns into (4130 goods, 4120 services), and
+/// whether it counts toward the goods value that releases held cost.
+enum SaleLineKind {
+  GOODS
+  SERVICE
+}
+
+enum ReceivableDocStatus {
+  DRAFT
+  APPROVED
+  /// A Super Admin reversed an approved document.
+  REVERSED
+}
+
+model CustomerPo {
+  id     String @id @default(uuid())
+  /// BS-CPO-00001, IdCounter "CPO" — our reference. The customer's own PO
+  /// number is `customerPoNumber`.
+  serial String @unique
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  customerId    String
+  customer      Customer    @relation(fields: [customerId], references: [id])
+
+  customerPoNumber String
+  date             DateTime
+  /// A different company to invoice, when the customer asks for one.
+  invoiceTo        String?
+
+  status       CustomerPoStatus @default(OPEN)
+  cancelReason String?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines    CustomerPoLine[]
+  invoices Invoice[]
+
+  @@unique([customerId, customerPoNumber])
+  @@index([opportunityId])
+  @@index([status])
+}
+
+model CustomerPoLine {
+  id   String     @id @default(uuid())
+  poId String
+  po   CustomerPo @relation(fields: [poId], references: [id], onDelete: Cascade)
+
+  description String
+  kind        SaleLineKind
+  quantity    Decimal      @db.Decimal(14, 2)
+  unitPrice   Decimal      @db.Decimal(14, 2)
+  /// quantity × unitPrice, net of VAT, worked out by the server at write.
+  amount      Decimal      @db.Decimal(14, 2)
+  vatCodeId   String
+  vatCode     VatCode      @relation(fields: [vatCodeId], references: [id])
+  order       Int          @default(0)
+
+  invoiceLines InvoiceLine[]
+
+  @@index([poId, order])
+}
+
+model Invoice {
+  id            String @id @default(uuid())
+  /// The number on the invoice Finance issued elsewhere (Tally, Word).
+  /// Recorded, not generated — decision of 2026-09-23.
+  invoiceNumber String @unique
+
+  poId       String
+  po         CustomerPo @relation(fields: [poId], references: [id])
+  customerId String
+  customer   Customer   @relation(fields: [customerId], references: [id])
+
+  date    DateTime
+  dueDate DateTime
+
+  status     ReceivableDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  /// Set by "Send back". While set, the draft is not on Waiting for approval.
+  /// Cleared when the person who prepared it saves it again.
+  rejectionNote String?
+  sentBackBy    String?
+  sentBackAt    DateTime?
+
+  /// Who last saved this draft. Null until it is edited after creation.
+  /// Approval refuses this person as well as the creator (spec: "The
+  /// person who prepared a draft cannot approve it").
+  updatedBy String?
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines       InvoiceLine[]
+  allocations ReceiptAllocation[]
+  creditNotes CustomerCreditNote[]
+
+  @@index([customerId, status])
+  @@index([poId])
+}
+
+model InvoiceLine {
+  id        String         @id @default(uuid())
+  invoiceId String
+  invoice   Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  poLineId  String
+  poLine    CustomerPoLine @relation(fields: [poLineId], references: [id])
+
+  description String
+  /// Net of VAT. Capped by what is left to invoice on the PO line.
+  amount      Decimal @db.Decimal(14, 2)
+  vatCodeId   String
+  vatCode     VatCode @relation(fields: [vatCodeId], references: [id])
+  vatAmount   Decimal @db.Decimal(14, 2)
+
+  creditNoteLines CustomerCreditNoteLine[]
+
+  @@index([invoiceId])
+  @@index([poLineId])
+}
+
+model Receipt {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  date       DateTime
+
+  /// Cash that reached the bank.
+  amount Decimal @db.Decimal(14, 2)
+
+  /// Tax the customer kept (spec §3.3). The certificate fields are memo:
+  /// editable after approval, because the certificate arrives days later.
+  vdsAmount          Decimal   @default(0) @db.Decimal(14, 2)
+  vdsCertificateRef  String?
+  vdsCertificateDate DateTime?
+  aitAmount          Decimal   @default(0) @db.Decimal(14, 2)
+  aitCertificateRef  String?
+  aitCertificateDate DateTime?
+
+  reference String?
+
+  status     ReceivableDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  /// The one deal this belongs to (spec: every document belongs to one deal).
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+
+  // A Super Admin can reverse an approved receipt.
+  reversedBy     String?
+  reversedAt     DateTime?
+  reversalReason String?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  allocations ReceiptAllocation[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([opportunityId])
+}
+
+/// "This much of this receipt settles this invoice", gross: cash plus the
+/// share of withheld tax.
+model ReceiptAllocation {
+  id        String   @id @default(uuid())
+  receiptId String
+  receipt   Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  amount    Decimal  @db.Decimal(14, 2)
+  createdAt DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model CustomerCreditNote {
+  id         String   @id @default(uuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  date       DateTime
+  reason     String
+
+  status     ReceivableDocStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+
+  /// Set by "Send back". While set, the draft is not on Waiting for approval.
+  /// Cleared when the person who prepared it saves it again.
+  rejectionNote String?
+  sentBackBy    String?
+  sentBackAt    DateTime?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines CustomerCreditNoteLine[]
+
+  @@index([invoiceId])
+}
+
+model CustomerCreditNoteLine {
+  id            String             @id @default(uuid())
+  creditNoteId  String
+  creditNote    CustomerCreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  invoiceLineId String
+  invoiceLine   InvoiceLine        @relation(fields: [invoiceLineId], references: [id])
+  amount        Decimal            @db.Decimal(14, 2)
+  vatAmount     Decimal            @db.Decimal(14, 2)
 }
 
 model JournalAttachment {
@@ -1972,15 +2488,16 @@ model JournalAttachment {
 
 // ── POSTING RULES ─────────────────────────────
 model PostingRule {
-  id String @id @default(uuid())
-  event String
-  key String
+  id        String   @id @default(uuid())
+  event     String
+  key       String
   accountId String
-  account Account @relation(fields: [accountId], references: [id])
-  note String?
+  account   Account  @relation(fields: [accountId], references: [id])
+  note      String?
   updatedBy String?
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+
   @@unique([event, key])
   @@index([event])
 }
@@ -1991,18 +2508,18 @@ enum CostNature {
 }
 
 model ExpenseCategory {
-  id String @id @default(uuid())
-  code String @unique
-  name String @unique
+  id     String         @id @default(uuid())
+  code   String         @unique
+  name   String         @unique
   claims ExpenseClaim[]
 }
 
 model StatementNote {
-  id String @id @default(uuid())
-  ref String @unique
-  title String
-  body String
-  sortOrder Int @default(0)
+  id        String @id @default(uuid())
+  ref       String @unique
+  title     String
+  body      String
+  sortOrder Int    @default(0)
 
   updatedBy String?
   updatedAt DateTime @updatedAt
@@ -2046,6 +2563,11 @@ model SalesAccount {
   meetings       SalesMeeting[]
   tasks          SalesTask[]
   weeklyNotes    WeeklyAccountNote[]
+
+  // Receivables & payables, Phase 1. Set the day this account's first
+  // Opportunity is Won (Phase 3 wires the hook); absent for accounts with
+  // no won deal yet.
+  customer Customer?
 
   @@index([ownerEmployeeId, status])
   @@index([status])
@@ -2162,6 +2684,7 @@ model SalesCommunication {
 /// somebody builds what sits behind it.
 enum SalesTrack {
   NETWORKING
+  SOFTWARE_DEVELOPMENT
 }
 
 /// Did we get it? The outcome. Distinct from Stage, which is the position.
@@ -2313,6 +2836,15 @@ model Opportunity {
   meetings SalesMeeting[]    @relation("MeetingOpportunity")
   tasks    SalesTask[]
 
+  // Receivables & payables, Phase 1: the back-relation for
+  // JournalLine.opportunityId. Empty until Phase 2/3 post against a deal.
+  journalLines     JournalLine[]
+  // Receivables & payables, Phase 3a.
+  customerPos      CustomerPo[]
+  supplierBills    SupplierBill[]
+  supplierPayments SupplierPayment[]
+  receipts         Receipt[]
+
   @@index([salesAccountId])
   @@index([status, expectedCloseDate])
   @@index([ownerEmployeeId, status])
@@ -2337,28 +2869,34 @@ model OpportunityLine {
   /// Free text with suggestions from prior values — the same treatment the OEM
   /// brand gets, for the same reason: a closed list would be wrong within a
   /// month and nobody would be able to record the deal they actually have.
-  product   String
-  oemBrand  String?
-  model     String?
+  product       String
+  oemBrand      String?
+  model         String?
   /// Nullable because some lines are services, not units.
-  quantity  Int?
-  unitValue Decimal? @db.Decimal(14, 2)
+  quantity      Int?
+  unitValue     Decimal? @db.Decimal(14, 2)
   /// Never derived silently from quantity × unitValue. A number written
   /// without being asked for is the same defect as a faked one; the interface
   /// offers to fill it and a person presses the button.
-  lineValue Decimal? @db.Decimal(14, 2)
+  lineValue     Decimal? @db.Decimal(14, 2)
   /// The profit on this product, as a percentage of `lineValue`, typed by a
   /// person: -100 to 100, negative for one sold at a loss. The taka figure is
   /// worked out when read (sales.margin.ts), so it follows the Total price;
   /// the deal's margin is these added up. Null is "no margin yet", never 0%.
   marginPercent Decimal? @db.Decimal(5, 2)
-  note      String?
-  order     Int      @default(0)
+  note          String?
+  order         Int      @default(0)
+
+  /// Who we will buy this from (spec: Sales Hub changes). Optional while the
+  /// deal is open; required on every line before the deal is Won.
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([opportunityId, order])
+  @@index([supplierId])
 }
 
 /// The same rows render as **Remarks** on a Sales Account and **Comments** on
@@ -2552,12 +3090,12 @@ model SalesTask {
   /// Required by the service in phase 3, so every task is on an account's
   /// Timeline. Nullable in the table because a phase 5 project task may not
   /// belong to an account.
-  salesAccountId String?
-  salesAccount   SalesAccount? @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-  opportunityId  String?
-  opportunity    Opportunity?  @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
-  meetingId      String?
-  meeting        SalesMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  salesAccountId  String?
+  salesAccount    SalesAccount?  @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  opportunityId   String?
+  opportunity     Opportunity?   @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  meetingId       String?
+  meeting         SalesMeeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
   /// Phase 5 will add this relation. The column exists now, so that will be a
   /// relation change and not a backfill.
   projectId       String?
@@ -2720,11 +3258,11 @@ model WeeklyReport {
   /// and attendance already follow.
   weekStart  DateTime
 
-  status WeeklyReportStatus @default(DRAFT)
+  status           WeeklyReportStatus @default(DRAFT)
   /// The first submit, and whether it was after the deadline. Both frozen: a
   /// week reopened and submitted again keeps its on-time mark (§26.4).
   firstSubmittedAt DateTime?
-  submittedLate    Boolean   @default(false)
+  submittedLate    Boolean            @default(false)
   lastSubmittedAt  DateTime?
 
   /// The user id, so a report can be traced to the sign-in that wrote it.

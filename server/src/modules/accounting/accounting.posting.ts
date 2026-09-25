@@ -74,6 +74,9 @@ export async function postSystemJournal(
     narration: l.narration ?? null,
     departmentId: l.departmentId ?? null,
     employeeId: l.employeeId ?? null,
+    opportunityId: l.opportunityId ?? null,
+    customerId: l.customerId ?? null,
+    supplierId: l.supplierId ?? null,
     // Memo only, and null on a BDT transaction. Nothing computes from them —
     // but a caller that bothers to work out "USD 50,000 at 122.50" should not
     // have it silently dropped on the way in.

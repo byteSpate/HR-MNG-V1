@@ -13,11 +13,13 @@ vi.mock("../../config/prisma", () => ({
 }))
 
 vi.mock("../payroll/payroll.preflight", () => ({ preflight: vi.fn() }))
+vi.mock("../dealMoney/dealMoney.approvals", () => ({ countWaitingForApproval: vi.fn() }))
 
 import prisma from "../../config/prisma"
 import { Prisma } from "../../generated/prisma/client"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { preflight } from "../payroll/payroll.preflight"
+import { countWaitingForApproval } from "../dealMoney/dealMoney.approvals"
 import { parseDateOnly } from "../../utils/dates"
 import { buildFinanceDashboard } from "./dashboard.finance"
 
@@ -41,6 +43,7 @@ beforeEach(() => {
   vi.mocked(prisma.exchangeRate.findFirst).mockResolvedValue(null)
   vi.mocked(prisma.expenseClaim.findMany).mockResolvedValue([] as never)
   vi.mocked(preflight).mockResolvedValue({ month: 7, year: 2026, ok: true, blockers: [] })
+  vi.mocked(countWaitingForApproval).mockResolvedValue(0)
 })
 
 afterEach(() => {
@@ -194,6 +197,31 @@ describe("reimbursements outstanding", () => {
   })
 })
 
+describe("waiting for approval", () => {
+  it("reads Nothing is waiting when the queue is empty", async () => {
+    const card = cardBy(await buildFinanceDashboard(actor), "Waiting for approval")
+    expect(card.value).toBe("0")
+    expect(card.sub).toBe("Nothing is waiting")
+    expect(card.tone).toBe("green")
+  })
+
+  it("counts the queue on the card and drives the approvals badge from the same count", async () => {
+    vi.mocked(countWaitingForApproval).mockResolvedValueOnce(1)
+    const payload = await buildFinanceDashboard(actor)
+    const card = cardBy(payload, "Waiting for approval")
+    expect(card.value).toBe("1")
+    expect(payload.badges["/finance/accounting/approvals"]).toBe(1)
+  })
+
+  it("tells a Finance viewer the draft is waiting on a Super Admin, not that they can act on it", async () => {
+    // A Finance Officer can see this queue but cannot approve or send back
+    // a draft — only a Super Admin can (elevated finding 5).
+    vi.mocked(countWaitingForApproval).mockResolvedValueOnce(2)
+    const card = cardBy(await buildFinanceDashboard(actor), "Waiting for approval")
+    expect(card.sub).toBe("2 drafts waiting for a Super Admin")
+  })
+})
+
 describe("chart and table", () => {
   it("uses the same payroll series the admin chart uses", async () => {
     const payload = await buildFinanceDashboard(actor)
@@ -237,7 +265,7 @@ describe("card isolation", () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
 
     const payload = await buildFinanceDashboard(actor)
-    expect(payload.stats).toHaveLength(4)
+    expect(payload.stats).toHaveLength(5)
     expect(cardBy(payload, "Run readiness").failed).toBe(true)
     expect(cardBy(payload, "Exchange rate").failed).toBeUndefined()
   })

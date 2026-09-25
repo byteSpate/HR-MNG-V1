@@ -12,7 +12,6 @@ export const navGroups: NavGroup[] = [
       { label: "Employee expenses", href: "/finance/expenses", icon: "RiReceiptLine" },
       { label: "Settlements", href: "/finance/settlements", icon: "RiHandCoinLine" },
       { label: "Expenses", href: "/finance/costs", icon: "RiBillLine" },
-      { label: "Posting rules", href: "/finance/posting-rules", icon: "RiSettingsLine" },
       { label: "Assets", href: "/finance/assets", icon: "RiComputerLine" },
       { label: "Depreciation", href: "/finance/depreciation", icon: "RiCalculatorLine" },
       { label: "Asset value", href: "/finance/assets/value", icon: "RiPieChartLine" },
@@ -22,22 +21,55 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    // Setup and master data: done once, or rarely. Split out of what used to
+    // be one 15-item "Accounting" group (see Ledger and Statements below) —
+    // matches the guide page's own "Set up" step.
     label: "Accounting",
     items: [
+      { label: "Guide", href: "/finance/accounting/guide", icon: "RiQuestionLine" },
+      { label: "Chart of accounts", href: "/finance/accounting/accounts", icon: "RiNodeTree" },
+      { label: "Customers", href: "/finance/accounting/customers", icon: "RiUserLine" },
+      { label: "Suppliers", href: "/finance/accounting/suppliers", icon: "RiTruckLine" },
+      // Setup, and used rarely — last, below the things used daily.
+      { label: "Years & periods", href: "/finance/accounting/periods", icon: "RiCalendarCheckLine" },
+      { label: "Opening balances", href: "/finance/accounting/opening-balances", icon: "RiPlayCircleLine" },
+    ],
+  },
+  {
+    // The guide's "Post" and "Read" steps: where entries land and how
+    // they're read back, one account or one book at a time.
+    label: "Ledger",
+    items: [
+      // Pairs with Journals in the guide's own "Post" step — the map that
+      // decides which account a journal line lands on.
+      { label: "Posting rules", href: "/finance/posting-rules", icon: "RiSettingsLine" },
       { label: "Journals", href: "/finance/accounting/journals", icon: "RiFileList3Line" },
+      { label: "General ledger", href: "/finance/accounting/ledger", icon: "RiBookOpenLine" },
+      { label: "Cash book", href: "/finance/accounting/cash-book", icon: "RiCashLine" },
+      { label: "Bank book", href: "/finance/accounting/bank-book", icon: "RiBankLine" },
+      { label: "Trial balance", href: "/finance/accounting/trial-balance", icon: "RiScales3Line" },
+    ],
+  },
+  {
+    // All of a deal's money is on its own page; these are the ways in.
+    label: "Deals & money",
+    items: [
+      { label: "Deals", href: "/finance/accounting/deals", icon: "RiBriefcaseLine" },
+      { label: "Waiting for approval", href: "/finance/accounting/approvals", icon: "RiCheckboxCircleLine" },
+      { label: "Customer ageing", href: "/finance/accounting/customer-ageing", icon: "RiTimeLine" },
+      { label: "Supplier ageing", href: "/finance/accounting/supplier-ageing", icon: "RiTimeLine" },
+      { label: "VAT summary", href: "/finance/accounting/vat-summary", icon: "RiPercentLine" },
+    ],
+  },
+  {
+    // The guide's "Report" step: what gets filed.
+    label: "Statements",
+    items: [
       { label: "Financial statements", href: "/finance/accounting/statements", icon: "RiFileChartLine" },
       { label: "Cash flow", href: "/finance/statements/cash-flow", icon: "RiExchangeDollarLine" },
       { label: "Notes", href: "/finance/statements/notes", icon: "RiFileTextLine" },
       { label: "Annexure-A", href: "/finance/statements/annexure-a", icon: "RiTableLine" },
       { label: "Policy notes", href: "/finance/statements/policy-notes", icon: "RiArticleLine" },
-      { label: "Chart of accounts", href: "/finance/accounting/accounts", icon: "RiNodeTree" },
-      { label: "General ledger", href: "/finance/accounting/ledger", icon: "RiBookOpenLine" },
-      { label: "Cash book", href: "/finance/accounting/cash-book", icon: "RiCashLine" },
-      { label: "Bank book", href: "/finance/accounting/bank-book", icon: "RiBankLine" },
-      { label: "Trial balance", href: "/finance/accounting/trial-balance", icon: "RiScales3Line" },
-      // Setup, and used rarely — last, below the things used daily.
-      { label: "Years & periods", href: "/finance/accounting/periods", icon: "RiCalendarCheckLine" },
-      { label: "Opening balances", href: "/finance/accounting/opening-balances", icon: "RiPlayCircleLine" },
     ],
   },
   {

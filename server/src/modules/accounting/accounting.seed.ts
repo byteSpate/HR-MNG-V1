@@ -85,9 +85,19 @@ export const CHART: ChartEntry[] = [
   a("1211", "Developed Software (Completed)", "ASSET", "1210", { cashFlow: "OPERATING_WC" }),
   a("1212", "Raw Materials", "ASSET", "1210", { cashFlow: "OPERATING_WC" }),
   a("1213", "Software Work in Process", "ASSET", "1210", { cashFlow: "OPERATING_WC" }),
+  // Goods bought for a Won deal, held here until delivered (receivables &
+  // payables, Phase 1 — see docs/superpowers/specs/accounting/2026-09-21-receivables-payables-design.md §5).
+  a("1214", "Goods Bought for Won Deals", "ASSET", "1210", { cashFlow: "OPERATING_WC" }),
   a("1220", "Trade and other Receivables", "ASSET", "1200", { note: "7.00", noteRef: "7.00", cashFlow: "OPERATING_WC" }),
+  // Earned, not yet invoiced (receivables & payables, Phase 1).
+  a("1221", "Unbilled Revenue", "ASSET", "1200", { cashFlow: "OPERATING_WC" }),
   g("1230", "Advance, Deposit & Prepayments", "ASSET", { parent: "1200", note: "8.00", noteRef: "8.00" }),
   a("1231", "Advance against Office Rent", "ASSET", "1230", { cashFlow: "OPERATING_WC" }),
+  // ── receivables & payables, Phase 1 ──
+  a("1232", "Advance to Suppliers", "ASSET", "1230", { cashFlow: "OPERATING_WC" }),
+  a("1233", "Input VAT", "ASSET", "1230", { cashFlow: "OPERATING_WC" }),
+  a("1234", "VAT Deducted at Source", "ASSET", "1230", { cashFlow: "OPERATING_WC" }),
+  a("1235", "Advance Income Tax", "ASSET", "1230", { cashFlow: "OPERATING_WC" }),
   g("1240", "Cash & Cash Equivalents", "ASSET", { parent: "1200", note: "9.00", noteRef: "9.00" }),
   a("1241", "Cash in Hand", "ASSET", "1240", { cashKind: "CASH", cashFlow: "CASH" }),
   a("1242", "City Bank — A/C 1104400708001", "ASSET", "1240", { cashKind: "BANK", note: "9.01", noteRef: "9.01", cashFlow: "CASH" }),
@@ -99,6 +109,10 @@ export const CHART: ChartEntry[] = [
   g("2000", "Liabilities", "LIABILITY"),
   g("2100", "Current Liabilities", "LIABILITY", { parent: "2000", systemRole: "CURRENT_LIABILITIES" }),
   a("2110", "Trade and other Payables", "LIABILITY", "2100", { note: "12.00", noteRef: "12.00", cashFlow: "OPERATING_WC" }),
+  // Suppliers billed for a deal, kept separate from 2110 on purpose:
+  // Operating Costs and Asset purchases keep crediting 2110, untouched
+  // (receivables & payables, Phase 1).
+  a("2111", "Trade Payables — Suppliers", "LIABILITY", "2100", { cashFlow: "OPERATING_WC" }),
   a("2120", "Provision for Income Tax", "LIABILITY", "2100", { note: "13.00", noteRef: "13.00", cashFlow: "OPERATING_WC" }),
   g("2130", "Liabilities for Expenses", "LIABILITY", { parent: "2100", note: "14.00", noteRef: "14.00" }),
   a("2131", "Audit Fee Payable", "LIABILITY", "2130", { cashFlow: "OPERATING_WC" }),
@@ -108,6 +122,9 @@ export const CHART: ChartEntry[] = [
   a("2135", "Employee Reimbursements Payable", "LIABILITY", "2130", { cashFlow: "OPERATING_WC" }),
   a("2140", "Tax Deducted at Source Payable", "LIABILITY", "2100", { cashFlow: "OPERATING_WC" }),
   a("2150", "VAT Payable", "LIABILITY", "2100", { cashFlow: "OPERATING_WC" }),
+  // ── receivables & payables, Phase 1 ──
+  a("2160", "Customer Advances", "LIABILITY", "2100", { cashFlow: "OPERATING_WC" }),
+  a("2170", "Unearned Revenue", "LIABILITY", "2100", { cashFlow: "OPERATING_WC" }),
   g("2200", "Non-Current Liabilities", "LIABILITY", { parent: "2000", systemRole: "NON_CURRENT_LIABILITIES" }),
   a("2210", "Loan Payable", "LIABILITY", "2200", { cashFlow: "FINANCING" }),
 
@@ -126,6 +143,9 @@ export const CHART: ChartEntry[] = [
   a("4130", "Product Sales", "INCOME", "4100"),
   g("4200", "Other Income", "INCOME", { parent: "4000", systemRole: "OTHER_INCOME" }),
   a("4210", "Interest Income", "INCOME", "4200"),
+  // Receivables & payables, Phase 1: a supplier paid at a different rate
+  // than the bill's frozen rate.
+  a("4220", "Exchange Gain", "INCOME", "4200"),
   a("4290", "Miscellaneous Income", "INCOME", "4200"),
 
   // ── 5000 EXPENSES ──
@@ -141,6 +161,9 @@ export const CHART: ChartEntry[] = [
   a("5126", "C & F Expenses", "EXPENSE", "5120"),
   a("5127", "Suit & Domain Fee", "EXPENSE", "5120"),
   a("5128", "Depreciation — Direct", "EXPENSE", "5120", { cashFlow: "NON_CASH_ADDBACK" }),
+  // Service lines on a supplier bill, expensed on the bill date rather than
+  // held in 1214 (receivables & payables, Phase 1).
+  a("5129", "Subcontract & Resold Services", "EXPENSE", "5120"),
 
   g("5200", "Administrative & Selling Expenses", "EXPENSE", { parent: "5000", systemRole: "ADMIN_SELLING", note: "17.00", noteRef: "17.00" }),
   a("5201", "Salary and Allowances", "EXPENSE", "5200"),
@@ -165,6 +188,8 @@ export const CHART: ChartEntry[] = [
 
   g("5300", "Financial Expenses", "EXPENSE", { parent: "5000", systemRole: "FINANCIAL_EXPENSE", note: "18.00", noteRef: "18.00" }),
   a("5310", "Bank Interest & Charges", "EXPENSE", "5300"),
+  // Receivables & payables, Phase 1: the counterpart of 4220.
+  a("5320", "Exchange Loss", "EXPENSE", "5300"),
 
   g("5400", "Income Tax Expense", "EXPENSE", { parent: "5000", systemRole: "TAX_EXPENSE", note: "19.00", noteRef: "19.00" }),
   a("5410", "Current Tax", "EXPENSE", "5400"),

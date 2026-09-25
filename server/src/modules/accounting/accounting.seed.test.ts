@@ -180,3 +180,23 @@ describe("Annexure-A inputs", () => {
     expect(pairs).toEqual({ "1111": "1121", "1112": "1122", "1113": "1123", "1114": "1124" })
   })
 })
+
+describe("receivables & payables, Phase 1", () => {
+  it("includes every new receivables & payables account", () => {
+    const codes = CHART.map((c) => c.code)
+    expect(codes).toEqual(
+      expect.arrayContaining([
+        "1214", "1221", "1232", "1233", "1234", "1235",
+        "2111", "2160", "2170", "4220", "5129", "5320",
+      ])
+    )
+  })
+
+  it("keeps 2110 and 2111 as siblings under 2100, never colliding", () => {
+    const trade = CHART.find((c) => c.code === "2110")
+    const suppliers = CHART.find((c) => c.code === "2111")
+    expect(trade?.parent).toBe("2100")
+    expect(suppliers?.parent).toBe("2100")
+    expect(trade?.code).not.toBe(suppliers?.code)
+  })
+})
