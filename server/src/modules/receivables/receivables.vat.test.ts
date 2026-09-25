@@ -14,7 +14,7 @@ describe("vatFor", () => {
 describe("loadActiveVatRates", () => {
   it("refuses an unknown or inactive VAT code", async () => {
     const client = { vatCode: { findMany: vi.fn().mockResolvedValue([]) } }
-    await expect(loadActiveVatRates(client as any, ["vat-x"])).rejects.toThrow("Unknown or inactive VAT code on a line")
+    await expect(loadActiveVatRates(client as any, ["vat-x"])).rejects.toThrow("This VAT code does not exist, or has been turned off.")
   })
 
   it("returns a rate per active code, de-duplicating ids", async () => {

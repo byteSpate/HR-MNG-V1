@@ -20,7 +20,7 @@ export async function loadActiveVatRates(client: VatCodeClient, ids: string[]): 
   const codes = await client.vatCode.findMany({ where: { id: { in: uniqueIds }, isActive: true } })
   const rates = new Map<string, Prisma.Decimal>(codes.map((c) => [c.id, new Prisma.Decimal(c.ratePercent)]))
   for (const id of uniqueIds) {
-    if (!rates.has(id)) throw new AppError(400, "Unknown or inactive VAT code on a line")
+    if (!rates.has(id)) throw new AppError(400, "This VAT code does not exist, or has been turned off.")
   }
   return rates
 }

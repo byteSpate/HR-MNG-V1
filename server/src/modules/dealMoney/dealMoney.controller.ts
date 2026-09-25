@@ -50,7 +50,7 @@ export async function sendBackHandler(req: Request<{ kind: string; id: string }>
         400,
         isApprovalKind(kind)
           ? "Credit notes cannot be sent back yet. Talk to whoever recorded it, so it can be fixed before you approve it."
-          : "Unknown document type."
+          : "This kind of document cannot be sent back."
       )
     }
     const body = sendBackBodySchema.parse(req.body)

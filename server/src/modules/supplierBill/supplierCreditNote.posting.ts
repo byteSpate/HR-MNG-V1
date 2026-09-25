@@ -48,7 +48,7 @@ export function buildSupplierCreditNoteLines(
 
   for (const line of note.lines) {
     const billLine = byId.get(line.billLineId)
-    if (!billLine) throw new AppError(400, `Credit note line references a bill line that does not exist: ${line.billLineId}`)
+    if (!billLine) throw new AppError(400, "One of this credit note's lines points to a bill line that does not exist.")
 
     if (billLine.kind === "GOODS") {
       const opp = note.opportunityId

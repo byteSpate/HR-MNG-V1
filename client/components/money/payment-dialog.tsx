@@ -85,11 +85,12 @@ export function PaymentDialog({
   }, [bills])
 
   // Open, approved bills for the chosen supplier with money still owed. A
-  // USD payment can only settle bills that were themselves entered in USD
-  // (design doc, "A US dollar bill is paid in US dollars only").
+  // bill can only be paid in the currency it was billed in (design doc,
+  // "A US dollar bill is paid in US dollars only") — a taka payment offers
+  // only taka bills, and a US dollar payment offers only US dollar bills.
   const candidates = bills
     .filter((b) => b.supplierId === supplierId && b.status === "APPROVED" && billStillOwed(b) > 0.004)
-    .filter((b) => (currency === "BDT" ? true : b.currency === "USD"))
+    .filter((b) => (currency === "BDT" ? b.currency === "BDT" : b.currency === "USD"))
 
   /** What is left on the bill, in the payment's currency. */
   const leftOn = (bill: DealMoneySupplierBill): number => {
@@ -180,7 +181,7 @@ export function PaymentDialog({
               <p className={`text-[12.5px] ${TONE.muted}`}>
                 {currency === "USD"
                   ? "This supplier has no open USD bills on this deal."
-                  : "Nothing is still owed to this supplier on this deal."}
+                  : "This supplier has no open taka bills on this deal."}
               </p>
             ) : (
               candidates.map((bill) => (

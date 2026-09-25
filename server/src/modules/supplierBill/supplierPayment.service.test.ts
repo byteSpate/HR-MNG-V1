@@ -185,4 +185,15 @@ describe("createSupplierPayment in USD", () => {
       )
     ).rejects.toThrow("A payment in US dollars can only pay a bill in US dollars. Bill INV-1 is in taka.")
   })
+
+  it("refuses a taka payment against a US dollar bill, in easy English", async () => {
+    arrangeWonDeal({ opportunityId: "opp-1", bills: [USD_BILL] })
+
+    await expect(
+      createSupplierPayment(
+        { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-11-01", amount: "1000000", currency: "BDT", allocations: [{ billId: "b2", amount: "1000000" }] } as any,
+        ACTOR
+      )
+    ).rejects.toThrow("Bill INV-2 is in US dollars. Pay it in US dollars, not taka.")
+  })
 })

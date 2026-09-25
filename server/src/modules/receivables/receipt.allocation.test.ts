@@ -17,7 +17,7 @@ const INV = (over: Record<string, unknown> = {}) => ({
 describe("assertReceivable", () => {
   it("refuses an invoice that does not exist", async () => {
     await expect(assertReceivable(invClient([]), "c1", [{ invoiceId: "nope", amount: d("1") }]))
-      .rejects.toThrow("An invoice being collected does not exist")
+      .rejects.toThrow("One of the invoices you picked does not exist.")
   })
 
   it("refuses another customer's invoice", async () => {

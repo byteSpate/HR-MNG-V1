@@ -38,7 +38,7 @@ export async function createSupplierCreditNote(input: CreateSupplierCreditNoteIn
   const lineById = new Map(bill.lines.map((l) => [l.id, l]))
   for (const line of input.lines) {
     const billLine = lineById.get(line.billLineId)
-    if (!billLine) throw new AppError(400, `${line.billLineId} is not a line on this bill`)
+    if (!billLine) throw new AppError(400, "One of this credit note's lines is not a line on this bill.")
 
     const credited = billLine.creditNoteLines.reduce((s, c) => s.plus(c.amount), new Prisma.Decimal(0))
     const creditedVat = billLine.creditNoteLines.reduce((s, c) => s.plus(c.vatAmount), new Prisma.Decimal(0))

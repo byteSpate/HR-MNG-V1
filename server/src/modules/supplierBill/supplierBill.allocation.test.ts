@@ -40,7 +40,7 @@ describe("assertAllocatable", () => {
 
   it("refuses a bill that does not exist", async () => {
     await expect(assertAllocatable(clientWith([]), "sup-1", [{ billId: "b1", amount: "1" }])).rejects.toThrow(
-      "A bill being paid does not exist"
+      "One of the bills you picked does not exist."
     )
   })
 

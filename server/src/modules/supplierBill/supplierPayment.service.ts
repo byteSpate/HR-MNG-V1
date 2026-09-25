@@ -59,7 +59,7 @@ async function toStoredAllocations(
 
   return input.allocations.map((a) => {
     const bill = byId.get(a.billId)
-    if (!bill) throw new AppError(404, "A bill being paid does not exist")
+    if (!bill) throw new AppError(404, "One of the bills you picked does not exist.")
     // Review Focus 1 (supplier side): two bills can share a supplier while
     // belonging to different deals. A payment settles one deal, so a bill
     // from any other deal is refused even when the supplier matches.
@@ -67,6 +67,13 @@ async function toStoredAllocations(
       throw new AppError(400, `Bill ${bill.billNumber} is on a different deal. Record a separate payment on that deal.`)
     }
     if (input.currency === "BDT") {
+      // Design: "A US dollar bill is paid in US dollars only" — a taka
+      // payment settling a USD bill would clear 2111 in taka while
+      // skipping the bill's own frozen FX rate, so it is refused here too,
+      // not only in the USD-payment-against-a-taka-bill direction below.
+      if (bill.currency === "USD") {
+        throw new AppError(400, `Bill ${bill.billNumber} is in US dollars. Pay it in US dollars, not taka.`)
+      }
       return { billId: a.billId, amount: new Prisma.Decimal(a.amount).toFixed(2), amountUsd: null }
     }
     if (bill.currency !== "USD" || !bill.fxRateToBdt) {

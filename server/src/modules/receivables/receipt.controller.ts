@@ -10,7 +10,7 @@ export async function listReceiptsHandler(req: Request, res: Response, next: Nex
   try {
     const { status, certificates } = req.query as { status?: "DRAFT" | "APPROVED"; certificates?: string }
     if (certificates !== undefined && certificates !== "missing") {
-      throw new AppError(400, "certificates must be 'missing'")
+      throw new AppError(400, "The certificates filter can only be 'missing', or left out.")
     }
     return res.status(200).json(await listReceipts({ status, certificates: certificates as "missing" | undefined }))
   } catch (err) {

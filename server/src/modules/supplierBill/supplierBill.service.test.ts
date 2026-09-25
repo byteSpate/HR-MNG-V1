@@ -63,7 +63,7 @@ describe("bill and deals", () => {
 
   it("refuses a bill tagged to a deal that does not exist", async () => {
     vi.mocked(prisma.opportunity.findUnique).mockResolvedValue(null)
-    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("A bill names a deal that does not exist")
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("This bill points to a deal that does not exist.")
   })
 })
 
@@ -138,7 +138,7 @@ describe("createSupplierBill VAT", () => {
 
   it("refuses a VAT code that does not exist or is inactive", async () => {
     vi.mocked(prisma.vatCode.findMany).mockResolvedValue([])
-    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("Unknown or inactive VAT code")
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("This VAT code does not exist, or has been turned off.")
   })
 })
 

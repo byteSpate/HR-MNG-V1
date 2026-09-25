@@ -78,7 +78,7 @@ describe("POST /api/deal-money/approvals/:kind/:id/send-back", () => {
       .send({ note: "x" })
       .set("Authorization", `Bearer ${tokenFor("SUPER_ADMIN")}`)
     expect(res.status).toBe(400)
-    expect(res.body.error).toBe("Unknown document type.")
+    expect(res.body.error).toBe("This kind of document cannot be sent back.")
     expect(sendBack).not.toHaveBeenCalled()
   })
 

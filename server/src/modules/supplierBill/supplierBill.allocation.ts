@@ -37,7 +37,7 @@ export async function assertAllocatable(
 
   for (const [billId, amount] of requested) {
     const bill = byId.get(billId)
-    if (!bill) throw new AppError(404, "A bill being paid does not exist")
+    if (!bill) throw new AppError(404, "One of the bills you picked does not exist.")
     if (bill.supplierId !== supplierId) throw new AppError(400, `Bill ${bill.billNumber} is from a different supplier.`)
     if (bill.status !== "APPROVED") throw new AppError(409, `Bill ${bill.billNumber} is not approved yet`)
 

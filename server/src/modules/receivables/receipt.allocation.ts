@@ -30,7 +30,7 @@ export async function assertReceivable(
 
   for (const [invoiceId, amount] of wanted) {
     const invoice = byId.get(invoiceId)
-    if (!invoice) throw new AppError(404, "An invoice being collected does not exist")
+    if (!invoice) throw new AppError(404, "One of the invoices you picked does not exist.")
     if (invoice.customerId !== customerId) throw new AppError(400, `Invoice ${invoice.invoiceNumber} belongs to a different customer`)
     if (invoice.status !== "APPROVED") {
       throw new AppError(409, `Invoice ${invoice.invoiceNumber} is not approved yet. Approve it before recording a payment against it.`)
