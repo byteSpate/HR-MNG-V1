@@ -72,20 +72,22 @@ describe("sendBack", () => {
     )
   })
 
-  it("sends back a customer credit note", async () => {
+  it("refuses to send back a customer credit note: neither credit note kind can be edited or deleted, so send-back would be a dead end", async () => {
     arrangeDraft("CUSTOMER_CREDIT_NOTE", { id: "cn1", status: "DRAFT", createdBy: "u-finance" })
-    await sendBack("CUSTOMER_CREDIT_NOTE", "cn1", { note: "Wrong amount" }, SUPER_ADMIN)
-    expect(prisma.customerCreditNote.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ rejectionNote: "Wrong amount" }) })
+    await expect(sendBack("CUSTOMER_CREDIT_NOTE", "cn1", { note: "Wrong amount" }, SUPER_ADMIN)).rejects.toThrow(
+      "Credit notes cannot be sent back yet. Talk to whoever recorded it, so it can be fixed before you approve it."
     )
+    expect(prisma.customerCreditNote.update).not.toHaveBeenCalled()
+    expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 
-  it("sends back a supplier credit note", async () => {
+  it("refuses to send back a supplier credit note, for the same reason", async () => {
     arrangeDraft("SUPPLIER_CREDIT_NOTE", { id: "cn2", status: "DRAFT", createdBy: "u-finance" })
-    await sendBack("SUPPLIER_CREDIT_NOTE", "cn2", { note: "Wrong amount" }, SUPER_ADMIN)
-    expect(prisma.supplierCreditNote.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ rejectionNote: "Wrong amount" }) })
+    await expect(sendBack("SUPPLIER_CREDIT_NOTE", "cn2", { note: "Wrong amount" }, SUPER_ADMIN)).rejects.toThrow(
+      "Credit notes cannot be sent back yet. Talk to whoever recorded it, so it can be fixed before you approve it."
     )
+    expect(prisma.supplierCreditNote.update).not.toHaveBeenCalled()
+    expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 
   it("writes an audit row with the note", async () => {

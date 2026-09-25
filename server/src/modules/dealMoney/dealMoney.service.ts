@@ -4,7 +4,7 @@ import type { AccessTokenPayload } from "../auth/auth.types"
 import { assertDealAccess, isFinance } from "../receivables/receivables.access"
 import { PO_INCLUDE } from "../receivables/customerPo.service"
 import { RECEIPT_INCLUDE } from "../receivables/receipt.service"
-import { getInvoiceOutstanding } from "../receivables/receivables.reports"
+import { getInvoiceOutstanding, getInvoiceSold } from "../receivables/receivables.reports"
 import { DEAL_BILL_INCLUDE, DEAL_INVOICE_INCLUDE, DEAL_PAYMENT_INCLUDE } from "./dealMoney.types"
 import type { DealMoney } from "./dealMoney.types"
 
@@ -54,13 +54,16 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
   // The four numbers (spec, "The four numbers"). Drafts never count: an
   // approved invoice or credit note is the only kind that moved the ledger.
   const approvedInvoices = invoices.filter((i) => i.status === "APPROVED")
-  const sold = approvedInvoices.reduce((sum, inv) => {
-    const lineTotal = inv.lines.reduce((s, l) => s.plus(l.amount), ZERO)
-    const creditedTotal = inv.creditNotes
-      .filter((cn) => cn.status === "APPROVED")
-      .reduce((s, cn) => s.plus(cn.lines.reduce((s2, l) => s2.plus(l.amount), ZERO)), ZERO)
-    return sum.plus(lineTotal).minus(creditedTotal)
-  }, ZERO)
+  const sold = approvedInvoices.reduce(
+    (sum, inv) =>
+      sum.plus(
+        getInvoiceSold({
+          lines: inv.lines,
+          creditNotes: inv.creditNotes.filter((cn) => cn.status === "APPROVED"),
+        })
+      ),
+    ZERO
+  )
   const stillOwed = approvedInvoices.reduce(
     (sum, inv) =>
       sum.plus(

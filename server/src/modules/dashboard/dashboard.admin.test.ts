@@ -17,11 +17,11 @@ vi.mock("../../config/prisma", () => ({
 }))
 
 vi.mock("../event/event.service", () => ({ listEvents: vi.fn() }))
-vi.mock("../dealMoney/dealMoney.approvals", () => ({ listWaitingForApproval: vi.fn() }))
+vi.mock("../dealMoney/dealMoney.approvals", () => ({ countWaitingForApproval: vi.fn() }))
 
 import prisma from "../../config/prisma"
 import type { AccessTokenPayload } from "../auth/auth.types"
-import { listWaitingForApproval } from "../dealMoney/dealMoney.approvals"
+import { countWaitingForApproval } from "../dealMoney/dealMoney.approvals"
 import { listEvents } from "../event/event.service"
 import { parseDateOnly } from "../../utils/dates"
 import { Prisma } from "../../generated/prisma/client"
@@ -53,7 +53,7 @@ beforeEach(() => {
   vi.mocked(prisma.payrollRun.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.employee.findMany).mockResolvedValue([] as never)
   vi.mocked(listEvents).mockResolvedValue({ items: [], nextCursor: null })
-  vi.mocked(listWaitingForApproval).mockResolvedValue([])
+  vi.mocked(countWaitingForApproval).mockResolvedValue(0)
 })
 
 afterEach(() => {
@@ -201,9 +201,7 @@ describe("waiting for approval", () => {
   })
 
   it("counts the queue on the card and drives the approvals badge from the same count", async () => {
-    vi.mocked(listWaitingForApproval).mockResolvedValueOnce([
-      { kind: "SUPPLIER_BILL", id: "b1", number: "BILL-1", dealId: "d1", dealSerial: "BS-OPP-1", party: "Star Tech", amount: "500.00", preparedBy: "Admin One", preparedAt: "2026-11-01T00:00:00.000Z" },
-    ])
+    vi.mocked(countWaitingForApproval).mockResolvedValueOnce(1)
     const payload = await buildAdminDashboard(actor)
     const card = cardBy(payload, "Waiting for approval")
     expect(card.value).toBe("1")

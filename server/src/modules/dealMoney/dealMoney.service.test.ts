@@ -84,6 +84,7 @@ describe("getDealMoney", () => {
     expect(m.bills).toBeNull()
     expect(m.supplierPayments).toBeNull()
     expect(prisma.supplierBill.findMany).not.toHaveBeenCalled()
+    expect(prisma.supplierPayment.findMany).not.toHaveBeenCalled()
     expect(prisma.journalLine.aggregate).not.toHaveBeenCalled()
   })
 

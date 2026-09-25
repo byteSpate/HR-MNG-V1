@@ -137,6 +137,24 @@ describe("updateInvoice", () => {
       data: expect.objectContaining({ rejectionNote: null, sentBackBy: null, sentBackAt: null }),
     }))
   })
+
+  it("never recomputes an already-approved invoice's stored VAT when the VAT code's rate later changes (Task 15)", async () => {
+    // Approved when the code's rate was 15%; its line already carries the
+    // vatAmount computed then.
+    vi.mocked(prisma.invoice.findUnique).mockResolvedValue({
+      id: "inv1", poId: "po1", status: "APPROVED",
+      lines: [{ poLineId: "pl1", vatCodeId: "vat-15", amount: "500000.00", vatAmount: "75000.00" }],
+    } as any)
+    // The code's rate has since changed to 7.5%.
+    vi.mocked(loadActiveVatRates).mockResolvedValue(new Map([["vat-15", d("7.5")]]))
+
+    await expect(updateInvoice("inv1", INPUT, FINANCE)).rejects.toThrow("Only a draft invoice can be edited")
+
+    // Refused before any write, so the approved invoice's stored line never
+    // gets touched, let alone recalculated at the new rate.
+    expect(prisma.invoiceLine.deleteMany).not.toHaveBeenCalled()
+    expect(prisma.invoice.update).not.toHaveBeenCalled()
+  })
 })
 
 describe("listInvoiceablePos", () => {

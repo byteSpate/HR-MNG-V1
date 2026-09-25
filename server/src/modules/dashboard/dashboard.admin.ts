@@ -10,7 +10,7 @@ import prisma from "../../config/prisma"
 import { officeToday } from "../attendance/attendance.time"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { monthName } from "../payroll/payroll.events"
-import { listWaitingForApproval } from "../dealMoney/dealMoney.approvals"
+import { countWaitingForApproval } from "../dealMoney/dealMoney.approvals"
 import { settleCards } from "./dashboard.cards"
 import { ageInDays, days, when } from "./dashboard.format"
 import { timeOfDayGreeting } from "./dashboard.greeting"
@@ -174,7 +174,7 @@ export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<Da
       prisma.assetRequest.count({ where: { status: { in: ["PENDING", "APPROVED", "ORDERED"] } } }),
       prisma.assetAssignment.count({ where: { returnedAt: null, acknowledgedAt: null } }),
     ]).then(([requests, unacknowledged]) => requests + unacknowledged),
-    listWaitingForApproval(),
+    countWaitingForApproval(),
   ])
 
   const [stats, bars, waiting] = await Promise.all([
@@ -183,7 +183,7 @@ export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<Da
       { label: "Total employees", build: () => headcountCard() },
       { label: "This month's payroll", build: () => currentPayrollCard("/admin/payroll") },
       { label: "Attendance backlog", build: () => attendanceBacklogCard(attendanceBacklog) },
-      { label: "Waiting for approval", build: async () => waitingForApprovalCard(moneyWaiting.length) },
+      { label: "Waiting for approval", build: async () => waitingForApprovalCard(moneyWaiting) },
     ]),
     payrollSeries(6),
     approvalRows(),
@@ -215,7 +215,7 @@ export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<Da
       // a nav item reads as "you have N to do", and putting the asset count
       // there would teach people the number is decoration.
       "/admin/assets": assetQueue,
-      "/admin/accounting/approvals": moneyWaiting.length,
+      "/admin/accounting/approvals": moneyWaiting,
     },
   }
 }

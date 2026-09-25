@@ -124,3 +124,19 @@ export async function listWaitingForApproval(): Promise<WaitingForApprovalRow[]>
       preparedAt: d.createdAt.toISOString(),
     }))
 }
+
+/**
+ * The same count as `listWaitingForApproval().length`, without loading
+ * lines, party names or preparer names — a dashboard card and nav badge
+ * only need the number. Four `count` calls instead of four `findMany`
+ * calls plus a user lookup.
+ */
+export async function countWaitingForApproval(): Promise<number> {
+  const [invoices, bills, customerCreditNotes, supplierCreditNotes] = await Promise.all([
+    prisma.invoice.count({ where: { status: "DRAFT", rejectionNote: null } }),
+    prisma.supplierBill.count({ where: { status: "DRAFT", rejectionNote: null } }),
+    prisma.customerCreditNote.count({ where: { status: "DRAFT", rejectionNote: null } }),
+    prisma.supplierCreditNote.count({ where: { status: "DRAFT", rejectionNote: null } }),
+  ])
+  return invoices + bills + customerCreditNotes + supplierCreditNotes
+}

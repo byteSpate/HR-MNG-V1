@@ -79,6 +79,14 @@ export async function sendBack(
 ): Promise<void> {
   if (actor.role !== Role.SUPER_ADMIN) throw new AppError(403, "Only a Super Admin can send this back.")
 
+  // Neither credit note kind has an update or a delete function, so a
+  // credit note sent back could never be fixed or re-approved — a
+  // permanent dead end. It can still be approved directly; only the
+  // send-back path is closed.
+  if (kind === "CUSTOMER_CREDIT_NOTE" || kind === "SUPPLIER_CREDIT_NOTE") {
+    throw new AppError(409, "Credit notes cannot be sent back yet. Talk to whoever recorded it, so it can be fixed before you approve it.")
+  }
+
   const note = input.note.trim()
   if (!note) throw new AppError(400, "Write a note so the person knows what to fix.")
 

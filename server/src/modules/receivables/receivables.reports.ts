@@ -31,6 +31,23 @@ export function getInvoiceOutstanding(invoice: OutstandingInput): Prisma.Decimal
   return gross.minus(collected).minus(credited)
 }
 
+export interface SoldInput {
+  lines: Array<{ amount: Prisma.Decimal }>
+  creditNotes: Array<{ lines: Array<{ amount: Prisma.Decimal }> }>
+}
+
+/** Line total less credited line total (net of VAT) — the "Sold" figure
+ *  the Deal Money section and the Deals list both show. Callers pass only
+ *  APPROVED credit notes; a DRAFT one has not moved anything yet. */
+export function getInvoiceSold(invoice: SoldInput): Prisma.Decimal {
+  const lineTotal = invoice.lines.reduce((sum, l) => sum.plus(l.amount), ZERO)
+  const credited = invoice.creditNotes.reduce(
+    (sum, note) => sum.plus(note.lines.reduce((s, l) => s.plus(l.amount), ZERO)),
+    ZERO
+  )
+  return lineTotal.minus(credited)
+}
+
 export type AgeingBucket = "Not due" | "1-30" | "31-60" | "61-90" | "Over 90"
 
 function bucketFor(daysPastDue: number): AgeingBucket {

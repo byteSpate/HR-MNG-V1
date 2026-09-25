@@ -13,7 +13,7 @@ import type { AccessTokenPayload } from "../auth/auth.types"
 import { REPORTING_CURRENCY, dec, toMoneyString } from "../payroll/payroll.money"
 import { monthName } from "../payroll/payroll.events"
 import { preflight } from "../payroll/payroll.preflight"
-import { listWaitingForApproval } from "../dealMoney/dealMoney.approvals"
+import { countWaitingForApproval } from "../dealMoney/dealMoney.approvals"
 import { settleCards } from "./dashboard.cards"
 import { ageInDays, bdt, days, money, when } from "./dashboard.format"
 import { timeOfDayGreeting } from "./dashboard.greeting"
@@ -199,7 +199,9 @@ function waitingForApprovalCard(count: number): DashboardStat {
   return {
     label: "Waiting for approval",
     value: String(count),
-    sub: count === 0 ? "Nothing is waiting" : `${count} draft${count === 1 ? "" : "s"} to approve or send back`,
+    // A Finance Officer can see this queue but cannot act on it: only a
+    // Super Admin approves or sends a draft back.
+    sub: count === 0 ? "Nothing is waiting" : `${count} draft${count === 1 ? "" : "s"} waiting for a Super Admin`,
     tag: count === 0 ? "Clear" : "Waiting",
     tone: toneFor.queue(count),
     href: "/finance/accounting/approvals",
@@ -211,7 +213,7 @@ export async function buildFinanceDashboard(
 ): Promise<DashboardPayload> {
   // Fetched once, read by the card and the nav badge (CLAUDE.md: "Nav
   // badges carry no literals").
-  const [outstanding, waiting] = await Promise.all([outstandingClaims(), listWaitingForApproval()])
+  const [outstanding, waiting] = await Promise.all([outstandingClaims(), countWaitingForApproval()])
 
   const [stats, bars, rows] = await Promise.all([
     settleCards([
@@ -219,7 +221,7 @@ export async function buildFinanceDashboard(
       { label: "Run readiness", build: () => readinessCard() },
       { label: "Exchange rate", build: () => exchangeRateCard() },
       { label: "Reimbursements outstanding", build: async () => outstandingCard(outstanding) },
-      { label: "Waiting for approval", build: async () => waitingForApprovalCard(waiting.length) },
+      { label: "Waiting for approval", build: async () => waitingForApprovalCard(waiting) },
     ]),
     payrollSeries(6),
     pendingClaimRows(),
@@ -241,6 +243,6 @@ export async function buildFinanceDashboard(
       rows,
       href: "/finance/expenses",
     },
-    badges: { "/finance/expenses": outstanding.count, "/finance/accounting/approvals": waiting.length },
+    badges: { "/finance/expenses": outstanding.count, "/finance/accounting/approvals": waiting },
   }
 }

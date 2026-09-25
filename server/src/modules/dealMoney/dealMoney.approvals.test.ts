@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("../../config/prisma", () => ({
   default: {
-    invoice: { findMany: vi.fn() },
-    supplierBill: { findMany: vi.fn() },
-    customerCreditNote: { findMany: vi.fn() },
-    supplierCreditNote: { findMany: vi.fn() },
+    invoice: { findMany: vi.fn(), count: vi.fn() },
+    supplierBill: { findMany: vi.fn(), count: vi.fn() },
+    customerCreditNote: { findMany: vi.fn(), count: vi.fn() },
+    supplierCreditNote: { findMany: vi.fn(), count: vi.fn() },
     user: { findMany: vi.fn() },
   },
 }))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
-import { listWaitingForApproval } from "./dealMoney.approvals"
+import { countWaitingForApproval, listWaitingForApproval } from "./dealMoney.approvals"
 
 const d = (v: string) => new Prisma.Decimal(v)
 
@@ -23,6 +23,10 @@ beforeEach(() => {
   vi.mocked(prisma.customerCreditNote.findMany).mockResolvedValue([])
   vi.mocked(prisma.supplierCreditNote.findMany).mockResolvedValue([])
   vi.mocked(prisma.user.findMany).mockResolvedValue([])
+  vi.mocked(prisma.invoice.count).mockResolvedValue(0)
+  vi.mocked(prisma.supplierBill.count).mockResolvedValue(0)
+  vi.mocked(prisma.customerCreditNote.count).mockResolvedValue(0)
+  vi.mocked(prisma.supplierCreditNote.count).mockResolvedValue(0)
 })
 
 describe("listWaitingForApproval", () => {
@@ -81,5 +85,22 @@ describe("listWaitingForApproval", () => {
     expect(rows[0]).toMatchObject({ number: "BILL-1", party: "Star Tech", amount: "575000.00", preparedBy: "Admin One" })
     expect(rows[2]).toMatchObject({ number: "INV-1", party: "Bengal Group", amount: "1150000.00", preparedBy: "Farah Islam" })
     expect(rows[3].number).toContain("INV-1")
+  })
+})
+
+describe("countWaitingForApproval", () => {
+  it("counts only DRAFT, not-sent-back rows, summed across all four kinds, without loading rows", async () => {
+    vi.mocked(prisma.invoice.count).mockResolvedValue(2)
+    vi.mocked(prisma.supplierBill.count).mockResolvedValue(1)
+    vi.mocked(prisma.customerCreditNote.count).mockResolvedValue(3)
+    vi.mocked(prisma.supplierCreditNote.count).mockResolvedValue(0)
+
+    const count = await countWaitingForApproval()
+
+    expect(count).toBe(6)
+    expect(prisma.invoice.findMany).not.toHaveBeenCalled()
+    for (const model of [prisma.invoice, prisma.supplierBill, prisma.customerCreditNote, prisma.supplierCreditNote]) {
+      expect(vi.mocked(model.count)).toHaveBeenCalledWith({ where: { status: "DRAFT", rejectionNote: null } })
+    }
   })
 })

@@ -1,6 +1,7 @@
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { env } from "../../config/env"
+import { getInvoiceOutstanding, getInvoiceSold, OUTSTANDING_SELECT } from "../receivables/receivables.reports"
 
 const ZERO = new Prisma.Decimal(0)
 const PAGE_SIZE = 50
@@ -62,12 +63,7 @@ export async function listDealMoney(query: { search?: string; page?: number }): 
   const [invoices, billCosts, waitingInvoices, waitingBills, waitingCustomerCreditNotes, waitingSupplierCreditNotes] = await Promise.all([
     prisma.invoice.findMany({
       where: { po: { opportunityId: { in: ids } }, status: "APPROVED" },
-      select: {
-        po: { select: { opportunityId: true } },
-        lines: { select: { amount: true, vatAmount: true } },
-        allocations: { where: { receipt: { status: "APPROVED" } }, select: { amount: true } },
-        creditNotes: { where: { status: "APPROVED" }, select: { lines: { select: { amount: true, vatAmount: true } } } },
-      },
+      select: { po: { select: { opportunityId: true } }, ...OUTSTANDING_SELECT },
     }),
     prisma.journalLine.groupBy({
       by: ["opportunityId"],
@@ -93,21 +89,15 @@ export async function listDealMoney(query: { search?: string; page?: number }): 
     }),
   ])
 
+  // Same source of truth as the deal Money section (dealMoney.service.ts):
+  // getInvoiceSold and getInvoiceOutstanding, not a second hand-written
+  // copy of the arithmetic that could silently drift from it.
   const soldByDeal = new Map<string, Prisma.Decimal>()
   const stillOwedByDeal = new Map<string, Prisma.Decimal>()
   for (const inv of invoices) {
     const oppId = inv.po.opportunityId
-    const lineTotal = inv.lines.reduce((s, l) => s.plus(l.amount), ZERO)
-    const creditedTotal = inv.creditNotes.reduce((s, cn) => s.plus(cn.lines.reduce((s2, l) => s2.plus(l.amount), ZERO)), ZERO)
-    soldByDeal.set(oppId, (soldByDeal.get(oppId) ?? ZERO).plus(lineTotal).minus(creditedTotal))
-
-    const gross = inv.lines.reduce((s, l) => s.plus(l.amount).plus(l.vatAmount), ZERO)
-    const collected = inv.allocations.reduce((s, a) => s.plus(a.amount), ZERO)
-    const creditedGross = inv.creditNotes.reduce(
-      (s, cn) => s.plus(cn.lines.reduce((s2, l) => s2.plus(l.amount).plus(l.vatAmount), ZERO)),
-      ZERO
-    )
-    stillOwedByDeal.set(oppId, (stillOwedByDeal.get(oppId) ?? ZERO).plus(gross).minus(collected).minus(creditedGross))
+    soldByDeal.set(oppId, (soldByDeal.get(oppId) ?? ZERO).plus(getInvoiceSold(inv)))
+    stillOwedByDeal.set(oppId, (stillOwedByDeal.get(oppId) ?? ZERO).plus(getInvoiceOutstanding(inv)))
   }
 
   const costByDeal = new Map(billCosts.map((c) => [c.opportunityId, (c._sum.debit ?? ZERO).minus(c._sum.credit ?? ZERO)]))
