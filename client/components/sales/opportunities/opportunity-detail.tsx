@@ -54,6 +54,7 @@ import {
 import { MeetingsPanel, TasksPanel } from "@/components/sales/shared/plan-panels"
 import { MoneySection } from "@/components/money/money-section"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
+import { SupplierPicker } from "@/components/sales/opportunities/supplier-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -159,13 +160,15 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
   const [lineValue, setLineValue] = useState("")
   const [marginPercent, setMarginPercent] = useState("")
   const [note, setNote] = useState("")
+  const [supplierId, setSupplierId] = useState("")
   const [editing, setEditing] = useState<OpportunityLineSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<OpportunityLineSummary | null>(null)
 
   const clearLineForm = () => {
     setEditing(null); setProduct(""); setOemBrand(""); setModel("")
-    setQuantity(""); setUnitValue(""); setLineValue(""); setMarginPercent(""); setNote(""); setError(null)
+    setQuantity(""); setUnitValue(""); setLineValue(""); setMarginPercent(""); setNote("")
+    setSupplierId(""); setError(null)
   }
 
   const invalidate = () => {
@@ -183,6 +186,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
             unitValue: unitValue.trim() || null, lineValue: lineValue.trim() || null,
             marginPercent: marginPercent.trim() || null,
             note: note.trim() || null,
+            supplierId: supplierId || null,
           })
         : addOpportunityLine(accessToken!, deal.id, {
             product: product.trim(), oemBrand: oemBrand.trim() || undefined,
@@ -190,6 +194,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
             unitValue: unitValue.trim() || undefined, lineValue: lineValue.trim() || undefined,
             marginPercent: marginPercent.trim() || undefined,
             note: note.trim() || undefined,
+            supplierId: supplierId || undefined,
           }),
     onSuccess: () => {
       setAdding(false)
@@ -211,6 +216,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
     setEditing(line); setAdding(true); setProduct(line.product); setOemBrand(line.oemBrand ?? "")
     setModel(line.model ?? ""); setQuantity(line.quantity?.toString() ?? "")
     setUnitValue(line.unitValue ?? ""); setLineValue(line.lineValue ?? ""); setNote(line.note ?? "")
+    setSupplierId(line.supplier?.id ?? "")
     // "12.00" from the server reads as 12 in the field.
     setMarginPercent(line.marginPercent ? String(Number(line.marginPercent)) : "")
   }
@@ -298,7 +304,12 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-semibold">{line.product}</div>
                   <div className={`text-[11.5px] ${TONE.muted}`}>
-                    {[line.oemBrand, line.model, line.quantity !== null ? `Qty ${line.quantity}` : null]
+                    {[
+                      line.oemBrand,
+                      line.model,
+                      line.quantity !== null ? `Qty ${line.quantity}` : null,
+                      line.supplier ? `Supplier: ${line.supplier.name}` : null,
+                    ]
                       .filter(Boolean)
                       .join(" · ") || "No further detail"}
                   </div>
@@ -373,7 +384,7 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
             <Input id="line-product" list="line-product-suggestions" autoComplete="off" value={product} onChange={(e) => setProduct(e.target.value)} />
             <SuggestionList id="line-product-suggestions" field="product" q={product} />
           </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <Field label="OEM brand" htmlFor="line-brand" hint="Optional." help="The maker, like Cisco or Fortinet. Names you have used before are suggested.">
               <Input id="line-brand" list="line-brand-suggestions" autoComplete="off" value={oemBrand} onChange={(e) => setOemBrand(e.target.value)} />
               <SuggestionList id="line-brand-suggestions" field="brand" q={oemBrand} />
@@ -381,6 +392,9 @@ function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: 
             <Field label="Model" htmlFor="line-model" hint="Optional." help="The exact model, like FortiGate 100F.">
               <Input id="line-model" list="line-model-suggestions" autoComplete="off" value={model} onChange={(e) => setModel(e.target.value)} />
               <SuggestionList id="line-model-suggestions" field="model" q={model} />
+            </Field>
+            <Field label="Supplier" htmlFor="line-supplier" hint="Optional for now." help="Who we buy this product from. Every product needs one before the deal can be marked Won.">
+              <SupplierPicker value={supplierId} onChange={setSupplierId} />
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
