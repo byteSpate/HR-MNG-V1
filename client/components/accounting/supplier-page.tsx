@@ -23,6 +23,7 @@ import {
   RowActions,
   toMessage,
 } from "@/components/dashboard/record-kit"
+import { Tag } from "@/components/dashboard/tag"
 import type { TableCell } from "@/components/dashboard/types"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -97,7 +98,14 @@ export function SupplierPage() {
   }
 
   const rows: TableCell[][] = (suppliers.data ?? []).map((s) => [
-    { text: s.name, weight: 600 },
+    {
+      node: (
+        <div className="flex items-center gap-2">
+          <span style={{ fontWeight: 600, color: "#1C2733" }}>{s.name}</span>
+          {!s.bin || !s.contactName ? <Tag label="Details missing" tone="yellow" /> : null}
+        </div>
+      ),
+    },
     {
       text: s.contactName ?? "—",
       sub: s.contactPhone ?? s.contactEmail ?? undefined,
