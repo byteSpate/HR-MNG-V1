@@ -4,8 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { getDealMoney } from "@/lib/api/dealMoney"
 import { useSession } from "@/lib/auth/session-context"
-import type { DealApprovalKind, DealMoney } from "@/lib/api/types"
-import { PanelAlert, toMessage } from "@/components/dashboard/record-kit"
+import type { DealApprovalKind, DealMoneyNotRecorded, DealMoneyRecorded } from "@/lib/api/types"
+import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BoughtPart } from "@/components/money/bought-part"
 import { InvoicedPart } from "@/components/money/invoiced-part"
@@ -53,7 +53,7 @@ export function useDealMoneyInvalidate(opportunityId: string): () => void {
  * `?? []` there correctly leaves their draft count to invoices only, since
  * they never see supplier documents at all.
  */
-function hasAnyDraft(data: DealMoney): boolean {
+function hasAnyDraft(data: DealMoneyRecorded): boolean {
   const draftInvoices = data.invoices.some(
     (inv) => inv.status === "DRAFT" || inv.creditNotes.some((cn) => cn.status === "DRAFT")
   )
@@ -61,6 +61,32 @@ function hasAnyDraft(data: DealMoney): boolean {
     (bill) => bill.status === "DRAFT" || bill.creditNotes.some((cn) => cn.status === "DRAFT")
   )
   return draftInvoices || draftBills
+}
+
+/** A YYYY-MM-DD day, written the way the Money parts write a date. Read
+ *  as UTC so the day never shifts in a time zone behind UTC. */
+function formatDay(day: string): string {
+  return new Date(`${day}T00:00:00.000Z`).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+  })
+}
+
+/**
+ * A deal whose money this app does not record: one plain sentence, no
+ * numbers and no buttons. Zeros would claim the deal sold nothing, and every
+ * button would only be refused by the server (final review Fix 3).
+ */
+function MoneyNotRecorded({ data }: { data: DealMoneyNotRecorded }) {
+  return (
+    <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+      <h2 className="font-heading text-[15px] font-bold tracking-tight">Money</h2>
+      <p className={`mt-1.5 text-[12.5px] leading-relaxed ${TONE.muted}`}>
+        {data.notRecordedReason === "WON_BEFORE_GO_LIVE"
+          ? `This deal was won before ${formatDay(data.goLiveDate)}. Its money is not recorded here.`
+          : "This deal is not won. Money is recorded here only for a won deal."}
+      </p>
+    </div>
+  )
 }
 
 function MoneySkeleton() {
@@ -118,6 +144,8 @@ export function MoneySection({
   if (money.isError) return <PanelAlert>{toMessage(money.error)}</PanelAlert>
 
   const data = money.data
+
+  if (!data.moneyAllowed) return <MoneyNotRecorded data={data} />
 
   return (
     <div className="space-y-5">

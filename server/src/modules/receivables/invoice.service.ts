@@ -121,6 +121,9 @@ export async function updateInvoice(id: string, input: UpdateInvoiceInput, actor
           date,
           dueDate: input.dueDate ? new Date(input.dueDate) : addDays(date, po.customer.paymentDays),
           lines: { create: await buildLineRows(tx, po, input.lines) },
+          // Whoever saves a draft cannot then approve it, the same as its
+          // creator (spec, "Approval"). Checked in invoice.posting.ts.
+          updatedBy: actor.sub,
           // Saving a sent-back draft again clears the note (Task 8): the
           // person who prepared it has had their chance to fix it.
           rejectionNote: null,

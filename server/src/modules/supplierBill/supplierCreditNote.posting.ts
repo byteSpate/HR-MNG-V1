@@ -101,7 +101,7 @@ export async function postSupplierCreditNote(tx: PrismaNamespace.TransactionClie
 
   return postSystemJournal(tx, {
     date: toLedgerDate(new Date()),
-    narration: `Credit note — ${note.supplier.name} — Bill ${note.bill.billNumber}`,
+    narration: `${note.supplier.name}, credit note on bill ${note.bill.billNumber}`,
     source: { module: "SUPPLIER", refId: noteId, event: "CREDIT" },
     lines: buildSupplierCreditNoteLines({ ...note, opportunityId: note.bill.opportunityId }, billLines, rules, heldByDeal),
     createdBy: actorUserId,

@@ -145,6 +145,9 @@ export async function updateSupplierBill(
         fxRateToBdt,
         opportunityId: input.opportunityId,
         lines: { create: await toLineRows(tx, input, fxRateToBdt) },
+        // Whoever saves a draft cannot then approve it, the same as its
+        // creator (spec, "Approval"). Checked in supplierBill.posting.ts.
+        updatedBy: actor.sub,
         // Saving a sent-back draft again clears the note (Task 8): the
         // person who prepared it has had their chance to fix it.
         rejectionNote: null,

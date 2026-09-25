@@ -2047,6 +2047,9 @@ export interface DealMoneyCustomerCreditNote {
  * fields are added here instead, where the Money section actually reads them.
  */
 export interface DealMoneyInvoice extends Invoice {
+  /** Who last saved this draft; null until it is edited after creation.
+   *  That person cannot approve it, the same as `createdBy`. */
+  updatedBy: string | null
   approvedBy: string | null
   approvedAt: string | null
   rejectionNote: string | null
@@ -2093,6 +2096,9 @@ export interface DealMoneySupplierBill {
    */
   sentBackByUser: { id: string; email: string; fullName: string | null } | null
   createdBy: string
+  /** Who last saved this draft; null until it is edited after creation.
+   *  That person cannot approve it, the same as `createdBy`. */
+  updatedBy: string | null
   supplier: { id: string; name: string }
   lines: SupplierBillLine[]
   allocations: Array<{ amount: string }>
@@ -2116,15 +2122,16 @@ export interface DealMoneyProductLine {
 }
 
 /**
- * The deal Money section's one payload, shown on both the deal page's Money
- * section and the standalone deal money page. Mirrors
- * `server/src/modules/dealMoney/dealMoney.types.ts`'s `DealMoney`.
+ * A deal whose money is recorded in this app (Won on or after go-live).
+ * Mirrors `server/src/modules/dealMoney/dealMoney.types.ts`'s
+ * `DealMoneyRecorded`.
  *
  * `bills` and `supplierPayments` are null, not empty arrays, for a viewer
  * who cannot see cost (`canSeeCost` false) — the server skips those queries
  * entirely rather than hiding a real empty result.
  */
-export interface DealMoney {
+export interface DealMoneyRecorded {
+  moneyAllowed: true
   deal: {
     id: string
     serial: string
@@ -2142,6 +2149,24 @@ export interface DealMoney {
   receipts: Receipt[]
   productLines: DealMoneyProductLine[]
 }
+
+/**
+ * A deal whose money is not recorded in this app: not Won, or Won before
+ * go-live. It carries no numbers and no documents at all, so the page shows
+ * one sentence instead of a row of zeros. Mirrors the server's
+ * `DealMoneyNotRecorded`.
+ */
+export interface DealMoneyNotRecorded {
+  moneyAllowed: false
+  notRecordedReason: "NOT_WON" | "WON_BEFORE_GO_LIVE"
+  /** `SALES_GO_LIVE`, YYYY-MM-DD. */
+  goLiveDate: string
+  deal: { id: string; serial: string; name: string }
+}
+
+/** The deal Money section's one payload, shown on both the deal page's
+ *  Money section and the standalone deal money page. */
+export type DealMoney = DealMoneyRecorded | DealMoneyNotRecorded
 
 /** One row of the Deals Won list (`dealMoney.list.ts`'s `listDealMoney`). */
 export interface DealMoneyListRow {

@@ -3,6 +3,7 @@ import { PO_INCLUDE } from "../receivables/customerPo.service"
 import { INVOICE_INCLUDE } from "../receivables/invoice.service"
 import { RECEIPT_INCLUDE } from "../receivables/receipt.service"
 import type { ActorName } from "../../utils/actors"
+import type { MoneyNotRecordedReason } from "./dealMoney.goLive"
 
 // The Money section's own includes, built from each document's existing
 // include (spec: "Reuse the existing includes") plus the relations this
@@ -62,7 +63,12 @@ export interface MoneyNumbers {
   profit: string | null
 }
 
-export interface DealMoney {
+/**
+ * A deal's Money section when its money is recorded in this app: Won on or
+ * after go-live (`moneyNotRecordedReason` returns null).
+ */
+export interface DealMoneyRecorded {
+  moneyAllowed: true
   deal: {
     id: string
     serial: string
@@ -85,3 +91,21 @@ export interface DealMoney {
     supplier: { id: string; name: string } | null
   }>
 }
+
+/**
+ * A deal whose money is not recorded in this app: not Won, or Won before
+ * go-live. No numbers and no documents at all, not a payload of zeros: a
+ * zero would claim the deal sold nothing, when the truth is that this app
+ * never tracked it (CLAUDE.md UI rule 1, "Never fake a number"; final review
+ * Fix 3). The client shows one sentence and no buttons, since every write
+ * would be refused by `assertMoneyAllowed`.
+ */
+export interface DealMoneyNotRecorded {
+  moneyAllowed: false
+  notRecordedReason: MoneyNotRecordedReason
+  /** `SALES_GO_LIVE`, YYYY-MM-DD, for the sentence the client shows. */
+  goLiveDate: string
+  deal: { id: string; serial: string; name: string }
+}
+
+export type DealMoney = DealMoneyRecorded | DealMoneyNotRecorded

@@ -2096,6 +2096,10 @@ model SupplierBill {
   allocations SupplierPaymentAllocation[]
   creditNotes SupplierCreditNote[]
 
+  /// Who last saved this draft. Null until it is edited after creation.
+  /// Approval refuses this person as well as the creator (spec: "The
+  /// person who prepared a draft cannot approve it").
+  updatedBy String?
   createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2333,6 +2337,10 @@ model Invoice {
   sentBackBy    String?
   sentBackAt    DateTime?
 
+  /// Who last saved this draft. Null until it is edited after creation.
+  /// Approval refuses this person as well as the creator (spec: "The
+  /// person who prepared a draft cannot approve it").
+  updatedBy String?
   createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

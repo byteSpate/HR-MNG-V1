@@ -9,7 +9,7 @@ import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneyInvoice, Receipt } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { CertificateDialog } from "@/components/money/certificate-dialog"
-import { ReceiptDialog } from "@/components/money/receipt-dialog"
+import { invoiceStillOwed, ReceiptDialog } from "@/components/money/receipt-dialog"
 import { DialogActions, Field, FormError, PanelAlert, RowActions, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import { Button } from "@/components/ui/button"
@@ -60,11 +60,17 @@ export function PaidPart({
     onError: (err) => setError(toMessage(err)),
   })
 
+  // A control that cannot do anything is a bug: "Record payment received"
+  // is hidden, not shown with an always-empty picker, when no approved
+  // invoice on this deal has money still owed. Same rule as "Pay supplier"
+  // in `BoughtPart`.
+  const canRecord = invoices.some((inv) => inv.status === "APPROVED" && invoiceStillOwed(inv) > 0.004)
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-heading text-[15px] font-bold tracking-tight">Paid</h2>
-        {canEdit ? (
+        {canEdit && canRecord ? (
           <Button
             type="button"
             onClick={() => { setError(null); setRecording(true) }}

@@ -2,6 +2,7 @@ import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { env } from "../../config/env"
 import { getInvoiceOutstanding, getInvoiceSold, OUTSTANDING_SELECT } from "../receivables/receivables.reports"
+import { dealCostLineWhere } from "./dealMoney.cost"
 
 const ZERO = new Prisma.Decimal(0)
 const PAGE_SIZE = 50
@@ -59,6 +60,7 @@ export async function listDealMoney(query: { search?: string; page?: number }): 
 
   if (deals.length === 0) return { rows: [], total }
   const ids = deals.map((d) => d.id)
+  const costWhere = await dealCostLineWhere()
 
   const [invoices, billCosts, waitingInvoices, waitingBills, waitingCustomerCreditNotes, waitingSupplierCreditNotes] = await Promise.all([
     prisma.invoice.findMany({
@@ -67,7 +69,7 @@ export async function listDealMoney(query: { search?: string; page?: number }): 
     }),
     prisma.journalLine.groupBy({
       by: ["opportunityId"],
-      where: { opportunityId: { in: ids }, account: { type: "EXPENSE" }, journal: { status: { in: ["POSTED", "REVERSED"] } } },
+      where: { ...costWhere, opportunityId: { in: ids } },
       _sum: { debit: true, credit: true },
     }),
     prisma.invoice.findMany({

@@ -72,6 +72,7 @@ describe("buildInvoiceLines", () => {
 
 function arrangeDraft(over: {
   createdBy?: string
+  updatedBy?: string | null
   date?: Date
   poLineAlreadyInvoicedByOthers?: string
   completesPo?: boolean
@@ -80,6 +81,7 @@ function arrangeDraft(over: {
   const lockHead = { poId: "po1" }
   const full = {
     id: "inv1", poId: "po1", status: "DRAFT", createdBy: over.createdBy ?? "finance-1",
+    updatedBy: over.updatedBy ?? null,
     rejectionNote: over.rejectionNote ?? null,
     customerId: "c1", invoiceNumber: "INV-1", date: over.date ?? new Date("2026-09-23"),
     po: { id: "po1", serial: "BS-CPO-00001", opportunityId: "opp-1" },
@@ -120,6 +122,20 @@ describe("approveInvoice", () => {
     arrangeDraft({ createdBy: ADMIN.sub })
     await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You prepared this invoice, so someone else must approve it.")
     expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("refuses a Super Admin who edited someone else's draft (final review Fix 1)", async () => {
+    // Prepared by finance-1, then edited and saved by this Super Admin.
+    arrangeDraft({ createdBy: "finance-1", updatedBy: ADMIN.sub })
+    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You edited this invoice, so someone else must approve it.")
+    expect(prisma.invoice.update).not.toHaveBeenCalled()
+    expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin approve a draft its preparer saved again", async () => {
+    arrangeDraft({ createdBy: "finance-1", updatedBy: "finance-1" })
+    await approveInvoice("inv1", ADMIN)
+    expect(postSystemJournal).toHaveBeenCalled()
   })
 
   it("refuses to approve a draft that was sent back and not saved again", async () => {

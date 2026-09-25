@@ -152,7 +152,7 @@ export function CustomerAgeingPage() {
         isError={ageing.isError}
         onRetry={() => ageing.refetch()}
         emptyTitle="Nothing is owed by customers"
-        emptyBody="Every approved invoice has been paid or credited in full. Draft invoices and draft receipts do not appear here until they are approved."
+        emptyBody="Every approved invoice has been paid or credited in full. A draft invoice does not appear here until it is approved."
         onEmptyAction={() => ageing.refetch()}
       />
 

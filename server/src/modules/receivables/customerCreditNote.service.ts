@@ -5,7 +5,6 @@ import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { getInvoiceOutstanding, OUTSTANDING_SELECT } from "./receivables.reports"
 import type { OutstandingInput } from "./receivables.reports"
-import { vatFor } from "./receivables.vat"
 import type { CreateCustomerCreditNoteInput } from "./customerCreditNote.validators"
 
 const ZERO = new Prisma.Decimal(0)
@@ -23,7 +22,6 @@ const INVOICE_FOR_CREDIT = {
   lines: {
     select: {
       id: true, description: true, amount: true, vatAmount: true,
-      vatCode: { select: { ratePercent: true } },
       // Only draft and approved notes count against what is left: a
       // rejected/never-approved note leaves nothing behind, and there is
       // no rejection state in this design, so every stored line counts.
@@ -50,6 +48,17 @@ export function assertWithinOutstanding(invoice: OutstandingInput & { invoiceNum
   }
 }
 
+/**
+ * VAT on part of an invoice line, at the rate that line actually charged:
+ * its own stored vatAmount / amount. Never the VAT code's rate today, which
+ * Settings can change after the invoice was approved (final review Fix 2).
+ * The same ratio the client previews in `credit-note-dialog.tsx`.
+ */
+function invoiceLineVat(line: { amount: Prisma.Decimal; vatAmount: Prisma.Decimal }, amount: Prisma.Decimal): Prisma.Decimal {
+  if (line.amount.isZero()) return ZERO
+  return new Prisma.Decimal(amount.times(line.vatAmount).dividedBy(line.amount).toFixed(2))
+}
+
 function buildLineRows(invoice: InvoiceForCredit, lines: CreateCustomerCreditNoteInput["lines"]) {
   const byId = new Map(invoice.lines.map((l) => [l.id, l]))
   const rows = lines.map((l) => {
@@ -66,7 +75,7 @@ function buildLineRows(invoice: InvoiceForCredit, lines: CreateCustomerCreditNot
 
     // Crediting everything left on a line credits exactly the VAT left,
     // so no paisa residue is stranded on 2150 by rounding.
-    const vatAmount = amount.equals(left) ? vatLeft : vatFor(amount, invoiceLine.vatCode.ratePercent)
+    const vatAmount = amount.equals(left) ? vatLeft : invoiceLineVat(invoiceLine, amount)
     return { invoiceLineId: l.invoiceLineId, amount: amount.toFixed(2), vatAmount: vatAmount.toFixed(2) }
   })
   return rows

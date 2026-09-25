@@ -157,6 +157,15 @@ describe("updateSupplierBill", () => {
     )
   })
 
+  it("records who saved the draft, so that person cannot approve it (final review Fix 1)", async () => {
+    vi.mocked(prisma.supplierBill.findUnique).mockResolvedValue({ id: "b1", status: "DRAFT", createdBy: "someone-else", billNumber: "INV-2201" } as any)
+    vi.mocked(prisma.supplierBill.update).mockResolvedValue({ id: "b1", billNumber: "INV-2201" } as any)
+    await updateSupplierBill("b1", INPUT, ACTOR)
+    expect(prisma.supplierBill.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ updatedBy: ACTOR.sub }),
+    }))
+  })
+
   it("clears the sent-back note when the draft is saved again", async () => {
     vi.mocked(prisma.supplierBill.findUnique).mockResolvedValue({ id: "b1", status: "DRAFT", rejectionNote: "Wrong amount", billNumber: "INV-2201" } as any)
     vi.mocked(prisma.supplierBill.update).mockResolvedValue({ id: "b1", billNumber: "INV-2201" } as any)

@@ -1,11 +1,14 @@
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
+import { env } from "../../config/env"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { resolveActors } from "../../utils/actors"
 import { assertDealAccess, isFinance } from "../receivables/receivables.access"
 import { PO_INCLUDE } from "../receivables/customerPo.service"
 import { RECEIPT_INCLUDE } from "../receivables/receipt.service"
 import { getInvoiceOutstanding, getInvoiceSold } from "../receivables/receivables.reports"
+import { dealCostLineWhere } from "./dealMoney.cost"
+import { moneyNotRecordedReason } from "./dealMoney.goLive"
 import { DEAL_BILL_INCLUDE, DEAL_INVOICE_INCLUDE, DEAL_PAYMENT_INCLUDE } from "./dealMoney.types"
 import type { DealMoney, InvoiceRowWithActor, SupplierBillRowWithActor } from "./dealMoney.types"
 
@@ -22,6 +25,20 @@ const ZERO = new Prisma.Decimal(0)
  */
 export async function getDealMoney(opportunityId: string, actor: AccessTokenPayload): Promise<DealMoney> {
   const deal = await assertDealAccess(prisma, actor, opportunityId)
+
+  // A deal whose money this app never recorded (not Won, or Won before
+  // go-live) gets no numbers at all rather than a row of zeros, and no
+  // money query runs for it (final review Fix 3).
+  const notRecordedReason = moneyNotRecordedReason(deal, env.SALES_GO_LIVE)
+  if (notRecordedReason) {
+    return {
+      moneyAllowed: false,
+      notRecordedReason,
+      goLiveDate: env.SALES_GO_LIVE,
+      deal: { id: deal.id, serial: deal.serial, name: deal.name },
+    }
+  }
+
   const canSeeCost = isFinance(actor)
   const canEdit = isFinance(actor)
 
@@ -45,10 +62,9 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
       ? prisma.supplierPayment.findMany({ where: { opportunityId }, include: DEAL_PAYMENT_INCLUDE, orderBy: { date: "desc" } })
       : Promise.resolve(null),
     canSeeCost
-      ? prisma.journalLine.aggregate({
-          where: { opportunityId, account: { type: "EXPENSE" }, journal: { status: { in: ["POSTED", "REVERSED"] } } },
-          _sum: { debit: true, credit: true },
-        })
+      ? dealCostLineWhere().then((costWhere) =>
+          prisma.journalLine.aggregate({ where: { ...costWhere, opportunityId }, _sum: { debit: true, credit: true } })
+        )
       : Promise.resolve(null),
   ])
 
@@ -100,6 +116,7 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
   const profit = cost !== null ? sold.minus(cost) : null
 
   return {
+    moneyAllowed: true,
     deal: {
       id: deal.id,
       serial: deal.serial,

@@ -80,7 +80,7 @@ export async function postSupplierBillAccrual(tx: PrismaNamespace.TransactionCli
   })
   return postSystemJournal(tx, {
     date: toLedgerDate(new Date()),
-    narration: `${full.supplier.name} — Bill ${full.billNumber}`,
+    narration: `${full.supplier.name}, bill ${full.billNumber}`,
     source: { module: "SUPPLIER", refId: billId, event: "ACCRUAL" },
     lines: buildSupplierBillLines(bill, rules),
     createdBy: actorUserId,
@@ -95,6 +95,7 @@ export async function approveSupplierBill(id: string, actor: AccessTokenPayload)
     throw new AppError(409, "This was sent back. The person who prepared it must save it again first.")
   }
   if (bill.createdBy === actor.sub) throw new AppError(403, "You prepared this bill, so someone else must approve it.")
+  if (bill.updatedBy === actor.sub) throw new AppError(403, "You edited this bill, so someone else must approve it.")
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.supplierBill.update({

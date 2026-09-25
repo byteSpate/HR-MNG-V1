@@ -366,6 +366,21 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
     if ((body.status === "LOST" || body.status === "CANCELLED") && !body.statusReason?.trim()) {
       throw new AppError(400, `${body.status === "LOST" ? "Lost" : "Cancelled"} Opportunities require a reason`)
     }
+    // A Won deal with money on it must stay Won (final review Fix 5).
+    // Leaving Won clears closedAt or the Won status, which hides the deal's
+    // Money section and drops it from the Deals list, while its posted
+    // invoices and journals stay in the ledger. A cancelled PO leaves
+    // nothing behind, so it does not count. Receipts and supplier payments
+    // need an invoice or a bill first, so these two checks cover them.
+    if (current.status === "WON") {
+      const [pos, bills] = await Promise.all([
+        tx.customerPo.count({ where: { opportunityId: id, status: { not: "CANCELLED" } } }),
+        tx.supplierBill.count({ where: { opportunityId: id } }),
+      ])
+      if (pos > 0 || bills > 0) {
+        throw new AppError(409, "This deal has money recorded on it, so it must stay Won. Ask Finance for help.")
+      }
+    }
     // Task 16: a supplier bill is filled from the deal's product lines, so
     // every line needs one before the deal can be Won. A deal with no
     // lines at all is allowed, as today.

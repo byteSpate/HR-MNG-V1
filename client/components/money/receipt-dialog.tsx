@@ -22,8 +22,12 @@ function today(): string {
  * (`server/src/modules/receivables/receivables.reports.ts:24`), worked out
  * client-side here for the picker below, the same figure the server sums
  * into the deal's `numbers.stillOwed`.
+ *
+ * Exported so `PaidPart` can hide "Record payment received" when no
+ * approved invoice on the deal has money still owed, the same way
+ * `BoughtPart` uses `billStillOwed` for "Pay supplier".
  */
-function stillOwed(inv: DealMoneyInvoice): number {
+export function invoiceStillOwed(inv: DealMoneyInvoice): number {
   const gross = inv.lines.reduce((s, l) => s + Number(l.amount) + Number(l.vatAmount), 0)
   const collected = inv.allocations.reduce((s, a) => s + Number(a.amount), 0)
   const credited = inv.creditNotes
@@ -70,7 +74,7 @@ export function ReceiptDialog({
   const [allocated, setAllocated] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
-  const owing = invoices.filter((inv) => inv.status === "APPROVED" && stillOwed(inv) > 0.004)
+  const owing = invoices.filter((inv) => inv.status === "APPROVED" && invoiceStillOwed(inv) > 0.004)
 
   const settledTotal = (Number(amount) || 0) + (Number(vdsAmount) || 0) + (Number(aitAmount) || 0)
   const allocatedTotal = Object.values(allocated).reduce((s, v) => s + (Number(v) || 0), 0)
@@ -168,7 +172,7 @@ export function ReceiptDialog({
               <p className={`text-[12.5px] ${TONE.muted}`}>No approved invoice on this deal still owes money.</p>
             ) : (
               owing.map((inv) => {
-                const left = stillOwed(inv)
+                const left = invoiceStillOwed(inv)
                 return (
                   <div key={inv.id} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
                     <div className="sm:col-span-6">

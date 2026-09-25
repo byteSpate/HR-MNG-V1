@@ -219,7 +219,17 @@ export function BoughtPart({
           {bills.map((bill) => {
             const { total } = billTotals(bill)
             const status = billStatus(bill)
-            const canApprove = canEdit && bill.status === "DRAFT" && isSuperAdmin && bill.createdBy !== user?.id
+            // Approve and Send back, together. Hidden from whoever created
+            // or last saved the draft (the server refuses both of them), and
+            // on a draft already sent back and not saved again (the server
+            // refuses to approve it until its preparer saves it).
+            const canApprove =
+              canEdit &&
+              bill.status === "DRAFT" &&
+              isSuperAdmin &&
+              bill.createdBy !== user?.id &&
+              bill.updatedBy !== user?.id &&
+              !bill.sentBackAt
             const actions = [
               ...(canEdit && bill.status === "DRAFT"
                 ? [{ kind: "edit" as const, label: "Edit", onClick: () => { setError(null); setEditingBill(bill) } }]
@@ -444,10 +454,10 @@ export function BoughtPart({
         title={`Approve bill ${approvingBill?.billNumber ?? ""}?`}
         body={
           approvingBill
-            ? `Approving posts what we owe ${approvingBill.supplier.name}, dated ${formatDate(approvingBill.date)}. It cannot be edited after that. A mistake is fixed with a credit note.`
+            ? `When you approve it, what we owe ${approvingBill.supplier.name} is counted in the accounts, dated ${formatDate(approvingBill.date)}. After that it cannot be changed. To fix a mistake later, use "Fix this bill".`
             : ""
         }
-        confirmLabel="Approve and post"
+        confirmLabel="Approve"
         pending={approve.isPending}
         onCancel={() => setApprovingBill(null)}
         onConfirm={() => approvingBill && approve.mutate(approvingBill.id)}
@@ -457,7 +467,7 @@ export function BoughtPart({
         open={approvingCn !== null}
         title="Approve this credit note?"
         body={approvingCn ? `Approving reduces what we owe the supplier on this bill, dated ${formatDate(approvingCn.date)}.` : ""}
-        confirmLabel="Approve and post"
+        confirmLabel="Approve"
         pending={approveCn.isPending}
         onCancel={() => setApprovingCn(null)}
         onConfirm={() => approvingCn && approveCn.mutate(approvingCn.id)}

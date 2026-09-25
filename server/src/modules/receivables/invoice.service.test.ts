@@ -125,6 +125,14 @@ describe("updateInvoice", () => {
     expect(deleteOrder).toBeLessThan(reloadOrder)
   })
 
+  it("records who saved the draft, so that person cannot approve it (final review Fix 1)", async () => {
+    vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "DRAFT", createdBy: "someone-else" } as any)
+    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: [{ poLineId: "pl1", amount: "500000" }] } as any, FINANCE)
+    expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ updatedBy: FINANCE.sub }),
+    }))
+  })
+
   it("refuses to edit an approved invoice", async () => {
     vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "APPROVED" } as any)
     await expect(updateInvoice("inv1", INPUT, FINANCE)).rejects.toThrow("Only a draft invoice can be edited")

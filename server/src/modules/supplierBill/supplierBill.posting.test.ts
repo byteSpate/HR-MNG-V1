@@ -105,10 +105,12 @@ describe("approveSupplierBill", () => {
     opportunityId: string
     lines: Array<{ kind: "GOODS" | "SERVICE" }>
     createdBy?: string
+    updatedBy?: string | null
     rejectionNote?: string | null
   }) {
     const bill = {
       id: "b1", supplierId: "sup-1", status: "DRAFT", createdBy: over.createdBy ?? "finance-1", billNumber: "INV-1",
+      updatedBy: over.updatedBy ?? null,
       rejectionNote: over.rejectionNote ?? null,
       opportunityId: over.opportunityId,
       lines: over.lines.map((l, i) => ({
@@ -146,6 +148,19 @@ describe("approveSupplierBill", () => {
   it("refuses the person who prepared it", async () => {
     arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: ADMIN.sub })
     await expect(approveSupplierBill("b1", ADMIN)).rejects.toThrow("You prepared this bill, so someone else must approve it.")
+  })
+
+  it("refuses a Super Admin who edited someone else's draft (final review Fix 1)", async () => {
+    // Prepared by finance-1, then edited and saved by this Super Admin.
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: "finance-1", updatedBy: ADMIN.sub })
+    await expect(approveSupplierBill("b1", ADMIN)).rejects.toThrow("You edited this bill, so someone else must approve it.")
+    expect(prisma.supplierBill.update).not.toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin approve a draft its preparer saved again", async () => {
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: "finance-1", updatedBy: "finance-1" })
+    await approveSupplierBill("b1", ADMIN)
+    expect(prisma.supplierBill.update).toHaveBeenCalled()
   })
 
   it("refuses to approve a draft that was sent back and not saved again", async () => {

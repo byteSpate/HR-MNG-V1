@@ -12,7 +12,14 @@ vi.mock("../../config/prisma", () => ({
   },
 }))
 
+vi.mock("../posting/posting.rules", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../posting/posting.rules")>()),
+  loadRules: vi.fn(),
+}))
+
+import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
+import { loadRules } from "../posting/posting.rules"
 import { listDealMoney } from "./dealMoney.list"
 
 beforeEach(() => {
@@ -24,6 +31,7 @@ beforeEach(() => {
   vi.mocked(prisma.customerCreditNote.findMany).mockResolvedValue([])
   vi.mocked(prisma.supplierCreditNote.findMany).mockResolvedValue([])
   vi.mocked(prisma.journalLine.groupBy).mockResolvedValue([])
+  vi.mocked(loadRules).mockResolvedValue({ event: "FX", byKey: new Map([["LOSS", "5320"], ["GAIN", "4220"]]) })
 })
 
 describe("listDealMoney search", () => {
@@ -51,5 +59,35 @@ describe("listDealMoney search", () => {
     const where = vi.mocked(prisma.opportunity.findMany).mock.calls[0][0]!.where as any
     expect(where.status).toBe("WON")
     expect(where.closedAt).toEqual({ gte: new Date("2026-11-01T00:00:00.000Z") })
+  })
+})
+
+describe("listDealMoney cost", () => {
+  it("leaves exchange gains and losses out of a deal's Cost (final review Fix 4)", async () => {
+    const d = (v: string) => new Prisma.Decimal(v)
+    vi.mocked(prisma.opportunity.findMany).mockResolvedValue([
+      { id: "opp-1", serial: "BS-OPP-00001", name: "Refresh", salesAccount: { customer: null } },
+    ] as any)
+    vi.mocked(prisma.opportunity.count).mockResolvedValue(1)
+    const journal = [
+      { opportunityId: "opp-1", code: "5129", type: "EXPENSE", debit: d("800000"), credit: d("0") },
+      { opportunityId: "opp-1", code: "5320", type: "EXPENSE", debit: d("12000"), credit: d("0") },
+    ]
+    // Stands in for the database: groups only the lines the `where` lets through.
+    vi.mocked(prisma.journalLine.groupBy).mockImplementation((async (args: any) => {
+      const account = args.where.account ?? {}
+      const kept = journal.filter(
+        (l) => (!account.type || l.type === account.type) && !(account.code?.notIn ?? []).includes(l.code)
+      )
+      return [{
+        opportunityId: "opp-1",
+        _sum: { debit: kept.reduce((s, l) => s.plus(l.debit), d("0")), credit: kept.reduce((s, l) => s.plus(l.credit), d("0")) },
+      }]
+    }) as any)
+
+    const { rows } = await listDealMoney({})
+
+    expect(rows[0].cost).toBe("800000.00")
+    expect(loadRules).toHaveBeenCalledWith(expect.anything(), "FX")
   })
 })

@@ -1601,7 +1601,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
     ],
     watchFor: [
-      "Draft invoices and draft receipts are left out. Only what has posted counts.",
+      "Draft invoices are left out. An invoice appears here once it is approved.",
     ],
   },
 

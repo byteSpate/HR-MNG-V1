@@ -81,7 +81,7 @@ export function CreditNoteDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Fix invoice {invoice.invoiceNumber}</DialogTitle>
-          <DialogDescription>Choose the lines being reduced. VAT is worked out by the server.</DialogDescription>
+          <DialogDescription>Choose the lines to reduce. The VAT is worked out for you.</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
@@ -117,7 +117,7 @@ export function CreditNoteDialog({
                   />
                   {on ? (
                     <div className="pl-6">
-                      <Field label="Amount (BDT)" htmlFor={`ccn-amt-${line.id}`} hint={`Preview VAT ${formatMoney(previewVat.toFixed(2), "BDT")}, worked out again by the server.`}>
+                      <Field label="Amount (BDT)" htmlFor={`ccn-amt-${line.id}`} hint={`VAT on this: ${formatMoney(previewVat.toFixed(2), "BDT")}. It is checked again when you save.`}>
                         <Input
                           id={`ccn-amt-${line.id}`}
                           type="number"

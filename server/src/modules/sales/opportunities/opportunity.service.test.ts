@@ -17,6 +17,8 @@ vi.mock("../../../config/prisma", () => ({
     salesComment: { findMany: vi.fn() },
     salesMeeting: { findMany: vi.fn(), findFirst: vi.fn() },
     salesTask: { create: vi.fn() },
+    customerPo: { count: vi.fn() },
+    supplierBill: { count: vi.fn() },
   },
 }))
 
@@ -76,6 +78,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.useRealTimers()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+  // No PO or supplier bill on the deal unless a test says so (final review Fix 5).
+  vi.mocked(prisma.customerPo.count).mockResolvedValue(0)
+  vi.mocked(prisma.supplierBill.count).mockResolvedValue(0)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(ACCOUNT as any)
   vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(ACCOUNT as any)
@@ -453,6 +458,45 @@ describe("stage, status, and next step", () => {
     expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.not.objectContaining({ stage: expect.anything() }),
     }))
+  })
+
+  it("refuses to move a Won deal with a recorded PO back to Ongoing (final review Fix 5)", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ status: "WON", closedAt: NOW }) as any)
+    vi.mocked(prisma.customerPo.count).mockResolvedValue(1)
+    vi.mocked(prisma.supplierBill.count).mockResolvedValue(0)
+
+    await expect(changeOpportunityStatus("opp-1", { status: "ONGOING" }, USER))
+      .rejects.toThrow("This deal has money recorded on it, so it must stay Won. Ask Finance for help.")
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+    // A cancelled PO leaves nothing behind, so only the others count.
+    expect(prisma.customerPo.count).toHaveBeenCalledWith({ where: { opportunityId: "opp-1", status: { not: "CANCELLED" } } })
+  })
+
+  it("refuses to mark a Won deal with a supplier bill as Lost (final review Fix 5)", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ status: "WON", closedAt: NOW }) as any)
+    vi.mocked(prisma.customerPo.count).mockResolvedValue(0)
+    vi.mocked(prisma.supplierBill.count).mockResolvedValue(2)
+
+    await expect(changeOpportunityStatus("opp-1", { status: "LOST", statusReason: "Price" }, USER))
+      .rejects.toThrow("This deal has money recorded on it, so it must stay Won. Ask Finance for help.")
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+  })
+
+  it("still lets a Won deal with no money recorded change status", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ status: "WON", closedAt: NOW }) as any)
+    vi.mocked(prisma.customerPo.count).mockResolvedValue(0)
+    vi.mocked(prisma.supplierBill.count).mockResolvedValue(0)
+
+    await changeOpportunityStatus("opp-1", { status: "CANCELLED", statusReason: "Project stopped" }, USER)
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: "CANCELLED" }),
+    }))
+  })
+
+  it("never checks for money when the deal is not leaving Won", async () => {
+    await changeOpportunityStatus("opp-1", { status: "LOST", statusReason: "Price" }, USER)
+    expect(prisma.customerPo.count).not.toHaveBeenCalled()
+    expect(prisma.supplierBill.count).not.toHaveBeenCalled()
   })
 
   it("reopening clears closedAt but preserves stage and the original winner", async () => {

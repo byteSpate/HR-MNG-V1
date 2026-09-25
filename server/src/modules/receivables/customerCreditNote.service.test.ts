@@ -54,6 +54,48 @@ describe("createCustomerCreditNote", () => {
     }))
   })
 
+  it("keeps the invoice's own VAT rate after the VAT code's rate is changed (final review Fix 2)", async () => {
+    // Invoiced at 15%: 1,000,000 + 150,000 VAT. The code's rate has since
+    // been changed to 7.5% in Settings.
+    arrangeInvoice({
+      lines: [{
+        id: "il1", description: "Firewall", amount: d("1000000"), vatAmount: d("150000"),
+        vatCode: { ratePercent: d("7.5") }, creditNoteLines: [],
+      }],
+    })
+    vi.mocked(prisma.customerCreditNote.create).mockResolvedValue({ id: "cn1" } as any)
+
+    await createCustomerCreditNote({
+      invoiceId: "inv1", date: "2026-09-23", reason: "Price corrected",
+      lines: [{ invoiceLineId: "il1", amount: "200000" }],
+    } as any, FINANCE)
+
+    // 15% of 200,000, the rate the invoice charged. Not 15,000 (7.5%).
+    expect(prisma.customerCreditNote.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        lines: { create: [{ invoiceLineId: "il1", amount: "200000.00", vatAmount: "30000.00" }] },
+      }),
+    }))
+  })
+
+  it("credits no VAT on a line the invoice charged no VAT on", async () => {
+    arrangeInvoice({
+      lines: [{ id: "il1", description: "Service", amount: d("50000"), vatAmount: d("0"), vatCode: { ratePercent: d("15") }, creditNoteLines: [] }],
+    })
+    vi.mocked(prisma.customerCreditNote.create).mockResolvedValue({ id: "cn1" } as any)
+
+    await createCustomerCreditNote({
+      invoiceId: "inv1", date: "2026-09-23", reason: "Price corrected",
+      lines: [{ invoiceLineId: "il1", amount: "10000" }],
+    } as any, FINANCE)
+
+    expect(prisma.customerCreditNote.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        lines: { create: [{ invoiceLineId: "il1", amount: "10000.00", vatAmount: "0.00" }] },
+      }),
+    }))
+  })
+
   it("credits exactly the VAT left when crediting everything left on a line", async () => {
     arrangeInvoice({
       lines: [{ id: "il1", description: "Licence", amount: d("333.33"), vatAmount: d("50.00"), vatCode: { ratePercent: d("15") }, creditNoteLines: [] }],
