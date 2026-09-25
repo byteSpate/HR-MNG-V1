@@ -350,11 +350,11 @@ export const HELP: Record<string, HelpEntry> = {
 
   "accounting/customers": {
     title: "Customers",
-    lede: "Every company we invoice, and what they owe. This is the Customer record itself, not yet an invoice or a receipt: recording a bill against someone here comes in a later phase.",
+    lede: "Every company we invoice, and what they owe. This is the Customer record itself; the PO, invoice, receipt and credit note for a deal are recorded on that deal's own Money section.",
     step: "setup",
     connects: {
-      fedBy: ["Added by hand here, or by a one-time opening-balance import for customers who already owed money before this system went live"],
-      feeds: ["Customer POs", "Invoices", "Receipts", "Customer credit notes", "Customer ageing"],
+      fedBy: ["Added by hand here, or automatically the day a Sales Account's first deal is Won"],
+      feeds: ["Deals", "Customer ageing"],
     },
     reading: [
       {
@@ -385,7 +385,7 @@ export const HELP: Record<string, HelpEntry> = {
           "A deal is agreed with Smart Technologies, and the first invoice is due next month.",
           "Add them here with their legal name, billing address and BIN, before that invoice is written.",
           "Set payment days to whatever was agreed. Thirty if nothing unusual was discussed.",
-          "The invoice, once that feature exists, picks this record rather than a name typed fresh each time.",
+          "The invoice, created on the deal's own Money section, picks this record rather than a name typed fresh each time.",
         ],
       },
     ],
@@ -399,8 +399,8 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "Every company we buy from. The Supplier record itself; what we owe them is on Supplier ageing.",
     step: "setup",
     connects: {
-      fedBy: ["Added by hand here, or by a one-time opening-balance import for suppliers we already owed before this system went live"],
-      feeds: ["Supplier bills", "Supplier payments", "Supplier credit notes", "Supplier ageing"],
+      fedBy: ["Added by hand here, or by picking \"+ Add a new supplier\" on a deal's product line in the Sales Hub"],
+      feeds: ["Deals", "Supplier ageing"],
     },
     reading: [
       {
@@ -435,7 +435,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "The deal needs firewalls from Smart Technologies, a supplier we have not used before.",
           "Add them here with a thirty-day payment term, before the purchase order goes out.",
-          "The bill is then entered on Supplier bills against this record, rather than a name typed fresh each time.",
+          "The bill is then entered on the deal's own Money section against this record, rather than a name typed fresh each time.",
         ],
       },
     ],
