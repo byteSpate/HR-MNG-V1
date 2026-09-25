@@ -2043,6 +2043,13 @@ export interface DealMoneyInvoice extends Invoice {
   rejectionNote: string | null
   sentBackBy: string | null
   sentBackAt: string | null
+  /**
+   * The name behind `sentBackBy`, resolved server-side
+   * (`server/src/utils/actors.ts`'s `resolveActors`) since that column is a
+   * bare user id with no Prisma relation. Null when the invoice has never
+   * been sent back, or when the account behind the id no longer exists.
+   */
+  sentBackByUser: { id: string; email: string; fullName: string | null } | null
   allocations: Array<{ amount: string }>
   creditNotes: DealMoneyCustomerCreditNote[]
 }

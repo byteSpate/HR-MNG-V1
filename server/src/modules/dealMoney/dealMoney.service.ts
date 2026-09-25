@@ -1,12 +1,13 @@
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import type { AccessTokenPayload } from "../auth/auth.types"
+import { resolveActors } from "../../utils/actors"
 import { assertDealAccess, isFinance } from "../receivables/receivables.access"
 import { PO_INCLUDE } from "../receivables/customerPo.service"
 import { RECEIPT_INCLUDE } from "../receivables/receipt.service"
 import { getInvoiceOutstanding, getInvoiceSold } from "../receivables/receivables.reports"
 import { DEAL_BILL_INCLUDE, DEAL_INVOICE_INCLUDE, DEAL_PAYMENT_INCLUDE } from "./dealMoney.types"
-import type { DealMoney } from "./dealMoney.types"
+import type { DealMoney, InvoiceRowWithActor } from "./dealMoney.types"
 
 const ZERO = new Prisma.Decimal(0)
 
@@ -51,9 +52,19 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
       : Promise.resolve(null),
   ])
 
+  // "Sent back by {name}" (Money section, Invoiced) needs a name, and
+  // `sentBackBy` is a bare user id with no Prisma relation — see
+  // `InvoiceRowWithActor`. Resolved once, in one query, for every invoice
+  // that has one.
+  const sentBackActors = await resolveActors(invoices.map((inv) => inv.sentBackBy))
+  const invoicesWithActor: InvoiceRowWithActor[] = invoices.map((inv) => ({
+    ...inv,
+    sentBackByUser: inv.sentBackBy ? (sentBackActors[inv.sentBackBy] ?? null) : null,
+  }))
+
   // The four numbers (spec, "The four numbers"). Drafts never count: an
   // approved invoice or credit note is the only kind that moved the ledger.
-  const approvedInvoices = invoices.filter((i) => i.status === "APPROVED")
+  const approvedInvoices = invoicesWithActor.filter((i) => i.status === "APPROVED")
   const sold = approvedInvoices.reduce(
     (sum, inv) =>
       sum.plus(
@@ -98,7 +109,7 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
     pos,
     bills,
     supplierPayments,
-    invoices,
+    invoices: invoicesWithActor,
     receipts,
     productLines: productLines.map((l) => ({
       id: l.id,
