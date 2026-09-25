@@ -23,8 +23,12 @@ function today(): string {
  * (`server/src/modules/supplierBill/supplierBill.reports.ts:19`), worked out
  * client-side here for the picker below, the same way `ReceiptDialog` mirrors
  * `getInvoiceOutstanding` for the customer side.
+ *
+ * Exported so `BoughtPart` can decide whether "Pay supplier" has anything to
+ * do at all (a draft bill is never payable, so a supplier whose only bill on
+ * this deal is still waiting for approval must not appear as payable).
  */
-function billStillOwed(bill: DealMoneySupplierBill): number {
+export function billStillOwed(bill: DealMoneySupplierBill): number {
   const gross = bill.lines.reduce((s, l) => s + Number(l.amount) + Number(l.vatAmount), 0)
   const paid = bill.allocations.reduce((s, a) => s + Number(a.amount), 0)
   const credited = bill.creditNotes
@@ -67,9 +71,16 @@ export function PaymentDialog({
   const [allocated, setAllocated] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
+  // Only suppliers with something actually payable — an approved bill with
+  // money still owed. A supplier whose only bill on this deal is still a
+  // draft must not appear here: picking them would land on an always-empty
+  // "nothing owed" state even though money is genuinely owed, just not yet
+  // approved (review finding, Minor 1).
   const supplierOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>()
-    for (const b of bills) map.set(b.supplierId, b.supplier)
+    for (const b of bills) {
+      if (b.status === "APPROVED" && billStillOwed(b) > 0.004) map.set(b.supplierId, b.supplier)
+    }
     return [...map.values()]
   }, [bills])
 

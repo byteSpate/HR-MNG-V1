@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import type { MoneyHighlight } from "@/components/money/money-section"
 import { BillCreditNoteDialog } from "@/components/money/bill-credit-note-dialog"
 import { BillDialog } from "@/components/money/bill-dialog"
-import { PaymentDialog } from "@/components/money/payment-dialog"
+import { billStillOwed, PaymentDialog } from "@/components/money/payment-dialog"
 import {
   ConfirmDialog,
   DialogActions,
@@ -169,6 +169,17 @@ export function BoughtPart({
    *  fallback for the same figure. */
   const billNumberOf = (id: string) => bills.find((b) => b.id === id)?.billNumber ?? "a bill"
 
+  /** Every payment's `supplierId` always matches a bill on this deal — a
+   *  payment can only be created against a supplier already offered by
+   *  `PaymentDialog`'s picker, which is itself built from `bills`. The
+   *  fallback only guards a payload that somehow disagrees with that. */
+  const supplierNameOf = (id: string) => bills.find((b) => b.supplierId === id)?.supplier.name ?? "Unknown supplier"
+
+  // A control that cannot do anything is a bug: "Pay supplier" is hidden,
+  // not shown with an always-empty picker, when nothing on this deal is
+  // actually payable (an approved bill with money still owed).
+  const canPay = bills.some((b) => b.status === "APPROVED" && billStillOwed(b) > 0.004)
+
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -183,14 +194,16 @@ export function BoughtPart({
               <RiAddLine className="size-3.5" aria-hidden />
               Add supplier bill
             </Button>
-            <Button
-              type="button"
-              onClick={() => { setError(null); setPaying(true) }}
-              className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
-            >
-              <RiAddLine className="size-3.5" aria-hidden />
-              Pay supplier
-            </Button>
+            {canPay ? (
+              <Button
+                type="button"
+                onClick={() => { setError(null); setPaying(true) }}
+                className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              >
+                <RiAddLine className="size-3.5" aria-hidden />
+                Pay supplier
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -349,7 +362,7 @@ export function BoughtPart({
                 <li key={p.id} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className={`min-w-0 ${reversed ? "line-through opacity-60" : ""}`}>
-                      <div className="text-[13.5px] font-bold">{formatMoney(p.amount, "BDT")}</div>
+                      <div className="text-[13.5px] font-bold">{supplierNameOf(p.supplierId)}</div>
                       <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
                         {formatDate(p.date)}
                         {p.currency === "USD" && p.sourceAmount ? ` · ${formatMoney(p.sourceAmount, "USD")} at ${Number(p.fxRateToBdt).toFixed(2)}` : ""}
@@ -357,6 +370,7 @@ export function BoughtPart({
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
+                      <span className="mr-2 text-[13px] font-bold">{formatMoney(p.amount, "BDT")}</span>
                       {actions.length > 0 ? <RowActions actions={actions} /> : null}
                     </div>
                   </div>
