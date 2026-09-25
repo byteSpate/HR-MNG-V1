@@ -2028,11 +2028,21 @@ export interface DealMoneyCustomerCreditNote {
 
 /**
  * An invoice as it appears in the Money section: the same shape as
- * `Invoice` above (`DEAL_INVOICE_INCLUDE` extends `INVOICE_INCLUDE`), plus
- * the allocations (approved receipts only, amount only) and credit notes
- * the Money section's numbers are worked out from.
+ * `Invoice` above (`DEAL_INVOICE_INCLUDE` extends `INVOICE_INCLUDE`, which
+ * carries no `select`, so every `Invoice` scalar column comes back), plus
+ * the approval / send-back fields `Invoice` above never carried, and the
+ * allocations (approved receipts only, amount only) and credit notes the
+ * Money section's numbers are worked out from. Same treatment as
+ * `DealMoneyCustomerCreditNote` above and `DealMoneySupplierBill` below —
+ * the base `Invoice` type stays as it was (out of this task's scope), these
+ * fields are added here instead, where the Money section actually reads them.
  */
 export interface DealMoneyInvoice extends Invoice {
+  approvedBy: string | null
+  approvedAt: string | null
+  rejectionNote: string | null
+  sentBackBy: string | null
+  sentBackAt: string | null
   allocations: Array<{ amount: string }>
   creditNotes: DealMoneyCustomerCreditNote[]
 }
