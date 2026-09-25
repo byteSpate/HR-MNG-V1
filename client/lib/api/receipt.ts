@@ -2,7 +2,10 @@ import { apiFetch } from "./client"
 import type { Receipt } from "./types"
 
 export interface ReceiptInput {
-  customerId: string
+  // The one deal this receipt belongs to (spec: every document belongs to
+  // one deal). No customerId: it is derived from the deal's customer, never
+  // taken from the caller.
+  opportunityId: string
   date: string
   amount: string
   vdsAmount?: string
@@ -13,7 +16,6 @@ export interface ReceiptInput {
   aitCertificateDate?: string
   reference?: string
   allocations: Array<{ invoiceId: string; amount: string }>
-  openingAllocation?: { amount: string }
 }
 
 export interface CertificatesInput {
@@ -34,22 +36,18 @@ export function getReceipt(accessToken: string, id: string): Promise<Receipt> {
   return apiFetch<Receipt>(`/api/receipts/${id}`, { accessToken })
 }
 
+/** A receipt posts and is saved APPROVED in the same step — there is no
+ *  separate draft/approve lifecycle any more. A mistake is corrected with
+ *  `reverseReceipt`, not a second approver. */
 export function createReceipt(accessToken: string, input: ReceiptInput): Promise<Receipt> {
   return apiFetch<Receipt>("/api/receipts", { method: "POST", accessToken, body: JSON.stringify(input) })
-}
-
-export function approveReceipt(accessToken: string, id: string): Promise<Receipt> {
-  return apiFetch<Receipt>(`/api/receipts/${id}/approve`, { method: "POST", accessToken })
 }
 
 export function updateReceiptCertificates(accessToken: string, id: string, input: CertificatesInput): Promise<Receipt> {
   return apiFetch<Receipt>(`/api/receipts/${id}/certificates`, { method: "PATCH", accessToken, body: JSON.stringify(input) })
 }
 
-export function matchCustomerAdvance(
-  accessToken: string,
-  id: string,
-  input: { invoiceId?: string; openingBalanceId?: string; amount: string }
-): Promise<unknown> {
-  return apiFetch<unknown>(`/api/receipts/${id}/match-advance`, { method: "POST", accessToken, body: JSON.stringify(input) })
+/** Super Admin only. Corrects an approved receipt by reversing its posted journal. */
+export function reverseReceipt(accessToken: string, id: string, reason: string): Promise<Receipt> {
+  return apiFetch<Receipt>(`/api/receipts/${id}/reverse`, { method: "POST", accessToken, body: JSON.stringify({ reason }) })
 }

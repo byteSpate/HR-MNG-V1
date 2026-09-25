@@ -1740,7 +1740,7 @@ export interface VatCode {
   isActive: boolean
 }
 
-export type SupplierDocStatus = "DRAFT" | "APPROVED"
+export type SupplierDocStatus = "DRAFT" | "APPROVED" | "REVERSED"
 
 export interface SupplierBillLine {
   id: string
@@ -1750,9 +1750,12 @@ export interface SupplierBillLine {
   sourceAmount: string | null
   vatCodeId: string
   vatAmount: string
-  opportunityId: string
 }
 
+/**
+ * The one deal a bill belongs to now lives on the bill itself, not on each
+ * line (Task 12) — `opportunityId` moved off `SupplierBillLine` onto here.
+ */
 export interface SupplierBill {
   id: string
   supplierId: string
@@ -1762,17 +1765,32 @@ export interface SupplierBill {
   currency: "BDT" | "USD"
   fxRateToBdt?: string | null
   status: SupplierDocStatus
+  opportunityId: string
   createdBy?: string
   approvedBy?: string | null
   approvedAt?: string | null
   lines: SupplierBillLine[]
 }
 
-export interface BillableOpportunity {
+/**
+ * `listSupplierBills` (`GET /api/supplier-bills`) uses an explicit Prisma
+ * `select` that was never extended to include `opportunityId` or the
+ * approval/send-back fields when those were added — narrower than the full
+ * row `getSupplierBill`/`createSupplierBill`/`updateSupplierBill` return.
+ * Kept as its own type rather than papering over the gap with optional
+ * fields on `SupplierBill`.
+ */
+export interface SupplierBillListRow {
   id: string
-  serial: string
-  name: string
-  accountName: string
+  supplierId: string
+  billNumber: string
+  date: string
+  dueDate: string
+  currency: "BDT" | "USD"
+  fxRateToBdt: string | null
+  status: SupplierDocStatus
+  createdBy: string
+  lines: SupplierBillLine[]
 }
 
 export interface SupplierPaymentAllocation {
@@ -1780,12 +1798,15 @@ export interface SupplierPaymentAllocation {
   billId: string
   amount: string
   amountUsd: string | null
-  matchedAt: string | null
+  /** Only present when the payment is loaded through `reverseSupplierPayment` — the bill it settles, named. */
+  bill?: { id: string; billNumber: string }
 }
 
 export interface SupplierPayment {
   id: string
   supplierId: string
+  /** The one deal this payment belongs to (spec: every document belongs to one deal). */
+  opportunityId: string
   date: string
   amount: string
   sourceAmount: string | null
@@ -1793,8 +1814,17 @@ export interface SupplierPayment {
   fxRateToBdt: string | null
   reference: string | null
   status: SupplierDocStatus
+  approvedBy: string
+  approvedAt: string
+  /** Set only once a Super Admin reverses this payment. */
+  reversedBy: string | null
+  reversedAt: string | null
+  reversalReason: string | null
   createdBy: string
   allocations: SupplierPaymentAllocation[]
+  /** Only present on `createSupplierPayment`'s response (`name` only) and
+   *  `reverseSupplierPayment`'s (`id` and `name`) — list/get do not include it. */
+  supplier?: { id?: string; name: string }
 }
 
 export interface SupplierCreditNoteLine {
@@ -1840,7 +1870,7 @@ export interface SupplierControlTieOut {
 
 export type SaleLineKind = "GOODS" | "SERVICE"
 export type CustomerPoStatus = "OPEN" | "COMPLETE" | "CANCELLED"
-export type ReceivableDocStatus = "DRAFT" | "APPROVED"
+export type ReceivableDocStatus = "DRAFT" | "APPROVED" | "REVERSED"
 
 export interface CustomerPoLine {
   id: string
@@ -1855,7 +1885,6 @@ export interface CustomerPoLine {
   /** Draft and approved invoice lines, for working out what is left to invoice. */
   invoiceLines: Array<{ amount: string }>
 }
-export interface BillingScheduleRow { id: string; plannedDate: string; amount: string; note: string | null; order: number }
 export interface CustomerPo {
   id: string
   serial: string
@@ -1868,7 +1897,6 @@ export interface CustomerPo {
   customer: { id: string; legalName: string }
   opportunity: { id: string; serial: string; name: string }
   lines: CustomerPoLine[]
-  schedule: BillingScheduleRow[]
 }
 export interface PrefillLine { description: string; kind: "GOODS"; quantity: string; unitPrice: string | null }
 
@@ -1904,10 +1932,18 @@ export interface Invoice {
 
 export interface Receipt {
   id: string
+  /** The one deal this receipt belongs to (spec: every document belongs to one deal). */
+  opportunityId: string
   date: string
   amount: string
   reference: string | null
   status: ReceivableDocStatus
+  approvedBy: string
+  approvedAt: string
+  /** Set only once a Super Admin reverses this receipt. */
+  reversedBy: string | null
+  reversedAt: string | null
+  reversalReason: string | null
   createdBy: string
   vdsAmount: string
   vdsCertificateRef: string | null
@@ -1916,8 +1952,7 @@ export interface Receipt {
   aitCertificateRef: string | null
   aitCertificateDate: string | null
   customer: { id: string; legalName: string }
-  allocations: Array<{ id: string; amount: string; matchedAt: string | null; invoice: { id: string; invoiceNumber: string } }>
-  openingAllocations: Array<{ id: string; amount: string; matchedAt: string | null }>
+  allocations: Array<{ id: string; receiptId: string; invoiceId: string; amount: string; createdAt: string; invoice: { id: string; invoiceNumber: string } }>
 }
 
 export interface CustomerCreditNote {
@@ -1959,6 +1994,173 @@ export interface CustomerStatement {
   openingBalance: string
   entries: StatementEntry[]
   closingBalance: string
+}
+
+/* -------------------------------------------------------------------------- */
+/* Deal Money (deal-money-simplify)                                           */
+/* -------------------------------------------------------------------------- */
+// Hand-mirrored from server/src/modules/dealMoney/*.ts. No shared package,
+// deliberately — keep these in step by hand.
+
+/**
+ * A customer credit note as it appears nested under a deal's invoice
+ * (`invoice.creditNotes`, from `dealMoney.types.ts`'s `DEAL_INVOICE_INCLUDE`
+ * — `{ include: { lines: true } }`, so no `invoice`/`customer` relation,
+ * since the parent invoice is already known). Distinct from
+ * `CustomerCreditNote` above, which is shaped for the standalone
+ * `/api/customer-credit-notes` endpoints and does carry those.
+ */
+export interface DealMoneyCustomerCreditNote {
+  id: string
+  invoiceId: string
+  customerId: string
+  date: string
+  reason: string
+  status: ReceivableDocStatus
+  approvedBy: string | null
+  approvedAt: string | null
+  rejectionNote: string | null
+  sentBackBy: string | null
+  sentBackAt: string | null
+  createdBy: string
+  lines: Array<{ id: string; creditNoteId: string; invoiceLineId: string; amount: string; vatAmount: string }>
+}
+
+/**
+ * An invoice as it appears in the Money section: the same shape as
+ * `Invoice` above (`DEAL_INVOICE_INCLUDE` extends `INVOICE_INCLUDE`), plus
+ * the allocations (approved receipts only, amount only) and credit notes
+ * the Money section's numbers are worked out from.
+ */
+export interface DealMoneyInvoice extends Invoice {
+  allocations: Array<{ amount: string }>
+  creditNotes: DealMoneyCustomerCreditNote[]
+}
+
+/**
+ * A supplier bill as it appears in the Money section (`DEAL_BILL_INCLUDE`):
+ * its own lines, its supplier, its payment allocations (approved payments
+ * only, amount only) and its credit notes — a different, richer shape than
+ * `SupplierBill`/`SupplierBillListRow` above, which serve the bill create /
+ * edit / list screens.
+ */
+export interface DealMoneySupplierBill {
+  id: string
+  supplierId: string
+  billNumber: string
+  date: string
+  dueDate: string
+  currency: "BDT" | "USD"
+  fxRateToBdt: string | null
+  status: SupplierDocStatus
+  approvedBy: string | null
+  approvedAt: string | null
+  opportunityId: string
+  rejectionNote: string | null
+  sentBackBy: string | null
+  sentBackAt: string | null
+  createdBy: string
+  supplier: { id: string; name: string }
+  lines: SupplierBillLine[]
+  allocations: Array<{ amount: string }>
+  creditNotes: SupplierCreditNote[]
+}
+
+export interface DealMoneyNumbers {
+  sold: string
+  stillOwed: string
+  /** Null for anyone who cannot see cost (`canSeeCost` false) — never "0.00". */
+  cost: string | null
+  profit: string | null
+}
+
+export interface DealMoneyProductLine {
+  id: string
+  product: string
+  model: string | null
+  quantity: number | null
+  supplier: { id: string; name: string } | null
+}
+
+/**
+ * The deal Money section's one payload, shown on both the deal page's Money
+ * section and the standalone deal money page. Mirrors
+ * `server/src/modules/dealMoney/dealMoney.types.ts`'s `DealMoney`.
+ *
+ * `bills` and `supplierPayments` are null, not empty arrays, for a viewer
+ * who cannot see cost (`canSeeCost` false) — the server skips those queries
+ * entirely rather than hiding a real empty result.
+ */
+export interface DealMoney {
+  deal: {
+    id: string
+    serial: string
+    name: string
+    customer: { id: string; legalName: string; billingAddress: string | null; paymentDays: number } | null
+  }
+  canSeeCost: boolean
+  canEdit: boolean
+  numbers: DealMoneyNumbers
+  pos: CustomerPo[]
+  bills: DealMoneySupplierBill[] | null
+  /** `allocations[].bill` is always populated here (`DEAL_PAYMENT_INCLUDE`); `supplier` is always absent. */
+  supplierPayments: SupplierPayment[] | null
+  invoices: DealMoneyInvoice[]
+  receipts: Receipt[]
+  productLines: DealMoneyProductLine[]
+}
+
+/** One row of the Deals Won list (`dealMoney.list.ts`'s `listDealMoney`). */
+export interface DealMoneyListRow {
+  id: string
+  serial: string
+  name: string
+  customerName: string | null
+  sold: string
+  cost: string
+  profit: string
+  stillOwed: string
+  /** Draft invoices, bills and credit notes waiting on this deal. */
+  waiting: number
+}
+
+export interface DealMoneyListResult {
+  rows: DealMoneyListRow[]
+  total: number
+}
+
+/** Every kind of draft document the Waiting-for-approval queue can list. */
+export type DealApprovalKind = "INVOICE" | "SUPPLIER_BILL" | "CUSTOMER_CREDIT_NOTE" | "SUPPLIER_CREDIT_NOTE"
+
+/**
+ * Narrower than `DealApprovalKind`: `dealMoney.sendBack.ts` refuses both
+ * credit-note kinds (neither has an update or delete path, so a sent-back
+ * credit note could never be fixed or re-approved), and the route itself
+ * rejects them before the service runs.
+ */
+export type DealSendBackKind = "INVOICE" | "SUPPLIER_BILL"
+
+export interface WaitingForApprovalRow {
+  kind: DealApprovalKind
+  id: string
+  number: string
+  dealId: string
+  dealSerial: string
+  party: string
+  amount: string
+  preparedBy: string
+  preparedAt: string
+}
+
+/**
+ * Not a VAT return — the app records VAT, it does not file it
+ * (`dealMoney.vatSummary.ts`).
+ */
+export interface DealVatSummary {
+  onInvoices: string
+  onBills: string
+  difference: string
+  withheldByCustomers: string
 }
 
 export interface AccountingPeriod {
@@ -2449,6 +2651,9 @@ export interface OpportunityLineSummary {
   marginAmount: string | null
   note: string | null
   order: number
+  /** Who we will buy this product from. Optional while the deal is open,
+      required on every line before it can be marked Won. */
+  supplier: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
 }
@@ -2536,6 +2741,8 @@ export interface OpportunityLineBody {
   /** A percentage of the Total price, -100 to 100. Negative is a product sold at a loss. */
   marginPercent?: string
   note?: string
+  /** Who we will buy this product from. Optional while the deal is open. */
+  supplierId?: string | null
 }
 
 /** Null clears a value; absent leaves it alone. The two are different asks. */
@@ -2548,6 +2755,7 @@ export interface UpdateOpportunityLineBody {
   lineValue?: string | null
   marginPercent?: string | null
   note?: string | null
+  supplierId?: string | null
 }
 
 export type SalesCommentKind = "GENERAL" | "CUSTOMER_FEEDBACK" | "MANAGEMENT_NOTE"

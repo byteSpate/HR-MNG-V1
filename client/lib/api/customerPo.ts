@@ -13,7 +13,6 @@ export interface CustomerPoInput {
     unitPrice: string
     vatCodeId: string
   }>
-  schedule: Array<{ plannedDate: string; amount: string; note?: string }>
 }
 
 export function listCustomerPos(

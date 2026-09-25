@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import type { BillableOpportunity, SupplierAgeingRow, SupplierBill, SupplierControlTieOut } from "./types"
+import type { SupplierAgeingRow, SupplierBill, SupplierBillListRow, SupplierControlTieOut } from "./types"
 
 export interface SupplierBillLineInput {
   description: string
@@ -7,7 +7,6 @@ export interface SupplierBillLineInput {
   amount: string
   sourceAmount?: string
   vatCodeId: string
-  opportunityId: string
 }
 
 export interface SupplierBillInput {
@@ -16,11 +15,16 @@ export interface SupplierBillInput {
   date: string
   dueDate: string
   currency: "BDT" | "USD"
+  // The one deal this bill belongs to (spec: every document belongs to one
+  // deal) — set once, on the bill, not per line.
+  opportunityId: string
   lines: SupplierBillLineInput[]
 }
 
-export function listSupplierBills(accessToken: string): Promise<SupplierBill[]> {
-  return apiFetch<SupplierBill[]>("/api/supplier-bills", { accessToken })
+/** `GET /api/supplier-bills` uses a narrower row shape than the other
+ *  endpoints below — see `SupplierBillListRow`. */
+export function listSupplierBills(accessToken: string): Promise<SupplierBillListRow[]> {
+  return apiFetch<SupplierBillListRow[]>("/api/supplier-bills", { accessToken })
 }
 
 export function getSupplierBill(accessToken: string, id: string): Promise<SupplierBill> {
@@ -37,10 +41,6 @@ export function updateSupplierBill(accessToken: string, id: string, input: Suppl
 
 export function approveSupplierBill(accessToken: string, id: string): Promise<SupplierBill> {
   return apiFetch<SupplierBill>(`/api/supplier-bills/${id}/approve`, { method: "POST", accessToken })
-}
-
-export function listBillableOpportunities(accessToken: string): Promise<BillableOpportunity[]> {
-  return apiFetch<BillableOpportunity[]>("/api/supplier-bills/opportunities", { accessToken })
 }
 
 export function getSupplierAgeing(accessToken: string): Promise<SupplierAgeingRow[]> {
