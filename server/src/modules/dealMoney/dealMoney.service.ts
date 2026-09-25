@@ -7,7 +7,7 @@ import { PO_INCLUDE } from "../receivables/customerPo.service"
 import { RECEIPT_INCLUDE } from "../receivables/receipt.service"
 import { getInvoiceOutstanding, getInvoiceSold } from "../receivables/receivables.reports"
 import { DEAL_BILL_INCLUDE, DEAL_INVOICE_INCLUDE, DEAL_PAYMENT_INCLUDE } from "./dealMoney.types"
-import type { DealMoney, InvoiceRowWithActor } from "./dealMoney.types"
+import type { DealMoney, InvoiceRowWithActor, SupplierBillRowWithActor } from "./dealMoney.types"
 
 const ZERO = new Prisma.Decimal(0)
 
@@ -52,15 +52,25 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
       : Promise.resolve(null),
   ])
 
-  // "Sent back by {name}" (Money section, Invoiced) needs a name, and
-  // `sentBackBy` is a bare user id with no Prisma relation — see
-  // `InvoiceRowWithActor`. Resolved once, in one query, for every invoice
-  // that has one.
-  const sentBackActors = await resolveActors(invoices.map((inv) => inv.sentBackBy))
+  // "Sent back by {name}" (Money section, Invoiced and Bought) needs a name,
+  // and `sentBackBy` is a bare user id with no Prisma relation — see
+  // `InvoiceRowWithActor` / `SupplierBillRowWithActor`. Resolved once, in one
+  // query per document kind, for every row that has one.
+  const sentBackActors = await resolveActors([
+    ...invoices.map((inv) => inv.sentBackBy),
+    ...(bills ?? []).map((bill) => bill.sentBackBy),
+  ])
   const invoicesWithActor: InvoiceRowWithActor[] = invoices.map((inv) => ({
     ...inv,
     sentBackByUser: inv.sentBackBy ? (sentBackActors[inv.sentBackBy] ?? null) : null,
   }))
+  const billsWithActor: SupplierBillRowWithActor[] | null =
+    bills === null
+      ? null
+      : bills.map((bill) => ({
+          ...bill,
+          sentBackByUser: bill.sentBackBy ? (sentBackActors[bill.sentBackBy] ?? null) : null,
+        }))
 
   // The four numbers (spec, "The four numbers"). Drafts never count: an
   // approved invoice or credit note is the only kind that moved the ledger.
@@ -107,7 +117,7 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
       profit: profit !== null ? profit.toFixed(2) : null,
     },
     pos,
-    bills,
+    bills: billsWithActor,
     supplierPayments,
     invoices: invoicesWithActor,
     receipts,

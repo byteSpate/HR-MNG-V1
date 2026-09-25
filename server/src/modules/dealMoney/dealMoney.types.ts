@@ -42,6 +42,17 @@ export type InvoiceRowWithActor = InvoiceRow & { sentBackByUser: ActorName | nul
 
 export type ReceiptRow = Prisma.ReceiptGetPayload<{ include: typeof RECEIPT_INCLUDE }>
 export type SupplierBillRow = Prisma.SupplierBillGetPayload<{ include: typeof DEAL_BILL_INCLUDE }>
+
+/**
+ * `SupplierBillRow` plus the name behind `sentBackBy`, the same gap
+ * `InvoiceRowWithActor` fills for invoices, for the identical reason: a bare
+ * user id with no Prisma relation. Resolved by hand in `getDealMoney`.
+ * Supplier credit notes never carry this — they can never be sent back
+ * (design doc, "Approval"; `DealSendBackKind` excludes both credit-note
+ * kinds) — so only the bill itself needs it.
+ */
+export type SupplierBillRowWithActor = SupplierBillRow & { sentBackByUser: ActorName | null }
+
 export type SupplierPaymentRow = Prisma.SupplierPaymentGetPayload<{ include: typeof DEAL_PAYMENT_INCLUDE }>
 
 export interface MoneyNumbers {
@@ -62,7 +73,7 @@ export interface DealMoney {
   canEdit: boolean
   numbers: MoneyNumbers
   pos: CustomerPoRow[]
-  bills: SupplierBillRow[] | null
+  bills: SupplierBillRowWithActor[] | null
   supplierPayments: SupplierPaymentRow[] | null
   invoices: InvoiceRowWithActor[]
   receipts: ReceiptRow[]

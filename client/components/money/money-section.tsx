@@ -7,6 +7,7 @@ import { useSession } from "@/lib/auth/session-context"
 import type { DealApprovalKind, DealMoney } from "@/lib/api/types"
 import { PanelAlert, toMessage } from "@/components/dashboard/record-kit"
 import { Skeleton } from "@/components/ui/skeleton"
+import { BoughtPart } from "@/components/money/bought-part"
 import { InvoicedPart } from "@/components/money/invoiced-part"
 import { MoneyNumbers } from "@/components/money/money-numbers"
 import { PaidPart } from "@/components/money/paid-part"
@@ -88,7 +89,7 @@ function MoneySkeleton() {
  * thing from the same fetch.
  *
  * Numbers, Customer PO, Invoiced and Paid exist (deal-money-simplify Tasks
- * 19-20). Task 21 adds `<BoughtPart />` below `<PoPart />`, reading fields
+ * 19-20). Task 21 adds `<BoughtPart />` below `<PaidPart />`, reading fields
  * already present on this same `money` payload — no second query.
  */
 export function MoneySection({
@@ -137,6 +138,20 @@ export function MoneySection({
         canEdit={data.canEdit}
         invalidate={invalidate}
       />
+      {data.canSeeCost ? (
+        <BoughtPart
+          opportunityId={opportunityId}
+          // Non-null: `bills`/`supplierPayments` are only ever null when
+          // `canSeeCost` is false (server doc comment on `DealMoney`), and
+          // this branch only renders when it is true.
+          bills={data.bills!}
+          supplierPayments={data.supplierPayments!}
+          productLines={data.productLines}
+          canEdit={data.canEdit}
+          invalidate={invalidate}
+          highlight={highlight}
+        />
+      ) : null}
     </div>
   )
 }

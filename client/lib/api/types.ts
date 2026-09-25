@@ -1841,6 +1841,14 @@ export interface SupplierCreditNote {
   date: string
   reason: string
   status: SupplierDocStatus
+  approvedBy: string | null
+  approvedAt: string | null
+  rejectionNote: string | null
+  /** Always null in practice: a supplier credit note can never be sent back
+   *  (design doc, "Approval"; `DealSendBackKind` excludes both credit-note
+   *  kinds). Kept for shape parity with the bill/invoice it fixes. */
+  sentBackBy: string | null
+  sentBackAt: string | null
   createdBy: string
   lines: SupplierCreditNoteLine[]
 }
@@ -2076,6 +2084,13 @@ export interface DealMoneySupplierBill {
   rejectionNote: string | null
   sentBackBy: string | null
   sentBackAt: string | null
+  /**
+   * The name behind `sentBackBy`, resolved server-side
+   * (`server/src/utils/actors.ts`'s `resolveActors`), same treatment as
+   * `DealMoneyInvoice.sentBackByUser`. Null when the bill has never been
+   * sent back, or when the account behind the id no longer exists.
+   */
+  sentBackByUser: { id: string; email: string; fullName: string | null } | null
   createdBy: string
   supplier: { id: string; name: string }
   lines: SupplierBillLine[]
