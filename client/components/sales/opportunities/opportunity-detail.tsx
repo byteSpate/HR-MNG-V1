@@ -52,7 +52,7 @@ import {
   taka,
 } from "@/components/sales/shared/sales-shared"
 import { MeetingsPanel, TasksPanel } from "@/components/sales/shared/plan-panels"
-import { CustomerPoPanel } from "@/components/sales/opportunities/customer-po-panel"
+import { MoneySection } from "@/components/money/money-section"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -909,7 +909,7 @@ export function OpportunityDetail({ opportunityId }: { opportunityId: string }) 
             <div className="grid gap-4">
               <WorkflowPanel deal={deal} canManage={canManage} />
               <LinesPanel deal={deal} canManage={canManage} />
-              <CustomerPoPanel opportunity={{ id: deal.id, serial: deal.serial, name: deal.name, status: deal.status }} />
+              {deal.status === "WON" ? <MoneySection opportunityId={deal.id} /> : null}
               <MeetingsPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} />
               <TasksPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} />
             </div>
