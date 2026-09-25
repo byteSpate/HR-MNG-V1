@@ -163,9 +163,11 @@ export function InvoiceDialog({
                     value={line.description}
                     onChange={(e) => update(line.poLineId, { description: e.target.value })}
                   />
-                  <div className={`flex items-center text-[12px] sm:col-span-2 ${TONE.muted}`}>
-                    Left {line.remaining ? formatMoney(line.remaining, "BDT") : "—"}
-                  </div>
+                  {!invoice ? (
+                    <div className={`flex items-center text-[12px] sm:col-span-2 ${TONE.muted}`}>
+                      Left {formatMoney(line.remaining, "BDT")}
+                    </div>
+                  ) : null}
                   <Input
                     aria-label={`${line.description} amount`}
                     className="sm:col-span-2"
