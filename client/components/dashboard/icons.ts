@@ -16,6 +16,7 @@ import {
   RiCalendarEventLine,
   RiCalculatorLine,
   RiCashLine,
+  RiCheckboxCircleLine,
   RiCoinsLine,
   RiComputerLine,
   RiContactsBook2Line,
@@ -33,6 +34,7 @@ import {
   RiFilter3Line,
   RiMegaphoneLine,
   RiNodeTree,
+  RiPercentLine,
   RiPieChartLine,
   RiPlayCircleLine,
   RiPulseLine,
@@ -67,6 +69,10 @@ export const icons = {
   RiFileList2Line,
   /** A receipt from a customer. */
   RiCoinsLine,
+  /** Waiting for approval: a draft becoming real. */
+  RiCheckboxCircleLine,
+  /** VAT summary. */
+  RiPercentLine,
   RiMegaphoneLine,
   RiUser3Line,
   RiTeamLine,

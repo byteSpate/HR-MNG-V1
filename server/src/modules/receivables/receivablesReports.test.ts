@@ -22,7 +22,7 @@ const d = (v: string) => new Prisma.Decimal(v)
 function invoice(over: Record<string, unknown> = {}) {
   return {
     id: "inv1", invoiceNumber: "INV-1", customerId: "c1", dueDate: new Date("2026-10-20"),
-    customer: { legalName: "Bengal Group" }, po: { opportunity: { serial: "BS-OPP-00002" } },
+    customer: { legalName: "Bengal Group" }, po: { opportunity: { id: "deal-1", serial: "BS-OPP-00002" } },
     lines: [{ amount: d("800000"), vatAmount: d("120000") }],
     allocations: [], creditNotes: [],
     ...over,
@@ -44,7 +44,7 @@ describe("getCustomerAgeing", () => {
 
     expect(rows).toEqual([{
       invoiceId: "inv1", label: "Invoice INV-1",
-      customerId: "c1", customerName: "Bengal Group", dealSerial: "BS-OPP-00002",
+      customerId: "c1", customerName: "Bengal Group", dealId: "deal-1", dealSerial: "BS-OPP-00002",
       dueDate: new Date("2026-10-20"), outstanding: "920000.00", bucket: "1-30",
     }])
   })

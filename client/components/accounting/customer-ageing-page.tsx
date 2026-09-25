@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { RiFileDownloadLine } from "@remixicon/react"
 
@@ -53,6 +55,12 @@ function slugify(name: string): string {
 
 export function CustomerAgeingPage() {
   const { accessToken } = useSession()
+  const pathname = usePathname()
+  // The deal money page lives at <base>/accounting/deals/{dealId}, a sibling
+  // of this page's own <base>/accounting/customer-ageing, not a child of it
+  // — so the link is built by swapping the trailing segment. Preserves
+  // whichever of /finance/accounting or /admin/accounting this is mounted under.
+  const dealsBase = pathname.replace(/\/customer-ageing$/, "/deals")
   const [statementFor, setStatementFor] = useState<{ id: string; legalName: string } | null>(null)
 
   const ageing = useQuery({
@@ -75,7 +83,15 @@ export function CustomerAgeingPage() {
   const rows: TableCell[][] = data.map((r) => [
     { text: r.customerName, weight: 600 },
     { text: r.label },
-    { text: r.dealSerial ?? "—" },
+    {
+      node: r.dealId ? (
+        <Link href={`${dealsBase}/${r.dealId}`} className="cursor-pointer font-semibold text-[#1C2733] hover:underline">
+          {r.dealSerial ?? "—"}
+        </Link>
+      ) : (
+        r.dealSerial ?? "—"
+      ),
+    },
     { text: formatDate(r.dueDate) },
     { text: formatMoney(r.outstanding, "BDT") },
     { node: <Tag label={bucketLabel(r.bucket)} tone={BUCKET_TONE[r.bucket]} /> },
@@ -104,20 +120,14 @@ export function CustomerAgeingPage() {
 
       {tieOut.data && !tieOut.data.ties ? (
         <PanelAlert>
-          Customer balances do not agree with the ledger: the invoices add up to {formatMoney(tieOut.data.subledgerTotal, "BDT")},
-          but account 1220 Trade and other Receivables reads {formatMoney(tieOut.data.glBalance, "BDT")}. One of them is wrong,
-          and it needs finding before these figures are relied on.
+          The total here does not match account 1220 in the ledger ({formatMoney(tieOut.data.subledgerTotal, "BDT")} here,{" "}
+          {formatMoney(tieOut.data.glBalance, "BDT")} in the ledger). Something was entered outside this page. Ask Finance to
+          check.
         </PanelAlert>
       ) : null}
       {tieOut.data?.ties ? (
         <p className={`text-[12.5px] ${TONE.muted}`}>
           The invoices below add up to {formatMoney(tieOut.data.subledgerTotal, "BDT")}, the same as account 1220 in the ledger.
-        </p>
-      ) : null}
-      {tieOut.data && Number(tieOut.data.advancesHeld) !== 0 ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>
-          Customers have also paid {formatMoney(tieOut.data.advancesHeld, "BDT")} in advance, not yet matched to an invoice.
-          That sits in Customer Advances (2160), not in the figures above.
         </p>
       ) : null}
 

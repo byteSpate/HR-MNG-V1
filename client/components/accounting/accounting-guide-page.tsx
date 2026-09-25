@@ -383,20 +383,22 @@ const MODULES: ModuleEntry[] = [
     ],
     note: (
       <>
-        Paying it is Debit Trade Payables, Credit Bank, for what is cleared. Money paid before
-        any bill exists waits in Advance to Suppliers until it is matched to one. A credit note
-        for returned goods runs the bill backwards for the part returned.
+        Paying it is Debit Trade Payables, Credit Bank, for what is cleared. A payment cannot be
+        more than the deal&apos;s bills from that supplier still owe; there are no advances. A
+        credit note for returned goods runs the bill backwards for the part returned.
       </>
     ),
-    also: "Supplier bills · Supplier payments · Supplier credit notes · Supplier ageing",
+    also: "Deals · Supplier ageing",
   },
   {
-    id: "invoice",
-    title: "An Invoice",
+    id: "deal",
+    title: "A Deal, Start to Finish",
     trigger: (
       <>
-        Bengal Group&apos;s firewalls, bought for ৳8,00,000 on the Supplier Bill above, are
-        invoiced at ৳10,00,000 plus 15% VAT. Finance records the invoice; a different Super Admin
+        A deal for firewalls is marked Won, with a supplier already picked on every product line.
+        On the deal&apos;s own Money section: the sales person records the customer&apos;s PO,
+        Finance adds the supplier bill for ৳8,00,000 plus 15% VAT and a Super Admin approves it.
+        Finance then creates the invoice for ৳10,00,000 plus 15% VAT, and a different Super Admin
         approves it:
       </>
     ),
@@ -408,12 +410,14 @@ const MODULES: ModuleEntry[] = [
     note: (
       <>
         In the same approval, the goods&apos; cost moves out of holding: Debit Hardware Purchase,
-        Credit Goods Bought for Won Deals, ৳8,00,000. When the customer pays ৳9,50,000 and keeps
-        ৳1,50,000 of VAT and ৳50,000 of income tax, the receipt clears all ৳11,50,000 and records
-        the two amounts withheld against their certificates.
+        Credit Goods Bought for Won Deals, ৳8,00,000. When the customer pays, Finance clicks
+        Record payment received on the deal page; it is saved and counted at once, with no
+        approval needed. When the supplier is paid, Finance clicks Pay supplier, also counted at
+        once. Every step, from the PO to the final payment, happens on this one deal page. Nobody
+        leaves it except a Super Admin, who works the Waiting for approval list.
       </>
     ),
-    also: "Customer POs · Invoices · Receipts · Customer credit notes · Customer ageing",
+    also: "Deals · Waiting for approval · Customer ageing · Supplier ageing · VAT summary",
   },
   {
     id: "manual-journal",
@@ -456,7 +460,7 @@ export function AccountingGuidePage() {
           <p className="mb-10">
             This follows one real transaction, July&apos;s payroll, through every stage the accounts
             go through, in order. Every other kind of entry, from a hand-typed correction to an
-            expense claim, goes through the exact same six steps; section 7 shows seven of them
+            expense claim, goes through the exact same six steps; section 7 shows eight of them
             with their own real numbers. Once this makes sense for payroll, it makes sense for the
             rest of the accounts too.
           </p>
@@ -489,7 +493,7 @@ export function AccountingGuidePage() {
               7 · Every other kind of entry
             </div>
             <h2 className="font-heading mb-3 text-[17px] font-bold tracking-tight text-[#17191C] sm:text-[19px]">
-              The same shape, five more times
+              The same shape, eight more times
             </h2>
             <p className="mb-8">
               Every one of these still goes through Set up, Record, Post, Read, Report and Close

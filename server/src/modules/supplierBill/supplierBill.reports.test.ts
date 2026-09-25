@@ -18,6 +18,7 @@ function bill(overrides: Record<string, unknown> = {}) {
   return {
     id: "b1", supplierId: "sup-1", supplier: { name: "Star Tech" }, dueDate: new Date("2026-10-20"),
     billNumber: "INV-1",
+    opportunity: { id: "deal-1", serial: "OP-1" },
     lines: [{ amount: d("800000"), vatAmount: d("120000") }],
     allocations: [], creditNotes: [],
     ...overrides,
@@ -80,7 +81,9 @@ describe("getSupplierAgeing", () => {
 
     const rows = await getSupplierAgeing(new Date("2026-11-15"))
 
-    expect(rows).toEqual([expect.objectContaining({ billId: "b1", label: "Bill INV-1" })])
+    expect(rows).toEqual([
+      expect.objectContaining({ billId: "b1", label: "Bill INV-1", dealId: "deal-1", dealSerial: "OP-1" }),
+    ])
   })
 })
 

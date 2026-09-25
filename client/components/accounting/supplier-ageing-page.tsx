@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 
 import { getSupplierAgeing, getSupplierControlTieOut } from "@/lib/api/supplierBill"
@@ -32,6 +34,12 @@ function bucketLabel(b: AgeingBucket): string {
 
 export function SupplierAgeingPage() {
   const { accessToken } = useSession()
+  const pathname = usePathname()
+  // The deal money page lives at <base>/accounting/deals/{dealId}, a sibling
+  // of this page's own <base>/accounting/supplier-ageing, not a child of it
+  // — so the link is built by swapping the trailing segment. Preserves
+  // whichever of /finance/accounting or /admin/accounting this is mounted under.
+  const dealsBase = pathname.replace(/\/supplier-ageing$/, "/deals")
 
   const ageing = useQuery({
     queryKey: ["supplier-ageing"],
@@ -53,6 +61,13 @@ export function SupplierAgeingPage() {
   const rows: TableCell[][] = data.map((r) => [
     { text: r.supplierName, weight: 600 },
     { text: r.label },
+    {
+      node: (
+        <Link href={`${dealsBase}/${r.dealId}`} className="cursor-pointer font-semibold text-[#1C2733] hover:underline">
+          {r.dealSerial}
+        </Link>
+      ),
+    },
     { text: formatDate(r.dueDate) },
     { text: formatMoney(r.outstanding, "BDT") },
     { node: <Tag label={bucketLabel(r.bucket)} tone={BUCKET_TONE[r.bucket]} /> },
@@ -70,9 +85,9 @@ export function SupplierAgeingPage() {
           softened into a warning. */}
       {tieOut.data && !tieOut.data.ties ? (
         <PanelAlert>
-          Supplier balances do not agree with the ledger: the bills add up to {formatMoney(tieOut.data.subledgerTotal, "BDT")},
-          but account 2111 Trade Payables, Suppliers reads {formatMoney(tieOut.data.glBalance, "BDT")}. One of them is wrong,
-          and it needs finding before these figures are relied on.
+          The total here does not match account 2111 in the ledger ({formatMoney(tieOut.data.subledgerTotal, "BDT")} here,{" "}
+          {formatMoney(tieOut.data.glBalance, "BDT")} in the ledger). Something was entered outside this page. Ask Finance to
+          check.
         </PanelAlert>
       ) : null}
       {tieOut.data?.ties ? (
@@ -97,8 +112,8 @@ export function SupplierAgeingPage() {
       ) : null}
 
       <PanelTable
-        cols="1.4fr 1.2fr 0.9fr 1fr 0.9fr"
-        headers={["Supplier", "What", "Due", "Outstanding", "Overdue"]}
+        cols="1.4fr 1.2fr 0.9fr 0.9fr 1fr 0.9fr"
+        headers={["Supplier", "What", "Deal", "Due", "Outstanding", "Overdue"]}
         rows={rows}
         isLoading={ageing.isPending}
         isError={ageing.isError}

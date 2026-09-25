@@ -51,27 +51,14 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    // Receivables & payables, Phase 3a (Selling): what customers owe us.
-    // Before Payables because a sale is where a deal's money starts.
-    label: "Receivables",
+    // All of a deal's money is on its own page; these are the ways in.
+    label: "Deals & money",
     items: [
-      { label: "Customer POs", href: "/finance/accounting/customer-pos", icon: "RiShoppingBag3Line" },
-      { label: "Invoices", href: "/finance/accounting/invoices", icon: "RiFileList2Line" },
-      { label: "Receipts", href: "/finance/accounting/receipts", icon: "RiCoinsLine" },
-      { label: "Customer credit notes", href: "/finance/accounting/customer-credit-notes", icon: "RiFileReduceLine" },
+      { label: "Deals", href: "/finance/accounting/deals", icon: "RiBriefcaseLine" },
+      { label: "Waiting for approval", href: "/finance/accounting/approvals", icon: "RiCheckboxCircleLine" },
       { label: "Customer ageing", href: "/finance/accounting/customer-ageing", icon: "RiTimeLine" },
-    ],
-  },
-  {
-    // Receivables & payables, Phase 2 (Buying): what we owe suppliers.
-    // Its own group rather than more rows under Ledger, which would take
-    // that group back to the crowding the split was made to fix.
-    label: "Payables",
-    items: [
-      { label: "Supplier bills", href: "/finance/accounting/supplier-bills", icon: "RiBillLine" },
-      { label: "Supplier payments", href: "/finance/accounting/supplier-payments", icon: "RiHandCoinLine" },
-      { label: "Supplier credit notes", href: "/finance/accounting/supplier-credit-notes", icon: "RiFileReduceLine" },
       { label: "Supplier ageing", href: "/finance/accounting/supplier-ageing", icon: "RiTimeLine" },
+      { label: "VAT summary", href: "/finance/accounting/vat-summary", icon: "RiPercentLine" },
     ],
   },
   {

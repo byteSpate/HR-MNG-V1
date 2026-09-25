@@ -1856,11 +1856,12 @@ export interface SupplierCreditNote {
 export type AgeingBucket = "Not due" | "1-30" | "31-60" | "61-90" | "Over 90"
 
 export interface SupplierAgeingRow {
-  billId: string | null
-  openingBalanceId: string | null
+  billId: string
   label: string
   supplierId: string
   supplierName: string
+  dealId: string
+  dealSerial: string
   dueDate: string
   outstanding: string
   bucket: AgeingBucket
@@ -1975,17 +1976,17 @@ export interface CustomerCreditNote {
 }
 
 export interface CustomerAgeingRow {
-  invoiceId: string | null
-  openingBalanceId: string | null
+  invoiceId: string
   label: string
   customerId: string
   customerName: string
+  dealId: string | null
   dealSerial: string | null
   dueDate: string
   outstanding: string
   bucket: AgeingBucket
 }
-export interface CustomerTieOut { subledgerTotal: string; glBalance: string; ties: boolean; advancesHeld: string }
+export interface CustomerTieOut { subledgerTotal: string; glBalance: string; ties: boolean }
 
 export interface StatementEntry {
   date: string

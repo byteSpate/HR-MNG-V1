@@ -39,6 +39,8 @@ export interface AgeingRow {
   label: string
   supplierId: string
   supplierName: string
+  dealId: string
+  dealSerial: string
   dueDate: Date
   outstanding: string
   bucket: AgeingBucket
@@ -50,6 +52,7 @@ export async function getSupplierAgeing(asOf: Date = new Date()): Promise<Ageing
     select: {
       id: true, supplierId: true, dueDate: true, billNumber: true,
       supplier: { select: { name: true } },
+      opportunity: { select: { id: true, serial: true } },
       lines: { select: { amount: true, vatAmount: true } },
       allocations: { where: { payment: { status: "APPROVED" } }, select: { amount: true } },
       creditNotes: {
@@ -71,6 +74,8 @@ export async function getSupplierAgeing(asOf: Date = new Date()): Promise<Ageing
       label: `Bill ${bill.billNumber}`,
       supplierId: bill.supplierId,
       supplierName: bill.supplier.name,
+      dealId: bill.opportunity.id,
+      dealSerial: bill.opportunity.serial,
       dueDate: bill.dueDate,
       outstanding: outstanding.toFixed(2),
       bucket: bucketFor(daysPastDue),

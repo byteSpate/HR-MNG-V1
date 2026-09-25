@@ -43,7 +43,7 @@ export const FLOW: FlowStep[] = [
     id: "record",
     title: "Record",
     body: "The daily work, and mostly not done in this section at all. A payroll run is approved, an expense claim is reimbursed, a supplier bill is entered, someone leaves and is settled. Anything those modules do not cover is typed as a journal by hand.",
-    pages: ["Payroll", "Employee expenses", "Settlements", "Expenses"],
+    pages: ["Payroll", "Employee expenses", "Settlements", "Expenses", "Deals", "Waiting for approval"],
   },
   {
     id: "post",
@@ -1515,158 +1515,13 @@ export const HELP: Record<string, HelpEntry> = {
   },
 
   // ── Payables: what we owe suppliers ───────────────────────────────────────
-  "accounting/supplier-bills": {
-    title: "Supplier bills",
-    lede: "What a supplier charges us for goods or services bought for a Won deal. A bill is entered as a draft and posts nothing until a Super Admin approves it.",
-    step: "record",
-    connects: {
-      fedBy: ["Suppliers", "Won deals in the Sales Hub", "VAT codes"],
-      feeds: ["Goods Bought for Won Deals", "Subcontract & Resold Services", "Input VAT", "Trade Payables, Suppliers", "Supplier ageing"],
-    },
-    reading: [
-      {
-        name: "Draft and Approved",
-        body: "A draft can still be edited and has not reached the ledger. Approved means it has posted, and from then on it can only be paid or reduced by a credit note.",
-      },
-      {
-        name: "Goods and Service lines",
-        body: "Goods are held against the deal until they are delivered to the customer. A service is a cost of the deal straight away.",
-      },
-      {
-        name: "The net, VAT and total shown while typing",
-        body: "A preview. The figures that count are worked out by the server when the bill is saved, from the VAT code on each line.",
-      },
-    ],
-    does: [
-      {
-        name: "Enter a bill",
-        body: "Supplier, bill number, dates, currency, and one line per item. Every line names the Won deal it was bought for, so the deal's margin can be read later.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Edit a draft",
-        body: "Any field, until it is approved.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Approve",
-        body: "Posts the bill. Refused for the person who entered it: someone else has to check it.",
-        roles: ["SUPER_ADMIN"],
-      },
-    ],
-    scenarios: [
-      {
-        title: "Firewalls bought for a Won deal",
-        steps: [
-          "Finance enters Smart Technologies' bill: one Goods line of 8,00,000.00 against the deal, VAT code 15%.",
-          "The bill saves as a draft with 1,20,000.00 of VAT and a total of 9,20,000.00. Nothing has posted.",
-          "A Super Admin approves it. Goods Bought for Won Deals and Input VAT are debited, and Trade Payables is credited with 9,20,000.00.",
-          "The bill now appears on Supplier ageing, and can be picked on Supplier payments.",
-        ],
-      },
-    ],
-    watchFor: [
-      "Only Won deals can be chosen. A deal still being negotiated has nothing to buy for yet.",
-      "A bill in dollars converts to taka at the rate for the bill date, and that rate is frozen on the bill.",
-      "Attaching the supplier's own bill as a file is not built yet.",
-    ],
-  },
-
-  "accounting/supplier-payments": {
-    title: "Supplier payments",
-    lede: "Money paid to a supplier, split across the bills it settles. Anything not matched to a bill is an advance, held until a bill arrives.",
-    step: "record",
-    connects: {
-      fedBy: ["Approved supplier bills"],
-      feeds: ["Trade Payables, Suppliers", "Advance to Suppliers", "The bank", "Exchange Gain or Exchange Loss"],
-    },
-    reading: [
-      {
-        name: "Allocations",
-        body: "Which bills this payment clears, and by how much. They are typed in the payment's own currency.",
-      },
-      {
-        name: "Advance",
-        body: "The part of the payment not allocated to any bill. It sits in Advance to Suppliers until it is matched.",
-      },
-    ],
-    does: [
-      {
-        name: "Record a payment",
-        body: "Supplier, date, amount and currency, and how much of it goes to each open bill. A payment cannot be allocated past what a bill still owes, or to another supplier's bill.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Approve",
-        body: "Posts the payment, after checking the allocations again in case another payment cleared the same bill meanwhile. Refused for the person who recorded it.",
-        roles: ["SUPER_ADMIN"],
-      },
-      {
-        name: "Match an advance",
-        body: "Once the bill for an advance arrives and is approved, moves the advance onto it: Debit Trade Payables, Credit Advance to Suppliers.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-    ],
-    scenarios: [
-      {
-        title: "Paying part up front",
-        steps: [
-          "Smart Technologies asks for 3,00,000.00 before shipping. Nothing has been billed yet, so the payment is recorded with no allocations.",
-          "Once approved, the bank drops and Advance to Suppliers holds 3,00,000.00.",
-          "The bill arrives and is approved. Match the advance to it, and the bill's balance falls by 3,00,000.00.",
-        ],
-      },
-    ],
-    watchFor: [
-      "A dollar payment can only settle dollar bills. The difference between the bill's rate and the payment's rate posts to Exchange Gain or Exchange Loss.",
-      "A dollar advance cannot be matched on this page yet. Record that match as a hand-typed journal, with its exchange difference.",
-      "Paying a dollar bill in taka leaves any exchange difference to a hand-typed journal.",
-    ],
-  },
-
-  "accounting/supplier-credit-notes": {
-    title: "Supplier credit notes",
-    lede: "A supplier reducing a bill it has already sent, for goods returned or a price corrected. It runs the bill backwards for the part credited.",
-    step: "record",
-    connects: {
-      fedBy: ["Approved supplier bills"],
-      feeds: ["Trade Payables, Suppliers", "Goods Bought for Won Deals", "Subcontract & Resold Services", "Input VAT", "Supplier ageing"],
-    },
-    does: [
-      {
-        name: "Raise a credit note",
-        body: "Against one approved bill, line by line. Each line can be credited only up to what is left on it after earlier credit notes, drafts included.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Approve",
-        body: "Posts it: Debit Trade Payables, Credit the bill line's own account and Input VAT. Refused for the person who raised it.",
-        roles: ["SUPER_ADMIN"],
-      },
-    ],
-    scenarios: [
-      {
-        title: "Two firewalls sent back",
-        steps: [
-          "Two of ten firewalls arrive damaged and go back. The supplier issues a credit note for 1,60,000.00 plus 24,000.00 VAT.",
-          "Raise it against the original bill's firewall line, and have it approved.",
-          "The bill now owes 1,84,000.00 less, and Supplier ageing shows the lower figure.",
-        ],
-      },
-    ],
-    watchFor: [
-      "A draft bill cannot be credited. Edit the draft instead.",
-      "Goods already delivered to the customer are credited as if still held; that case arrives with the selling side.",
-    ],
-  },
-
   "accounting/supplier-ageing": {
     title: "Supplier ageing",
     lede: "What is still owed on every approved bill, grouped by how far past its due date it is. It is also where the payables account is checked against the bills behind it.",
     step: "read",
     connects: {
-      fedBy: ["Supplier bills", "Supplier payments", "Supplier credit notes"],
-      feeds: ["Supplier payments, which offers these bills to pay"],
+      fedBy: ["Deals, where supplier bills, payments and credit notes are entered"],
+      feeds: ["Pay supplier, on the deal page, where these bills are offered"],
     },
     reading: [
       NUMBER_CONVENTIONS,
@@ -1676,13 +1531,17 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "The tie-out",
-        body: "The balance on Trade Payables, Suppliers compared with the total still owed on bills. When they differ, a warning prints both figures. The usual cause is a hand-typed journal posted straight to the payables account, or an opening balance with no bill behind it.",
+        body: "The balance on account 2111 Trade Payables, Suppliers compared with the total still owed on bills. When they differ, a plain message shows both figures and says to ask Finance to check. The usual cause is a hand-typed journal posted straight to the payables account.",
       },
     ],
     does: [
       {
         name: "Read what is owed",
-        body: "Per bill, with its supplier, due date and bucket. Nothing is changed from here.",
+        body: "Per bill, with its supplier, deal, due date and bucket. Nothing is changed from here.",
+      },
+      {
+        name: "Open the deal",
+        body: "Click the Deal cell on any row to open that deal's Money section, where the bill was made and can be paid.",
       },
     ],
     scenarios: [
@@ -1690,7 +1549,7 @@ export const HELP: Record<string, HelpEntry> = {
         title: "Deciding what to pay this week",
         steps: [
           "Open Supplier ageing and read the over-90 and 61 to 90 buckets first.",
-          "Note the bills, then record the payment on Supplier payments, where the same bills are offered.",
+          "Click the deal on a row to open its Money section, then click Pay supplier there.",
         ],
       },
     ],
@@ -1699,204 +1558,13 @@ export const HELP: Record<string, HelpEntry> = {
     ],
   },
 
-  "accounting/customer-pos": {
-    title: "Customer POs",
-    lede: "What a customer ordered on a Won deal, and what is left to invoice against it. Recorded by the deal's own sales person, or by Finance.",
-    step: "record",
-    connects: {
-      fedBy: ["Customers", "Won deals in the Sales Hub", "VAT codes"],
-      feeds: ["Invoices", "Customer ageing"],
-    },
-    reading: [
-      {
-        name: "Open, Complete and Cancelled",
-        body: "Open still has something left to invoice. Complete means every line has been invoiced in full. Cancelled can only happen before the first invoice, and always carries a reason.",
-      },
-      {
-        name: "Left to invoice",
-        body: "Each line's amount less every draft and approved invoice line against it.",
-      },
-      {
-        name: "The billing schedule",
-        body: "A plan of when amounts are expected to be invoiced. It posts nothing by itself; an invoice still has to be entered and approved when the date arrives.",
-      },
-    ],
-    does: [
-      {
-        name: "Record a customer PO",
-        body: "Deal, the customer's own PO number, date, and one line per item. Products can be copied from the deal's own Line Items with one button, never silently. Available to Finance, a Super Admin, or the deal's own sales person from the Sales Hub.",
-      },
-      {
-        name: "Edit or cancel",
-        body: "Only while nothing has been invoiced against it yet. Cancelling asks for a reason.",
-      },
-    ],
-    scenarios: [
-      {
-        title: "Bengal Group orders firewalls on a Won deal",
-        steps: [
-          "A deal for firewalls worth 10,00,000.00 plus 15% VAT is Won.",
-          "The deal's own sales person records the customer PO from the Sales Hub, copying the products from the deal's Line Items with one button.",
-          "Finance sees the PO on Customer POs, with 10,00,000.00 left to invoice.",
-        ],
-      },
-    ],
-    watchFor: [
-      "Delivery is not tracked on a customer PO yet: the whole amount counts as earned the moment it is invoiced, whichever order goods actually move in. Tracked deliveries are a later phase.",
-      "A PO cannot be edited or cancelled once it has an invoice against it. Raise a credit note on the invoice instead.",
-    ],
-  },
-
-  "accounting/invoices": {
-    title: "Invoices",
-    lede: "A sale billed against a customer PO, recorded here so it reaches the ledger. Approval posts the sale.",
-    step: "record",
-    connects: {
-      fedBy: ["Customer POs", "VAT codes"],
-      feeds: ["Trade and other Receivables", "Product Sales", "Service Revenue, Local", "VAT Payable", "Goods Bought for Won Deals", "Customer ageing"],
-    },
-    reading: [
-      {
-        name: "Draft and Approved",
-        body: "A draft can still be edited and has not reached the ledger. Approved means it posted; a mistake afterwards is corrected with a credit note, not an edit.",
-      },
-      {
-        name: "The net, VAT and total shown while typing",
-        body: "A preview. The figures that count are worked out by the server when the invoice is saved.",
-      },
-    ],
-    does: [
-      {
-        name: "Record an invoice",
-        body: "Pick the customer PO, an invoice number as printed on the invoice itself, and how much of each line is being billed. Never more than is left to invoice on that line.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Edit a draft",
-        body: "Any field, until it is approved.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Approve",
-        body: "Posts the sale and its VAT, and releases the matching share of the goods held for the deal. Refused for the person who recorded it.",
-        roles: ["SUPER_ADMIN"],
-      },
-    ],
-    scenarios: [
-      {
-        title: "Bengal Group's firewalls, invoiced",
-        steps: [
-          "Bengal Group's firewalls, bought for 8,00,000.00 on the supplier bill, are invoiced at 10,00,000.00 plus 15% VAT.",
-          "Finance records the invoice; a different Super Admin approves it.",
-          "Trade and other Receivables is debited 11,50,000.00; Product Sales and VAT Payable are credited. In the same approval, 8,00,000.00 of held goods cost moves out to Subcontract & Resold Services.",
-        ],
-      },
-    ],
-    watchFor: [
-      "Invoices are issued from your usual invoicing tool. This page records them so they reach the ledger; it does not print them.",
-      "Delivery is not tracked yet, so one invoice both bills the customer and earns the revenue in the same entry.",
-    ],
-  },
-
-  "accounting/receipts": {
-    title: "Receipts",
-    lede: "Money received from a customer, the tax it withheld, and what it settles.",
-    step: "record",
-    connects: {
-      fedBy: ["Approved invoices", "Customers"],
-      feeds: ["Trade and other Receivables", "Customer Advances", "The bank", "VAT Deducted at Source", "Advance Income Tax"],
-    },
-    reading: [
-      {
-        name: "Settles and Advance",
-        body: "Settles is what was allocated to invoices and the opening balance. Advance is whatever cash and withheld tax was left over, held until it is matched.",
-      },
-      {
-        name: "Certificates",
-        body: "A customer who withholds VAT or income tax owes a Mushak 6.6 certificate for it. Until that number and date are recorded, the receipt shows as certificate missing.",
-      },
-    ],
-    does: [
-      {
-        name: "Record a receipt",
-        body: "Customer, date, cash received, and any VAT or income tax the customer kept. Allocate the total against invoices and the opening balance; anything left becomes an advance.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Approve",
-        body: "Posts it, clearing what it settles. Refused for the person who recorded it.",
-        roles: ["SUPER_ADMIN"],
-      },
-      {
-        name: "Record a certificate",
-        body: "The Mushak 6.6 number and date, added after the fact if it was not available when the receipt was recorded. Works on a receipt of any status.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Match an advance",
-        body: "Once an invoice or the opening balance is ready to take it, move part or all of the advance onto it.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-    ],
-    scenarios: [
-      {
-        title: "Bengal Group pays, keeping tax withheld",
-        steps: [
-          "Bengal Group's 11,50,000.00 invoice is settled by 9,50,000.00 cash, 1,50,000.00 VAT withheld and 50,000.00 income tax withheld.",
-          "The receipt is recorded with all three amounts allocated to the invoice, and approved.",
-          "The two certificates arrive a few days later and are recorded against the same receipt.",
-        ],
-      },
-    ],
-    watchFor: [
-      "Tax a customer withholds needs its own certificate before the record is complete; a receipt missing one shows on the Certificate missing filter until it is added.",
-      "The customer's opening balance can be settled by a receipt just like an invoice can.",
-    ],
-  },
-
-  "accounting/customer-credit-notes": {
-    title: "Customer credit notes",
-    lede: "Reducing what a customer owes on an approved invoice, for returned goods or a corrected price.",
-    step: "record",
-    connects: {
-      fedBy: ["Approved invoices"],
-      feeds: ["Trade and other Receivables", "Product Sales", "Service Revenue, Local", "VAT Payable", "Customer ageing"],
-    },
-    does: [
-      {
-        name: "Raise a credit note",
-        body: "Against one approved invoice, line by line. Each line can be credited only up to what is left on it after earlier credit notes, drafts included. A reason is required.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Approve",
-        body: "Posts it, reversing the sale and its VAT for the amount credited. Refused for the person who raised it.",
-        roles: ["SUPER_ADMIN"],
-      },
-    ],
-    scenarios: [
-      {
-        title: "Two firewalls sent back",
-        steps: [
-          "Two of Bengal Group's firewalls arrive faulty and go back. A credit note for 1,60,000.00 plus 24,000.00 VAT is raised against the original invoice line.",
-          "It is approved by a different Super Admin.",
-          "The invoice now owes 1,84,000.00 less, and Customer ageing shows the lower figure.",
-        ],
-      },
-    ],
-    watchFor: [
-      "A credit note cannot put a customer in credit. Refunds are not recorded in this system yet, so the amount credited can never exceed what the invoice still has outstanding.",
-      "If the goods came back to us, also record a supplier credit note when the supplier takes them back. This page does not return goods to stock by itself.",
-    ],
-  },
-
   "accounting/customer-ageing": {
     title: "Customer ageing",
     lede: "What is still owed by every customer, grouped by how far past its due date each invoice is. Also where the receivables account is checked against the invoices behind it, and where a customer statement is produced.",
     step: "read",
     connects: {
-      fedBy: ["Invoices", "Receipts", "Customer credit notes"],
-      feeds: ["Receipts, which offers these invoices to settle"],
+      fedBy: ["Deals, where invoices, receipts and customer credit notes are entered"],
+      feeds: ["Record payment received, on the deal page, where these invoices are offered"],
     },
     reading: [
       NUMBER_CONVENTIONS,
@@ -1906,13 +1574,17 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "The tie-out",
-        body: "The balance on Trade and other Receivables compared with the total still owed on invoices and opening balances. When they differ, a warning prints both figures. Advances customers have paid but not yet matched to an invoice are shown separately, since they sit in Customer Advances rather than in what is overdue.",
+        body: "The balance on account 1220 Trade and other Receivables compared with the total still owed on invoices. When they differ, a plain message shows both figures and says to ask Finance to check. The usual cause is a hand-typed journal posted straight to the receivables account.",
       },
     ],
     does: [
       {
         name: "Read what is owed",
-        body: "Per invoice or opening balance, with the customer, deal, due date and bucket. Nothing is changed from here.",
+        body: "Per invoice, with the customer, deal, due date and bucket. Nothing is changed from here.",
+      },
+      {
+        name: "Open the deal",
+        body: "Click the Deal cell on any row to open that deal's Money section, where the invoice was made and can be paid.",
       },
       {
         name: "Download a statement",
@@ -1930,7 +1602,159 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     watchFor: [
       "Draft invoices and draft receipts are left out. Only what has posted counts.",
-      "Advances held but not yet matched to an invoice sit in Customer Advances, shown separately from what is overdue.",
+    ],
+  },
+
+  "accounting/deals": {
+    title: "Deals",
+    lede: "Every deal won since go-live, and its money in one place: the customer's PO, what we bought, what we invoiced, and what was paid. Open a deal to see or add any of it.",
+    step: "record",
+    connects: {
+      fedBy: ["Won deals in the Sales Hub", "Customers", "Suppliers", "VAT codes"],
+      feeds: ["Waiting for approval", "Customer ageing", "Supplier ageing", "VAT summary"],
+    },
+    reading: [
+      NUMBER_CONVENTIONS,
+      {
+        name: "The four numbers",
+        body: "Sold, Cost, Profit and Still owed, at the top of a deal's Money section. Sold is approved invoices, less approved credit notes. Cost is what the deal's supplier bills cost, counted when the goods are invoiced. Profit is Sold minus Cost. Still owed is what the customer has not paid yet. A draft never changes any of these four numbers; only approved documents do. Cost and Profit are shown to Finance and Super Admin only; a sales person sees Sold and Still owed.",
+      },
+      {
+        name: "Customer PO, Bought, Invoiced, Paid",
+        body: "Four parts on one page, top to bottom. Customer PO is what the customer ordered. Bought is the supplier bills and what was paid for them. Invoiced is the invoices and any credit notes against them. Paid is the receipts from the customer, with any tax it withheld.",
+      },
+    ],
+    does: [
+      {
+        name: "Open a deal",
+        body: "Search by deal, customer, PO, invoice or bill number, or click a row to open that deal's Money section.",
+      },
+      {
+        name: "Record the customer PO",
+        body: "The customer's own PO number, date and lines. Can be edited or cancelled with a reason until it has an invoice. Available to Finance, a Super Admin, or the deal's own sales person.",
+      },
+      {
+        name: "Add a supplier bill",
+        body: "Supplier and lines are filled in from the deal's product lines. Finance types the bill number, real prices and VAT, then it goes to Waiting for approval.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Create an invoice",
+        body: "Pick how much of each PO line to bill. It goes to Waiting for approval. If the customer's legal name, billing address or payment days are missing, a small form asks for them first.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Record payment received",
+        body: "Saved and counted at once. No approval needed. Cannot be more than the deal's invoices still owe; there are no advances.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Pay supplier",
+        body: "Saved and counted at once. No approval needed. Cannot be more than the deal's bills from that supplier still owe.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Fix a bill or invoice",
+        body: "A credit note against an approved supplier bill or invoice, with a reason. Goes to Waiting for approval. Cannot put the customer in credit.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "A deal, start to finish",
+        steps: [
+          "A deal for firewalls is marked Won in the Sales Hub. Every product line already has a supplier.",
+          "On the deal's Money section, the customer's PO is recorded.",
+          "Finance clicks Add supplier bill; the supplier and lines are already filled in. It waits for approval.",
+          "A Super Admin approves it. Finance clicks Create invoice on the PO; it also waits for approval.",
+          "A Super Admin approves the invoice. Sold now shows on the deal.",
+          "The customer pays. Finance clicks Record payment received; it counts at once and Still owed drops.",
+          "Finance clicks Pay supplier when the supplier is paid.",
+        ],
+      },
+    ],
+    watchFor: [
+      "Only deals Won on or after go-live day can have money recorded. Older deals are not in the app.",
+      "A US dollar bill can only be paid in US dollars. Any exchange difference posts on its own.",
+      "Nobody needs to leave the deal page except a Super Admin, who works one list, Waiting for approval.",
+    ],
+  },
+
+  "accounting/approvals": {
+    title: "Waiting for approval",
+    lede: "Every draft invoice, supplier bill and credit note, across all deals, oldest first. A Super Admin checks each one before it posts.",
+    step: "post",
+    connects: {
+      fedBy: ["Deals, wherever a bill, invoice or credit note is saved as a draft"],
+      feeds: ["The deal's own Money section, once a row is approved or sent back"],
+    },
+    does: [
+      {
+        name: "Open a draft",
+        body: "Click a row to open the deal it belongs to, with that draft shown.",
+      },
+      {
+        name: "Approve",
+        body: "Posts the draft. Refused for the person who prepared it; someone else has to check it.",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        name: "Send back",
+        body: "Only for a draft invoice or supplier bill, not a credit note. Needs a note saying what is wrong. The draft leaves this list and shows the note on the deal page. When the person who prepared it saves it again, the note clears and it comes back on this list.",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
+    scenarios: [
+      {
+        title: "A bill sent back for a wrong price",
+        steps: [
+          "Finance enters a supplier bill with the wrong unit price.",
+          "A Super Admin sends it back with a note: \"Check the price against the supplier's PDF.\"",
+          "Finance opens the deal, fixes the price and saves the bill again. The note clears.",
+          "The bill is back on Waiting for approval. A Super Admin approves it.",
+        ],
+      },
+    ],
+    watchFor: [
+      "The person who prepared a draft can never approve it, even after a send-back and a re-save.",
+      "Receipts and supplier payments never appear here. They count as soon as they are saved.",
+    ],
+  },
+
+  "accounting/vat-summary": {
+    title: "VAT summary",
+    lede: "VAT on invoices and supplier bills for a period you choose.",
+    step: "report",
+    connects: {
+      fedBy: ["Approved invoices", "Approved supplier bills", "VAT codes"],
+    },
+    reading: [
+      {
+        name: "The four tiles",
+        body: "VAT on invoices is what was charged to customers. VAT on supplier bills is what was paid to suppliers. Difference is the first less the second; it is not styled as a loss, since a negative figure here just reflects the mix of activity in the period. Withheld by customers is VAT customers kept back and pay to the government on our behalf.",
+      },
+    ],
+    does: [
+      {
+        name: "Pick a period",
+        body: "A financial year, a preset range inside it, or a custom range.",
+      },
+      {
+        name: "Read the four figures",
+        body: "Nothing here can be changed. The figures are computed from approved invoices and supplier bills in the period.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "Checking VAT for last quarter",
+        steps: [
+          "Open VAT summary and pick last quarter as the period.",
+          "Read VAT on invoices and VAT on supplier bills to see the net VAT position for the quarter.",
+        ],
+      },
+    ],
+    watchFor: [
+      "This is not a VAT return. The app records VAT; it does not file it.",
     ],
   },
 }

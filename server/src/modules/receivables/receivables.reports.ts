@@ -63,6 +63,7 @@ export interface CustomerAgeingRow {
   label: string
   customerId: string
   customerName: string
+  dealId: string | null
   dealSerial: string | null
   dueDate: Date
   outstanding: string
@@ -78,7 +79,7 @@ export async function getCustomerAgeing(asOf: Date = new Date()): Promise<Custom
     select: {
       id: true, invoiceNumber: true, customerId: true, dueDate: true,
       customer: { select: { legalName: true } },
-      po: { select: { opportunity: { select: { serial: true } } } },
+      po: { select: { opportunity: { select: { id: true, serial: true } } } },
       ...OUTSTANDING_SELECT,
     },
   })
@@ -94,6 +95,7 @@ export async function getCustomerAgeing(asOf: Date = new Date()): Promise<Custom
       label: `Invoice ${invoice.invoiceNumber}`,
       customerId: invoice.customerId,
       customerName: invoice.customer.legalName,
+      dealId: invoice.po.opportunity.id,
       dealSerial: invoice.po.opportunity.serial,
       dueDate: invoice.dueDate,
       outstanding: outstanding.toFixed(2),
