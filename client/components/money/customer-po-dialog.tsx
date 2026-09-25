@@ -214,7 +214,7 @@ export function CustomerPoDialog({
                   ))}
                 </select>
                 <div className={`flex items-center text-[12.5px] sm:col-span-3 ${TONE.muted}`}>
-                  {lineTotal(line) ? `Line total ${formatMoney(lineTotal(line)!, "BDT")}` : "Line total —"}
+                  {lineTotal(line) ? `Line total ${formatMoney(lineTotal(line)!, "BDT")}` : "No line total yet"}
                 </div>
                 <Button
                   type="button"
