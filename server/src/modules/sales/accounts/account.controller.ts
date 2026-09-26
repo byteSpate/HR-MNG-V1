@@ -10,7 +10,7 @@ import {
   listSalesAccounts,
   listSalesEligibleEmployees,
 } from "./account.service"
-import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
+import { addContact, listContacts, setContactStatus, setPrimaryContact, updateContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
   createSalesAccountSchema,
@@ -18,6 +18,7 @@ import {
   logCommunicationSchema,
   setContactStatusSchema,
   updateSalesAccountSchema,
+  updateSalesContactSchema,
 } from "./account.validators"
 
 export async function listSalesAccountsHandler(
@@ -101,6 +102,19 @@ export async function addContactHandler(
   try {
     const body = createSalesContactSchema.parse(req.body)
     return res.status(201).json(await addContact(req.params.id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function updateContactHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const body = updateSalesContactSchema.parse(req.body)
+    return res.status(200).json(await updateContact(req.params.id, body, req.user!))
   } catch (err) {
     return next(err)
   }

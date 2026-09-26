@@ -28,6 +28,7 @@ import {
   logCommunication,
   setContactStatus,
   setPrimaryContact,
+  updateContact,
 } from "@/lib/api/sales/accounts"
 import {
   listOpportunities,
@@ -44,6 +45,7 @@ import type {
   SalesChannel,
   SalesContactSummary,
   TimelineItem,
+  UpdateSalesContactBody,
 } from "@/lib/api/types"
 import { Tag } from "@/components/dashboard/tag"
 import { DialogActions, Field, FormError, RowActions, toMessage } from "@/components/dashboard/record-kit"
@@ -131,6 +133,7 @@ function PanelError({ onRetry }: { onRetry: () => void }) {
 
 function ContactRow({
   contact,
+  onEdit,
   onMakePrimary,
   onVerify,
   pending,
@@ -138,6 +141,7 @@ function ContactRow({
   delayMs,
 }: {
   contact: SalesContactSummary
+  onEdit: () => void
   onMakePrimary: () => void
   onVerify: () => void
   pending: boolean
@@ -146,6 +150,7 @@ function ContactRow({
 }) {
   const actions = canManage
     ? [
+        { kind: "edit" as const, label: "Edit", onClick: onEdit },
         ...(contact.isPrimary
           ? []
           : [{ kind: "custom" as const, label: "Make primary", icon: <RiStarLine className="size-3.5" aria-hidden />, onClick: onMakePrimary }]),
@@ -198,6 +203,7 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
   const { accessToken } = useSession()
   const queryClient = useQueryClient()
   const [addOpen, setAddOpen] = useState(false)
+  const [editingContact, setEditingContact] = useState<SalesContactSummary | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [pendingContactId, setPendingContactId] = useState<string | null>(null)
   const [rowError, setRowError] = useState<string | null>(null)
@@ -222,6 +228,15 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
     mutationFn: (body: CreateSalesContactBody) => addContact(accessToken!, accountId, body),
     onSuccess: () => {
       setAddOpen(false)
+      invalidate()
+    },
+    onError: (err) => setFormError(toMessage(err)),
+  })
+
+  const editMutation = useMutation({
+    mutationFn: (body: UpdateSalesContactBody) => updateContact(accessToken!, editingContact!.id, body),
+    onSuccess: () => {
+      setEditingContact(null)
       invalidate()
     },
     onError: (err) => setFormError(toMessage(err)),
@@ -262,18 +277,31 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
     setFormError(null)
   }
 
+  function openEdit(contact: SalesContactSummary) {
+    setFormError(null)
+    setName(contact.name)
+    setDesignation(contact.designation ?? "")
+    setPhone(contact.phone ?? "")
+    setEmail(contact.email ?? "")
+    setEditingContact(contact)
+  }
+
+  // Shared by Add and Edit: a contact nobody can contact is just a name in a
+  // list. Mirrors createSalesContactSchema's own rule server-side.
+  function validateFields(): string | null {
+    if (!name.trim()) return "A contact needs a name."
+    if (!phone.trim() && !email.trim()) {
+      return "Add a phone number or an email — a contact needs at least one way to reach them."
+    }
+    return null
+  }
+
   function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault()
     setFormError(null)
-    if (!name.trim()) {
-      setFormError("A contact needs a name.")
-      return
-    }
-    // Mirrors the server's refine on createSalesContactSchema. A contact
-    // nobody can contact is just a name in a list — if there is genuinely no
-    // number or address yet, that belongs in the account's note.
-    if (!phone.trim() && !email.trim()) {
-      setFormError("Add a phone number or an email — a contact needs at least one way to reach them.")
+    const error = validateFields()
+    if (error) {
+      setFormError(error)
       return
     }
     addMutation.mutate({
@@ -281,6 +309,22 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
       designation: designation.trim() || undefined,
       phone: phone.trim() || undefined,
       email: email.trim() || undefined,
+    })
+  }
+
+  function handleEditSubmit(e?: React.FormEvent) {
+    e?.preventDefault()
+    setFormError(null)
+    const error = validateFields()
+    if (error) {
+      setFormError(error)
+      return
+    }
+    editMutation.mutate({
+      name: name.trim(),
+      designation: designation.trim() || null,
+      phone: phone.trim() || null,
+      email: email.trim() || null,
     })
   }
 
@@ -340,6 +384,7 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
               pending={pendingContactId === c.id}
               canManage={canManage}
               delayMs={Math.min(i, 8) * 24}
+              onEdit={() => openEdit(c)}
               onMakePrimary={() => primaryMutation.mutate(c.id)}
               onVerify={() => verifyMutation.mutate(c.id)}
             />
@@ -371,7 +416,7 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
                 either will do, but one of them is required, and that is a
                 fact about the pair. */}
             <p className="-mt-2 text-[11.5px] leading-relaxed text-[#5F6B7C]">
-              Give at least one — a phone number or an email. Without one there is no way to
+              Give at least one: a phone number or an email. Without one there is no way to
               reach this person.
             </p>
             {formError ? <FormError>{formError}</FormError> : null}
@@ -382,6 +427,44 @@ function ContactsPanel({ accountId, canManage }: { accountId: string; canManage:
                 disabled={false}
                 onCancel={() => setAddOpen(false)}
                 onSubmit={() => handleSubmit()}
+              />
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingContact !== null} onOpenChange={(open) => !open && setEditingContact(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {editingContact?.name ?? "contact"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <Field label="Name" htmlFor="contact-edit-name">
+              <Input id="contact-edit-name" value={name} onChange={(e) => setName(e.target.value)} />
+            </Field>
+            <Field label="Designation" htmlFor="contact-edit-designation" hint="Optional." help="Their job title, like Procurement Manager.">
+              <Input id="contact-edit-designation" value={designation} onChange={(e) => setDesignation(e.target.value)} />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Phone" htmlFor="contact-edit-phone">
+                <Input id="contact-edit-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </Field>
+              <Field label="Email" htmlFor="contact-edit-email">
+                <Input id="contact-edit-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </Field>
+            </div>
+            <p className="-mt-2 text-[11.5px] leading-relaxed text-[#5F6B7C]">
+              Give at least one: a phone number or an email. Without one there is no way to
+              reach this person.
+            </p>
+            {formError ? <FormError>{formError}</FormError> : null}
+            <DialogFooter>
+              <DialogActions
+                pending={editMutation.isPending}
+                submitLabel="Save changes"
+                disabled={false}
+                onCancel={() => setEditingContact(null)}
+                onSubmit={() => handleEditSubmit()}
               />
             </DialogFooter>
           </form>

@@ -22,7 +22,7 @@ vi.mock("../../../config/prisma", () => ({
 
 import prisma from "../../../config/prisma"
 import { AppError } from "../../../middleware/errorHandler"
-import { addContact, listContacts, setContactStatus, setPrimaryContact } from "./contact.service"
+import { addContact, listContacts, setContactStatus, setPrimaryContact, updateContact } from "./contact.service"
 
 const USER = {
   sub: "user-2",
@@ -399,5 +399,88 @@ describe("setContactStatus", () => {
     await expect(setContactStatus("c-1", { status: "VERIFIED" }, USER)).rejects.toThrow(AppError)
 
     expect(prisma.salesContact.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("updateContact", () => {
+  it("updates only the fields sent, and audits before and after", async () => {
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue(ROW as any)
+    vi.mocked(prisma.salesContact.update).mockResolvedValue({
+      ...ROW,
+      designation: "Head of IT",
+    } as any)
+
+    await updateContact("c-1", { designation: "Head of IT" }, USER)
+
+    expect(prisma.salesContact.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "c-1" },
+        // Unsent fields keep the row's current value, not undefined —
+        // Prisma would otherwise interpret `undefined` as "no change" only
+        // by luck of the field being absent from the object, not by design.
+        data: {
+          name: "Mr Rahman",
+          designation: "Head of IT",
+          phone: "01700000000",
+          email: null,
+          note: null,
+        },
+      })
+    )
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          entity: "SALES_CONTACT",
+          entityId: "c-1",
+          action: "UPDATE",
+          changedBy: "user-2",
+          before: expect.objectContaining({ designation: "Head of Procurement" }),
+          after: expect.objectContaining({ designation: "Head of IT" }),
+        }),
+      })
+    )
+  })
+
+  it("clears a field when it is explicitly set to null", async () => {
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue(ROW as any)
+
+    await updateContact("c-1", { designation: null }, USER)
+
+    expect(prisma.salesContact.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ designation: null }) })
+    )
+  })
+
+  it("refuses an edit that would leave the contact with no phone and no email", async () => {
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue(ROW as any)
+
+    await expect(updateContact("c-1", { phone: null }, USER)).rejects.toThrow(/phone number or an email/i)
+
+    expect(prisma.salesContact.update).not.toHaveBeenCalled()
+  })
+
+  it("allows clearing the phone when the contact still has an email", async () => {
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue({ ...ROW, email: "rahman@demo.com" } as any)
+
+    await updateContact("c-1", { phone: null }, USER)
+
+    expect(prisma.salesContact.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ phone: null, email: "rahman@demo.com" }) })
+    )
+  })
+
+  it("refuses an edit on an account the caller cannot see", async () => {
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue(ROW as any)
+    vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
+
+    await expect(updateContact("c-1", { name: "New Name" }, USER)).rejects.toThrow(AppError)
+
+    expect(prisma.salesContact.update).not.toHaveBeenCalled()
+  })
+
+  it("404s a contact that does not exist", async () => {
+    vi.mocked(prisma.salesContact.findUnique).mockResolvedValue(null)
+
+    await expect(updateContact("c-nope", { name: "New Name" }, USER)).rejects.toThrow(/contact/i)
   })
 })

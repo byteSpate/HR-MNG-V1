@@ -110,6 +110,15 @@ export interface SetContactStatusBody {
   note?: string
 }
 
+/** Every field optional; absent leaves it alone, null clears it. */
+export interface UpdateSalesContactBody {
+  name?: string
+  designation?: string | null
+  phone?: string | null
+  email?: string | null
+  note?: string | null
+}
+
 export type SalesChannel = "CALL" | "EMAIL" | "WHATSAPP" | "OTHER"
 
 export interface SalesCommunicationSummary {
