@@ -70,6 +70,31 @@ export const createSalesContactSchema = z
 
 export type CreateSalesContactBody = z.infer<typeof createSalesContactSchema>
 
+/**
+ * Editing a contact's own details. Every field optional, same reasoning as
+ * `updateSalesAccountSchema`: the form sends only what changed, but a body
+ * with nothing in it is a mistake worth naming.
+ *
+ * The "must be reachable somehow" rule from `createSalesContactSchema` is not
+ * repeated here as a `.refine` — an edit only sends the fields that changed,
+ * so this schema alone cannot know whether the *other*, unsent field is still
+ * set. That check belongs in the service, which has the existing row to
+ * check the merged result against.
+ */
+export const updateSalesContactSchema = z
+  .object({
+    name: z.string().trim().min(2, "A contact needs a name").max(160).optional(),
+    designation: z.string().trim().max(120).nullable().optional(),
+    phone: z.string().trim().max(32).nullable().optional(),
+    email: z.string().trim().email("That is not an email address").toLowerCase().nullable().optional(),
+    note: z.string().trim().max(500).nullable().optional(),
+  })
+  .refine((body) => Object.values(body).some((value) => value !== undefined), {
+    message: "Nothing was changed",
+  })
+
+export type UpdateSalesContactBody = z.infer<typeof updateSalesContactSchema>
+
 export const setContactStatusSchema = z.object({
   status: z.enum(["UNVERIFIED", "VERIFIED", "UNREACHABLE", "INVALID"]),
   /** Goes on the audit row, not over the contact's own note. */

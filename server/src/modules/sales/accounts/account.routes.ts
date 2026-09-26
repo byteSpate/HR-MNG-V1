@@ -16,6 +16,7 @@ import {
   logCommunicationHandler,
   setContactStatusHandler,
   setPrimaryContactHandler,
+  updateContactHandler,
   updateSalesAccountHandler,
 } from "./account.controller"
 
@@ -46,6 +47,7 @@ router.get(
 // Sales User reaching an account that is not theirs.
 router.get("/accounts/:id/contacts", requireAuth, requireSales(), listContactsHandler)
 router.post("/accounts/:id/contacts", requireAuth, requireSales(), addContactHandler)
+router.patch("/contacts/:id", requireAuth, requireSales(), updateContactHandler)
 router.patch("/contacts/:id/primary", requireAuth, requireSales(), setPrimaryContactHandler)
 router.patch("/contacts/:id/status", requireAuth, requireSales(), setContactStatusHandler)
 
