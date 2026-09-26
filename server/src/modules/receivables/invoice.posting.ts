@@ -1,4 +1,4 @@
-import { Prisma } from "../../generated/prisma/client"
+import { Prisma, Role } from "../../generated/prisma/client"
 import type { Prisma as PrismaNamespace, SaleLineKind } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
@@ -80,8 +80,14 @@ export async function approveInvoice(id: string, actor: AccessTokenPayload) {
     if (invoice.rejectionNote) {
       throw new AppError(409, "This was sent back. The person who prepared it must save it again first.")
     }
-    if (invoice.createdBy === actor.sub) throw new AppError(403, "You prepared this invoice, so someone else must approve it.")
-    if (invoice.updatedBy === actor.sub) throw new AppError(403, "You edited this invoice, so someone else must approve it.")
+    // Finance can never reach this endpoint (route requires Super Admin), so
+    // this check only ever stops a Super Admin approving their own work. A
+    // Super Admin holds every permission there is, so there is no one above
+    // them to ask instead; the check is dropped for that one role.
+    if (actor.role !== Role.SUPER_ADMIN) {
+      if (invoice.createdBy === actor.sub) throw new AppError(403, "You prepared this invoice, so someone else must approve it.")
+      if (invoice.updatedBy === actor.sub) throw new AppError(403, "You edited this invoice, so someone else must approve it.")
+    }
 
     const poLines = await tx.customerPoLine.findMany({
       where: { poId: invoice.poId },

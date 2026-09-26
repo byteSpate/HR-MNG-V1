@@ -23,6 +23,9 @@ import { approveCustomerCreditNote, buildCustomerCreditNoteLines } from "./custo
 
 const d = (v: string) => new Prisma.Decimal(v)
 const ADMIN = { sub: "admin-1", role: "SUPER_ADMIN", email: "a@b.com", mustChangePassword: false, salesRole: null } as any
+// Never actually reaches this function (the route requires Super Admin), but
+// the service checks the role too as defense in depth.
+const FINANCE = { sub: "finance-1", role: "FINANCE_OFFICER", email: "f@b.com", mustChangePassword: false, salesRole: null } as any
 
 function rulesOf(event: PostingEvent, map: Record<string, string>): ResolvedRules {
   return { event, byKey: new Map(Object.entries(map)) }
@@ -74,10 +77,16 @@ beforeEach(() => {
 })
 
 describe("approveCustomerCreditNote", () => {
-  it("refuses the person who prepared it", async () => {
-    arrangeDraftNote({ createdBy: ADMIN.sub })
-    await expect(approveCustomerCreditNote("cn1", ADMIN)).rejects.toThrow("You prepared this credit note, so someone else must approve it.")
+  it("refuses a non-Super-Admin who prepared it", async () => {
+    arrangeDraftNote({ createdBy: FINANCE.sub })
+    await expect(approveCustomerCreditNote("cn1", FINANCE)).rejects.toThrow("You prepared this credit note, so someone else must approve it.")
     expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin approve a credit note they prepared themselves (only Super Admin approves, so nobody else could)", async () => {
+    arrangeDraftNote({ createdBy: ADMIN.sub })
+    await approveCustomerCreditNote("cn1", ADMIN)
+    expect(postSystemJournal).toHaveBeenCalled()
   })
 
   it("refuses to approve a draft that was sent back and not saved again", async () => {

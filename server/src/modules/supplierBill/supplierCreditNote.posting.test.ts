@@ -20,6 +20,10 @@ import prisma from "../../config/prisma"
 import { loadRules } from "../posting/posting.rules"
 import { approveSupplierCreditNote, buildSupplierCreditNoteLines } from "./supplierCreditNote.posting"
 
+// Never actually reaches this function (the route requires Super Admin), but
+// the service checks the role too as defense in depth.
+const FINANCE = { sub: "finance-1", role: "FINANCE_OFFICER", email: "f@b.com", mustChangePassword: false, salesRole: null } as any
+
 const RULES = {
   event: "SUPPLIER_CREDIT" as const,
   byKey: new Map([
@@ -129,11 +133,17 @@ function arrangeDraftNote(over: { createdBy?: string; rejectionNote?: string | n
 }
 
 describe("approveSupplierCreditNote", () => {
-  it("refuses the person who prepared it", async () => {
-    arrangeDraftNote({ createdBy: ADMIN.sub })
-    await expect(approveSupplierCreditNote("cn1", ADMIN)).rejects.toThrow(
+  it("refuses a non-Super-Admin who prepared it", async () => {
+    arrangeDraftNote({ createdBy: FINANCE.sub })
+    await expect(approveSupplierCreditNote("cn1", FINANCE)).rejects.toThrow(
       "You prepared this credit note, so someone else must approve it."
     )
+  })
+
+  it("lets a Super Admin approve a credit note they prepared themselves (only Super Admin approves, so nobody else could)", async () => {
+    arrangeDraftNote({ createdBy: ADMIN.sub })
+    await approveSupplierCreditNote("cn1", ADMIN)
+    expect(prisma.supplierCreditNote.update).toHaveBeenCalled()
   })
 
   it("refuses to approve a draft that was sent back and not saved again", async () => {
