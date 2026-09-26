@@ -219,17 +219,13 @@ export function BoughtPart({
           {bills.map((bill) => {
             const { total } = billTotals(bill)
             const status = billStatus(bill)
-            // Approve and Send back, together. Hidden from whoever created
-            // or last saved the draft (the server refuses both of them), and
-            // on a draft already sent back and not saved again (the server
-            // refuses to approve it until its preparer saves it).
-            const canApprove =
-              canEdit &&
-              bill.status === "DRAFT" &&
-              isSuperAdmin &&
-              bill.createdBy !== user?.id &&
-              bill.updatedBy !== user?.id &&
-              !bill.sentBackAt
+            // Approve and Send back, together. Only a Super Admin can reach
+            // this at all (the route requires it), and a Super Admin has no
+            // one above them to hand approval to, so there is no same-person
+            // check here. Still hidden on a draft already sent back and not
+            // saved again (the server refuses to approve it until its
+            // preparer saves it).
+            const canApprove = canEdit && bill.status === "DRAFT" && isSuperAdmin && !bill.sentBackAt
             const actions = [
               ...(canEdit && bill.status === "DRAFT"
                 ? [{ kind: "edit" as const, label: "Edit", onClick: () => { setError(null); setEditingBill(bill) } }]
@@ -303,7 +299,9 @@ export function BoughtPart({
                     {bill.creditNotes.map((note) => {
                       const noteTotal = note.lines.reduce((s, l) => s + Number(l.amount) + Number(l.vatAmount), 0)
                       const noteStatus = creditNoteStatus(note)
-                      const noteCanApprove = canEdit && note.status === "DRAFT" && isSuperAdmin && note.createdBy !== user?.id
+                      // Same as canApprove above: only a Super Admin ever
+                      // reaches this, and they have no one above them to ask.
+                      const noteCanApprove = canEdit && note.status === "DRAFT" && isSuperAdmin
                       return (
                         <div
                           key={note.id}
