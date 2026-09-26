@@ -584,7 +584,7 @@ function AccountBlock({
       ) : null}
 
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <Field label="Challenges" hint="What got in your way on this account that day.">
+        <Field label="Challenges" hint="The problem the customer has, that is why they need this deal.">
           <Textarea
             rows={2}
             aria-label={`Challenges on ${row.accountName}`}
@@ -594,7 +594,7 @@ function AccountBlock({
             onBlur={() => (row.challenges ?? "") !== challenges && commit({ challenges })}
           />
         </Field>
-        <Field label="Gap" hint="A shortfall on our side that cost us with this customer.">
+        <Field label="Gap" hint="A problem on our side that slowed this down, ours or the company's.">
           <Textarea
             rows={2}
             aria-label={`Gap on ${row.accountName}`}

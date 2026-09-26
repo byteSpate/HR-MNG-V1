@@ -11,6 +11,7 @@ import type {
   SetContactStatusBody,
   SalesAccountMargin,
   UpdateSalesAccountBody,
+  UpdateSalesContactBody,
   TimelineItem,
 } from "../types"
 
@@ -66,6 +67,18 @@ export function addContact(
 ): Promise<SalesContactSummary> {
   return apiFetch<SalesContactSummary>(`/api/sales/accounts/${accountId}/contacts`, {
     method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateContact(
+  accessToken: string,
+  contactId: string,
+  body: UpdateSalesContactBody
+): Promise<SalesContactSummary> {
+  return apiFetch<SalesContactSummary>(`/api/sales/contacts/${contactId}`, {
+    method: "PATCH",
     accessToken,
     body: JSON.stringify(body),
   })

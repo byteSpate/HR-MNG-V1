@@ -29,11 +29,11 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STAGE_LABEL: Record<string, string> = {
-  REQUIREMENT_RECEIVED: "Requirement received",
   SOLUTION_DESIGN: "Solution design",
+  REQUIREMENT_RECEIVED: "Requirement received",
   OEM_PRICING: "OEM pricing",
   QUOTATION_SUBMITTED: "Quotation submitted",
-  NEGOTIATION: "Negotiation",
+  NEGOTIATION: "Quotation Revision",
   AWAITING_DECISION: "Awaiting decision",
 }
 

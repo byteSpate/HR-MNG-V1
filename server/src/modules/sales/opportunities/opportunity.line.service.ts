@@ -12,7 +12,8 @@ import type {
 } from "./opportunity.validators"
 
 const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prisma
-const nullable = (value: string | undefined) => value === undefined || value === "" ? null : value
+const nullable = (value: string | null | undefined) =>
+  value === undefined || value === null || value === "" ? null : value
 
 async function lineForWrite(tx: Prisma.TransactionClient, lineId: string, actor: AccessTokenPayload) {
   const line = await tx.opportunityLine.findFirst({ where: { id: lineId } })
