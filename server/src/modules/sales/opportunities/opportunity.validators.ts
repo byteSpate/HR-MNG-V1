@@ -76,15 +76,22 @@ export const createOpportunityLineSchema = z.object({
   note: z.string().trim().max(500).optional(),
 })
 export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
-  // Prices are nullable on edit though not on create, and the two states are
-  // different answers: absent leaves the price alone, null takes it back off.
-  // Without that difference a price typed by mistake can never be undone, and
-  // storing 0 instead would claim the line is free.
+  // Every optional field is nullable on edit though not on create, and the
+  // two states are different answers: absent leaves the value alone, null
+  // clears it. Without that difference a value typed by mistake can never be
+  // taken back off, and storing "" or 0 instead would claim a real, empty
+  // value rather than no value at all. The client already sends null for
+  // every one of these when a field is cleared (see UpdateOpportunityLineBody
+  // in client/lib/api/types.ts); leaving one out here just makes clearing
+  // that one field fail with a raw "expected string, received null".
   .extend({
+    oemBrand: z.string().trim().max(120).nullable().optional(),
+    model: z.string().trim().max(120).nullable().optional(),
     quantity: z.number().int().positive().nullable().optional(),
     unitValue: money.nullable().optional(),
     lineValue: money.nullable().optional(),
     marginPercent: marginPercent.nullable().optional(),
+    note: z.string().trim().max(500).nullable().optional(),
   })
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
 export const reorderOpportunityLinesSchema = z.object({
