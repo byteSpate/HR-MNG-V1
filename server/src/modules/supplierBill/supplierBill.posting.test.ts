@@ -32,6 +32,9 @@ const RULES = {
 }
 
 const ADMIN = { sub: "admin-1", role: "SUPER_ADMIN", email: "a@b.com", mustChangePassword: false, salesRole: null } as any
+// Never actually reaches this function (the route requires Super Admin), but
+// the service checks the role too as defense in depth.
+const FINANCE = { sub: "finance-1", role: "FINANCE_OFFICER", email: "f@b.com", mustChangePassword: false, salesRole: null } as any
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -145,16 +148,27 @@ describe("approveSupplierBill", () => {
     expect(releaseLateCost).not.toHaveBeenCalled()
   })
 
-  it("refuses the person who prepared it", async () => {
-    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: ADMIN.sub })
-    await expect(approveSupplierBill("b1", ADMIN)).rejects.toThrow("You prepared this bill, so someone else must approve it.")
+  it("refuses a non-Super-Admin who prepared it", async () => {
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: FINANCE.sub })
+    await expect(approveSupplierBill("b1", FINANCE)).rejects.toThrow("You prepared this bill, so someone else must approve it.")
   })
 
-  it("refuses a Super Admin who edited someone else's draft (final review Fix 1)", async () => {
-    // Prepared by finance-1, then edited and saved by this Super Admin.
-    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: "finance-1", updatedBy: ADMIN.sub })
-    await expect(approveSupplierBill("b1", ADMIN)).rejects.toThrow("You edited this bill, so someone else must approve it.")
+  it("refuses a non-Super-Admin who edited someone else's draft", async () => {
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: "someone-else", updatedBy: FINANCE.sub })
+    await expect(approveSupplierBill("b1", FINANCE)).rejects.toThrow("You edited this bill, so someone else must approve it.")
     expect(prisma.supplierBill.update).not.toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin approve a bill they prepared themselves (only Super Admin approves, so nobody else could)", async () => {
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: ADMIN.sub })
+    await approveSupplierBill("b1", ADMIN)
+    expect(prisma.supplierBill.update).toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin approve a draft they last edited themselves", async () => {
+    arrangeDraftBill({ opportunityId: "opp-1", lines: [{ kind: "SERVICE" }], createdBy: "finance-1", updatedBy: ADMIN.sub })
+    await approveSupplierBill("b1", ADMIN)
+    expect(prisma.supplierBill.update).toHaveBeenCalled()
   })
 
   it("lets a Super Admin approve a draft its preparer saved again", async () => {

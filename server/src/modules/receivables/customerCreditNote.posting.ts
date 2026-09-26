@@ -1,4 +1,4 @@
-import { Prisma } from "../../generated/prisma/client"
+import { Prisma, Role } from "../../generated/prisma/client"
 import type { SaleLineKind } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
@@ -88,7 +88,12 @@ export async function approveCustomerCreditNote(id: string, actor: AccessTokenPa
     if (note.rejectionNote) {
       throw new AppError(409, "This was sent back. The person who prepared it must save it again first.")
     }
-    if (note.createdBy === actor.sub) throw new AppError(403, "You prepared this credit note, so someone else must approve it.")
+    // Finance can never reach this endpoint (route requires Super Admin), so
+    // this only ever stops a Super Admin approving their own work; dropped
+    // for that one role since there is no one above them to ask instead.
+    if (actor.role !== Role.SUPER_ADMIN && note.createdBy === actor.sub) {
+      throw new AppError(403, "You prepared this credit note, so someone else must approve it.")
+    }
 
     const gross = note.lines.reduce((s, l) => s.plus(l.amount).plus(l.vatAmount), new Prisma.Decimal(0))
     assertWithinOutstanding(note.invoice, gross)

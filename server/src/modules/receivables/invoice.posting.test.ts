@@ -24,6 +24,9 @@ import { approveInvoice, buildInvoiceLines } from "./invoice.posting"
 
 const d = (v: string) => new Prisma.Decimal(v)
 const ADMIN = { sub: "admin-1", role: "SUPER_ADMIN", email: "a@b.com", mustChangePassword: false, salesRole: null } as any
+// Never actually reaches this function (the route requires Super Admin), but
+// the service checks the role too as defense in depth.
+const FINANCE = { sub: "finance-1", role: "FINANCE_OFFICER", email: "f@b.com", mustChangePassword: false, salesRole: null } as any
 
 function rulesOf(event: PostingEvent, map: Record<string, string>): ResolvedRules {
   return { event, byKey: new Map(Object.entries(map)) }
@@ -118,18 +121,29 @@ beforeEach(() => {
 })
 
 describe("approveInvoice", () => {
-  it("refuses the person who prepared it", async () => {
-    arrangeDraft({ createdBy: ADMIN.sub })
-    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You prepared this invoice, so someone else must approve it.")
+  it("refuses a non-Super-Admin who prepared it", async () => {
+    arrangeDraft({ createdBy: FINANCE.sub })
+    await expect(approveInvoice("inv1", FINANCE)).rejects.toThrow("You prepared this invoice, so someone else must approve it.")
     expect(postSystemJournal).not.toHaveBeenCalled()
   })
 
-  it("refuses a Super Admin who edited someone else's draft (final review Fix 1)", async () => {
-    // Prepared by finance-1, then edited and saved by this Super Admin.
-    arrangeDraft({ createdBy: "finance-1", updatedBy: ADMIN.sub })
-    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You edited this invoice, so someone else must approve it.")
+  it("refuses a non-Super-Admin who edited someone else's draft", async () => {
+    arrangeDraft({ createdBy: "someone-else", updatedBy: FINANCE.sub })
+    await expect(approveInvoice("inv1", FINANCE)).rejects.toThrow("You edited this invoice, so someone else must approve it.")
     expect(prisma.invoice.update).not.toHaveBeenCalled()
     expect(postSystemJournal).not.toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin approve an invoice they prepared themselves (only Super Admin approves, so nobody else could)", async () => {
+    arrangeDraft({ createdBy: ADMIN.sub })
+    await approveInvoice("inv1", ADMIN)
+    expect(postSystemJournal).toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin approve a draft they last edited themselves", async () => {
+    arrangeDraft({ createdBy: "finance-1", updatedBy: ADMIN.sub })
+    await approveInvoice("inv1", ADMIN)
+    expect(postSystemJournal).toHaveBeenCalled()
   })
 
   it("lets a Super Admin approve a draft its preparer saved again", async () => {
@@ -146,9 +160,9 @@ describe("approveInvoice", () => {
     expect(postSystemJournal).not.toHaveBeenCalled()
   })
 
-  it("the preparer still cannot approve after a send-back and a new save (Review Focus 2)", async () => {
-    arrangeDraft({ createdBy: ADMIN.sub, rejectionNote: null })
-    await expect(approveInvoice("inv1", ADMIN)).rejects.toThrow("You prepared this invoice, so someone else must approve it.")
+  it("a non-Super-Admin preparer still cannot approve after a send-back and a new save (Review Focus 2)", async () => {
+    arrangeDraft({ createdBy: FINANCE.sub, rejectionNote: null })
+    await expect(approveInvoice("inv1", FINANCE)).rejects.toThrow("You prepared this invoice, so someone else must approve it.")
   })
 
   it("locks the PO row before reading anything it will decide on", async () => {
