@@ -2796,6 +2796,8 @@ export interface OpportunitySummary {
    * never synchronises on its own.
    */
   amountDiffersFromLines: boolean
+  /** The Project started from this Won Opportunity (ADR 0005), at most one. */
+  project: { id: string; serial: string; name: string; status: ProjectStatus } | null
   /** Whether this viewer may change the deal. Decided by the server: the
       directory is shared, so seeing one and working it are different. */
   canManage: boolean
@@ -3544,4 +3546,97 @@ export interface FunnelActionBody {
   priority?: "LOW" | "NORMAL" | "HIGH"
   salesAccountId?: string | null
   opportunityId?: string | null
+}
+
+/**
+ * The Project record (ADR 0005). Hand-mirrored from
+ * `server/src/modules/sales/sales.types.ts`; the server's `ProjectStatusValue`
+ * is called `ProjectStatus` here, because a client type called `...Value` reads
+ * like a leak of an internal name.
+ */
+export type ProjectStatus = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "ON_HOLD" | "COMPLETED" | "CANCELLED"
+
+export interface ProjectTeamMemberSummary {
+  employeeId: string
+  fullName: string
+  responsibility: string | null
+  /** False once they stop being the account's Owner or a collaborator. */
+  onAccount: boolean
+}
+
+export interface ProjectMilestoneSummary {
+  id: string
+  title: string
+  dueOn: string | null
+  doneAt: string | null
+  order: number
+}
+
+export interface ProjectLineSummary {
+  id: string
+  product: string
+  oemBrand: string | null
+  model: string | null
+  quantity: number | null
+  supplierName: string | null
+  lineValue: string | null
+  marginPercent: string | null
+  done: { at: string; byName: string | null } | null
+}
+
+export interface ProjectSummary {
+  id: string
+  serial: string
+  name: string
+  opportunity: { id: string; serial: string; name: string; track: string }
+  salesAccount: { id: string; name: string }
+  manager: { employeeId: string; fullName: string; onAccount: boolean }
+  team: ProjectTeamMemberSummary[]
+  startOn: string | null
+  dueOn: string | null
+  priority: "LOW" | "NORMAL" | "HIGH"
+  budget: string | null
+  value: string | null
+  plannedCost: string | null
+  /** Finance and Super Admin only; null for everyone else, and `canSeeCost` says which. */
+  spentSoFar: string | null
+  canSeeCost: boolean
+  status: ProjectStatus
+  statusReason: string | null
+  completedAt: string | null
+  milestones: ProjectMilestoneSummary[]
+  lines: ProjectLineSummary[]
+  canManage: boolean
+  canTick: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectListRow {
+  id: string
+  serial: string
+  name: string
+  salesAccountName: string
+  opportunitySerial: string
+  managerName: string
+  status: ProjectStatus
+  dueOn: string | null
+  milestonesDone: number
+  milestonesTotal: number
+}
+
+/**
+ * A link to a file kept outside the app, with the Stage it belongs to
+ * (spec 2026-09-28 §1.5). Every version stays: nothing is overwritten.
+ */
+export interface DocumentLinkSummary {
+  id: string
+  opportunityId: string
+  name: string
+  url: string
+  stage: OpportunityStage
+  createdBy: string
+  createdByName: string | null
+  createdAt: string
+  canRemove: boolean
 }
