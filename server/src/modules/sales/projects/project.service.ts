@@ -6,13 +6,15 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
 import { dealCostLineWhere } from "../../dealMoney/dealMoney.cost"
 import { isFinance } from "../../receivables/receivables.access"
-import { ZERO } from "../../payroll/payroll.money"
+import { dec, ZERO } from "../../payroll/payroll.money"
 import { accountScopeFor, employeeIdFor, isSalesAdmin, OPPORTUNITY_NOT_VISIBLE } from "../sales.access"
 import { nextProjectSerial } from "../sales.serial"
 import type { ProjectListRow, ProjectSummary } from "../sales.types"
-import { loadProjectRow, PROJECT_INCLUDE, type ProjectRow } from "./project.access"
+import { loadProjectRow, peopleOf, PROJECT_INCLUDE, requireManage, type ProjectRow } from "./project.access"
 import { presentProject } from "./project.present"
-import type { ListProjectQuery } from "./project.validators"
+import type {
+  ChangeProjectStatusBody, ListProjectQuery, SetProjectTeamBody, UpdateProjectBody,
+} from "./project.validators"
 
 type Client = typeof prisma
 export const asClient = (tx: Prisma.TransactionClient) => tx as unknown as Client
@@ -111,4 +113,126 @@ export async function listProjects(query: ListProjectQuery, actor: AccessTokenPa
     milestonesDone: r.milestones.filter((m) => m.doneAt !== null).length,
     milestonesTotal: r.milestones.length,
   }))
+}
+
+const toDay = (v: string | null | undefined) => (v ? new Date(`${v}T00:00:00.000Z`) : null)
+
+const REASON_NEEDED: Partial<Record<string, string>> = {
+  BLOCKED: "Say why the Project is blocked.",
+  ON_HOLD: "Say why the Project is on hold.",
+  CANCELLED: "Say why the Project is cancelled.",
+}
+
+async function namesOf(tx: Prisma.TransactionClient, ids: string[]): Promise<Map<string, string>> {
+  const rows = await tx.employee.findMany({ where: { id: { in: ids } }, select: { id: true, fullName: true } })
+  return new Map(rows.map((r) => [r.id, r.fullName]))
+}
+
+/** Loads for a write, checks the manager rule, and hands back what the write needs. */
+async function forWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {
+  const { row, employeeId } = await loadProjectRow(asClient(tx), id, actor)
+  requireManage(actor, employeeId, row.managerEmployeeId)
+  return { row, employeeId, people: peopleOf(row.salesAccount) }
+}
+
+export async function rereadProject(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload): Promise<ProjectSummary> {
+  const { row, employeeId } = await loadProjectRow(asClient(tx), id, actor)
+  return summarise(asClient(tx), row, actor, employeeId)
+}
+
+/**
+ * Details only. Every field is optional, so a field nobody touched is never
+ * written and never audited (spec §1.7): sending a whole form as a patch
+ * would put the Project's history full of no-op changes.
+ */
+export async function updateProject(id: string, body: UpdateProjectBody, actor: AccessTokenPayload): Promise<ProjectSummary> {
+  return prisma.$transaction(async (tx) => {
+    const { row, people } = await forWrite(tx, id, actor)
+    if (body.managerEmployeeId && !people.has(body.managerEmployeeId)) {
+      throw new AppError(400, `The Project Manager must be the Owner or a collaborator on ${row.salesAccount.name}.`)
+    }
+    const data: Record<string, unknown> = {}
+    const before: Record<string, unknown> = {}
+    const after: Record<string, unknown> = {}
+    const set = (field: string, next: unknown, prev: unknown) => {
+      if (next !== undefined && String(next) !== String(prev)) {
+        data[field] = next
+        before[field] = prev
+        after[field] = next
+      }
+    }
+    set("name", body.name, row.name)
+    set("managerEmployeeId", body.managerEmployeeId, row.managerEmployeeId)
+    if (body.startOn !== undefined) set("startOn", toDay(body.startOn), row.startOn)
+    if (body.dueOn !== undefined) set("dueOn", toDay(body.dueOn), row.dueOn)
+    set("priority", body.priority, row.priority)
+    if (body.budget !== undefined) set("budget", body.budget === null ? null : dec(body.budget), row.budget)
+    const start = ("startOn" in data ? data.startOn : row.startOn) as Date | null
+    const due = ("dueOn" in data ? data.dueOn : row.dueOn) as Date | null
+    if (start && due && due.getTime() < start.getTime()) {
+      throw new AppError(400, "The finish date cannot be before the start date.")
+    }
+    if (Object.keys(data).length > 0) {
+      await tx.project.update({ where: { id }, data: data as Prisma.ProjectUncheckedUpdateInput })
+      await writeAudit(tx, {
+        entity: "PROJECT", entityId: id, action: "UPDATE", changedBy: actor.sub,
+        before: before as Prisma.InputJsonObject, after: after as Prisma.InputJsonObject,
+      })
+    }
+    return rereadProject(tx, id, actor)
+  })
+}
+
+/**
+ * The Project Team, replaced wholesale rather than added to: a person taken
+ * off the team must actually come off it, and a diff would need every
+ * intermediate state to be a legal one.
+ */
+export async function setProjectTeam(id: string, body: SetProjectTeamBody, actor: AccessTokenPayload): Promise<ProjectSummary> {
+  return prisma.$transaction(async (tx) => {
+    const { row, people } = await forWrite(tx, id, actor)
+    const outsiders = body.members.map((m) => m.employeeId).filter((e) => !people.has(e))
+    if (outsiders.length > 0) {
+      const names = await namesOf(tx, outsiders)
+      const who = outsiders.map((e) => names.get(e) ?? "Someone").join(", ")
+      throw new AppError(400, `${who} is not the Owner or a collaborator on ${row.salesAccount.name}. A Sales Admin can add them to the account first.`)
+    }
+    await tx.projectTeamMember.deleteMany({ where: { projectId: id } })
+    if (body.members.length > 0) {
+      await tx.projectTeamMember.createMany({
+        data: body.members.map((m) => ({ projectId: id, employeeId: m.employeeId, responsibility: m.responsibility?.trim() || null })),
+      })
+    }
+    await writeAudit(tx, {
+      entity: "PROJECT", entityId: id, action: "UPDATE", changedBy: actor.sub,
+      before: { team: row.team.map((m) => m.employeeId) }, after: { team: body.members.map((m) => m.employeeId) },
+      note: "Project Team changed",
+    })
+    return rereadProject(tx, id, actor)
+  })
+}
+
+export async function changeProjectStatus(id: string, body: ChangeProjectStatusBody, actor: AccessTokenPayload): Promise<ProjectSummary> {
+  return prisma.$transaction(async (tx) => {
+    const { row } = await forWrite(tx, id, actor)
+    const reason = body.reason?.trim() || null
+    const needs = REASON_NEEDED[body.status]
+    if (needs && !reason) throw new AppError(400, needs)
+    const nextReason = needs ? reason : null
+    if (row.status !== body.status || (row.statusReason ?? null) !== nextReason) {
+      await tx.project.update({
+        where: { id },
+        data: {
+          status: body.status,
+          statusReason: nextReason,
+          completedAt: body.status === "COMPLETED" ? (row.completedAt ?? new Date()) : null,
+        },
+      })
+      await writeAudit(tx, {
+        entity: "PROJECT", entityId: id, action: "UPDATE", changedBy: actor.sub,
+        before: { status: row.status }, after: { status: body.status }, note: reason,
+      })
+    }
+    return rereadProject(tx, id, actor)
+  })
 }

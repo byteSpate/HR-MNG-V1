@@ -1,7 +1,7 @@
 /**
  * The Sales Hub's routes. Each feature folder owns its own router (accounts,
  * opportunities, comments, meetings, tasks, minutes, weekly, funnel, targets,
- * dashboard); this file only mounts them, in the order their routes were first
+ * projects, dashboard); this file only mounts them, in the order their routes were first
  * registered, so first-match order is unchanged. The routers are mounted at
  * `/` with full paths, except the funnel, which keeps `/funnel`.
  */
@@ -15,6 +15,7 @@ import funnelRouter from "./funnel/funnel.routes"
 import meetingRouter from "./meetings/meeting.routes"
 import minutesRouter from "./minutes/minutes.routes"
 import opportunityRouter from "./opportunities/opportunity.routes"
+import projectRouter from "./projects/project.routes"
 import targetRouter from "./targets/target.routes"
 import taskRouter from "./tasks/task.routes"
 import weeklyRouter from "./weekly/weekly.routes"
@@ -24,6 +25,9 @@ const router = Router()
 router.use(accountRouter)
 
 router.use(opportunityRouter)
+// After the Opportunity router, which has no `POST /opportunities/:id/project`,
+// so mounting it here cannot shadow an existing path.
+router.use(projectRouter)
 
 router.use(commentRouter)
 
