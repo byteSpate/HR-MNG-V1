@@ -149,7 +149,7 @@ export function CustomerPoDialog({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{po ? `Edit ${po.serial}` : "Record customer PO"}</DialogTitle>
-          <DialogDescription>What the customer ordered on this deal.</DialogDescription>
+          <DialogDescription>What the customer ordered on this Opportunity.</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
@@ -173,7 +173,7 @@ export function CustomerPoDialog({
             <div className="flex items-center justify-between">
               <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines</h3>
               <Button type="button" variant="outline" size="sm" disabled={copyFromDeal.isPending} onClick={() => copyFromDeal.mutate()}>
-                {copyFromDeal.isPending ? "Copying…" : "Copy products from the deal"}
+                {copyFromDeal.isPending ? "Copying…" : "Copy products from the Opportunity"}
               </Button>
             </div>
 

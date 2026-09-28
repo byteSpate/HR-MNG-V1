@@ -448,7 +448,7 @@ export async function answerRequirement(
     const employeeId = await employeeIdFor(actor, asClient(tx))
     const current = await loadMinutes(tx, id, actor, employeeId)
     if (current.meeting.opportunityId) {
-      throw new AppError(400, "This meeting already has a deal, so there is nothing to ask")
+      throw new AppError(400, "This meeting already has an Opportunity, so there is nothing to ask")
     }
     if (current.lastSentAt) {
       throw new AppError(400, "The answer is fixed once the minutes have been sent")

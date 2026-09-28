@@ -112,7 +112,7 @@ export function CustomerPage() {
         isError={customers.isError}
         onRetry={() => customers.refetch()}
         emptyTitle="No customers yet"
-        emptyBody="A Customer is created automatically once a Sales Account's first deal is Won, or added here directly. That automatic link is not built yet."
+        emptyBody="A Customer is created automatically once a Sales Account's first Opportunity is Won, or added here directly. That automatic link is not built yet."
         emptyAction="New customer"
         onEmptyAction={add}
       />

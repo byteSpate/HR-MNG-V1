@@ -194,7 +194,7 @@ export async function listCustomerPos(
   actor: AccessTokenPayload
 ) {
   if (!isFinance(actor)) {
-    if (!filter.opportunityId) throw new AppError(400, "Choose a deal to list its customer POs")
+    if (!filter.opportunityId) throw new AppError(400, "Choose an Opportunity to list its customer POs")
     await assertDealAccess(prisma, actor, filter.opportunityId)
   }
   return prisma.customerPo.findMany({

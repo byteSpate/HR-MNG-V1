@@ -48,7 +48,7 @@ function MarginWon({ accountId }: { accountId: string }) {
   // What could not be counted, named rather than folded in as zero.
   const gaps = [
     missing > 0 ? `${count(missing, "product")} with no margin yet` : null,
-    dealsWithoutProducts > 0 ? `${count(dealsWithoutProducts, "won deal")} with no products` : null,
+    dealsWithoutProducts > 0 ? `${count(dealsWithoutProducts, "won Opportunity")} with no products` : null,
   ]
     .filter(Boolean)
     .join(", and ")
@@ -57,10 +57,10 @@ function MarginWon({ accountId }: { accountId: string }) {
     <p className="mb-3 text-[12.5px] leading-relaxed text-[#5F6B7C]">
       <span className="font-semibold text-[#1C2733]">Margin won: </span>
       {nothingWon
-        ? "no deals won on this account yet."
+        ? "no Opportunities won on this account yet."
         : counted === 0
           ? `no margin yet — ${gaps}.`
-          : `${amount} from ${count(counted, "product")} on won deals${gaps ? `, not counting ${gaps}` : ""}.`}
+          : `${amount} from ${count(counted, "product")} on won Opportunities${gaps ? `, not counting ${gaps}` : ""}.`}
     </p>
   )
 }
@@ -149,7 +149,7 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
       {/* The list is one page. Said rather than implied, so a long-running
           account does not look like it has exactly fifty deals. */}
       {dealsQuery.data.nextCursor ? (
-        <p className="mt-2 text-[11.5px] text-[#5F6B7C]">Showing the 50 newest deals on this account.</p>
+        <p className="mt-2 text-[11.5px] text-[#5F6B7C]">Showing the 50 newest Opportunities on this account.</p>
       ) : null}
       <OpportunityFormDialog accountId={account.id} open={createOpen} onOpenChange={setCreateOpen} />
     </Panel>

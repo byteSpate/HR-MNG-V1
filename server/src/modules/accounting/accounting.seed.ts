@@ -87,7 +87,7 @@ export const CHART: ChartEntry[] = [
   a("1213", "Software Work in Process", "ASSET", "1210", { cashFlow: "OPERATING_WC" }),
   // Goods bought for a Won deal, held here until delivered (receivables &
   // payables, Phase 1 — see docs/superpowers/specs/accounting/2026-09-21-receivables-payables-design.md §5).
-  a("1214", "Goods Bought for Won Deals", "ASSET", "1210", { cashFlow: "OPERATING_WC" }),
+  a("1214", "Goods Bought for Won Opportunities", "ASSET", "1210", { cashFlow: "OPERATING_WC" }),
   a("1220", "Trade and other Receivables", "ASSET", "1200", { note: "7.00", noteRef: "7.00", cashFlow: "OPERATING_WC" }),
   // Earned, not yet invoiced (receivables & payables, Phase 1).
   a("1221", "Unbilled Revenue", "ASSET", "1200", { cashFlow: "OPERATING_WC" }),

@@ -101,7 +101,7 @@ export function ApprovalsPage() {
 
       <PanelTable
         cols="1fr 1.2fr 0.9fr 1.2fr 0.9fr 1.1fr 0.9fr"
-        headers={["What", "Number", "Deal", "Customer or supplier", "Amount", "Prepared by", "Date"]}
+        headers={["What", "Number", "Opportunity", "Customer or supplier", "Amount", "Prepared by", "Date"]}
         rows={rows}
         isLoading={approvals.isPending}
         isError={approvals.isError}

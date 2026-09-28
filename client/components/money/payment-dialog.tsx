@@ -176,12 +176,12 @@ export function PaymentDialog({
           <section className="space-y-2">
             <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Bills this pays</h3>
             {!supplierId ? (
-              <p className={`text-[12.5px] ${TONE.muted}`}>Choose a supplier to see what is still owed on this deal.</p>
+              <p className={`text-[12.5px] ${TONE.muted}`}>Choose a supplier to see what is still owed on this Opportunity.</p>
             ) : candidates.length === 0 ? (
               <p className={`text-[12.5px] ${TONE.muted}`}>
                 {currency === "USD"
-                  ? "This supplier has no open USD bills on this deal."
-                  : "This supplier has no open taka bills on this deal."}
+                  ? "This supplier has no open USD bills on this Opportunity."
+                  : "This supplier has no open taka bills on this Opportunity."}
               </p>
             ) : (
               candidates.map((bill) => (

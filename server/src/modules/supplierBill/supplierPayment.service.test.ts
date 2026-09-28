@@ -100,7 +100,7 @@ describe("createSupplierPayment", () => {
         { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-10-10", amount: "500000", currency: "BDT", allocations: [{ billId: "b1", amount: "500000" }] } as any,
         ACTOR
       )
-    ).rejects.toThrow("Bill INV-1 is on a different deal. Record a separate payment on that deal.")
+    ).rejects.toThrow("Bill INV-1 is on a different Opportunity. Record a separate payment on that Opportunity.")
   })
 
   it("refuses a bill from a different supplier", async () => {

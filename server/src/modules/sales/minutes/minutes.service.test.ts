@@ -339,7 +339,7 @@ describe("the requirement question", () => {
       meeting: meeting({ opportunityId: "opp-1" }),
     }) as any)
 
-    await expect(answerRequirement("minutes-1", { found: false }, USER)).rejects.toThrow(/already has a deal/)
+    await expect(answerRequirement("minutes-1", { found: false }, USER)).rejects.toThrow(/already has an Opportunity/)
   })
 
   it("is fixed once the minutes have been sent", async () => {

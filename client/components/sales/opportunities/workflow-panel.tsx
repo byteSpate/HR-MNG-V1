@@ -113,7 +113,7 @@ export function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; c
         <Field
           label="Next step"
           htmlFor="next-step"
-          help="The one thing that happens next, as a note on the deal. Tick the box below to also make it a task with a reminder."
+          help="The one thing that happens next, as a note on the Opportunity. Tick the box below to also make it a task with a reminder."
         >
           <Input
             id="next-step"

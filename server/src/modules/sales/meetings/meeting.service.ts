@@ -212,7 +212,7 @@ async function requireDealOnAccount(tx: Prisma.TransactionClient, opportunityId:
     where: { id: opportunityId, salesAccountId },
     select: { id: true },
   })
-  if (!deal) throw new AppError(400, "That deal is not on this account")
+  if (!deal) throw new AppError(400, "That Opportunity is not on this account")
 }
 
 /** The meeting, after the same write gate as its account, and who the caller is. */

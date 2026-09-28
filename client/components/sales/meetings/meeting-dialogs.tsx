@@ -420,18 +420,18 @@ function MeetingForm({
       </div>
 
       {accountId ? (
-        <Field label="Deal" htmlFor="meeting-deal" hint="Optional.">
+        <Field label="Opportunity" htmlFor="meeting-deal" hint="Optional.">
           <Select value={dealId || NO_DEAL} onValueChange={(v) => setDealId(!v || v === NO_DEAL ? "" : v)}>
             <SelectTrigger id="meeting-deal" className="w-full">
               <SelectValue>
                 {(v: string | null) => {
                   const deal = deals.find((d) => d.id === v)
-                  return deal ? `${deal.serial} · ${deal.name}` : "Not about one deal"
+                  return deal ? `${deal.serial} · ${deal.name}` : "Not about one Opportunity"
                 }}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NO_DEAL}>Not about one deal</SelectItem>
+              <SelectItem value={NO_DEAL}>Not about one Opportunity</SelectItem>
               {deals.map((deal) => (
                 <SelectItem key={deal.id} value={deal.id}>{`${deal.serial} · ${deal.name}`}</SelectItem>
               ))}

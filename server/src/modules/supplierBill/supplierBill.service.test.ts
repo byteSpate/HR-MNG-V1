@@ -51,7 +51,7 @@ beforeEach(() => {
 describe("bill and deals", () => {
   it("refuses a bill tagged to a deal that is not Won", async () => {
     vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ id: "opp-1", status: "ONGOING", serial: "BS-OPP-00001", closedAt: null } as any)
-    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("BS-OPP-00001 is not won yet. Money can be recorded only on a won deal.")
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("BS-OPP-00001 is not won yet. Money can be recorded only on a won Opportunity.")
   })
 
   it("refuses a bill tagged to a deal Won before go-live", async () => {
@@ -63,7 +63,7 @@ describe("bill and deals", () => {
 
   it("refuses a bill tagged to a deal that does not exist", async () => {
     vi.mocked(prisma.opportunity.findUnique).mockResolvedValue(null)
-    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("This bill points to a deal that does not exist.")
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("This bill points to an Opportunity that does not exist.")
   })
 })
 

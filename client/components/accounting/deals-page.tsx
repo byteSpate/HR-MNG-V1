@@ -80,7 +80,7 @@ export function DealsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader kicker="Accounting" title="Deals" sub="Every deal won since go-live, and its money." />
+      <PageHeader kicker="Accounting" title="Opportunities" sub="Every Opportunity won since go-live, and its money." />
 
       {/* Hidden while the first page loads: a count beside a skeleton reads
           as an answer, and a search box over nothing loaded yet invites a
@@ -93,23 +93,23 @@ export function DealsPage() {
             setSearch(e.target.value)
             setPage(1)
           }}
-          placeholder="Search by deal, customer, PO, invoice or bill number"
+          placeholder="Search by Opportunity, customer, PO, invoice or bill number"
           className="max-w-md"
         />
       ) : null}
 
       <PanelTable
         cols="1.6fr 1.2fr 0.9fr 0.9fr 0.9fr 0.9fr 1fr"
-        headers={["Deal", "Customer", "Sold", "Cost", "Profit", "Still owed", "Waiting"]}
+        headers={["Opportunity", "Customer", "Sold", "Cost", "Profit", "Still owed", "Waiting"]}
         rows={rows}
         isLoading={deals.isPending}
         isError={deals.isError}
         onRetry={() => deals.refetch()}
-        emptyTitle={search ? `No deal matches '${search}'.` : "No deals won since go-live yet."}
+        emptyTitle={search ? `No Opportunity matches '${search}'.` : "No Opportunities won since go-live yet."}
         emptyBody={
           search
-            ? "Try a different deal, customer, PO, invoice or bill number."
-            : "A deal appears here as soon as it is marked Won."
+            ? "Try a different Opportunity, customer, PO, invoice or bill number."
+            : "An Opportunity appears here as soon as it is marked Won."
         }
         onEmptyAction={() => undefined}
       />

@@ -40,7 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 const MONEY = /^\d{1,12}(\.\d{1,2})?$/
 
 const NOBODY_ON_ACCOUNT =
-  "Nobody on this account can run a deal right now. A Sales Admin can give the account a new owner or add a collaborator."
+  "Nobody on this account can run an Opportunity right now. A Sales Admin can give the account a new owner or add a collaborator."
 
 /**
  * Creating a deal, and editing one.
@@ -307,7 +307,7 @@ function OpportunityFields({
       return
     }
     if (!ownerId && employees.length > 0) {
-      setError("Choose who will run this deal.")
+      setError("Choose who will run this Opportunity.")
       return
     }
     // Nobody to hand it to and no way to add anybody: the server would refuse,
@@ -386,7 +386,7 @@ function OpportunityFields({
           hint={deal ? undefined : "Optional."}
           help={
             deal
-              ? "The deal value. Clear it if there is no price yet. The products list never changes it."
+              ? "The Opportunity value. Clear it if there is no price yet. The products list never changes it."
               : "Leave it empty if there is no price yet — it shows as No price yet, never ৳0."
           }
         >
@@ -402,7 +402,7 @@ function OpportunityFields({
         </Field>
       </div>
 
-      <Field label="OEM contact" htmlFor="opp-oem" hint="Optional." help="The person at the OEM handling this deal.">
+      <Field label="OEM contact" htmlFor="opp-oem" hint="Optional." help="The person at the OEM handling this Opportunity.">
         <Input id="opp-oem" value={oemContact} onChange={(e) => setOemContact(e.target.value)} />
       </Field>
 
@@ -426,20 +426,20 @@ function OpportunityFields({
         label="Owner"
         help={
           canAddPeople
-            ? "Runs this deal. Usually the account's owner, so it starts with them. Sales Users only."
-            : "Runs this deal. Anybody already on this account can. To hand it to somebody else, a Sales Admin adds them to the account first."
+            ? "Runs this Opportunity. Usually the account's owner, so it starts with them. Sales Users only."
+            : "Runs this Opportunity. Anybody already on this account can. To hand it to somebody else, a Sales Admin adds them to the account first."
         }
         hint={
           eligibleError
             ? deal
               ? "This list could not be loaded, so the owner cannot be changed yet."
-              : `This list could not be loaded, so the deal will go to ${account.ownerName}, the account's owner.`
+              : `This list could not be loaded, so the Opportunity will go to ${account.ownerName}, the account's owner.`
             : employees.length === 0
               ? canAddPeople
                 ? "No Sales User is available. Hub access is granted from an employee's record."
                 : NOBODY_ON_ACCOUNT
               : !deal && !accountOwnerCanRun
-                ? `${account.ownerName} can no longer run deals, so choose who will.`
+                ? `${account.ownerName} can no longer run Opportunities, so choose who will.`
                 : undefined
         }
       >

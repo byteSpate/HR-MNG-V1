@@ -257,7 +257,7 @@ export function FunnelPage() {
         <PageHeader
           kicker="Sales Hub"
           title="Funnel"
-          sub="Every quoted deal, per person, reviewed each Saturday."
+          sub="Every quoted Opportunity, per person, reviewed each Saturday."
         />
 
         {teamQuery.isError ? <PanelAlert>{toMessage(teamQuery.error)}</PanelAlert> : null}
@@ -320,7 +320,7 @@ export function FunnelPage() {
       <PageHeader
         kicker="Sales Hub"
         title={isAdmin && grid ? `${grid.employeeName}'s funnel` : "Funnel"}
-        sub="Every deal quoted, newest first. A deal joins when its quotation goes out, and stays here afterwards."
+        sub="Every Opportunity quoted, newest first. One joins when its quotation goes out, and stays here afterwards."
       />
 
       <div className="flex flex-wrap items-center gap-2">

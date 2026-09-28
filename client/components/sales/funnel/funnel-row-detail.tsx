@@ -125,7 +125,7 @@ export function FunnelRowDetail({
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               maxLength={4000}
-              placeholder="What is blocking this deal?"
+              placeholder="What is blocking this Opportunity?"
               className="mt-2 w-full rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
             />
             {error ? <PanelAlert>{toMessage(error)}</PanelAlert> : null}
@@ -148,7 +148,7 @@ export function FunnelRowDetail({
         </h4>
 
         {row.lines.length === 0 ? (
-          <p className={cn("mt-2 text-sm", TONE.muted)}>No products on this deal yet.</p>
+          <p className={cn("mt-2 text-sm", TONE.muted)}>No products on this Opportunity yet.</p>
         ) : (
           // Every line, in the deal's own order: the grid's brand, model and
           // quantity cells are only the first of these.

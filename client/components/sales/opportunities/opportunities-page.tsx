@@ -264,8 +264,8 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
   // somebody looking for deals that were never there.
   const emptyTitle = isFiltered ? "Nothing matches these filters" : "No opportunities yet"
   const emptyBody = isFiltered
-    ? "No deal matches every filter at once. Widening one of them is usually enough."
-    : "An opportunity is a live deal on a Sales Account — what is being sold, at what stage, and what happens next. Open an account and press New opportunity."
+    ? "No Opportunity matches every filter at once. Widening one of them is usually enough."
+    : "An Opportunity is live work on a Sales Account — what is being sold, at what stage, and what happens next. Open an account and press New opportunity."
 
   return (
     <>
@@ -274,8 +274,8 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
         title="Opportunities"
         sub={
           isSalesAdmin
-            ? "The shared pipeline, with each stage saying who the deal is waiting on."
-            : "The deals across your accessible accounts, with each stage saying who is next."
+            ? "The shared pipeline, with each stage saying who the Opportunity is waiting on."
+            : "The Opportunities across your accessible accounts, with each stage saying who is next."
         }
       />
 

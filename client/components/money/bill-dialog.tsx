@@ -209,7 +209,7 @@ export function BillDialog({
           <div className="space-y-3">
             {productLineSuppliers.length > 0 ? (
               <div className="space-y-1.5">
-                <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>On this deal</h3>
+                <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>On this Opportunity</h3>
                 <div className="flex flex-wrap gap-1.5">
                   {productLineSuppliers.map((s) => (
                     <Button

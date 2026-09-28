@@ -146,7 +146,7 @@ export function CustomerAgeingPage() {
 
       <PanelTable
         cols="1.4fr 1.3fr 0.9fr 0.9fr 1fr 0.9fr 0.9fr"
-        headers={["Customer", "What", "Deal", "Due", "Owed", "Overdue", ""]}
+        headers={["Customer", "What", "Opportunity", "Due", "Owed", "Overdue", ""]}
         rows={rows}
         isLoading={ageing.isPending}
         isError={ageing.isError}

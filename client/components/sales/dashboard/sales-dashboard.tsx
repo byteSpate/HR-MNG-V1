@@ -152,7 +152,7 @@ function QuarterTable({ quarters }: { quarters: SalesTargetQuarter[] }) {
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Target</th>
             <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Won</th>
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Result</th>
-            <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Deals</th>
+            <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Opportunities</th>
           </tr>
         </thead>
         <tbody>
@@ -271,7 +271,7 @@ function TeamTable({ team, onReview }: { team: SalesTeamRow[]; onReview: (employ
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Person</th>
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Target</th>
             <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Won</th>
-            <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Deals</th>
+            <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Opportunities</th>
             <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Ongoing</th>
             <th className="px-4 py-2.5" aria-label="Review" />
           </tr>
@@ -476,7 +476,7 @@ function TargetForm({
         <Field
           label="Yearly target (৳)"
           htmlFor="target-amount"
-          help="The deal value to win in the year, in taka. Commas are fine."
+          help="The Opportunity value to win in the year, in taka. Commas are fine."
         >
           <Input
             id="target-amount"

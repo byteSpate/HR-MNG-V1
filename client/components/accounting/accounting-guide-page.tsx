@@ -377,7 +377,7 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Goods Bought for Won Deals", amount: "৳8,00,000" },
+      { side: "Debit", account: "Goods Bought for Won Opportunities", amount: "৳8,00,000" },
       { side: "Debit", account: "Input VAT", amount: "৳1,20,000" },
       { side: "Credit", account: "Trade Payables, Suppliers", amount: "৳9,20,000" },
     ],
@@ -388,11 +388,11 @@ const MODULES: ModuleEntry[] = [
         credit note for returned goods runs the bill backwards for the part returned.
       </>
     ),
-    also: "Deals · Supplier ageing",
+    also: "Opportunities · Supplier ageing",
   },
   {
     id: "deal",
-    title: "A Deal, Start to Finish",
+    title: "An Opportunity, Start to Finish",
     trigger: (
       <>
         A deal for firewalls is marked Won, with a supplier already picked on every product line.
@@ -417,7 +417,7 @@ const MODULES: ModuleEntry[] = [
         leaves it except a Super Admin, who works the Waiting for approval list.
       </>
     ),
-    also: "Deals · Waiting for approval · Customer ageing · Supplier ageing · VAT summary",
+    also: "Opportunities · Waiting for approval · Customer ageing · Supplier ageing · VAT summary",
   },
   {
     id: "manual-journal",

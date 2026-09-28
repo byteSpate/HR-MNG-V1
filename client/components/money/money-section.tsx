@@ -82,8 +82,8 @@ function MoneyNotRecorded({ data }: { data: DealMoneyNotRecorded }) {
       <h2 className="font-heading text-[15px] font-bold tracking-tight">Money</h2>
       <p className={`mt-1.5 text-[12.5px] leading-relaxed ${TONE.muted}`}>
         {data.notRecordedReason === "WON_BEFORE_GO_LIVE"
-          ? `This deal was won before ${formatDay(data.goLiveDate)}. Its money is not recorded here.`
-          : "This deal is not won. Money is recorded here only for a won deal."}
+          ? `This Opportunity was won before ${formatDay(data.goLiveDate)}. Its money is not recorded here.`
+          : "This Opportunity is not won. Money is recorded here only for a won Opportunity."}
       </p>
     </div>
   )

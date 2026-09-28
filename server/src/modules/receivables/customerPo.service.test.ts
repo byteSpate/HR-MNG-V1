@@ -79,7 +79,7 @@ describe("createCustomerPo", () => {
   it("refuses a PO on a deal that is not Won", async () => {
     arrangeDeal({ status: "ONGOING", serial: "BS-OPP-00003" })
     await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow(
-      "BS-OPP-00003 is not won yet. Money can be recorded only on a won deal."
+      "BS-OPP-00003 is not won yet. Money can be recorded only on a won Opportunity."
     )
   })
 
@@ -147,7 +147,7 @@ describe("listCustomerPos", () => {
   it("makes a sales user name the deal when listing", async () => {
     const { isFinance } = await import("./receivables.access")
     vi.mocked(isFinance).mockReturnValue(false)
-    await expect(listCustomerPos({}, SALES_USER)).rejects.toThrow("Choose a deal to list its customer POs")
+    await expect(listCustomerPos({}, SALES_USER)).rejects.toThrow("Choose an Opportunity to list its customer POs")
   })
 })
 

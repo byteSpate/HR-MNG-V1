@@ -372,7 +372,7 @@ export async function saveAccountNote(
         select: { id: true },
       })
       if (openDeal) {
-        throw new AppError(400, "This account has an open deal, so change that deal's next step instead")
+        throw new AppError(400, "This account has an open Opportunity, so change that Opportunity's next step instead")
       }
     }
 

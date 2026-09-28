@@ -333,7 +333,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               <Input id="line-model" list="line-model-suggestions" autoComplete="off" value={model} onChange={(e) => setModel(e.target.value)} />
               <SuggestionList id="line-model-suggestions" field="model" q={model} />
             </Field>
-            <Field label="Supplier" htmlFor="line-supplier" hint="Optional for now." help="Who we buy this product from. Every product needs one before the deal can be marked Won.">
+            <Field label="Supplier" htmlFor="line-supplier" hint="Optional for now." help="Who we buy this product from. Every product needs one before the Opportunity can be marked Won.">
               <SupplierPicker value={supplierId} onChange={setSupplierId} />
             </Field>
           </div>
@@ -365,7 +365,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               label="Margin (%)"
               htmlFor="line-margin"
               hint={["Optional.", marginPreview(lineValue, marginPercent)].filter(Boolean).join(" ")}
-              help="The profit on this product, as a percentage of its Total price. Type a minus sign for a product sold at a loss, like -5. The deal's margin is its products' margins added up."
+              help="The profit on this product, as a percentage of its Total price. Type a minus sign for a product sold at a loss, like -5. The Opportunity's margin is its products' margins added up."
             >
               <Input
                 id="line-margin"

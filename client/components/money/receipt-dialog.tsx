@@ -117,11 +117,11 @@ export function ReceiptDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Record payment received</DialogTitle>
-          <DialogDescription>Money the customer paid on this deal, and which invoices it settles.</DialogDescription>
+          <DialogDescription>Money the customer paid on this Opportunity, and which invoices it settles.</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
-          <PanelNotice>One payment for two deals? Record it once on each deal.</PanelNotice>
+          <PanelNotice>One payment for two Opportunities? Record it once on each Opportunity.</PanelNotice>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Date" htmlFor="rcpt-date">
@@ -169,7 +169,7 @@ export function ReceiptDialog({
           <section className="space-y-2">
             <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>What it settles</h3>
             {owing.length === 0 ? (
-              <p className={`text-[12.5px] ${TONE.muted}`}>No approved invoice on this deal still owes money.</p>
+              <p className={`text-[12.5px] ${TONE.muted}`}>No approved invoice on this Opportunity still owes money.</p>
             ) : (
               owing.map((inv) => {
                 const left = invoiceStillOwed(inv)

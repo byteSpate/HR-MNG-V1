@@ -29,7 +29,7 @@ async function assertBillDealAllowed(tx: PrismaNamespace.TransactionClient, oppo
     where: { id: opportunityId },
     select: { id: true, status: true, serial: true, closedAt: true },
   })
-  if (!opp) throw new AppError(400, "This bill points to a deal that does not exist.")
+  if (!opp) throw new AppError(400, "This bill points to an Opportunity that does not exist.")
   assertMoneyAllowed(opp, env.SALES_GO_LIVE)
 }
 
