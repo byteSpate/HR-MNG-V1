@@ -127,3 +127,12 @@ export const setSoftwareNeededSchema = z.object({
   softwareNeeded: z.boolean().nullable(),
 })
 export type SetSoftwareNeededBody = z.infer<typeof setSoftwareNeededSchema>
+
+/** A web address for a file kept outside the app (spec 2026-09-28 §1.5). */
+export const addDocumentLinkSchema = z.object({
+  name: z.string().trim().min(1, "Give the link a name, like SRS v1").max(120),
+  url: z.string().trim().max(2000).url("Paste the full web address")
+    .refine((v) => v.startsWith("https://"), "The web address must start with https://"),
+  stage: opportunityStage.optional(),
+})
+export type AddDocumentLinkBody = z.infer<typeof addDocumentLinkSchema>

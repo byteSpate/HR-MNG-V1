@@ -436,3 +436,19 @@ export interface SalesDashboardPayload {
    */
   notBuilt: string[]
 }
+
+/**
+ * A link to a file kept outside the app, with the Stage it belongs to
+ * (spec 2026-09-28 §1.5). Every version stays: nothing is overwritten.
+ */
+export interface DocumentLinkSummary {
+  id: string
+  opportunityId: string
+  name: string
+  url: string
+  stage: string
+  createdBy: string
+  createdByName: string | null
+  createdAt: string
+  canRemove: boolean
+}

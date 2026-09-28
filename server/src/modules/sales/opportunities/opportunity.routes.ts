@@ -3,6 +3,7 @@ import { Router } from "express"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
 import {
+  addDocumentLinkHandler,
   addOpportunityLineHandler,
   changeOpportunityNextStepHandler,
   changeOpportunityStageHandler,
@@ -13,8 +14,10 @@ import {
   getOpportunityHandler,
   getOpportunityHistoryHandler,
   getOpportunityTimelineHandler,
+  listDocumentLinksHandler,
   listOpportunitiesHandler,
   listOpportunityOwnersHandler,
+  removeDocumentLinkHandler,
   reorderOpportunityLinesHandler,
   setSoftwareNeededHandler,
   suggestOpportunityLinesHandler,
@@ -31,6 +34,12 @@ router.get("/opportunities/:id", requireAuth, requireSales(), getOpportunityHand
 router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunityHandler)
 router.patch("/opportunities/:id/stage", requireAuth, requireSales(), changeOpportunityStageHandler)
 router.patch("/opportunities/:id/status", requireAuth, requireSales(), changeOpportunityStatusHandler)
+// Document links (spec 2026-09-28 §1.5). `/documents/:linkId` rather than
+// `/opportunities/:id/documents/:linkId`, so the path can never be read as
+// `/opportunities/:id`; it matches how `/lines/:lineId` is routed today.
+router.get("/opportunities/:id/documents", requireAuth, requireSales(), listDocumentLinksHandler)
+router.post("/opportunities/:id/documents", requireAuth, requireSales(), addDocumentLinkHandler)
+router.delete("/documents/:linkId", requireAuth, requireSales(), removeDocumentLinkHandler)
 // Won, Lost and Cancelled are final; a Sales Admin corrects a mistake here (spec 2026-09-28 §1.4).
 router.post("/opportunities/:id/correct-status", requireAuth, requireSales(), correctOpportunityStatusHandler)
 router.patch("/opportunities/:id/next-step", requireAuth, requireSales(), changeOpportunityNextStepHandler)
