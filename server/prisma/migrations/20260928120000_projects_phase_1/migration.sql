@@ -1,3 +1,21 @@
+-- CreateEnum
+CREATE TYPE "VatMethod" AS ENUM ('CODE', 'MANUAL');
+
+-- CreateEnum
+CREATE TYPE "ProjectStatus" AS ENUM ('NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'ON_HOLD', 'COMPLETED', 'CANCELLED');
+
+-- AlterTable
+ALTER TABLE "CustomerPoLine" ADD COLUMN     "vatMethod" "VatMethod" NOT NULL DEFAULT 'CODE',
+ADD COLUMN     "vatRatePercent" DECIMAL(5,2);
+
+-- AlterTable
+ALTER TABLE "InvoiceLine" ADD COLUMN     "vatMethod" "VatMethod" NOT NULL DEFAULT 'CODE',
+ADD COLUMN     "vatRatePercent" DECIMAL(5,2);
+
+-- AlterTable
+ALTER TABLE "SupplierBillLine" ADD COLUMN     "vatMethod" "VatMethod" NOT NULL DEFAULT 'CODE',
+ADD COLUMN     "vatRatePercent" DECIMAL(5,2);
+
 -- CreateTable
 CREATE TABLE "Project" (
     "id" TEXT NOT NULL,
@@ -123,3 +141,8 @@ ALTER TABLE "ProjectLineDone" ADD CONSTRAINT "ProjectLineDone_opportunityLineId_
 
 -- AddForeignKey
 ALTER TABLE "OpportunityDocumentLink" ADD CONSTRAINT "OpportunityDocumentLink_opportunityId_fkey" FOREIGN KEY ("opportunityId") REFERENCES "Opportunity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Every existing line used its VAT code's rate. Save that rate on the line.
+UPDATE "CustomerPoLine" l SET "vatRatePercent" = v."ratePercent" FROM "VatCode" v WHERE v."id" = l."vatCodeId" AND l."vatRatePercent" IS NULL;
+UPDATE "InvoiceLine" l SET "vatRatePercent" = v."ratePercent" FROM "VatCode" v WHERE v."id" = l."vatCodeId" AND l."vatRatePercent" IS NULL;
+UPDATE "SupplierBillLine" l SET "vatRatePercent" = v."ratePercent" FROM "VatCode" v WHERE v."id" = l."vatCodeId" AND l."vatRatePercent" IS NULL;
