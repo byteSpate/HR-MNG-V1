@@ -55,6 +55,11 @@ export type AuditEntity =
   // deal they changed, not against this — the note on that row names the
   // meeting instead (§27.7).
   | "FUNNEL_MEETING"
+  // The Project record and its document links (spec 2026-09-28 §1.5, §1.7).
+  // The link is its own entity because one Opportunity has many links, so
+  // "what did you change here" is answered per link, not per Opportunity.
+  | "PROJECT"
+  | "OPPORTUNITY_DOCUMENT_LINK"
   | "ASSET"
   | "ASSET_CATEGORY"
   | "ASSET_ASSIGNMENT"
