@@ -41,7 +41,7 @@ const SALES_USER = { sub: "u-s", role: "EMPLOYEE", salesRole: "SALES_USER", emai
 
 const PO_INPUT = {
   opportunityId: "opp-1", customerPoNumber: "PO-778", date: "2026-09-23",
-  lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15" }],
+  lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15", vatMethod: "CODE" as const }],
 }
 
 function arrangeDeal(over: Partial<{ status: string; serial: string; closedAt: Date | null }> = {}) {

@@ -5,7 +5,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { poLineRemaining } from "./customerPo.service"
-import { loadActiveVatRates, vatFor } from "./receivables.vat"
+import { loadActiveVatRates, resolveLineVat } from "./receivables.vat"
 import type { CreateInvoiceInput, UpdateInvoiceInput } from "./invoice.validators"
 
 function isUniqueViolation(err: unknown): boolean {
@@ -49,14 +49,25 @@ async function buildLineRows(tx: PrismaNamespace.TransactionClient, po: PoForInv
   const rates = await loadActiveVatRates(tx, lines.map((l) => l.vatCodeId ?? byId.get(l.poLineId)!.vatCodeId))
   return lines.map((l) => {
     const poLine = byId.get(l.poLineId)!
-    const vatCodeId = l.vatCodeId ?? poLine.vatCodeId
     const amount = new Prisma.Decimal(l.amount)
+    const vatCodeId = l.vatCodeId ?? poLine.vatCodeId
+    // "Not sent" means "copy the PO line" (spec §1.6). Naming a code, or
+    // asking for CODE, overrides it.
+    const copyFromPo = l.vatMethod === undefined && l.vatCodeId === undefined
+    const vat = copyFromPo
+      ? resolveLineVat(
+          { vatCodeId, vatMethod: poLine.vatMethod, vatRatePercent: poLine.vatRatePercent?.toFixed(2) ?? null },
+          rates, amount
+        )
+      : resolveLineVat({ vatCodeId, vatMethod: l.vatMethod ?? "CODE", vatRatePercent: l.vatRatePercent }, rates, amount)
     return {
       poLineId: l.poLineId,
       description: l.description?.trim() || poLine.description,
       amount: amount.toFixed(2),
-      vatCodeId,
-      vatAmount: vatFor(amount, rates.get(vatCodeId)!).toFixed(2),
+      vatCodeId: vat.vatCodeId,
+      vatMethod: vat.vatMethod,
+      vatRatePercent: vat.vatRatePercent,
+      vatAmount: vat.vatAmount,
     }
   })
 }
@@ -156,6 +167,7 @@ export async function listInvoiceablePos() {
       opportunity: po.opportunity,
       lines: po.lines.map((l) => ({
         id: l.id, description: l.description, kind: l.kind, amount: l.amount.toFixed(2), vatCodeId: l.vatCodeId,
+        vatMethod: l.vatMethod, vatRatePercent: l.vatRatePercent?.toFixed(2) ?? null,
         remaining: poLineRemaining(l).toFixed(2),
       })),
     }))
