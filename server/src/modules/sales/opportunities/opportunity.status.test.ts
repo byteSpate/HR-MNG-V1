@@ -28,7 +28,7 @@ vi.mock("../../customer/customer.link", () => ({ ensureCustomerForAccount: vi.fn
 import prisma from "../../../config/prisma"
 import { dec } from "../../payroll/payroll.money"
 import { ensureCustomerForAccount } from "../../customer/customer.link"
-import { correctOpportunityStatus } from "./opportunity.status"
+import { correctOpportunityStatus, hasMoneyOrLiveProject, MONEY_OR_PROJECT } from "./opportunity.status"
 import { changeOpportunityStatus } from "./opportunity.service"
 import { changeOpportunityStatusSchema } from "./opportunity.validators"
 
@@ -174,5 +174,37 @@ describe("correctOpportunityStatus", () => {
     )
     await expect(correctOpportunityStatus("opp-1", { status: "WON", reason: "It was won" }, ADMIN))
       .rejects.toThrow("Pick a supplier for every product before marking this Opportunity won. Missing: Installation.")
+  })
+})
+
+describe("hasMoneyOrLiveProject", () => {
+  it("is false on an Opportunity with nothing recorded on it", async () => {
+    await expect(hasMoneyOrLiveProject(prisma as never, "opp-1")).resolves.toBe(false)
+  })
+
+  it("counts a PO that is not cancelled, a bill, and a Project that is not cancelled", async () => {
+    vi.mocked(prisma.customerPo.count).mockResolvedValue(1)
+    await expect(hasMoneyOrLiveProject(prisma as never, "opp-1")).resolves.toBe(true)
+    vi.mocked(prisma.customerPo.count).mockResolvedValue(0)
+    vi.mocked(prisma.supplierBill.count).mockResolvedValue(1)
+    await expect(hasMoneyOrLiveProject(prisma as never, "opp-1")).resolves.toBe(true)
+    vi.mocked(prisma.supplierBill.count).mockResolvedValue(0)
+    vi.mocked(prisma.project.count).mockResolvedValue(1)
+    await expect(hasMoneyOrLiveProject(prisma as never, "opp-1")).resolves.toBe(true)
+  })
+
+  it("asks each question with the right exclusion", async () => {
+    await hasMoneyOrLiveProject(prisma as never, "opp-1")
+    // A cancelled PO and a cancelled Project leave nothing behind, so only the
+    // others count. A bill has no cancelled state, so it is asked plainly.
+    expect(prisma.customerPo.count).toHaveBeenCalledWith({ where: { opportunityId: "opp-1", status: { not: "CANCELLED" } } })
+    expect(prisma.project.count).toHaveBeenCalledWith({ where: { opportunityId: "opp-1", status: { not: "CANCELLED" } } })
+    expect(prisma.supplierBill.count).toHaveBeenCalledWith({ where: { opportunityId: "opp-1" } })
+  })
+
+  it("names the money-or-Project refusal in words a person can act on", () => {
+    expect(MONEY_OR_PROJECT).toBe(
+      "This Opportunity has money or a Project on it, so its status cannot be changed. Ask Finance for help."
+    )
   })
 })
