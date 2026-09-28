@@ -4,7 +4,7 @@ import { writeAudit } from "../../../utils/audit"
 import { emitEvent } from "../../event/event.emit"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import type { SalesContactSummary } from "../sales.types"
-import type { CreateSalesContactBody, SetContactStatusBody } from "./account.validators"
+import type { CreateSalesContactBody, SetContactStatusBody, UpdateSalesContactBody } from "./account.validators"
 import { requireAccountAccess, requireAccountVisible } from "../sales.access"
 
 type ContactRow = {
@@ -113,6 +113,65 @@ export async function addContact(
     })
 
     return toSummary(contact)
+  })
+}
+
+/**
+ * Editing a contact's own details: name, designation, phone, email, note.
+ * Distinct from `setPrimaryContact` and `setContactStatus`, which each
+ * change one specific fact and carry their own audit story — this is the
+ * plain "fix the phone number" edit those two were never meant to cover.
+ */
+export async function updateContact(
+  contactId: string,
+  body: UpdateSalesContactBody,
+  actor: AccessTokenPayload
+): Promise<SalesContactSummary> {
+  const { contact } = await requireContactAccess(contactId, actor)
+
+  const next = {
+    name: body.name ?? contact.name,
+    designation: body.designation !== undefined ? body.designation : contact.designation,
+    phone: body.phone !== undefined ? body.phone : contact.phone,
+    email: body.email !== undefined ? body.email : contact.email,
+    note: body.note !== undefined ? body.note : contact.note,
+  }
+
+  // Mirrors createSalesContactSchema's own rule: a contact nobody can
+  // contact is just a name in a list. Checked here, not in the validator,
+  // because only the merged result (existing row plus what actually
+  // changed) can answer whether this edit would leave the contact
+  // unreachable.
+  if (!next.phone && !next.email) {
+    throw new AppError(400, "Add a phone number or an email — a contact needs at least one way to reach them")
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.salesContact.update({
+      where: { id: contact.id },
+      data: next,
+    })
+
+    await writeAudit(tx, {
+      entity: "SALES_CONTACT",
+      entityId: contact.id,
+      action: "UPDATE",
+      changedBy: actor.sub,
+      before: {
+        name: contact.name,
+        designation: contact.designation,
+        phone: contact.phone,
+        email: contact.email,
+      },
+      after: {
+        name: updated.name,
+        designation: updated.designation,
+        phone: updated.phone,
+        email: updated.email,
+      },
+    })
+
+    return toSummary(updated)
   })
 }
 

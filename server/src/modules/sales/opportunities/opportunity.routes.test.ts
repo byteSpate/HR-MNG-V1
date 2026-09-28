@@ -94,6 +94,28 @@ describe("opportunity routes", () => {
       "line-1", { quantity: null }, expect.objectContaining({ sub: "user-1" })
     )
   })
+
+  // Regression: the client sends null to clear these three, same as it does
+  // for quantity above, but the schema had only been extended to accept null
+  // on the price fields — oemBrand, model and note were left behind, so
+  // saving an edit with any of them blank failed with a raw Zod message
+  // ("oemBrand: Invalid input: expected string, received null") instead of
+  // clearing the field.
+  it("allows OEM brand, model and note to each be cleared", async () => {
+    await request(app).patch("/api/sales/lines/line-1")
+      .set("Authorization", auth("SALES_USER"))
+      .send({ oemBrand: null }).expect(200)
+    await request(app).patch("/api/sales/lines/line-1")
+      .set("Authorization", auth("SALES_USER"))
+      .send({ model: null }).expect(200)
+    await request(app).patch("/api/sales/lines/line-1")
+      .set("Authorization", auth("SALES_USER"))
+      .send({ note: null }).expect(200)
+
+    expect(lines.updateOpportunityLine).toHaveBeenCalledWith("line-1", { oemBrand: null }, expect.anything())
+    expect(lines.updateOpportunityLine).toHaveBeenCalledWith("line-1", { model: null }, expect.anything())
+    expect(lines.updateOpportunityLine).toHaveBeenCalledWith("line-1", { note: null }, expect.anything())
+  })
 })
 
 describe("a product's margin", () => {

@@ -104,18 +104,18 @@ export function channelForMeta(meta: string | null): SalesChannel {
 
 /** Each stage is named for who the deal is waiting on. */
 export const STAGE_LABEL: Record<OpportunityStage, string> = {
-  REQUIREMENT_RECEIVED: "Requirement received",
   SOLUTION_DESIGN: "Solution design",
+  REQUIREMENT_RECEIVED: "Requirement received",
   OEM_PRICING: "OEM pricing",
   QUOTATION_SUBMITTED: "Quotation submitted",
-  NEGOTIATION: "Negotiation",
+  NEGOTIATION: "Quotation Revision",
   AWAITING_DECISION: "Awaiting decision",
 }
 
 /** Who we are waiting on, which is what makes a stage worth acting on. */
 export const STAGE_WAITING_ON: Record<OpportunityStage, string> = {
-  REQUIREMENT_RECEIVED: "Waiting on us to start",
   SOLUTION_DESIGN: "Waiting on us",
+  REQUIREMENT_RECEIVED: "Waiting on us to start",
   OEM_PRICING: "Waiting on the OEM",
   QUOTATION_SUBMITTED: "Waiting on the customer",
   NEGOTIATION: "Both sides",
