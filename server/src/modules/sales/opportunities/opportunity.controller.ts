@@ -20,11 +20,13 @@ import {
   suggestOpportunityLineValues,
   updateOpportunityLine,
 } from "./opportunity.line.service"
+import { correctOpportunityStatus } from "./opportunity.status"
 import {
   changeOpportunityNextStepSchema,
   setSoftwareNeededSchema,
   changeOpportunityStageSchema,
   changeOpportunityStatusSchema,
+  correctOpportunityStatusSchema,
   createOpportunityLineSchema,
   createOpportunitySchema,
   listOpportunitySchema,
@@ -66,6 +68,12 @@ export async function changeOpportunityStageHandler(req: Request<{ id: string }>
 
 export async function changeOpportunityStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await changeOpportunityStatus(req.params.id, changeOpportunityStatusSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+/** The one way back from a final status, for a Sales Admin (spec §1.4). */
+export async function correctOpportunityStatusHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await correctOpportunityStatus(req.params.id, correctOpportunityStatusSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
 }
 

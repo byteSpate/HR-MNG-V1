@@ -58,6 +58,8 @@ export type EventType =
   | "sales.opportunity.software_needed_changed"
   | "sales.opportunity.won"
   | "sales.opportunity.closed"
+  // A Sales Admin putting right a final status set by mistake (spec §1.4).
+  | "sales.opportunity.status_corrected"
   | "sales.meeting.scheduled"
   | "sales.meeting.rescheduled"
   | "sales.meeting.completed"

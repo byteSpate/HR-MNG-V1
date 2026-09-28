@@ -7,6 +7,7 @@ import {
   changeOpportunityNextStepHandler,
   changeOpportunityStageHandler,
   changeOpportunityStatusHandler,
+  correctOpportunityStatusHandler,
   createOpportunityHandler,
   deleteOpportunityLineHandler,
   getOpportunityHandler,
@@ -30,6 +31,8 @@ router.get("/opportunities/:id", requireAuth, requireSales(), getOpportunityHand
 router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunityHandler)
 router.patch("/opportunities/:id/stage", requireAuth, requireSales(), changeOpportunityStageHandler)
 router.patch("/opportunities/:id/status", requireAuth, requireSales(), changeOpportunityStatusHandler)
+// Won, Lost and Cancelled are final; a Sales Admin corrects a mistake here (spec 2026-09-28 §1.4).
+router.post("/opportunities/:id/correct-status", requireAuth, requireSales(), correctOpportunityStatusHandler)
 router.patch("/opportunities/:id/next-step", requireAuth, requireSales(), changeOpportunityNextStepHandler)
 // The weekly report Application column, answered on the deal (§26.9).
 router.patch("/opportunities/:id/software-needed", requireAuth, requireSales(), setSoftwareNeededHandler)

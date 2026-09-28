@@ -7,6 +7,7 @@ vi.mock("./opportunity.service", () => ({
   changeOpportunityStatus: vi.fn(), changeOpportunityNextStep: vi.fn(),
   getOpportunityTimeline: vi.fn(), getOpportunityHistory: vi.fn(),
 }))
+vi.mock("./opportunity.status", () => ({ correctOpportunityStatus: vi.fn() }))
 vi.mock("./opportunity.line.service", () => ({
   addOpportunityLine: vi.fn(), updateOpportunityLine: vi.fn(), deleteOpportunityLine: vi.fn(),
   reorderOpportunityLines: vi.fn(), suggestOpportunityLineValues: vi.fn(),
@@ -16,6 +17,7 @@ import app from "../../../app"
 import { signAccessToken } from "../../auth/auth.utils"
 import * as opportunities from "./opportunity.service"
 import * as lines from "./opportunity.line.service"
+import * as status from "./opportunity.status"
 
 const token = (salesRole: "SALES_USER" | "SALES_ADMIN" | null) => signAccessToken({
   sub: "user-1", role: "EMPLOYEE" as never, email: "sales@example.com",
@@ -31,6 +33,7 @@ beforeEach(() => {
   vi.mocked(opportunities.getOpportunity).mockResolvedValue({ id: "opp-1" } as any)
   vi.mocked(opportunities.getOpportunityHistory).mockResolvedValue({ items: [], truncated: false, limit: 100 } as any)
   vi.mocked(opportunities.changeOpportunityStage).mockResolvedValue({ id: "opp-1" } as any)
+  vi.mocked(status.correctOpportunityStatus).mockResolvedValue({ id: "opp-1" } as any)
   vi.mocked(lines.addOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
   vi.mocked(lines.updateOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
   vi.mocked(lines.suggestOpportunityLineValues).mockResolvedValue([])
@@ -151,5 +154,17 @@ describe("a product's margin", () => {
         .send({ product: "Switch", marginPercent }).expect(400)
     }
     expect(lines.addOpportunityLine).not.toHaveBeenCalled()
+  })
+
+  it("serves the status correction, and refuses one with no reason", async () => {
+    await request(app).post("/api/sales/opportunities/opp-1/correct-status")
+      .set("Authorization", auth("SALES_ADMIN"))
+      .send({ status: "LOST", reason: "Wrong click" }).expect(200)
+    await request(app).post("/api/sales/opportunities/opp-1/correct-status")
+      .set("Authorization", auth("SALES_ADMIN"))
+      .send({ status: "LOST" }).expect(400)
+    expect(status.correctOpportunityStatus).toHaveBeenCalledWith(
+      "opp-1", { status: "LOST", reason: "Wrong click" }, expect.objectContaining({ sub: "user-1" })
+    )
   })
 })
