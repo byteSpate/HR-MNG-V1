@@ -1,15 +1,20 @@
 import { z } from "zod"
 
+import { requireManualRate, vatChoiceFields } from "./receivables.vat.validators"
+
 const positiveMoney = z.string().refine((v) => Number(v) > 0, "Must be greater than zero")
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD")
 
-export const poLineSchema = z.object({
-  description: z.string().trim().min(1, "A description is required").max(300),
-  kind: z.enum(["GOODS", "SERVICE"]),
-  quantity: positiveMoney,
-  unitPrice: positiveMoney,
-  vatCodeId: z.string().uuid(),
-})
+export const poLineSchema = z
+  .object({
+    description: z.string().trim().min(1, "A description is required").max(300),
+    kind: z.enum(["GOODS", "SERVICE"]),
+    quantity: positiveMoney,
+    unitPrice: positiveMoney,
+    vatCodeId: z.string().uuid(),
+    ...vatChoiceFields,
+  })
+  .superRefine(requireManualRate)
 
 export const createCustomerPoSchema = z.object({
   opportunityId: z.string().uuid(),

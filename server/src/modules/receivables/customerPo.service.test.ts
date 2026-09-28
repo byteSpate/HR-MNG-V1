@@ -16,7 +16,10 @@ vi.mock("./receivables.access", () => ({
   isFinance: vi.fn(() => true),
 }))
 vi.mock("../customer/customer.link", () => ({ ensureCustomerForAccount: vi.fn() }))
-vi.mock("./receivables.vat", () => ({ loadActiveVatRates: vi.fn() }))
+vi.mock("./receivables.vat", async () => ({
+  loadActiveVatRates: vi.fn(),
+  resolveLineVat: (await vi.importActual<typeof import("./receivables.vat")>("./receivables.vat")).resolveLineVat,
+}))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
@@ -99,6 +102,19 @@ describe("createCustomerPo", () => {
         lines: { create: [expect.objectContaining({ quantity: "10.00", unitPrice: "80000.00", amount: "800000.00", order: 0 })] },
       }),
     }))
+  })
+
+  it("saves a typed VAT rate on the PO line and keeps its VAT code", async () => {
+    arrangeDeal()
+    vi.mocked(prisma.customerPo.create).mockResolvedValue({ id: "po1", serial: "BS-CPO-00001" } as any)
+
+    await createCustomerPo({
+      ...PO_INPUT,
+      lines: [{ ...PO_INPUT.lines[0], vatMethod: "MANUAL" as const, vatRatePercent: "7.50" }],
+    }, FINANCE)
+
+    const data = vi.mocked(prisma.customerPo.create).mock.calls[0][0].data as any
+    expect(data.lines.create[0]).toMatchObject({ vatCodeId: "vat-15", vatMethod: "MANUAL", vatRatePercent: "7.50" })
   })
 
   it("says plainly when the PO number is already taken for this customer", async () => {
