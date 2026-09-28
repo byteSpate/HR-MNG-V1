@@ -14,6 +14,18 @@ import attendanceRoutes from "./modules/attendance/attendance.routes"
 import authRoutes from "./modules/auth/auth.routes"
 import userRoutes from "./modules/auth/user.routes"
 import costRoutes from "./modules/cost/cost.routes"
+import customerRoutes from "./modules/customer/customer.routes"
+import supplierRoutes from "./modules/supplier/supplier.routes"
+import vatCodeRoutes from "./modules/vatCode/vatCode.routes"
+import supplierBillRoutes from "./modules/supplierBill/supplierBill.routes"
+import supplierPaymentRoutes from "./modules/supplierBill/supplierPayment.routes"
+import supplierCreditNoteRoutes from "./modules/supplierBill/supplierCreditNote.routes"
+import dealMoneyRoutes from "./modules/dealMoney/dealMoney.routes"
+import customerPoRoutes from "./modules/receivables/customerPo.routes"
+import invoiceRoutes from "./modules/receivables/invoice.routes"
+import receiptRoutes from "./modules/receivables/receipt.routes"
+import customerCreditNoteRoutes from "./modules/receivables/customerCreditNote.routes"
+import receivablesReportsRoutes from "./modules/receivables/receivablesReports.routes"
 import dashboardRoutes from "./modules/dashboard/dashboard.routes"
 import notificationRoutes from "./modules/notification/notification.routes"
 import salesRoutes from "./modules/sales/sales.routes"
@@ -75,6 +87,18 @@ app.use("/api/events", eventRoutes)
 app.use("/api/dashboard", dashboardRoutes)
 app.use("/api/emails", notificationRoutes)
 app.use("/api/sales", salesRoutes)
+app.use("/api/customers", customerRoutes)
+app.use("/api/vat-codes", vatCodeRoutes)
+app.use("/api/supplier-bills", supplierBillRoutes)
+app.use("/api/supplier-payments", supplierPaymentRoutes)
+app.use("/api/supplier-credit-notes", supplierCreditNoteRoutes)
+app.use("/api/customer-pos", customerPoRoutes)
+app.use("/api/invoices", invoiceRoutes)
+app.use("/api/receipts", receiptRoutes)
+app.use("/api/customer-credit-notes", customerCreditNoteRoutes)
+app.use("/api/receivables", receivablesReportsRoutes)
+app.use("/api/suppliers", supplierRoutes)
+app.use("/api/deal-money", dealMoneyRoutes)
 
 app.use(errorHandler)
 

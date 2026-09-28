@@ -74,6 +74,9 @@ export const createOpportunityLineSchema = z.object({
   lineValue: money.optional(),
   marginPercent: marginPercent.optional(),
   note: z.string().trim().max(500).optional(),
+  // Who we will buy this product from (spec: Sales Hub changes). Optional
+  // while the deal is open; required on every line before the deal is Won.
+  supplierId: z.string().uuid().nullable().optional(),
 })
 export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
   // Prices are nullable on edit though not on create, and the two states are

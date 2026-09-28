@@ -13,6 +13,7 @@ import { seedChartOfAccounts } from "../src/modules/accounting/accounting.seed"
 import { seedCostCategories } from "../src/modules/cost/cost.categories.seed"
 import { seedPolicyNotes } from "../src/modules/statements/statements.policy.seed"
 import { seedPostingRules } from "../src/modules/posting/posting.rules.seed"
+import { seedVatCodes } from "../src/modules/vatCode/vatCode.seed"
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
@@ -143,16 +144,37 @@ async function main() {
   const hrAdmin = await seedAdminUser("hr@demo.com", Role.HR_ADMIN)
   await seedAdminUser("finance@demo.com", Role.FINANCE_OFFICER)
 
-  const departments = ["Engineering", "People Operations", "Finance", "Operations"]
-  for (const name of departments) {
-    await prisma.department.upsert({ where: { name }, update: {}, create: { name } })
+  const departments = [
+    { name: "Engineering", costNature: "ADMINISTRATIVE" as const },
+    { name: "People Operations", costNature: "ADMINISTRATIVE" as const },
+    { name: "Finance", costNature: "ADMINISTRATIVE" as const },
+    { name: "Operations", costNature: "ADMINISTRATIVE" as const },
+    // The two Direct Departments (design §2/§4) — every Won Opportunity
+    // belongs to exactly one, and payroll already posts a direct
+    // department's salaries as a cost of sales.
+    { name: "Network & Security", costNature: "DIRECT" as const },
+    { name: "Software Development", costNature: "DIRECT" as const },
+    // Confirmed 2026-09-22: Finance, HR and management must not sit inside
+    // either Direct Department, or their salaries would inflate cost of
+    // sales. This is the fix for that, not a new mechanism — costNature
+    // already existed.
+    { name: "Administration", costNature: "ADMINISTRATIVE" as const },
+  ]
+  for (const { name, costNature } of departments) {
+    await prisma.department.upsert({ where: { name }, update: {}, create: { name, costNature } })
   }
 
   await seedAssetCategories()
-  await seedCostCategories()
   await seedChartOfAccounts()
+  await seedVatCodes()
   await seedPolicyNotes()
   await seedPostingRules()
+  // Last, not third: this one has a pre-existing bug (a P2002 on an
+  // in-place rename colliding with a row already at the new name) that
+  // predates the receivables & payables work and crashes main() outright.
+  // Running it last means that crash no longer silently skips the chart of
+  // accounts and posting rules seeded above it.
+  await seedCostCategories()
 
   // The standing shift every employee falls back to when shiftId is null.
   // 09:00-18:00 with the 1h lunch/break inside the span, so a full day is

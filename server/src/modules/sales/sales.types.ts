@@ -26,6 +26,9 @@ export interface OpportunityLineSummary {
   marginAmount: string | null
   note: string | null
   order: number
+  /** Who we will buy this product from. Optional while the deal is open,
+   *  required on every line before it can be marked Won. */
+  supplier: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
 }

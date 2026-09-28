@@ -92,6 +92,10 @@ export interface SystemJournalInput {
     credit?: string
     departmentId?: string
     employeeId?: string
+    // ── deal-based dimensions, added for receivables & payables ──
+    opportunityId?: string
+    customerId?: string
+    supplierId?: string
     narration?: string
     /**
      * Provenance of a converted figure, memo only — the `JournalLine` columns

@@ -36,6 +36,7 @@ const FIELD_LABEL: Record<string, string> = {
   product: "Product",
   oemBrand: "OEM brand",
   model: "Model",
+  supplierId: "Supplier",
   quantity: "Quantity",
   unitValue: "Price per unit",
   lineValue: "Total price",

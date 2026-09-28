@@ -79,6 +79,21 @@ export type AuditEntity =
   | "DEPARTMENT"
   | "SHIFT"
   | "LEAVE_TYPE"
+  // Receivables & payables master data.
+  | "CUSTOMER"
+  | "SUPPLIER"
+  // Receivables & payables, Phase 2 (Buying).
+  | "SUPPLIER_BILL"
+  | "SUPPLIER_PAYMENT"
+  | "SUPPLIER_CREDIT_NOTE"
+  // Receivables & payables, Phase 3a (Selling).
+  | "CUSTOMER_PO"
+  | "INVOICE"
+  | "RECEIPT"
+  | "CUSTOMER_CREDIT_NOTE"
+  // Reference data editable from Settings (Task 15): a rate change is
+  // audited the same way DEPARTMENT or SHIFT already are.
+  | "VAT_CODE"
 
 export type AuditAction =
   | "CREATE"

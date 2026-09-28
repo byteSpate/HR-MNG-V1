@@ -19,26 +19,58 @@ export const navGroups: NavGroup[] = [
       { label: "Employee expenses", href: "/admin/expenses", icon: "RiReceiptLine" },
       { label: "Settlements", href: "/admin/settlements", icon: "RiHandCoinLine" },
       { label: "Expenses", href: "/admin/costs", icon: "RiBillLine" },
-      { label: "Posting rules", href: "/admin/posting-rules", icon: "RiSettingsLine" },
     ],
   },
   {
+    // Setup and master data: done once, or rarely. Split out of what used to
+    // be one 15-item "Accounting" group (see Ledger and Statements below) —
+    // matches the guide page's own "Set up" step.
     label: "Accounting",
     items: [
+      { label: "Guide", href: "/admin/accounting/guide", icon: "RiQuestionLine" },
+      { label: "Chart of accounts", href: "/admin/accounting/accounts", icon: "RiNodeTree" },
+      { label: "Customers", href: "/admin/accounting/customers", icon: "RiUserLine" },
+      { label: "Suppliers", href: "/admin/accounting/suppliers", icon: "RiTruckLine" },
+      // Setup, and used rarely — last, below the things used daily.
+      { label: "Years & periods", href: "/admin/accounting/periods", icon: "RiCalendarCheckLine" },
+      { label: "Opening balances", href: "/admin/accounting/opening-balances", icon: "RiPlayCircleLine" },
+    ],
+  },
+  {
+    // The guide's "Post" and "Read" steps: where entries land and how
+    // they're read back, one account or one book at a time.
+    label: "Ledger",
+    items: [
+      // Pairs with Journals in the guide's own "Post" step — the map that
+      // decides which account a journal line lands on.
+      { label: "Posting rules", href: "/admin/posting-rules", icon: "RiSettingsLine" },
       { label: "Journals", href: "/admin/accounting/journals", icon: "RiFileList3Line" },
+      { label: "General ledger", href: "/admin/accounting/ledger", icon: "RiBookOpenLine" },
+      { label: "Cash book", href: "/admin/accounting/cash-book", icon: "RiCashLine" },
+      { label: "Bank book", href: "/admin/accounting/bank-book", icon: "RiBankLine" },
+      { label: "Trial balance", href: "/admin/accounting/trial-balance", icon: "RiScales3Line" },
+    ],
+  },
+  {
+    // All of a deal's money is on its own page; these are the ways in.
+    label: "Deals & money",
+    items: [
+      { label: "Deals", href: "/admin/accounting/deals", icon: "RiBriefcaseLine" },
+      { label: "Waiting for approval", href: "/admin/accounting/approvals", icon: "RiCheckboxCircleLine" },
+      { label: "Customer ageing", href: "/admin/accounting/customer-ageing", icon: "RiTimeLine" },
+      { label: "Supplier ageing", href: "/admin/accounting/supplier-ageing", icon: "RiTimeLine" },
+      { label: "VAT summary", href: "/admin/accounting/vat-summary", icon: "RiPercentLine" },
+    ],
+  },
+  {
+    // The guide's "Report" step: what gets filed.
+    label: "Statements",
+    items: [
       { label: "Financial statements", href: "/admin/accounting/statements", icon: "RiFileChartLine" },
       { label: "Cash flow", href: "/admin/statements/cash-flow", icon: "RiExchangeDollarLine" },
       { label: "Notes", href: "/admin/statements/notes", icon: "RiFileTextLine" },
       { label: "Annexure-A", href: "/admin/statements/annexure-a", icon: "RiTableLine" },
       { label: "Policy notes", href: "/admin/statements/policy-notes", icon: "RiArticleLine" },
-      { label: "Chart of accounts", href: "/admin/accounting/accounts", icon: "RiNodeTree" },
-      { label: "General ledger", href: "/admin/accounting/ledger", icon: "RiBookOpenLine" },
-      { label: "Cash book", href: "/admin/accounting/cash-book", icon: "RiCashLine" },
-      { label: "Bank book", href: "/admin/accounting/bank-book", icon: "RiBankLine" },
-      { label: "Trial balance", href: "/admin/accounting/trial-balance", icon: "RiScales3Line" },
-      // Setup, and used rarely — last, below the things used daily.
-      { label: "Years & periods", href: "/admin/accounting/periods", icon: "RiCalendarCheckLine" },
-      { label: "Opening balances", href: "/admin/accounting/opening-balances", icon: "RiPlayCircleLine" },
     ],
   },
   {

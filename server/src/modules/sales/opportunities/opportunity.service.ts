@@ -21,6 +21,7 @@ import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.pr
 import { presentChanges, resolveNames } from "../accounts/history.present"
 import { createTaskIn } from "../tasks/task.service"
 import { stampOfferedOn } from "../funnel/funnel.edit"
+import { ensureCustomerForAccount } from "../../customer/customer.link"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
@@ -43,7 +44,7 @@ const INCLUDE = {
       assignments: { select: { employeeId: true } },
     },
   },
-  lines: { orderBy: { order: "asc" as const } },
+  lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
 } as const
 
 /** Whether `actor` may write to this deal, decided from its parent account. */
@@ -365,6 +366,30 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
     if ((body.status === "LOST" || body.status === "CANCELLED") && !body.statusReason?.trim()) {
       throw new AppError(400, `${body.status === "LOST" ? "Lost" : "Cancelled"} Opportunities require a reason`)
     }
+    // A Won deal with money on it must stay Won (final review Fix 5).
+    // Leaving Won clears closedAt or the Won status, which hides the deal's
+    // Money section and drops it from the Deals list, while its posted
+    // invoices and journals stay in the ledger. A cancelled PO leaves
+    // nothing behind, so it does not count. Receipts and supplier payments
+    // need an invoice or a bill first, so these two checks cover them.
+    if (current.status === "WON") {
+      const [pos, bills] = await Promise.all([
+        tx.customerPo.count({ where: { opportunityId: id, status: { not: "CANCELLED" } } }),
+        tx.supplierBill.count({ where: { opportunityId: id } }),
+      ])
+      if (pos > 0 || bills > 0) {
+        throw new AppError(409, "This deal has money recorded on it, so it must stay Won. Ask Finance for help.")
+      }
+    }
+    // Task 16: a supplier bill is filled from the deal's product lines, so
+    // every line needs one before the deal can be Won. A deal with no
+    // lines at all is allowed, as today.
+    if (body.status === "WON") {
+      const missing = current.lines.filter((l) => !l.supplierId).map((l) => l.product)
+      if (missing.length > 0) {
+        throw new AppError(400, `Pick a supplier for every product before marking this deal won. Missing: ${missing.join(", ")}.`)
+      }
+    }
     const now = new Date()
     const data: Prisma.OpportunityUpdateInput = {
       status: body.status, lastActivityAt: now,
@@ -376,6 +401,10 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
         ? { wonBy: { connect: { id: current.ownerEmployeeId } } } : {}),
     }
     const updated = await tx.opportunity.update({ where: { id }, data, include: INCLUDE })
+    // Spec §2: a Customer exists from the day the account's first deal is
+    // Won. Never blocks the Won: a name clash is resolved on Customers, and
+    // Task 6's customerPo.service refuses a PO until it is.
+    if (body.status === "WON") await ensureCustomerForAccount(tx, current.salesAccountId, "skip-on-conflict", actor.sub)
     await writeAudit(tx, {
       entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
       before: { status: current.status }, after: { status: body.status }, note: body.statusReason,

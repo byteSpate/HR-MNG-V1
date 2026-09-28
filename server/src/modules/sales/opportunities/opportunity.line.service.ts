@@ -15,7 +15,10 @@ const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prism
 const nullable = (value: string | undefined) => value === undefined || value === "" ? null : value
 
 async function lineForWrite(tx: Prisma.TransactionClient, lineId: string, actor: AccessTokenPayload) {
-  const line = await tx.opportunityLine.findFirst({ where: { id: lineId } })
+  const line = await tx.opportunityLine.findFirst({
+    where: { id: lineId },
+    include: { supplier: { select: { id: true, name: true } } },
+  })
   if (!line) throw new AppError(404, "That Opportunity line does not exist, or is not yours")
   await requireOpportunityAccess(line.opportunityId, actor, asClient(tx))
   return line
@@ -25,24 +28,38 @@ async function touch(tx: Prisma.TransactionClient, opportunityId: string) {
   await tx.opportunity.update({ where: { id: opportunityId }, data: { lastActivityAt: new Date() } })
 }
 
+const SUPPLIER_INCLUDE = { supplier: { select: { id: true, name: true } } } as const
+
+async function assertSupplierUsable(tx: Prisma.TransactionClient, supplierId: string | null): Promise<void> {
+  if (supplierId === null) return
+  const supplier = await tx.supplier.findUnique({ where: { id: supplierId }, select: { isActive: true } })
+  if (!supplier) throw new AppError(400, "That supplier does not exist")
+  if (!supplier.isActive) throw new AppError(400, "That supplier is no longer active. Pick another.")
+}
+
 export async function addOpportunityLine(
   opportunityId: string, body: CreateOpportunityLineBody, actor: AccessTokenPayload
 ) {
   return prisma.$transaction(async (tx) => {
     await requireOpportunityAccess(opportunityId, actor, asClient(tx))
+    const supplierId = body.supplierId ?? null
+    await assertSupplierUsable(tx, supplierId)
     const order = ((await tx.opportunityLine.aggregate({
       where: { opportunityId }, _max: { order: true },
     }))._max.order ?? -1) + 1
-    const created = await tx.opportunityLine.create({ data: {
-      opportunityId, product: body.product, oemBrand: nullable(body.oemBrand),
-      model: nullable(body.model), quantity: body.quantity ?? null,
-      unitValue: body.unitValue === undefined ? null : dec(body.unitValue),
-      // Deliberately not quantity × unitValue. Only an explicitly submitted value is stored.
-      lineValue: body.lineValue === undefined ? null : dec(body.lineValue),
-      // No margin typed is "no margin yet", not 0%.
-      marginPercent: body.marginPercent === undefined ? null : dec(body.marginPercent),
-      note: nullable(body.note), order,
-    } })
+    const created = await tx.opportunityLine.create({
+      data: {
+        opportunityId, product: body.product, oemBrand: nullable(body.oemBrand),
+        model: nullable(body.model), quantity: body.quantity ?? null,
+        unitValue: body.unitValue === undefined ? null : dec(body.unitValue),
+        // Deliberately not quantity × unitValue. Only an explicitly submitted value is stored.
+        lineValue: body.lineValue === undefined ? null : dec(body.lineValue),
+        // No margin typed is "no margin yet", not 0%.
+        marginPercent: body.marginPercent === undefined ? null : dec(body.marginPercent),
+        note: nullable(body.note), order, supplierId,
+      },
+      include: SUPPLIER_INCLUDE,
+    })
     await touch(tx, opportunityId)
     await writeAudit(tx, {
       entity: "OPPORTUNITY_LINE", entityId: created.id, action: "CREATE", changedBy: actor.sub,
@@ -106,8 +123,15 @@ export async function updateOpportunityLine(
         }
       }
     }
+    if (body.supplierId !== undefined) {
+      const next = body.supplierId
+      if (next !== current.supplierId) {
+        await assertSupplierUsable(tx, next)
+        data.supplierId = next; before.supplierId = current.supplierId; after.supplierId = next
+      }
+    }
     if (Object.keys(data).length === 0) return presentLine(current)
-    const updated = await tx.opportunityLine.update({ where: { id: lineId }, data })
+    const updated = await tx.opportunityLine.update({ where: { id: lineId }, data, include: SUPPLIER_INCLUDE })
     await touch(tx, current.opportunityId)
     await writeAudit(tx, {
       entity: "OPPORTUNITY_LINE", entityId: lineId, action: "UPDATE", changedBy: actor.sub,

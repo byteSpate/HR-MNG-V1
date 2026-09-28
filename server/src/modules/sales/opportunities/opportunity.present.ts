@@ -15,6 +15,7 @@ export function presentLine(row: any): OpportunityLineSummary {
     // the price or the percentage is missing: "no margin yet", never ৳0.
     marginAmount: moneyOrNull(marginAmount(row.lineValue, row.marginPercent)),
     note: row.note ?? null, order: row.order,
+    supplier: row.supplier ? { id: row.supplier.id, name: row.supplier.name } : null,
     createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
   }
 }

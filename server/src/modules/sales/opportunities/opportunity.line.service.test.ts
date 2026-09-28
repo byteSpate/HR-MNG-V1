@@ -49,11 +49,11 @@ describe("opportunity lines", () => {
     await addOpportunityLine("opp-1", {
       product: "Switch", quantity: 2, unitValue: "100",
     }, USER)
-    expect(prisma.opportunityLine.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+    expect(prisma.opportunityLine.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
       opportunityId: "opp-1", order: 2, unitValue: expect.anything(), lineValue: null,
       // No margin typed is "no margin yet", not 0%.
       marginPercent: null,
-    }) })
+    }) }))
     expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
       data: { lastActivityAt: expect.any(Date) },
     }))

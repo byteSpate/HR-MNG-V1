@@ -11,7 +11,7 @@ vi.mock("../../config/prisma", () => {
     account: { findMany: vi.fn(), findUnique: vi.fn() },
     idCounter: { upsert: vi.fn() },
     auditLog: { create: vi.fn() },
-    journal: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn() },
+    journal: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), findFirst: vi.fn() },
   }
   return {
     default: {
@@ -278,6 +278,7 @@ describe("reverseRun", () => {
       id: "run-1", runNo: "BS-DEP-00007", year: 2026, month: 7, status: "REVERSED",
       reversedBy: "user-fin", reversedAt: new Date(),
     })
+    tx.journal.findUniqueOrThrow.mockResolvedValue(postedRun.journal)
     tx.journal.create.mockResolvedValue({ id: "rev-1", journalNo: "BS-JV-00002" })
   })
 

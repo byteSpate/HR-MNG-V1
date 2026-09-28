@@ -257,4 +257,45 @@ describe("postSystemJournal", () => {
       expect(created.date.toISOString()).toBe("2026-07-31T00:00:00.000Z")
     })
   })
+
+  describe("receivables & payables dimensions", () => {
+    it("carries opportunityId, customerId and supplierId through to the JournalLine data", async () => {
+      const tx = makeTx()
+      const withDimensions = {
+        date: utcDate(2026, 10, 5),
+        narration: "Supplier bill — Smart Technologies",
+        source: { module: "SUPPLIER", refId: "bill-1", event: "ACCRUAL" },
+        lines: [
+          { accountCode: "5201", debit: "80000.00", supplierId: "sup-1", opportunityId: "opp-1" },
+          { accountCode: "2132", credit: "80000.00", customerId: "cus-1" },
+        ],
+        createdBy: "system",
+      }
+
+      await postSystemJournal(tx, withDimensions)
+
+      const created = (tx as any).journal.create.mock.calls[0][0].data
+      const lines = created.lines.createMany.data
+      expect(lines[0]).toEqual(
+        expect.objectContaining({ supplierId: "sup-1", opportunityId: "opp-1", customerId: null })
+      )
+      expect(lines[1]).toEqual(
+        expect.objectContaining({ customerId: "cus-1", supplierId: null, opportunityId: null })
+      )
+    })
+
+    it("defaults all three dimensions to null when a caller omits them, unchanged from every existing caller", async () => {
+      const tx = makeTx()
+
+      await postSystemJournal(tx, input)
+
+      const created = (tx as any).journal.create.mock.calls[0][0].data
+      const lines = created.lines.createMany.data
+      for (const line of lines) {
+        expect(line.opportunityId).toBeNull()
+        expect(line.customerId).toBeNull()
+        expect(line.supplierId).toBeNull()
+      }
+    })
+  })
 })

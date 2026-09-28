@@ -7,6 +7,7 @@ import {
   RiComputerLine,
   RiExchangeDollarLine,
   RiLockLine,
+  RiPercentLine,
   RiPriceTag3Line,
   RiTimeLine,
   type RemixiconComponentType,
@@ -22,6 +23,7 @@ import { DepartmentsPanel } from "./departments-panel"
 import { ExchangeRatesPanel } from "./exchange-rates-panel"
 import { LeaveTypesPanel } from "./leave-types-panel"
 import { ShiftsPanel } from "./shifts-panel"
+import { VatCodesPanel } from "./vat-codes-panel"
 import { TONE } from "@/components/dashboard/record-kit"
 
 interface SettingsTab {
@@ -85,6 +87,13 @@ const TABS: SettingsTab[] = [
     icon: RiExchangeDollarLine,
     roles: ["SUPER_ADMIN", "FINANCE_OFFICER"],
     Panel: ExchangeRatesPanel,
+  },
+  {
+    value: "vat-codes",
+    label: "VAT codes",
+    icon: RiPercentLine,
+    roles: ["SUPER_ADMIN", "FINANCE_OFFICER"],
+    Panel: VatCodesPanel,
   },
 ]
 
