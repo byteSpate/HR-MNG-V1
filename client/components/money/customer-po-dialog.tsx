@@ -7,12 +7,13 @@ import { RiAddLine, RiDeleteBinLine } from "@remixicon/react"
 import { createCustomerPo, prefillPoLines, updateCustomerPo, type CustomerPoInput } from "@/lib/api/customerPo"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
-import type { CustomerPo, SaleLineKind, VatCode } from "@/lib/api/types"
+import type { CustomerPo, SaleLineKind, VatCode, VatMethod } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { VatChoice, vatIncomplete } from "./vat-choice"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -26,10 +27,15 @@ interface LineDraft {
   quantity: string
   unitPrice: string
   vatCodeId: string
+  vatMethod: VatMethod
+  vatRatePercent: string
 }
 
 function blankLine(vatCodes: VatCode[]): LineDraft {
-  return { description: "", kind: "GOODS", quantity: "1", unitPrice: "", vatCodeId: vatCodes[0]?.id ?? "" }
+  return {
+    description: "", kind: "GOODS", quantity: "1", unitPrice: "",
+    vatCodeId: vatCodes[0]?.id ?? "", vatMethod: "CODE", vatRatePercent: "",
+  }
 }
 
 function lineTotal(l: LineDraft): string | null {
@@ -82,7 +88,10 @@ export function CustomerPoDialog({
   const [invoiceTo, setInvoiceTo] = useState(po?.invoiceTo ?? "")
   const [lines, setLines] = useState<LineDraft[]>(
     po
-      ? po.lines.map((l) => ({ description: l.description, kind: l.kind, quantity: l.quantity, unitPrice: l.unitPrice, vatCodeId: l.vatCodeId }))
+      ? po.lines.map((l) => ({
+          description: l.description, kind: l.kind, quantity: l.quantity, unitPrice: l.unitPrice, vatCodeId: l.vatCodeId,
+          vatMethod: l.vatMethod, vatRatePercent: l.vatMethod === "MANUAL" ? (l.vatRatePercent ?? "") : "",
+        }))
       : [blankLine([])]
   )
 
@@ -93,7 +102,10 @@ export function CustomerPoDialog({
     mutationFn: () => prefillPoLines(accessToken!, opportunityId),
     onSuccess: (result) => {
       setLines(
-        result.lines.map((p) => ({ description: p.description, kind: p.kind, quantity: p.quantity, unitPrice: p.unitPrice ?? "", vatCodeId: codes[0]?.id ?? "" }))
+        result.lines.map((p) => ({
+          description: p.description, kind: p.kind, quantity: p.quantity, unitPrice: p.unitPrice ?? "",
+          vatCodeId: codes[0]?.id ?? "", vatMethod: "CODE" as const, vatRatePercent: "",
+        }))
       )
     },
     onError: (err) => setError(toMessage(err)),
@@ -110,7 +122,9 @@ export function CustomerPoDialog({
 
   const net = lines.reduce((s, l) => s + Number(lineTotal(l) ?? "0"), 0)
 
-  const linesComplete = lines.every((l) => l.description.trim() && Number(l.quantity) > 0 && Number(l.unitPrice) > 0 && (l.vatCodeId || codes[0]))
+  const linesComplete = lines.every(
+    (l) => l.description.trim() && Number(l.quantity) > 0 && Number(l.unitPrice) > 0 && (l.vatCodeId || codes[0]) && !vatIncomplete(l)
+  )
   const canSubmit = Boolean(customerPoNumber.trim() && date && lines.length > 0 && linesComplete)
 
   const submit = () =>
@@ -125,6 +139,8 @@ export function CustomerPoDialog({
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         vatCodeId: l.vatCodeId || codes[0]?.id || "",
+        vatMethod: l.vatMethod,
+        ...(l.vatMethod === "MANUAL" ? { vatRatePercent: l.vatRatePercent } : {}),
       })),
     })
 
@@ -201,18 +217,9 @@ export function CustomerPoDialog({
                   placeholder="Enter a unit price"
                   required
                 />
-                <select
-                  aria-label={`Line ${i + 1} VAT`}
-                  className={`${SELECT} sm:col-span-2`}
-                  value={line.vatCodeId || codes[0]?.id || ""}
-                  onChange={(e) => update(i, { vatCodeId: e.target.value })}
-                >
-                  {codes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="sm:col-span-2">
+                  <VatChoice index={i} value={line} codes={codes} onChange={(patch) => update(i, patch)} />
+                </div>
                 <div className={`flex items-center text-[12.5px] sm:col-span-3 ${TONE.muted}`}>
                   {lineTotal(line) ? `Line total ${formatMoney(lineTotal(line)!, "BDT")}` : "No line total yet"}
                 </div>

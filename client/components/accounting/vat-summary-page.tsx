@@ -123,6 +123,23 @@ export function VatSummaryPage() {
             <Tile label="Difference" value={formatMoney(summary.data.difference, "BDT")} />
             <Tile label="Withheld by customers" value={formatMoney(summary.data.withheldByCustomers, "BDT")} />
           </div>
+          <div className="mt-4 rounded-md border border-[#E4E9EF] bg-white p-4">
+            <h3 className="text-[12.5px] font-bold">VAT typed by hand</h3>
+            <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 text-[13px] sm:grid-cols-2">
+              <div className="flex items-center justify-between gap-3">
+                <dt className={TONE.muted}>On invoices</dt>
+                <dd className="tabular-nums">{formatMoney(summary.data.typedOnInvoices, "BDT")}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className={TONE.muted}>On supplier bills</dt>
+                <dd className="tabular-nums">{formatMoney(summary.data.typedOnBills, "BDT")}</dd>
+              </div>
+            </dl>
+            <p className={cn("mt-2 text-[12px]", TONE.muted)}>
+              These amounts are already inside the totals above. They show how much came from a VAT % typed on a line, not
+              from a VAT code.
+            </p>
+          </div>
           <p className={cn("text-[12px]", TONE.muted)}>
             This is not a VAT return. The app records VAT; it does not file it.
           </p>

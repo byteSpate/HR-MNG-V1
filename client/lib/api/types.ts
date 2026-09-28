@@ -1751,6 +1751,13 @@ export interface VatCode {
 
 export type SupplierDocStatus = "DRAFT" | "APPROVED" | "REVERSED"
 
+/**
+ * Where a line's VAT rate came from (spec 2026-09-28 §1.6). CODE: the VAT
+ * code's rate from Settings. MANUAL: a % typed on the line. Either way the
+ * line keeps its VAT code.
+ */
+export type VatMethod = "CODE" | "MANUAL"
+
 export interface SupplierBillLine {
   id: string
   description: string
@@ -1758,6 +1765,8 @@ export interface SupplierBillLine {
   amount: string
   sourceAmount: string | null
   vatCodeId: string
+  vatMethod: VatMethod
+  vatRatePercent: string | null
   vatAmount: string
 }
 
@@ -1898,6 +1907,8 @@ export interface CustomerPoLine {
   unitPrice: string
   amount: string
   vatCodeId: string
+  vatMethod: VatMethod
+  vatRatePercent: string | null
   vatCode: VatCode
   order: number
   /** Draft and approved invoice lines, for working out what is left to invoice. */
@@ -1924,7 +1935,16 @@ export interface InvoiceablePo {
   customerPoNumber: string
   customer: { id: string; legalName: string }
   opportunity: { id: string; serial: string; name: string }
-  lines: Array<{ id: string; description: string; kind: SaleLineKind; amount: string; vatCodeId: string; remaining: string }>
+  lines: Array<{
+    id: string
+    description: string
+    kind: SaleLineKind
+    amount: string
+    vatCodeId: string
+    vatMethod: VatMethod
+    vatRatePercent: string | null
+    remaining: string
+  }>
 }
 export interface InvoiceLine {
   id: string
@@ -1932,6 +1952,8 @@ export interface InvoiceLine {
   description: string
   amount: string
   vatCodeId: string
+  vatMethod: VatMethod
+  vatRatePercent: string | null
   vatAmount: string
   poLine: { kind: SaleLineKind }
   vatCode: VatCode
@@ -2217,6 +2239,12 @@ export interface WaitingForApprovalRow {
   amount: string
   preparedBy: string
   preparedAt: string
+  /**
+   * The VAT rates a person typed by hand on this draft's lines, 2 decimals,
+   * lowest first, no repeats. Empty when every line used a VAT code
+   * (spec 2026-09-28 §1.6).
+   */
+  typedVatRates: string[]
 }
 
 /**
@@ -2228,6 +2256,10 @@ export interface DealVatSummary {
   onBills: string
   difference: string
   withheldByCustomers: string
+  /** VAT on approved invoice lines whose rate was typed by hand, in the range. */
+  typedOnInvoices: string
+  /** The same for approved supplier bill lines. */
+  typedOnBills: string
 }
 
 export interface AccountingPeriod {

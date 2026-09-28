@@ -1,12 +1,20 @@
 import { apiFetch } from "./client"
-import type { Invoice, InvoiceablePo } from "./types"
+import type { Invoice, InvoiceablePo, VatMethod } from "./types"
 
 export interface InvoiceInput {
   poId: string
   invoiceNumber: string
   date: string
   dueDate?: string
-  lines: Array<{ poLineId: string; description?: string; amount: string; vatCodeId?: string }>
+  lines: Array<{
+    poLineId: string
+    description?: string
+    amount: string
+    /** Send none of the three to copy the PO line's VAT (spec §1.6). */
+    vatCodeId?: string
+    vatMethod?: VatMethod
+    vatRatePercent?: string
+  }>
 }
 
 export function listInvoices(accessToken: string, filter: { status?: string } = {}): Promise<Invoice[]> {

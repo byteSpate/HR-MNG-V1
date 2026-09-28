@@ -9,6 +9,7 @@ import { useSession } from "@/lib/auth/session-context"
 import type { CustomerPo, CustomerPoStatus } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { CustomerPoDialog } from "@/components/money/customer-po-dialog"
+import { vatLabel } from "@/components/money/vat-choice"
 import { DialogActions, Field, FormError, PanelAlert, RowActions, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import type { Tone } from "@/components/dashboard/types"
@@ -152,6 +153,9 @@ export function PoPart({
                 {po.lines.map((line) => (
                   <div key={line.id} className="flex items-center justify-between gap-3 text-[12.5px]">
                     <span className="min-w-0 truncate">{line.description}</span>
+                    <span className={line.vatMethod === "MANUAL" ? "shrink-0 text-[#8A5E0C]" : "shrink-0 text-[#5F6B7C]"}>
+                      VAT {vatLabel(line)}
+                    </span>
                     <span className={`shrink-0 ${TONE.muted}`}>
                       {formatMoney(lineInvoiced(line), "BDT")} of {formatMoney(line.amount, "BDT")} invoiced
                     </span>
