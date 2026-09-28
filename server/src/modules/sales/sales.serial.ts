@@ -9,3 +9,13 @@ export async function nextOpportunitySerial(tx: Prisma.TransactionClient): Promi
   })
   return `BS-OPP-${String(counter.value).padStart(5, "0")}`
 }
+
+/** Transactional `BS-PRJ-00001` issuer, the same mechanism as Opportunities. */
+export async function nextProjectSerial(tx: Prisma.TransactionClient): Promise<string> {
+  const counter = await tx.idCounter.upsert({
+    where: { id: "PRJ" },
+    update: { value: { increment: 1 } },
+    create: { id: "PRJ", value: 1 },
+  })
+  return `BS-PRJ-${String(counter.value).padStart(5, "0")}`
+}

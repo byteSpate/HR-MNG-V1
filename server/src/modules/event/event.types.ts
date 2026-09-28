@@ -60,6 +60,8 @@ export type EventType =
   | "sales.opportunity.closed"
   // A Sales Admin putting right a final status set by mistake (spec §1.4).
   | "sales.opportunity.status_corrected"
+  // The Project started for a Won Opportunity (ADR 0005).
+  | "sales.project.started"
   | "sales.meeting.scheduled"
   | "sales.meeting.rescheduled"
   | "sales.meeting.completed"

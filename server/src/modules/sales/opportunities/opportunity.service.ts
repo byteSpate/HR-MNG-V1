@@ -50,6 +50,8 @@ export const INCLUDE = {
     },
   },
   lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
+  // The delivery work started from this Won Opportunity (ADR 0005), at most one.
+  project: { select: { id: true, serial: true, name: true, status: true } },
 } as const
 
 /** Whether `actor` may write to this deal, decided from its parent account. */
