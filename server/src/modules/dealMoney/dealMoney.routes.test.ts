@@ -25,7 +25,10 @@ beforeEach(() => {
   vi.mocked(getDealMoney).mockResolvedValue({} as any)
   vi.mocked(listWaitingForApproval).mockResolvedValue([])
   vi.mocked(sendBack).mockResolvedValue(undefined)
-  vi.mocked(getVatSummary).mockResolvedValue({ onInvoices: "0.00", onBills: "0.00", difference: "0.00", withheldByCustomers: "0.00" })
+  vi.mocked(getVatSummary).mockResolvedValue({
+    onInvoices: "0.00", onBills: "0.00", difference: "0.00", withheldByCustomers: "0.00",
+    typedOnInvoices: "0.00", typedOnBills: "0.00",
+  })
 })
 
 describe("GET /api/deal-money/deals", () => {

@@ -16,6 +16,7 @@ import { writeAudit } from "../../utils/audit"
 import { resolveRateOrThrow } from "../payroll/payroll.fx"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { assertMoneyAllowed } from "../dealMoney/dealMoney.goLive"
+import { loadActiveVatRates, resolveLineVat } from "../receivables/receivables.vat"
 import type { CreateSupplierBillInput, UpdateSupplierBillInput } from "./supplierBill.validators"
 
 // Goods are bought only after the customer's PO, and a PO exists only on a
@@ -33,32 +34,31 @@ async function assertBillDealAllowed(tx: PrismaNamespace.TransactionClient, oppo
 }
 
 // VAT is frozen per line when the line is written, from its VAT code's rate
-// at that moment, rounded to the paisa (design §3.2). A later change to the
-// code's rate never moves a bill already entered.
+// at that moment or from a % typed on the line, rounded to the paisa
+// (design §3.2, spec 2026-09-28 §1.6). A later change to the code's rate
+// never moves a bill already entered.
 async function toLineRows(
   tx: PrismaNamespace.TransactionClient,
   input: CreateSupplierBillInput,
   fxRateToBdt: string | null
 ) {
-  const vatIds = [...new Set(input.lines.map((l) => l.vatCodeId))]
-  const codes = await tx.vatCode.findMany({ where: { id: { in: vatIds }, isActive: true } })
-  const rateById = new Map(codes.map((c) => [c.id, new Prisma.Decimal(c.ratePercent)]))
+  const rates = await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
 
   return input.lines.map((line) => {
-    const rate = rateById.get(line.vatCodeId)
-    if (!rate) throw new AppError(400, "This VAT code does not exist, or has been turned off.")
-
     const amount =
       input.currency === "BDT" || !line.sourceAmount
         ? line.amount
         : (Number(line.sourceAmount) * Number(fxRateToBdt)).toFixed(2)
+    const vat = resolveLineVat(line, rates, new Prisma.Decimal(amount))
     return {
       description: line.description,
       kind: line.kind,
       amount,
       sourceAmount: input.currency === "BDT" ? null : (line.sourceAmount ?? line.amount),
-      vatCodeId: line.vatCodeId,
-      vatAmount: new Prisma.Decimal(amount).times(rate).dividedBy(100).toFixed(2),
+      vatCodeId: vat.vatCodeId,
+      vatMethod: vat.vatMethod,
+      vatRatePercent: vat.vatRatePercent,
+      vatAmount: vat.vatAmount,
     }
   })
 }

@@ -86,6 +86,41 @@ describe("listWaitingForApproval", () => {
     expect(rows[2]).toMatchObject({ number: "INV-1", party: "Bengal Group", amount: "1150000.00", preparedBy: "Farah Islam" })
     expect(rows[3].number).toContain("INV-1")
   })
+
+  it("lists the typed VAT rates on a draft so the approver sees them", async () => {
+    vi.mocked(prisma.invoice.findMany).mockResolvedValue([
+      {
+        id: "i1", invoiceNumber: "INV-1", createdBy: "u1", createdAt: new Date("2026-09-28"),
+        customer: { legalName: "Rising Group" },
+        lines: [
+          { amount: d("100"), vatAmount: d("7.50"), vatMethod: "MANUAL", vatRatePercent: d("7.5") },
+          { amount: d("100"), vatAmount: d("15"), vatMethod: "CODE", vatRatePercent: d("15") },
+          { amount: d("100"), vatAmount: d("3.50"), vatMethod: "MANUAL", vatRatePercent: d("3.5") },
+          { amount: d("100"), vatAmount: d("3.50"), vatMethod: "MANUAL", vatRatePercent: d("3.5") },
+        ],
+        po: { opportunity: { id: "o1", serial: "BS-OPP-00001" } },
+      },
+    ] as any)
+
+    const rows = await listWaitingForApproval()
+
+    // Distinct, 2 decimals, lowest first.
+    expect(rows[0].typedVatRates).toEqual(["3.50", "7.50"])
+  })
+
+  it("reports no typed rates on a draft whose lines all use a VAT code", async () => {
+    vi.mocked(prisma.invoice.findMany).mockResolvedValue([
+      {
+        id: "i2", invoiceNumber: "INV-2", createdBy: "u1", createdAt: new Date("2026-09-28"),
+        customer: { legalName: "Rising Group" },
+        lines: [{ amount: d("100"), vatAmount: d("15"), vatMethod: "CODE", vatRatePercent: d("15") }],
+        po: { opportunity: { id: "o1", serial: "BS-OPP-00001" } },
+      },
+    ] as any)
+
+    const rows = await listWaitingForApproval()
+    expect(rows[0].typedVatRates).toEqual([])
+  })
 })
 
 describe("countWaitingForApproval", () => {

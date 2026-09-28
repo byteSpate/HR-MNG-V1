@@ -4,6 +4,8 @@ vi.mock("../../config/prisma", () => ({
   default: {
     account: { findUniqueOrThrow: vi.fn() },
     journalLine: { aggregate: vi.fn() },
+    invoiceLine: { aggregate: vi.fn() },
+    supplierBillLine: { aggregate: vi.fn() },
   },
 }))
 vi.mock("../posting/posting.rules", async (importOriginal) => ({
@@ -34,6 +36,8 @@ beforeEach(() => {
   vi.mocked(prisma.account.findUniqueOrThrow).mockImplementation(
     (async ({ where }: any) => ({ id: ACCOUNT_ID[where.code] })) as any
   )
+  vi.mocked(prisma.invoiceLine.aggregate).mockResolvedValue({ _sum: { vatAmount: null } } as any)
+  vi.mocked(prisma.supplierBillLine.aggregate).mockResolvedValue({ _sum: { vatAmount: null } } as any)
 })
 
 describe("getVatSummary", () => {
@@ -48,7 +52,24 @@ describe("getVatSummary", () => {
 
     const summary = await getVatSummary("2026-11-01", "2026-11-30")
 
-    expect(summary).toEqual({ onInvoices: "150000.00", onBills: "120000.00", difference: "30000.00", withheldByCustomers: "30000.00" })
+    expect(summary).toEqual({
+      onInvoices: "150000.00", onBills: "120000.00", difference: "30000.00", withheldByCustomers: "30000.00",
+      typedOnInvoices: "0.00", typedOnBills: "0.00",
+    })
+  })
+
+  it("adds what was already inside the totals, typed by hand on a line", async () => {
+    vi.mocked(prisma.journalLine.aggregate).mockResolvedValue({ _sum: { debit: d("0"), credit: d("0") } } as any)
+    vi.mocked(prisma.invoiceLine.aggregate).mockResolvedValue({ _sum: { vatAmount: d("75") } } as any)
+    vi.mocked(prisma.supplierBillLine.aggregate).mockResolvedValue({ _sum: { vatAmount: null } } as any)
+
+    const summary = await getVatSummary("2026-11-01", "2026-11-30")
+
+    expect(summary.typedOnInvoices).toBe("75.00")
+    expect(summary.typedOnBills).toBe("0.00")
+    expect(vi.mocked(prisma.invoiceLine.aggregate).mock.calls[0][0]).toMatchObject({
+      where: { vatMethod: "MANUAL", invoice: { status: "APPROVED" } },
+    })
   })
 
   it("counts a journal dated on the end day itself", async () => {

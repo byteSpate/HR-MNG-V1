@@ -9,6 +9,10 @@ export interface VatSummary {
   onBills: string
   difference: string
   withheldByCustomers: string
+  /** VAT on approved invoice lines whose rate was typed by hand, in the range. */
+  typedOnInvoices: string
+  /** The same for approved supplier bill lines. */
+  typedOnBills: string
 }
 
 /** Posted debits minus credits for an account, over a date range, counting
@@ -62,10 +66,25 @@ export async function getVatSummary(from: string, to: string): Promise<VatSummar
     debitLessCredit(resolveAccountCode(receiptRules, "VDS"), fromDate, toDate),
   ])
 
+  // How much of the totals above came from a % typed on a line rather than
+  // from a VAT code. It is already inside the totals, not extra.
+  const [typedInvoices, typedBills] = await Promise.all([
+    prisma.invoiceLine.aggregate({
+      where: { vatMethod: "MANUAL", invoice: { status: "APPROVED", date: { gte: fromDate, lt: toDate } } },
+      _sum: { vatAmount: true },
+    }),
+    prisma.supplierBillLine.aggregate({
+      where: { vatMethod: "MANUAL", bill: { status: "APPROVED", date: { gte: fromDate, lt: toDate } } },
+      _sum: { vatAmount: true },
+    }),
+  ])
+
   return {
     onInvoices: onInvoicesCreditLessDebit.toFixed(2),
     onBills: onBills.toFixed(2),
     difference: onInvoicesCreditLessDebit.minus(onBills).toFixed(2),
     withheldByCustomers: withheldByCustomers.toFixed(2),
+    typedOnInvoices: (typedInvoices._sum.vatAmount ?? ZERO).toFixed(2),
+    typedOnBills: (typedBills._sum.vatAmount ?? ZERO).toFixed(2),
   }
 }

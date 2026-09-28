@@ -29,7 +29,7 @@ const INPUT = {
   currency: "BDT" as const,
   opportunityId: "opp-1",
   lines: [
-    { description: "Firewalls", kind: "GOODS" as const, amount: "800000", vatCodeId: "vat-std" },
+    { description: "Firewalls", kind: "GOODS" as const, amount: "800000", vatCodeId: "vat-std", vatMethod: "CODE" as const },
   ],
 }
 
@@ -68,6 +68,18 @@ describe("bill and deals", () => {
 })
 
 describe("createSupplierBill", () => {
+  it("works out VAT from a typed rate on a bill line", async () => {
+    vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1", status: "DRAFT" } as any)
+
+    await createSupplierBill({
+      ...INPUT,
+      lines: [{ ...INPUT.lines[0], amount: "2000", vatMethod: "MANUAL" as const, vatRatePercent: "5" }],
+    }, ACTOR)
+
+    const data = vi.mocked(prisma.supplierBill.create).mock.calls[0][0].data as any
+    expect(data.lines.create[0]).toMatchObject({ vatMethod: "MANUAL", vatRatePercent: "5.00", vatAmount: "100.00" })
+  })
+
   it("creates a DRAFT bill with its lines in one transaction", async () => {
     vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1", status: "DRAFT" } as any)
 
