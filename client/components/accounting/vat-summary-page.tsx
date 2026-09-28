@@ -16,6 +16,13 @@ import { cn } from "@/lib/utils"
 
 /** A bordered card with a big number, matching `money-numbers.tsx`'s `Tile` —
  *  not imported from there since that one is private to its own file. */
+/** total less typed, to the paisa. Never negative: a typed line's VAT is
+ *  inside its document's total, so the remainder cannot go below zero. */
+function less(total: string, typed: string): string {
+  const value = Number(total) - Number(typed)
+  return (Number.isFinite(value) && value > 0 ? value : 0).toFixed(2)
+}
+
 function Tile({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
     <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
@@ -123,21 +130,46 @@ export function VatSummaryPage() {
             <Tile label="Difference" value={formatMoney(summary.data.difference, "BDT")} />
             <Tile label="Withheld by customers" value={formatMoney(summary.data.withheldByCustomers, "BDT")} />
           </div>
+          {/* The two rows are the total above, split by where the rate came
+              from (spec 2026-09-28 §1.6). "From a VAT code" is the total less
+              the typed part, worked out here rather than asked for separately:
+              two queries for one subtraction would let the two halves drift
+              apart, and then neither would be the total. */}
           <div className="mt-4 rounded-md border border-[#E4E9EF] bg-white p-4">
-            <h3 className="text-[12.5px] font-bold">VAT typed by hand</h3>
-            <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 text-[13px] sm:grid-cols-2">
-              <div className="flex items-center justify-between gap-3">
-                <dt className={TONE.muted}>On invoices</dt>
-                <dd className="tabular-nums">{formatMoney(summary.data.typedOnInvoices, "BDT")}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className={TONE.muted}>On supplier bills</dt>
-                <dd className="tabular-nums">{formatMoney(summary.data.typedOnBills, "BDT")}</dd>
-              </div>
-            </dl>
+            <h3 className="text-[12.5px] font-bold">Where the VAT came from</h3>
+            <table className="mt-2 w-full text-[13px]">
+              <thead>
+                <tr className="text-left text-[11.5px]">
+                  <th scope="col" className={`py-1 font-semibold ${TONE.muted}`}>Source</th>
+                  <th scope="col" className={`py-1 text-right font-semibold ${TONE.muted}`}>On invoices</th>
+                  <th scope="col" className={`py-1 text-right font-semibold ${TONE.muted}`}>On supplier bills</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-[#EEF1F5]">
+                  <th scope="row" className="py-1.5 text-left font-semibold">From a VAT code</th>
+                  <td className="py-1.5 text-right tabular-nums">
+                    {formatMoney(less(summary.data.onInvoices, summary.data.typedOnInvoices), "BDT")}
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">
+                    {formatMoney(less(summary.data.onBills, summary.data.typedOnBills), "BDT")}
+                  </td>
+                </tr>
+                <tr className="border-t border-[#EEF1F5]">
+                  <th scope="row" className="py-1.5 text-left font-semibold text-[#8A5E0C]">Typed by hand</th>
+                  <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.typedOnInvoices, "BDT")}</td>
+                  <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.typedOnBills, "BDT")}</td>
+                </tr>
+                <tr className="border-t border-[#E4E9EF] font-bold">
+                  <th scope="row" className="py-1.5 text-left">Total</th>
+                  <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.onInvoices, "BDT")}</td>
+                  <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.onBills, "BDT")}</td>
+                </tr>
+              </tbody>
+            </table>
             <p className={cn("mt-2 text-[12px]", TONE.muted)}>
-              These amounts are already inside the totals above. They show how much came from a VAT % typed on a line, not
-              from a VAT code.
+              These amounts are already inside the totals above, not extra. &quot;Typed by hand&quot; is the VAT % someone
+              typed on a line rather than taking from a VAT code in Settings.
             </p>
           </div>
           <p className={cn("text-[12px]", TONE.muted)}>

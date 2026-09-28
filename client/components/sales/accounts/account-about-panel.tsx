@@ -1,6 +1,7 @@
 "use client"
 
 import type { SalesAccountSummary } from "@/lib/api/types"
+import { CommentPanel } from "@/components/sales/shared/comment-panel"
 import { TONE } from "@/components/dashboard/record-kit"
 import { ACCOUNT_STATUS_LABEL } from "@/components/sales/shared/sales-shared"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
@@ -31,7 +32,8 @@ export function AccountAboutPanel({
   if (account.statusReason) rows.push({ label: "Status reason", value: account.statusReason })
 
   return (
-    <Panel>
+    <div className="grid gap-4">
+      <Panel>
       <PanelHeading title="About" />
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-2">
         {rows.map((row) => (
@@ -41,13 +43,21 @@ export function AccountAboutPanel({
           </div>
         ))}
       </dl>
-      {/* Management notes are admin-only to write. The server refuses either
-          way; hiding the option keeps a control that cannot act off screen. */}
-      <p className={`mt-3 text-[11.5px] ${TONE.muted}`}>
-        {isSalesAdmin
-          ? "As a Sales Admin you can add a management note as a Remark."
-          : "Remarks are open to the account's owner, its collaborators and a Sales Admin."}
-      </p>
-    </Panel>
+      </Panel>
+
+      {/* "Remarks" here and "Comments" on an Opportunity, from one component.
+          That is the business's own vocabulary and the two labels must not be
+          made consistent with each other. */}
+      <CommentPanel
+        entity="SALES_ACCOUNT"
+        entityId={account.id}
+        label="Remarks"
+        // Customer feedback is offered on an Opportunity only: feedback is
+        // always about a specific Opportunity, and the server no longer
+        // refuses the row, so the restriction lives here.
+        kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
+        canWrite={account.canManage}
+      />
+    </div>
   )
 }

@@ -13,7 +13,6 @@ import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/sh
 import { MeetingsPanel, TasksPanel } from "@/components/sales/shared/plan-panels"
 import { Button } from "@/components/ui/button"
 import { AccountEditDialog } from "@/components/sales/accounts/account-edit-dialog"
-import { CommentPanel } from "@/components/sales/shared/comment-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
 import { ContactsPanel } from "@/components/sales/accounts/contacts-panel"
@@ -196,22 +195,6 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
             },
             { value: "meetings", label: "Meetings", content: <MeetingsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
             { value: "tasks", label: "Tasks", content: <TasksPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
-            {
-              value: "remarks",
-              label: "Remarks",
-              content: (
-                <CommentPanel
-                  entity="SALES_ACCOUNT"
-                  entityId={accountId}
-                  label="Remarks"
-                  // Customer feedback is offered on a deal only: feedback is
-                  // always about a specific deal, and the server no longer
-                  // refuses the row, so the restriction lives here.
-                  kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
-                  canWrite={accountQuery.data.canManage}
-                />
-              ),
-            },
           ]}
         />
       ) : null}
