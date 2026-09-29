@@ -59,6 +59,10 @@ export const INCLUDE = {
   lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
   // The delivery work started from this Won Opportunity (ADR 0005), at most one.
   project: { select: { id: true, serial: true, name: true, status: true } },
+  // The Hand-over link, so a page can show "handed over from" and "handed to"
+  // without a second read (spec §2.5).
+  handedOverFrom: { select: { id: true, serial: true, name: true } },
+  handedOverTo: { select: { id: true, serial: true, name: true } },
 } as const
 
 /** Whether `actor` may write to this deal, decided from its parent account. */

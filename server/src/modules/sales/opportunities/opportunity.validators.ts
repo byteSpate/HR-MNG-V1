@@ -57,6 +57,13 @@ export const updateOpportunitySchema = z.object({
 export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
 
 export const changeOpportunityStageSchema = z.object({ stage: opportunityStage })
+
+/** Handing the software part to the Software team (spec §2.5). */
+export const handOverSchema = z.object({
+  name: z.string().trim().min(2, "An Opportunity needs a name").max(180).optional(),
+  ownerEmployeeId: z.string().uuid(),
+})
+export type HandOverBody = z.infer<typeof handOverSchema>
 export const changeOpportunityStatusSchema = z.object({
   // Ongoing is not here: Won, Lost and Cancelled are final (spec 2026-09-28
   // §1.4). A mistake is corrected by a Sales Admin on /correct-status.

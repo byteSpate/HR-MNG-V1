@@ -14,6 +14,8 @@ import {
   getOpportunityHandler,
   getOpportunityHistoryHandler,
   getOpportunityTimelineHandler,
+  handOverHandler,
+  listHandOverOwnersHandler,
   listDocumentLinksHandler,
   listOpportunitiesHandler,
   listOpportunityOwnersHandler,
@@ -34,6 +36,10 @@ router.get("/opportunities/:id", requireAuth, requireSales(), getOpportunityHand
 router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunityHandler)
 router.patch("/opportunities/:id/stage", requireAuth, requireSales(), changeOpportunityStageHandler)
 router.patch("/opportunities/:id/status", requireAuth, requireSales(), changeOpportunityStatusHandler)
+// The Hand-over (spec §2.5). Both sit under `/opportunities/:id`, so they are
+// declared with the rest of that family, above the `/opportunities/:id` read.
+router.get("/opportunities/:id/handover-owners", requireAuth, requireSales(), listHandOverOwnersHandler)
+router.post("/opportunities/:id/handover", requireAuth, requireSales(), handOverHandler)
 // Document links (spec 2026-09-28 §1.5). `/documents/:linkId` rather than
 // `/opportunities/:id/documents/:linkId`, so the path can never be read as
 // `/opportunities/:id`; it matches how `/lines/:lineId` is routed today.

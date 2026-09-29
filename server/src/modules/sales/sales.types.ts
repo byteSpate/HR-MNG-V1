@@ -69,6 +69,9 @@ export interface OpportunitySummary {
   amountDiffersFromLines: boolean
   /** The Project started from this Won Opportunity (ADR 0005), at most one. */
   project: { id: string; serial: string; name: string; status: ProjectStatusValue } | null
+  /** The Hand-over link (spec §2.5). Exactly one of the two is set. */
+  handedOverFrom: { id: string; serial: string; name: string } | null
+  handedOverTo: { id: string; serial: string; name: string } | null
   /** Whether this viewer may change the deal. The directory is shared, so
       seeing one and being able to work it are different questions. */
   canManage: boolean
