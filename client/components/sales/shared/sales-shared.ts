@@ -110,6 +110,13 @@ export const STAGE_LABEL: Record<OpportunityStage, string> = {
   QUOTATION_SUBMITTED: "Quotation submitted",
   NEGOTIATION: "Quotation Revision",
   AWAITING_DECISION: "Awaiting decision",
+  // Software Development stages (spec §2.4). The same words the server uses,
+  // so a stage never reads one way in the app and another in an email.
+  REQUIREMENT_GATHERING: "Requirement gathering",
+  BRD_SENT: "BRD sent",
+  SRS_SENT: "SRS sent",
+  PROPOSAL_SUBMITTED: "Proposal submitted",
+  PROPOSAL_REVISION: "Proposal revision",
 }
 
 /** Who we are waiting on, which is what makes a stage worth acting on. */
@@ -120,6 +127,11 @@ export const STAGE_WAITING_ON: Record<OpportunityStage, string> = {
   QUOTATION_SUBMITTED: "Waiting on the customer",
   NEGOTIATION: "Both sides",
   AWAITING_DECISION: "Waiting on the customer",
+  REQUIREMENT_GATHERING: "Waiting on us",
+  BRD_SENT: "Waiting on the customer",
+  SRS_SENT: "Waiting on the customer",
+  PROPOSAL_SUBMITTED: "Waiting on the customer",
+  PROPOSAL_REVISION: "Waiting on us",
 }
 
 export const OPPORTUNITY_STATUS_LABEL: Record<OpportunityStatus, string> = {
@@ -219,6 +231,7 @@ export const TASK_PRIORITY_TONE: Record<SalesTaskPriority, Tone> = {
 export const TASK_ORIGIN_LABEL: Record<SalesTaskOrigin, string> = {
   SELF: "My own",
   FUNNEL_MEETING: "Funnel meeting",
+  PROJECT: "Project",
 }
 
 /** One glyph each, used on the Timeline, the panels and the overview. */

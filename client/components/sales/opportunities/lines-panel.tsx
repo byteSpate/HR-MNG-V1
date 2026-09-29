@@ -187,10 +187,15 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
     onError: (err) => setError(toMessage(err)),
   })
 
+  // A Software Opportunity's lines are Modules: a name, what it covers and a
+  // price. The OEM, model, quantity, unit price, margin and supplier fields
+  // are for bought goods, and a control that cannot be used is a defect.
+  const modules = deal.track === "SOFTWARE_DEVELOPMENT"
+
   return (
     <Panel>
       <PanelHeading
-        title="Products"
+        title={modules ? "Modules" : "Products"}
         action={
           canManage && !adding ? (
             <Button
@@ -199,7 +204,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
             >
               <RiAddLine className="size-3.5" aria-hidden />
-              Add
+              {modules ? "Add module" : "Add"}
             </Button>
           ) : undefined
         }
@@ -214,7 +219,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
         <PanelNotice>
           <span className="flex flex-wrap items-center gap-2">
             <span>
-              The Opportunity value is {taka(deal.amount)}, but the products add up to {taka(deal.lineTotal)}.
+              The Opportunity value is {taka(deal.amount)}, but the {modules ? "modules" : "products"} add up to {taka(deal.lineTotal)}.
             </span>
             {canManage ? (
               <Button
@@ -224,7 +229,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                 onClick={() => reconcile.mutate()}
                 className="h-auto p-0 text-[12px] font-bold text-[#8A5E0C] underline"
               >
-                Use the products total as the Opportunity value
+                Use the {modules ? "modules" : "products"} total as the Opportunity value
               </Button>
             ) : null}
           </span>
@@ -233,8 +238,9 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
 
       {deal.lines.length === 0 ? (
         <p className={`text-[12.5px] ${TONE.muted}`}>
-          No products yet. An Opportunity can have several products, each with its own quantity and
-          price. The Opportunity value stays the figure the funnel reads.
+          {modules
+            ? "No modules yet. Add each part of the software, with its price."
+            : "No products yet. An Opportunity can have several products, each with its own quantity and price. The Opportunity value stays the figure the funnel reads."}
         </p>
       ) : (
         <ul>
@@ -293,7 +299,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
       {deal.lines.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 border-t border-[#E4E9EF] pt-3">
           <span className={`text-[12px] ${TONE.muted}`}>
-            Products total
+            {modules ? "Modules total" : "Products total"}
             {/* The excluded count is stated rather than folded in as zero. */}
             {deal.unpricedLineCount > 0
               ? `, not counting ${deal.unpricedLineCount} with no price yet`
@@ -303,7 +309,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
         </div>
       ) : null}
 
-      {deal.lines.length > 0 ? (
+      {deal.lines.length > 0 && !modules ? (
         <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
           <span className={`text-[12px] ${TONE.muted}`}>
             Margin total
@@ -320,10 +326,11 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
 
       {adding ? (
         <div className="mt-3 space-y-3 border-t border-[#E4E9EF] pt-3">
-          <Field label="Product" htmlFor="line-product">
+          <Field label={modules ? "Module name" : "Product"} htmlFor="line-product">
             <Input id="line-product" list="line-product-suggestions" autoComplete="off" value={product} onChange={(e) => setProduct(e.target.value)} />
             <SuggestionList id="line-product-suggestions" field="product" q={product} />
           </Field>
+          {modules ? null : (
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="OEM brand" htmlFor="line-brand" hint="Optional." help="The maker, like Cisco or Fortinet. Names you have used before are suggested.">
               <Input id="line-brand" list="line-brand-suggestions" autoComplete="off" value={oemBrand} onChange={(e) => setOemBrand(e.target.value)} />
@@ -337,7 +344,9 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               <SupplierPicker value={supplierId} onChange={setSupplierId} />
             </Field>
           </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
+            {modules ? null : (
             <Field label="Quantity" htmlFor="line-qty" hint="Optional." help="Leave it empty for a service, like installation.">
               <Input
                 id="line-qty"
@@ -346,11 +355,14 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </Field>
+            )}
+            {modules ? null : (
             <Field label="Price per unit" htmlFor="line-unit-value" hint="Optional." help="The price of one piece, kept for reference. It is not added up anywhere.">
               <Input id="line-unit-value" inputMode="decimal" value={unitValue} onChange={(e) => setUnitValue(e.target.value)} />
             </Field>
+            )}
             <Field
-              label="Total price"
+              label={modules ? "Price" : "Total price"}
               htmlFor="line-value"
               hint="Optional." help="The price for all of them together, typed by you — it is not worked out from the price per unit. Leave it empty if there is no price yet."
             >
@@ -361,6 +373,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                 onChange={(e) => setLineValue(e.target.value)}
               />
             </Field>
+            {modules ? null : (
             <Field
               label="Margin (%)"
               htmlFor="line-margin"
@@ -374,8 +387,9 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                 onChange={(e) => setMarginPercent(e.target.value)}
               />
             </Field>
+            )}
           </div>
-          <Field label="Note" htmlFor="line-note" hint="Optional." help="Anything else about this product.">
+          <Field label={modules ? "What it covers" : "Note"} htmlFor="line-note" hint="Optional." help={modules ? "What this part of the software does." : "Anything else about this product."}>
             <Input id="line-note" value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           <div className="flex gap-2">
@@ -385,7 +399,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               onClick={() => saveLine.mutate()}
               className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
             >
-              {saveLine.isPending ? "Saving…" : editing ? "Save product" : "Add product"}
+              {saveLine.isPending ? "Saving…" : editing ? (modules ? "Save module" : "Save product") : (modules ? "Add module" : "Add product")}
             </Button>
             <Button
               type="button"

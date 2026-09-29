@@ -15,10 +15,30 @@ const asClient = (tx: Prisma.TransactionClient) => tx as unknown as typeof prism
 const nullable = (value: string | null | undefined) =>
   value === undefined || value === null || value === "" ? null : value
 
+export const MODULE_FIELDS_REFUSED =
+  "A module has a name, what it covers, and a price. OEM, model, quantity, unit price, margin and supplier are for Networking products."
+
+const NETWORKING_ONLY = ["oemBrand", "model", "quantity", "unitValue", "marginPercent", "supplierId"] as const
+
+/**
+ * A Software Opportunity's lines are Modules (spec §2.4, CONTEXT.md Module):
+ * a name, what it covers and a price. Sending a Networking field with a value
+ * is a mistake worth naming rather than silently dropping; sending it empty is
+ * how a line is cleared, so that still goes through.
+ */
+function assertModuleShape(track: string, body: Record<string, unknown>) {
+  if (track !== "SOFTWARE_DEVELOPMENT") return
+  const sent = NETWORKING_ONLY.filter((f) => body[f] !== undefined && body[f] !== null && body[f] !== "")
+  if (sent.length > 0) throw new AppError(400, MODULE_FIELDS_REFUSED)
+}
+
 async function lineForWrite(tx: Prisma.TransactionClient, lineId: string, actor: AccessTokenPayload) {
   const line = await tx.opportunityLine.findFirst({
     where: { id: lineId },
-    include: { supplier: { select: { id: true, name: true } } },
+    include: {
+      supplier: { select: { id: true, name: true } },
+      opportunity: { select: { track: true } },
+    },
   })
   if (!line) throw new AppError(404, "That Opportunity line does not exist, or is not yours")
   await requireOpportunityAccess(line.opportunityId, actor, asClient(tx))
@@ -42,7 +62,8 @@ export async function addOpportunityLine(
   opportunityId: string, body: CreateOpportunityLineBody, actor: AccessTokenPayload
 ) {
   return prisma.$transaction(async (tx) => {
-    await requireOpportunityAccess(opportunityId, actor, asClient(tx))
+    const access = await requireOpportunityAccess(opportunityId, actor, asClient(tx))
+    assertModuleShape(access.track, body)
     const supplierId = body.supplierId ?? null
     await assertSupplierUsable(tx, supplierId)
     const order = ((await tx.opportunityLine.aggregate({
@@ -75,6 +96,7 @@ export async function updateOpportunityLine(
 ) {
   return prisma.$transaction(async (tx) => {
     const current = await lineForWrite(tx, lineId, actor)
+    assertModuleShape(current.opportunity.track, body)
     const data: Record<string, unknown> = {}
     const before: Record<string, unknown> = {}
     const after: Record<string, unknown> = {}

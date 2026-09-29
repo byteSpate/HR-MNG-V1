@@ -1,5 +1,12 @@
 "use client"
 
+import {
+  RiBookOpenLine,
+  RiBox3Line,
+  RiInformationLine,
+  RiPulseLine,
+  RiTaskLine,
+} from "@remixicon/react"
 import Link from "next/link"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 
@@ -12,11 +19,13 @@ import { Tag } from "@/components/dashboard/tag"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
 import { ProjectDetailsTab } from "@/components/sales/projects/project-details-tab"
 import { ProjectProductsTab } from "@/components/sales/projects/project-products-tab"
+import { ProjectTasksTab } from "@/components/sales/projects/project-tasks-tab"
+import { ProjectDailyLogTab } from "@/components/sales/projects/project-daily-log-tab"
 import { ProjectStatusTab } from "@/components/sales/projects/project-status-tab"
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE } from "@/components/sales/projects/project-shared"
 import { Skeleton } from "@/components/ui/skeleton"
 
-type ProjectTab = "details" | "products" | "status"
+type ProjectTab = "details" | "products" | "status" | "tasks" | "daily-log"
 
 /**
  * The Project page (spec 2026-09-28 §1.7, §1.9): a header card, then Details,
@@ -96,9 +105,11 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
           <RecordTabs<ProjectTab>
             initialTab={initialTab}
             tabs={[
-              { value: "details", label: "Details", content: <ProjectDetailsTab project={project} onSaved={onSaved} /> },
-              { value: "products", label: "Products", content: <ProjectProductsTab project={project} onSaved={onSaved} /> },
-              { value: "status", label: "Status", content: <ProjectStatusTab project={project} onSaved={onSaved} /> },
+              { value: "details", icon: RiInformationLine, label: "Details", content: <ProjectDetailsTab project={project} onSaved={onSaved} /> },
+              { value: "products", icon: RiBox3Line, label: project.opportunity.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <ProjectProductsTab project={project} onSaved={onSaved} /> },
+              { value: "status", icon: RiPulseLine, label: "Status", content: <ProjectStatusTab project={project} onSaved={onSaved} /> },
+              { value: "tasks", icon: RiTaskLine, label: "Tasks", content: <ProjectTasksTab project={project} /> },
+              { value: "daily-log", icon: RiBookOpenLine, label: "Daily Log", content: <ProjectDailyLogTab project={project} /> },
             ]}
           />
         </>

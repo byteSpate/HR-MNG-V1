@@ -44,9 +44,10 @@ export const listTaskSchema = z.object({
   status: z.enum(["PENDING", "DONE", "CANCELLED"]).optional(),
   // "now" is due today or overdue: the overview's "Tasks due or overdue" row.
   due: z.enum(["overdue", "today", "now", "week"]).optional(),
-  origin: z.enum(["SELF", "FUNNEL_MEETING"]).optional(),
+  origin: z.enum(["SELF", "FUNNEL_MEETING", "PROJECT"]).optional(),
   salesAccountId: z.string().uuid().optional(),
   opportunityId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
   meetingId: z.string().uuid().optional(),
   mine: z
     .enum(["true", "false"])

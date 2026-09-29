@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  RiAddLine,
   RiAlertLine,
   RiArrowRightLine,
   RiBuilding2Line,
+  RiCheckboxCircleLine,
   RiEyeLine,
   RiGroupLine,
+  RiPauseCircleLine,
 } from "@remixicon/react"
 
 import {
@@ -33,6 +36,8 @@ import {
 } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/shared/sales-shared"
+import { accountStats } from "@/components/sales/shared/sales-stats"
+import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -55,7 +60,7 @@ function AccountNameCell({
   const others = account.assignees.filter((a) => a.id !== account.ownerEmployeeId)
   return (
     <div
-      className={animate ? "rise-in min-w-0" : "min-w-0"}
+      className={animate ? "rise-in min-w-0 text-[13px]" : "min-w-0 text-[13px]"}
       style={animate ? { animationDelay: `${delayMs}ms` } : undefined}
     >
       <div className="flex items-center gap-1.5">
@@ -88,7 +93,7 @@ function toRows(accounts: SalesAccountSummary[], animate: boolean): TableCell[][
     },
     {
       node: (
-        <div className="min-w-0">
+        <div className="min-w-0 text-[13px]">
           <div className="truncate">{a.ownerName}</div>
           {/* Revoking access or recording an exit does not reassign the
               account, so an owner can end up unable to work their own
@@ -223,6 +228,16 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
 
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
   const rows = useMemo(() => toRows(accounts, true), [accounts])
+  // Counted from the rows on this list, so a tile always agrees with the table.
+  const stats = useMemo<SalesStat[]>(() => {
+    const c = accountStats(accounts)
+    return [
+      { label: "Accounts", value: String(c.total), sub: "On this list", icon: RiBuilding2Line },
+      { label: "Active", value: String(c.active), sub: "Being worked now", icon: RiCheckboxCircleLine },
+      { label: "Not active", value: String(c.notActive), sub: "Inactive or Do not contact", icon: RiPauseCircleLine },
+      { label: "Need a new owner", value: String(c.needsOwner), sub: "Owner cannot work them", icon: RiAlertLine },
+    ]
+  }, [accounts])
   const employees = eligibleQuery.data ?? []
   const isLoading = sessionStatus === "loading" || accountsQuery.isPending
 
@@ -269,9 +284,14 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
         sub={sub}
         cta={canCreate ? "New Sales Account" : undefined}
         onCta={canCreate ? handleOpenCreate : undefined}
+        ctaIcon={RiAddLine}
       />
 
+      <SalesStatRow stats={stats} isLoading={isLoading} isError={accountsQuery.isError} />
+
       <PanelTable
+        title={scope === "all" ? "All accounts" : "My accounts"}
+        emptyIcon={RiBuilding2Line}
         cols="minmax(0,2fr) 1fr 1fr auto"
         headers={["Sales Account", "Owner", "Status", ""]}
         rows={rows}

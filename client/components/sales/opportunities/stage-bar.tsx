@@ -1,10 +1,8 @@
-import type { OpportunityStage, OpportunityStatus } from "@/lib/api/types"
+import type { OpportunityStage, OpportunityStatus, SalesTrack } from "@/lib/api/types"
 import { tones } from "@/components/dashboard/types"
 import { cn } from "@/lib/utils"
 import { OPPORTUNITY_STATUS_LABEL, STAGE_LABEL } from "@/components/sales/shared/sales-shared"
-
-/** The six stages in funnel order, the order `STAGE_LABEL` declares them in. */
-const STAGE_ORDER = Object.keys(STAGE_LABEL) as OpportunityStage[]
+import { stagesFor } from "@/lib/api/sales/stages"
 
 /**
  * How far along the funnel a deal is: six segments, filled up to its stage.
@@ -17,12 +15,16 @@ const STAGE_ORDER = Object.keys(STAGE_LABEL) as OpportunityStage[]
 export function StageBar({
   status,
   stage,
+  track,
   className,
 }: {
   status: OpportunityStatus
   stage: OpportunityStage
+  /** The bar is the track's own stages, not a fixed set of six. */
+  track: SalesTrack
   className?: string
 }) {
+  const STAGE_ORDER = stagesFor(track)
   const reached = STAGE_ORDER.indexOf(stage) + 1
   const fill =
     status === "WON"

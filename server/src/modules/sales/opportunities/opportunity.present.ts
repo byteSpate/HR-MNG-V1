@@ -35,6 +35,8 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     marginAmount: margin.value,
     unmarginedLineCount: margin.missing,
     expectedCloseDate: row.expectedCloseDate?.toISOString().slice(0, 10) ?? null,
+    // Set once the quotation or proposal goes out: the Opportunity is then in the funnel.
+    offeredOn: row.offeredOn?.toISOString().slice(0, 10) ?? null,
     oemAccountManager: row.oemAccountManager ?? null, status: row.status,
     statusReason: row.statusReason ?? null, closedAt: row.closedAt?.toISOString() ?? null,
     stage: row.stage, stageChangedAt: row.stageChangedAt.toISOString(),
@@ -49,6 +51,10 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     // The Project started from this Opportunity, or null. Its money stays on
     // the Opportunity, so this is a link and nothing more.
     project: row.project ? { id: row.project.id, serial: row.project.serial, name: row.project.name, status: row.project.status } : null,
+    // The Hand-over link (spec §2.5). One side is always null: a pair cannot
+    // be handed over twice, and the index says so.
+    handedOverFrom: row.handedOverFrom ?? null,
+    handedOverTo: row.handedOverTo ?? null,
     lineTotal: toMoneyString(total), unpricedLineCount: rows.length - priced.length,
     // `priced.length`, not `rows.length`. Lines nobody has costed are not
     // summed as zero, so when none of them carries a value there is no line

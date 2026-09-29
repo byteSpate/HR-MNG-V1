@@ -8,6 +8,7 @@ vi.mock("../../../config/prisma", () => ({
     salesAccount: { findUnique: vi.fn() },
     opportunity: { findFirst: vi.fn() },
     project: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+    projectMilestone: { createMany: vi.fn() },
     journalLine: { aggregate: vi.fn() },
     auditLog: { create: vi.fn() },
     event: { create: vi.fn() },
@@ -26,7 +27,7 @@ const NOW = new Date("2026-09-28T10:00:00.000Z")
 const d = (v: string) => new Prisma.Decimal(v)
 
 const OPP = {
-  id: "opp-1", serial: "BS-OPP-00001", name: "Core refresh", status: "WON",
+  id: "opp-1", serial: "BS-OPP-00001", name: "Core refresh", status: "WON", track: "NETWORKING",
   salesAccountId: "acc-1", ownerEmployeeId: "emp-1", project: null,
 }
 const projectRow = (o: Record<string, unknown> = {}) => ({
@@ -43,6 +44,7 @@ const projectRow = (o: Record<string, unknown> = {}) => ({
   },
   team: [{ employeeId: "emp-2", responsibility: "Install", employee: { id: "emp-2", fullName: "Karim" } }],
   milestones: [],
+  tasks: [],
   ...o,
 })
 
@@ -70,6 +72,21 @@ describe("startProject", () => {
     expect(p.serial).toBe("BS-PRJ-00001")
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
+  })
+
+  it("starts a Software Project with the five milestones", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ ...OPP, track: "SOFTWARE_DEVELOPMENT" } as any)
+    await startProject("opp-1", USER)
+    expect(prisma.projectMilestone.createMany).toHaveBeenCalledWith({
+      data: ["Design", "Development", "Testing", "UAT", "Deployment"].map((title, order) => ({
+        projectId: "prj-1", title, order,
+      })),
+    })
+  })
+
+  it("starts a Networking Project with no milestones", async () => {
+    await startProject("opp-1", USER)
+    expect(prisma.projectMilestone.createMany).not.toHaveBeenCalled()
   })
 
   it("issues the next serial in the series", async () => {
@@ -147,6 +164,17 @@ describe("getProject", () => {
     expect(p.lines[0].done).toEqual({ at: NOW.toISOString(), byName: "Farah" })
   })
 
+  it("carries what a Module covers, so a Software Project can show it (spec §2.4)", async () => {
+    vi.mocked(prisma.project.findFirst).mockResolvedValue(projectRow({
+      opportunity: {
+        ...projectRow().opportunity,
+        lines: [{ ...projectRow().opportunity.lines[0], note: "Leave and attendance" }],
+      },
+    }) as any)
+    const p = await getProject("prj-1", USER)
+    expect(p.lines[0].note).toBe("Leave and attendance")
+  })
+
   it("says the Project is not visible rather than leaking that it exists", async () => {
     vi.mocked(prisma.project.findFirst).mockResolvedValue(null as any)
     await expect(getProject("prj-9", USER)).rejects.toThrow("That Project does not exist, or is not yours")
@@ -184,6 +212,20 @@ describe("listProjects", () => {
     const where = vi.mocked(prisma.project.findMany).mock.calls[0][0]!.where as any
     expect(where).not.toHaveProperty("status")
     expect(where).not.toHaveProperty("salesAccountId")
+  })
+
+  it("filters Projects by the Opportunity's track", async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as any)
+    await listProjects({ track: "SOFTWARE_DEVELOPMENT" } as any, USER)
+    const where = vi.mocked(prisma.project.findMany).mock.calls[0][0]!.where as any
+    expect(where.opportunity).toEqual({ track: "SOFTWARE_DEVELOPMENT" })
+  })
+
+  it("leaves the track out of the where when no track was asked for", async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as any)
+    await listProjects({}, USER)
+    const where = vi.mocked(prisma.project.findMany).mock.calls[0][0]!.where as any
+    expect(where).not.toHaveProperty("opportunity")
   })
 
   it("counts done and total milestones per row", async () => {

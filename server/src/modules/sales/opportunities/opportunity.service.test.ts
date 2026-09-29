@@ -661,3 +661,94 @@ describe("software needed on a deal", () => {
     expect(prisma.opportunity.update).not.toHaveBeenCalled()
   })
 })
+
+describe("Software Development track", () => {
+  it("creates a Software Opportunity", async () => {
+    await createOpportunity({ salesAccountId: ACCOUNT.id, name: "HR app", track: "SOFTWARE_DEVELOPMENT" } as any, USER)
+    expect(prisma.opportunity.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ track: "SOFTWARE_DEVELOPMENT", stage: "REQUIREMENT_RECEIVED" }),
+    }))
+  })
+
+  it("refuses a Software stage on a Networking Opportunity (Review Focus 1)", async () => {
+    await expect(changeOpportunityStage("opp-1", { stage: "BRD_SENT" } as any, USER))
+      .rejects.toThrow("That stage is for Software Development Opportunities. Pick a Networking stage.")
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+  })
+
+  it("refuses a Networking stage on a Software Opportunity", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ track: "SOFTWARE_DEVELOPMENT" }) as any)
+    await expect(changeOpportunityStage("opp-1", { stage: "OEM_PRICING" } as any, USER))
+      .rejects.toThrow("That stage is for Networking Opportunities. Pick a Software Development stage.")
+  })
+
+  it("changes track while there are no lines, and resets the stage", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "OEM_PRICING" }) as any)
+    await updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER)
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ track: "SOFTWARE_DEVELOPMENT", stage: "REQUIREMENT_RECEIVED", stageChangedAt: expect.any(Date) }),
+    }))
+  })
+
+  it("refuses a track change once there are lines (Review Focus 2)", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ lines: [{ id: "l1", product: "Firewall", supplierId: "s1" }] }) as any)
+    await expect(updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER))
+      .rejects.toThrow("Remove the products first. The track can only change while the Opportunity has no products or modules.")
+  })
+
+  it("refuses a track change on a closed Opportunity, and says it is closed", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ status: "WON" }) as any)
+    await expect(updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER))
+      .rejects.toThrow("This Opportunity is closed, so its track cannot change.")
+  })
+
+  it("refuses a track change on the Networking side of a Hand-over", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(
+      opportunity({ handedOverTo: { id: "opp-2", serial: "BS-OPP-00002", name: "Core refresh (Software)" } }) as any)
+    await expect(updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER))
+      .rejects.toThrow("This Opportunity is linked by a Hand-over, so its track cannot change.")
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+  })
+
+  it("refuses a track change on the Software side of a Hand-over", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(
+      opportunity({ track: "SOFTWARE_DEVELOPMENT", handedOverFrom: { id: "opp-0", serial: "BS-OPP-00000", name: "Core refresh" } }) as any)
+    await expect(updateOpportunity("opp-1", { track: "NETWORKING" } as any, USER))
+      .rejects.toThrow("This Opportunity is linked by a Hand-over, so its track cannot change.")
+  })
+
+  it("refuses a track change once the Opportunity is in the funnel, because its stage would go back but its offer date would stay", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ offeredOn: new Date("2026-09-01T00:00:00.000Z") }) as any)
+    await expect(updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER))
+      .rejects.toThrow("This Opportunity is already in the funnel, so its track cannot change.")
+  })
+
+  it("records the stage reset in the audit, so History shows the move", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "OEM_PRICING" }) as any)
+    await updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER)
+    const rows = vi.mocked(prisma.auditLog.create).mock.calls.map((c) => c[0].data)
+    // One row per field, so History reads "track moved" and "stage went back".
+    expect(rows).toContainEqual(expect.objectContaining({
+      before: { track: "NETWORKING" }, after: { track: "SOFTWARE_DEVELOPMENT" },
+    }))
+    expect(rows).toContainEqual(expect.objectContaining({
+      before: { stage: "OEM_PRICING" }, after: { stage: "REQUIREMENT_RECEIVED" },
+    }))
+  })
+
+  it("marks a Software Opportunity Won with no supplier on its modules", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      track: "SOFTWARE_DEVELOPMENT", lines: [{ id: "l1", product: "HR module", supplierId: null }],
+    }) as any)
+    await changeOpportunityStatus("opp-1", { status: "WON" }, USER)
+    expect(prisma.opportunity.update).toHaveBeenCalled()
+  })
+
+  it("still wants a supplier on every product of a Networking Opportunity", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      track: "NETWORKING", lines: [{ id: "l1", product: "Firewall", supplierId: null }],
+    }) as any)
+    await expect(changeOpportunityStatus("opp-1", { status: "WON" }, USER))
+      .rejects.toThrow("Pick a supplier for every product before marking this Opportunity won. Missing: Firewall.")
+  })
+})

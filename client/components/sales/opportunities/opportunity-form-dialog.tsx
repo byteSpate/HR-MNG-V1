@@ -13,12 +13,14 @@ import {
   updateOpportunity,
 } from "@/lib/api/sales/opportunities"
 import { opportunityWriteKeys, salesKeys } from "@/lib/api/sales/keys"
+import { TRACK_LABEL, TRACKS } from "@/lib/api/sales/stages"
 import { useSession } from "@/lib/auth/session-context"
 import type {
   CreateOpportunityBody,
   OpportunitySummary,
   SalesAccountSummary,
   SalesEligibleEmployee,
+  SalesTrack,
   UpdateOpportunityBody,
 } from "@/lib/api/types"
 import {
@@ -235,6 +237,7 @@ function OpportunityFields({
     deal ? deal.ownerEmployeeId : accountOwnerCanRun ? account.ownerEmployeeId : ""
   )
   const [addAssignment, setAddAssignment] = useState(false)
+  const [track, setTrack] = useState<SalesTrack>(deal?.track ?? "NETWORKING")
   const [error, setError] = useState<string | null>(null)
 
   const chosen = employees.find((e) => e.id === ownerId)
@@ -246,6 +249,11 @@ function OpportunityFields({
         ? account.ownerName
         : null)
   const ownerChanged = deal ? ownerId !== deal.ownerEmployeeId : true
+  // The server also refuses a track change once the Opportunity is in the funnel
+  // or linked by a Hand-over, so the picker is not offered then either.
+  const trackEditable =
+    !deal ||
+    (deal.status === "ONGOING" && deal.lines.length === 0 && !deal.handedOverFrom && !deal.handedOverTo && !deal.offeredOn)
   const onAccount =
     ownerId === account.ownerEmployeeId || account.assignees.some((a) => a.id === ownerId)
   const needsAssignment = !!ownerId && ownerChanged && !onAccount
@@ -327,8 +335,7 @@ function OpportunityFields({
       create.mutate({
         salesAccountId: account.id,
         name: trimmedName,
-        // The only track there is. No selector: a control with one option cannot do anything.
-        track: "NETWORKING",
+        track,
         ...(cleanAmount ? { amount: cleanAmount } : {}),
         ...(closeDate ? { expectedCloseDate: closeDate } : {}),
         ...(oemContact.trim() ? { oemAccountManager: oemContact.trim() } : {}),
@@ -357,6 +364,10 @@ function OpportunityFields({
       body.ownerEmployeeId = ownerId
       if (needsAssignment) body.addAssignment = true
     }
+    // Sent only when it moved: posting an unchanged track would still be read
+    // as a change request, and the server refuses one on an Opportunity that
+    // has products.
+    if (track !== deal.track) body.track = track
 
     if (Object.keys(body).length === 0) {
       setError("Nothing was changed.")
@@ -378,6 +389,34 @@ function OpportunityFields({
       <Field label="Name" htmlFor="opp-name" help="What is being sold, like “Firewall upgrade” or “Core switch refresh”.">
         <Input id="opp-name" value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
+
+      {/* The track decides the stages and whether lines are products or
+          Modules, so it is chosen once and then read-only: the server refuses
+          a change on an Opportunity that has any. */}
+      {trackEditable ? (
+        <Field
+          label="Track"
+          htmlFor="opp-track"
+          help="Networking sells equipment and software projects sell Modules. The track decides the stages and the lines."
+        >
+          <select
+            id="opp-track"
+            value={track}
+            onChange={(e) => setTrack(e.target.value as SalesTrack)}
+            className="h-9 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-2.5 text-[13px]"
+          >
+            {TRACKS.map((t) => <option key={t} value={t}>{TRACK_LABEL[t]}</option>)}
+          </select>
+        </Field>
+      ) : (
+        <div>
+          <span className={`block text-[12px] font-medium ${TONE.muted}`}>Track</span>
+          <p className="mt-1 text-[13px]">{TRACK_LABEL[deal!.track]}</p>
+          <p className={`mt-1 text-[12px] ${TONE.muted}`}>
+            The track is fixed once the Opportunity has products or modules, is in the funnel, is closed, or is linked by a Hand-over.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field

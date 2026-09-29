@@ -101,6 +101,22 @@ export interface WeekOtherWork {
   text: string
 }
 
+/** A Project this person is on: enough to print a line, never more. */
+export interface WeekProject {
+  id: string
+  serial: string
+  name: string
+}
+
+/** One Daily Log line: what was done on a Project that day, or that nothing was. */
+export interface WeekProjectLog {
+  id: string
+  projectId: string
+  date: Date
+  noWork: boolean
+  text: string | null
+}
+
 export interface ComposeInput {
   weekStart: Date
   person: {
@@ -119,6 +135,13 @@ export interface ComposeInput {
   openTasks: WeekOpenTask[]
   notes: WeekNote[]
   otherWork: WeekOtherWork[]
+  /** The Projects this person is on that are In Progress now. */
+  projects: WeekProject[]
+  /** Projects logged this week that are no longer In Progress (spec §2.2). */
+  loggedProjects: WeekProject[]
+  projectLogs: WeekProjectLog[]
+  /** The office date, passed in so the composer stays pure and testable. */
+  today: Date
 }
 
 // ── what it gives back ───────────────────────────────────────────────────────
@@ -149,11 +172,23 @@ export interface WeekAccountRow {
   taskId: string | null
 }
 
+export interface WeekProjectRow {
+  projectId: string
+  serial: string
+  name: string
+  logId: string | null
+  noWork: boolean
+  text: string | null
+  /** A working day that has come, for an In Progress Project, with no line. */
+  missing: boolean
+}
+
 export interface WeekDayView {
   date: Date
   label: DayLabel | null
   accounts: WeekAccountRow[]
   otherWork: WeekOtherWork[]
+  projects: WeekProjectRow[]
 }
 
 export interface WeekCounts {
@@ -162,6 +197,8 @@ export interface WeekCounts {
   meetings: number
   dealChanges: number
   tasksDone: number
+  /** Daily Log lines the person could have written this week and did not. */
+  missingDailyLogs: number
 }
 
 export interface WeekView {
@@ -219,6 +256,7 @@ export function composeWeek(input: ComposeInput): WeekView {
     meetings: 0,
     dealChanges: 0,
     tasksDone: 0,
+    missingDailyLogs: 0,
   }
 
   const rowFor = (date: Date, salesAccountId: string): WeekAccountRow | null => {
@@ -317,22 +355,54 @@ export function composeWeek(input: ComposeInput): WeekView {
       .map((account) => forDay?.get(account.id))
       .filter((row): row is WeekAccountRow => row !== undefined)
     for (const row of accounts) worked.add(row.salesAccountId)
-    return {
-      date,
-      label: dayLabelOf(date, {
-        shift: input.person.shift,
-        holidays: input.holidays,
-        leaves: input.leaves,
-        joiningDate: input.person.joiningDate,
-        lastWorkingDay: input.person.lastWorkingDay,
+    const dayLabel = dayLabelOf(date, {
+      shift: input.person.shift,
+      holidays: input.holidays,
+      leaves: input.leaves,
+      joiningDate: input.person.joiningDate,
+      lastWorkingDay: input.person.lastWorkingDay,
+    })
+    // A line is owed only for a day that is an ordinary working day for this
+    // person, that has already happened, and that is not the Saturday before
+    // the week: that one opens the sheet, it is not part of it.
+    const isSaturday = key(date) === key(saturdayBefore(input.weekStart))
+    const due = !isSaturday && dayLabel === null && date.getTime() <= input.today.getTime()
+    const logFor = (projectId: string) =>
+      input.projectLogs.find((l) => l.projectId === projectId && key(l.date) === key(date))
+    const projects: WeekProjectRow[] = [
+      // In progress now: a row every working day, and a gap on the days with
+      // no line. A day off (holiday, leave, weekly off) asks for nothing, so it
+      // gets a row only when a line was already written there. Sending an
+      // empty row would hide the page's "office was closed" note.
+      ...input.projects.flatMap((p) => {
+        const log = logFor(p.id)
+        if (dayLabel !== null && !log) return []
+        const missing = due && !log
+        if (missing) counts.missingDailyLogs++
+        return [{
+          projectId: p.id, serial: p.serial, name: p.name, logId: log?.id ?? null,
+          noWork: log?.noWork ?? false, text: log?.text ?? null, missing,
+        }]
       }),
-      accounts,
-      otherWork: otherByDay.get(key(date)) ?? [],
-    }
+      // Logged earlier this week but no longer in progress: the line stays
+      // visible, and the other days say nothing at all rather than reporting
+      // a gap on work that is finished.
+      ...input.loggedProjects.flatMap((p) => {
+        const log = logFor(p.id)
+        return log
+          ? [{
+              projectId: p.id, serial: p.serial, name: p.name, logId: log.id,
+              noWork: log.noWork, text: log.text, missing: false,
+            }]
+          : []
+      }),
+    ]
+    return { date, label: dayLabel, accounts, otherWork: otherByDay.get(key(date)) ?? [], projects }
   })
   counts.accounts = worked.size
 
   const [saturday, ...rest] = view
-  const keepSaturday = saturday.accounts.length > 0 || saturday.otherWork.length > 0
+  const keepSaturday =
+    saturday.accounts.length > 0 || saturday.otherWork.length > 0 || saturday.projects.some((p) => p.logId !== null)
   return { weekStart: input.weekStart, days: keepSaturday ? view : rest, counts }
 }

@@ -60,6 +60,8 @@ export type EventType =
   | "sales.opportunity.closed"
   // A Sales Admin putting right a final status set by mistake (spec §1.4).
   | "sales.opportunity.status_corrected"
+  // The software part passed to the Software team as a second Opportunity (§2.5).
+  | "sales.opportunity.handed_over"
   // The Project started for a Won Opportunity (ADR 0005).
   | "sales.project.started"
   | "sales.meeting.scheduled"

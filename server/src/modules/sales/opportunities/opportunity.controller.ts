@@ -27,6 +27,7 @@ import {
   setSoftwareNeededSchema,
   changeOpportunityStageSchema,
   changeOpportunityStatusSchema,
+  handOverSchema,
   correctOpportunityStatusSchema,
   addDocumentLinkSchema,
   createOpportunityLineSchema,
@@ -37,6 +38,7 @@ import {
   updateOpportunityLineSchema,
   updateOpportunitySchema,
 } from "./opportunity.validators"
+import { handOverToSoftware, listHandOverOwners } from "./opportunity.handover"
 
 export async function createOpportunityHandler(req: Request, res: Response, next: NextFunction) {
   try { return res.status(201).json(await createOpportunity(createOpportunitySchema.parse(req.body), req.user!)) }
@@ -65,6 +67,18 @@ export async function updateOpportunityHandler(req: Request<{ id: string }>, res
 
 export async function changeOpportunityStageHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await changeOpportunityStage(req.params.id, changeOpportunityStageSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+/** Who may own the Software Opportunity this one is handed to. */
+export async function listHandOverOwnersHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listHandOverOwners(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+/** Hand the software part to the Software team, once, as a linked Opportunity. */
+export async function handOverHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(201).json(await handOverToSoftware(req.params.id, handOverSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
 }
 

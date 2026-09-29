@@ -17,7 +17,7 @@ export const PROJECT_INCLUDE = {
       lines: {
         orderBy: { order: "asc" as const },
         select: {
-          id: true, product: true, oemBrand: true, model: true, quantity: true, lineValue: true, marginPercent: true, order: true,
+          id: true, product: true, oemBrand: true, model: true, quantity: true, lineValue: true, marginPercent: true, note: true, order: true,
           supplier: { select: { name: true } },
           projectTicks: { select: { projectId: true, doneAt: true, doneBy: true } },
         },
@@ -26,6 +26,9 @@ export const PROJECT_INCLUDE = {
   },
   team: { include: { employee: { select: { id: true, fullName: true } } }, orderBy: { employee: { fullName: "asc" as const } } },
   milestones: { orderBy: [{ order: "asc" as const }, { dueOn: "asc" as const }] },
+  // Enough of each task to work out progress, per-person counts and health
+  // (spec §2.3). Nothing more: those three numbers need a status and a date.
+  tasks: { select: { status: true, dueOn: true, assignedToEmployeeId: true } },
 } satisfies Prisma.ProjectInclude
 
 export type ProjectRow = Prisma.ProjectGetPayload<{ include: typeof PROJECT_INCLUDE }>

@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { FunnelQueryOptions, FunnelTotals, OpportunityStatus } from "@/lib/api/types"
+import type { FunnelQueryOptions, FunnelTotals, OpportunityStatus, SalesTrack } from "@/lib/api/types"
+import { TRACKS, TRACK_LABEL } from "@/lib/api/sales/stages"
 import { cn } from "@/lib/utils"
 
 interface FunnelFiltersProps {
@@ -46,6 +47,7 @@ const ALL = "__all__"
  * control is given its text explicitly, from the same table the list uses.
  */
 const ANY_STATUS = "Any status"
+const ANY_TRACK = "All tracks"
 const EVERY_ACCOUNT = "Every account"
 const STATUS_OPTIONS: { value: OpportunityStatus; label: string }[] = [
   { value: "ONGOING", label: "Ongoing" },
@@ -67,6 +69,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
   const set = (patch: Partial<FunnelQueryOptions>) => onChange({ ...value, ...patch })
 
   const statusText = STATUS_OPTIONS.find((o) => o.value === value.status)?.label ?? ANY_STATUS
+  const trackText = TRACKS.map((t) => TRACK_LABEL[t]).find((l) => l === value.track) ?? ANY_TRACK
   const accountText = accounts.find((a) => a.id === value.salesAccountId)?.name ?? EVERY_ACCOUNT
 
   return (
@@ -88,6 +91,26 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
               {STATUS_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>
                   {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-[#5F6B7C]">Track</span>
+          <Select
+            value={value.track ?? ALL}
+            onValueChange={(next) => set({ track: next && next !== ALL ? (next as SalesTrack) : undefined })}
+          >
+            <SelectTrigger className="h-8 w-48 text-sm">
+              <SelectValue>{() => trackText}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>{ANY_TRACK}</SelectItem>
+              {TRACKS.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {TRACK_LABEL[t]}
                 </SelectItem>
               ))}
             </SelectContent>

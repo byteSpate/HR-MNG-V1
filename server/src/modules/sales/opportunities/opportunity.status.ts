@@ -6,7 +6,7 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
 import { ensureCustomerForAccount } from "../../customer/customer.link"
 import { isSalesAdmin } from "../sales.access"
-import { INCLUDE, loadForWrite, STATUS_WORD } from "./opportunity.service"
+import { INCLUDE, loadForWrite, STATUS_WORD, supplierRuleApplies } from "./opportunity.service"
 import { presentOpportunity } from "./opportunity.present"
 import type { CorrectOpportunityStatusBody } from "./opportunity.validators"
 
@@ -41,7 +41,7 @@ export async function correctOpportunityStatus(id: string, body: CorrectOpportun
     }
     if (current.status === body.status) return presentOpportunity(current)
     if (await hasMoneyOrLiveProject(tx, id)) throw new AppError(409, MONEY_OR_PROJECT)
-    if (body.status === "WON") {
+    if (body.status === "WON" && supplierRuleApplies(current.track)) {
       const missing = current.lines.filter((l) => !l.supplierId).map((l) => l.product)
       if (missing.length > 0) {
         throw new AppError(400, `Pick a supplier for every product before marking this Opportunity won. Missing: ${missing.join(", ")}.`)

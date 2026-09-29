@@ -32,6 +32,9 @@ export const salesKeys = {
   accountMargin: (id: string) => ["sales", "account-margin", id] as const,
 
   // ── opportunities ───────────────────────────────────────────────────────
+  /** Who may own a Software Opportunity, for the Hand-over dialog (spec §2.5). */
+  handOverOwners: (id: string) => ["sales", "opportunities", id, "handover-owners"] as const,
+
   /**
    * Filters are part of the key, so two filter settings are two cache entries
    * rather than one that flickers between answers.
@@ -49,6 +52,10 @@ export const salesKeys = {
   // ── projects (2026-09-28) ───────────────────────────────────────────────
   projects: (filters: Record<string, unknown> = {}) => ["sales", "projects", filters] as const,
   project: (id: string) => ["sales", "projects", id] as const,
+  // Under the Project prefix, so `salesKeys.project(id)` invalidates them too.
+  projectTasks: (id: string) => ["sales", "projects", id, "tasks"] as const,
+  projectActivity: (id: string) => ["sales", "projects", id, "activity"] as const,
+  projectDailyLog: (id: string, week: string | null) => ["sales", "projects", id, "daily-log", week] as const,
 
   // ── comments ────────────────────────────────────────────────────────────
   comments: (entity: string, entityId: string) => ["sales", "comments", entity, entityId] as const,

@@ -47,6 +47,7 @@ export interface OpportunitySummary {
   /** Products whose margin cannot be worked out: no Total price, or no percentage. */
   unmarginedLineCount: number
   expectedCloseDate: string | null
+  offeredOn: string | null
   oemAccountManager: string | null
   status: OpportunityStatus
   statusReason: string | null
@@ -69,6 +70,9 @@ export interface OpportunitySummary {
   amountDiffersFromLines: boolean
   /** The Project started from this Won Opportunity (ADR 0005), at most one. */
   project: { id: string; serial: string; name: string; status: ProjectStatusValue } | null
+  /** The Hand-over link (spec §2.5). Exactly one of the two is set. */
+  handedOverFrom: { id: string; serial: string; name: string } | null
+  handedOverTo: { id: string; serial: string; name: string } | null
   /** Whether this viewer may change the deal. The directory is shared, so
       seeing one and being able to work it are different questions. */
   canManage: boolean
@@ -484,6 +488,8 @@ export interface ProjectLineSummary {
   supplierName: string | null
   lineValue: string | null
   marginPercent: string | null
+  /** "What it covers", on a Software Opportunity's Modules (spec §2.4). */
+  note: string | null
   done: { at: string; byName: string | null } | null
 }
 
@@ -508,11 +514,36 @@ export interface ProjectSummary {
   statusReason: string | null
   completedAt: string | null
   milestones: ProjectMilestoneSummary[]
+  /** How far along the work is (spec §2.3). Null, never 0%, when no task counts. */
+  progress: { done: number; total: number; percent: number } | null
+  /** Open and late tasks per person, the Project Manager included. */
+  people: Array<{ employeeId: string; fullName: string; open: number; late: number }>
+  /** Null when there is nothing honest to say: finished, cancelled, or not yet started. */
+  health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  openTaskCount: number
   lines: ProjectLineSummary[]
   canManage: boolean
   canTick: boolean
   createdAt: string
   updatedAt: string
+}
+
+/** The Project's Daily Log for one week: a day each, a team member each (spec §2.2). */
+export interface ProjectDailyLogView {
+  weekStart: string
+  days: Array<{
+    date: string
+    people: Array<{
+      employeeId: string
+      fullName: string
+      /** Why the day is not an ordinary working day, or null when it is one. */
+      label: string | null
+      noWork: boolean
+      text: string | null
+      /** A working day that has come, on a Project in progress, with no line. */
+      missing: boolean
+    }>
+  }>
 }
 
 export interface ProjectListRow {
@@ -521,6 +552,8 @@ export interface ProjectListRow {
   name: string
   salesAccountName: string
   opportunitySerial: string
+  /** The Opportunity's track, so a list can show Networking or Software. */
+  track: string
   managerName: string
   status: ProjectStatusValue
   dueOn: string | null

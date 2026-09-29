@@ -11,13 +11,15 @@ const marginPercent = z
 const opportunityStage = z.enum([
   "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING",
   "QUOTATION_SUBMITTED", "NEGOTIATION", "AWAITING_DECISION",
+  "REQUIREMENT_GATHERING", "BRD_SENT", "SRS_SENT", "PROPOSAL_SUBMITTED", "PROPOSAL_REVISION",
 ])
+const salesTrack = z.enum(["NETWORKING", "SOFTWARE_DEVELOPMENT"])
 const opportunityStatus = z.enum(["ONGOING", "WON", "LOST", "CANCELLED"])
 
 export const createOpportunitySchema = z.object({
   salesAccountId: z.string().uuid(),
   name: z.string().trim().min(2, "An Opportunity needs a name").max(180),
-  track: z.enum(["NETWORKING"]),
+  track: salesTrack,
   amount: money.optional(),
   expectedCloseDate: dateOnly.optional(),
   oemAccountManager: z.string().trim().max(160).optional(),
@@ -31,6 +33,7 @@ export type CreateOpportunityBody = z.infer<typeof createOpportunitySchema>
 export const listOpportunitySchema = z.object({
   status: opportunityStatus.optional(),
   stage: opportunityStage.optional(),
+  track: salesTrack.optional(),
   salesAccountId: z.string().uuid().optional(),
   ownerEmployeeId: z.string().uuid().optional(),
   mine: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
@@ -44,7 +47,7 @@ export type ListOpportunityQuery = z.infer<typeof listOpportunitySchema>
 
 export const updateOpportunitySchema = z.object({
   name: z.string().trim().min(2).max(180).optional(),
-  track: z.enum(["NETWORKING"]).optional(),
+  track: salesTrack.optional(),
   amount: money.nullable().optional(),
   expectedCloseDate: dateOnly.nullable().optional(),
   oemAccountManager: z.string().trim().max(160).nullable().optional(),
@@ -54,6 +57,13 @@ export const updateOpportunitySchema = z.object({
 export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
 
 export const changeOpportunityStageSchema = z.object({ stage: opportunityStage })
+
+/** Handing the software part to the Software team (spec §2.5). */
+export const handOverSchema = z.object({
+  name: z.string().trim().min(2, "An Opportunity needs a name").max(180).optional(),
+  ownerEmployeeId: z.string().uuid(),
+})
+export type HandOverBody = z.infer<typeof handOverSchema>
 export const changeOpportunityStatusSchema = z.object({
   // Ongoing is not here: Won, Lost and Cancelled are final (spec 2026-09-28
   // §1.4). A mistake is corrected by a Sales Admin on /correct-status.

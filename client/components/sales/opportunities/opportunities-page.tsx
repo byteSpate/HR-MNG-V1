@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { RiArrowRightLine, RiBriefcaseLine, RiFilterOffLine, RiLayoutColumnLine } from "@remixicon/react"
+import {
+  RiArrowRightLine,
+  RiBriefcaseLine,
+  RiCloseCircleLine,
+  RiCoinsLine,
+  RiFilterOffLine,
+  RiLayoutColumnLine,
+  RiTimeLine,
+  RiTrophyLine,
+} from "@remixicon/react"
 
 import {
   listOpportunities,
@@ -11,10 +20,14 @@ import {
   type ListOpportunitiesQuery,
 } from "@/lib/api/sales/opportunities"
 import { salesKeys } from "@/lib/api/sales/keys"
+import { TRACK_LABEL } from "@/lib/api/sales/stages"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunityStatus, OpportunitySummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, RowActions, TONE } from "@/components/dashboard/record-kit"
+import { opportunityStats } from "@/components/sales/shared/sales-stats"
+import { sized } from "@/components/sales/shared/sized-cell"
+import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -103,7 +116,7 @@ const STATUSES = Object.keys(OPPORTUNITY_STATUS_LABEL) as OpportunityStatus[]
 
 /** Date-only, read as written. A close date is a calendar day, not an instant. */
 function onDate(value: string | null): string {
-  if (!value) return "—"
+  if (!value) return "Not set"
   const [year, month, day] = value.slice(0, 10).split("-")
   return `${day}/${month}/${year}`
 }
@@ -139,7 +152,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
         node: (
           <span className="block min-w-0">
             <span className="block truncate">{stageSentence(deal.status, deal.stage)}</span>
-            <StageBar status={deal.status} stage={deal.stage} className="mt-1 max-w-[9rem]" />
+            <StageBar status={deal.status} stage={deal.stage} track={deal.track} className="mt-1 max-w-[9rem]" />
           </span>
         ),
       }
@@ -181,7 +194,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
     case "lastActivity":
       return { node: <span>{`${daysSince(deal.lastActivityAt)}d ago`}</span> }
     case "track":
-      return { node: <span>{deal.track === "NETWORKING" ? "Networking" : deal.track}</span> }
+      return { node: <span>{TRACK_LABEL[deal.track]}</span> }
   }
 }
 
@@ -236,10 +249,30 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
         ? "The shared team pipeline"
         : "Opportunities across the accounts you can access"
 
+  // Counted from the rows loaded. The list is read 50 at a time and this page
+  // does not fetch the next batch, so when more exist the tiles say so instead
+  // of claiming to describe the whole pipeline.
+  const partial = query.data?.nextCursor != null
+  const stats = useMemo<SalesStat[]>(() => {
+    const c = opportunityStats(deals)
+    const scope = partial ? `In the first ${deals.length} loaded` : null
+    return [
+      { label: "Ongoing", value: String(c.ongoing), sub: scope ?? "Still being worked", icon: RiTimeLine },
+      {
+        label: "Ongoing value",
+        value: c.ongoingValue === null ? "No price yet" : taka(c.ongoingValue),
+        sub: c.ongoingUnpriced > 0 ? `${c.ongoingUnpriced} Ongoing with no price yet` : (scope ?? "Priced Ongoing Opportunities"),
+        icon: RiCoinsLine,
+      },
+      { label: "Won", value: String(c.won), sub: scope ?? "Closed as Won", icon: RiTrophyLine },
+      { label: "Lost or cancelled", value: String(c.closedOther), sub: scope ?? "Closed without a sale", icon: RiCloseCircleLine },
+    ]
+  }, [deals, partial])
+
   const rows = useMemo(
     () =>
       deals.map((deal, index) => [
-        ...columns.map((column) => cellFor(column, deal, index)),
+        ...columns.map((column) => sized(cellFor(column, deal, index))),
         {
           node: (
             <RowActions
@@ -278,6 +311,8 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
             : "The Opportunities across your accessible accounts, with each stage saying who is next."
         }
       />
+
+      <SalesStatRow stats={stats} isLoading={isLoading} isError={query.isError} />
 
       {/* Hidden while the first page loads. A filter row beside a skeleton
           reads as an answer about a list nobody has counted yet. */}
@@ -430,6 +465,8 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
       ) : null}
 
       <PanelTable
+        title="Pipeline"
+        emptyIcon={RiBriefcaseLine}
         cols={`${columns.map((c) => COLUMN_WIDTH[c]).join(" ")} auto`}
         headers={[...columns.map((c) => COLUMN_LABEL[c]), ""]}
         rows={rows}

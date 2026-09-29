@@ -9,7 +9,15 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { RiArrowRightLine, RiFilterOffLine } from "@remixicon/react"
+import {
+  RiAddLine,
+  RiAlertLine,
+  RiArrowRightLine,
+  RiFilterOffLine,
+  RiFolder3Line,
+  RiTaskLine,
+  RiTimeLine,
+} from "@remixicon/react"
 
 import { listTasks } from "@/lib/api/sales/tasks"
 import { salesKeys } from "@/lib/api/sales/keys"
@@ -18,6 +26,9 @@ import type { ListTasksQuery, SalesTaskOrigin, SalesTaskStatus, SalesTaskSummary
 import type { TableCell } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, RowActions, TONE } from "@/components/dashboard/record-kit"
+import { taskStats } from "@/components/sales/shared/sales-stats"
+import { sized } from "@/components/sales/shared/sized-cell"
+import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
 import { Tag } from "@/components/dashboard/tag"
 import { taskActions } from "@/components/sales/shared/plan-panels"
 import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
@@ -90,7 +101,20 @@ export function TasksPage({
   const isLoading = sessionStatus === "loading" || query.isPending
   const isFiltered = Boolean(status !== "PENDING" || due || origin)
 
-  const rows: TableCell[][] = (query.data?.items ?? []).map((task) => [
+  // Counted from the rows on this list, so a tile always agrees with the table.
+  // The server sends at most 500, and says so here rather than pretend.
+  const items = useMemo(() => query.data?.items ?? [], [query.data])
+  const stats = useMemo<SalesStat[]>(() => {
+    const c = taskStats(items, new Date().toLocaleDateString("en-CA"))
+    const scope = items.length >= 500 ? "In the first 500 loaded" : "On this list"
+    return [
+      { label: "Pending", value: String(c.pending), sub: scope, icon: RiTimeLine },
+      { label: "Overdue", value: String(c.overdue), sub: c.overdue > 0 ? "Past their due date" : "Nothing is late", icon: RiAlertLine },
+      { label: "Project tasks", value: String(c.fromProject), sub: "Pending, given on a Project", icon: RiFolder3Line },
+    ]
+  }, [items])
+
+  const rows: TableCell[][] = items.map((task) => ([
     {
       node: (
         <span className="flex flex-wrap items-center gap-1.5">
@@ -117,7 +141,7 @@ export function TasksPage({
           {task.salesAccountName}
         </Link>
       ) : (
-        <span className={TONE.muted}>—</span>
+        <span className={TONE.muted}>No account</span>
       ),
     },
     { tag: TASK_PRIORITY_LABEL[task.priority], tone: TASK_PRIORITY_TONE[task.priority] },
@@ -135,7 +159,7 @@ export function TasksPage({
         />
       ),
     },
-  ])
+  ] as TableCell[]).map(sized))
 
   const clearFilters = () => {
     setStatus("PENDING")
@@ -152,7 +176,10 @@ export function TasksPage({
         sub="Follow-ups you set yourself, each on an account. Anything due or overdue is in your 00:01 email."
         cta="New task"
         onCta={() => setCreateOpen(true)}
+        ctaIcon={RiAddLine}
       />
+
+      <SalesStatRow stats={stats} isLoading={isLoading} isError={query.isError} />
 
       {/* Hidden while loading: a filter beside a skeleton reads as an answer
           about a list nobody has counted yet. */}
@@ -225,6 +252,8 @@ export function TasksPage({
       ) : null}
 
       <PanelTable
+        title="Follow-ups"
+        emptyIcon={RiTaskLine}
         cols="auto minmax(0,1.6fr) minmax(0,1fr) auto auto minmax(0,0.8fr) auto"
         headers={["Due", "Task", "Account", "Priority", "Status", "Owner", ""]}
         rows={rows}

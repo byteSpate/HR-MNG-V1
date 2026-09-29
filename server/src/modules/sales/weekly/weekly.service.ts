@@ -157,6 +157,7 @@ async function loadWeek(
     tasksDone,
     openTasks,
     report,
+    projects,
   ] = await Promise.all([
     prisma.shift.findMany(),
     prisma.holiday.findMany({
@@ -219,10 +220,33 @@ async function loadWeek(
       include: {
         notes: true,
         otherWork: { orderBy: { createdAt: "asc" } },
+        projectLogs: { orderBy: { createdAt: "asc" } },
         copies: { orderBy: { submittedAt: "desc" } },
       },
     }),
+    // The Projects this person is on that are In Progress now. The app keeps no
+    // day-by-day history of a Project's status, so today's status decides
+    // which Projects owe a Daily Log line for the whole week.
+    prisma.project.findMany({
+      where: { status: "IN_PROGRESS", team: { some: { employeeId } } },
+      select: { id: true, serial: true, name: true },
+      orderBy: { name: "asc" },
+    }),
   ])
+
+  const projectLogs = (report?.projectLogs ?? []).map((l) => ({
+    id: l.id, projectId: l.projectId, date: l.date, noWork: l.noWork, text: l.text,
+  }))
+  // A Project logged earlier this week that has since stopped being in
+  // progress: its lines stay on the week, but the other days owe nothing.
+  const inProgressIds = new Set(projects.map((p) => p.id))
+  const loggedIds = [...new Set(projectLogs.map((l) => l.projectId))].filter((id) => !inProgressIds.has(id))
+  const loggedProjects = loggedIds.length
+    ? await prisma.project.findMany({
+        where: { id: { in: loggedIds } },
+        select: { id: true, serial: true, name: true },
+      })
+    : []
 
   const shift = resolveShift({ shiftId: person.shiftId }, weekStart, shifts)
   const dealsById = new Map(deals.map((deal) => [deal.id, deal]))
@@ -282,6 +306,10 @@ async function loadWeek(
       date: work.date,
       text: work.text,
     })),
+    projects,
+    loggedProjects,
+    projectLogs,
+    today: officeToday(),
   })
 
   return {
@@ -311,7 +339,7 @@ export async function getMyWeek(query: WeekQuery, actor: AccessTokenPayload): Pr
  * A submitted week that is added to goes back to Draft, keeping its old PDFs
  * and its on-time mark (§26.4).
  */
-async function openWeekFor(
+export async function openWeekFor(
   tx: Prisma.TransactionClient,
   employeeId: string,
   weekStart: Date,
@@ -336,7 +364,7 @@ async function openWeekFor(
 }
 
 /** The day being written to: inside this week, and not still to come. */
-function writableDate(value: string, weekStart: Date): Date {
+export function writableDate(value: string, weekStart: Date): Date {
   const date = dateFrom(value)
   if (!isInWeek(date, weekStart)) throw new AppError(400, "That day is not in this week")
   if (date.getTime() > officeToday().getTime()) throw new AppError(400, "That day has not happened yet")

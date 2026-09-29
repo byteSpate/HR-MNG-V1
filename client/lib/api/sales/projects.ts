@@ -1,10 +1,12 @@
 import { apiFetch } from "../client"
-import type { ProjectListRow, ProjectStatus, ProjectSummary } from "../types"
+import type { ProjectDailyLogView, ProjectListRow, ProjectStatus, ProjectSummary, SalesTaskSummary, SalesTrack } from "../types"
 
 export interface ListProjectsQuery {
   status?: ProjectStatus
   managerEmployeeId?: string
   salesAccountId?: string
+  /** The Opportunity's track, so a list can show one track or both. */
+  track?: SalesTrack
 }
 
 export function listProjects(accessToken: string, query: ListProjectsQuery = {}): Promise<ProjectListRow[]> {
@@ -46,3 +48,20 @@ export const updateMilestone = (t: string, milestoneId: string, body: { title?: 
 export const removeMilestone = (t: string, milestoneId: string) => send(t, `/api/sales/project-milestones/${milestoneId}`, "DELETE")
 export const tickProjectLine = (t: string, id: string, lineId: string) => send(t, `/api/sales/projects/${id}/lines/${lineId}/done`, "PUT")
 export const untickProjectLine = (t: string, id: string, lineId: string) => send(t, `/api/sales/projects/${id}/lines/${lineId}/done`, "DELETE")
+
+// ── Project Tasks (spec §2.1) ───────────────────────────────────────────────
+export const listProjectTasks = (t: string, id: string) =>
+  apiFetch<SalesTaskSummary[]>(`/api/sales/projects/${id}/tasks`, { accessToken: t })
+
+export const addProjectTask = (t: string, id: string, body: { title: string; dueOn: string; assigneeEmployeeId?: string }) =>
+  apiFetch<SalesTaskSummary>(`/api/sales/projects/${id}/tasks`, { method: "POST", accessToken: t, body: JSON.stringify(body) })
+
+export const cancelProjectTask = (t: string, taskId: string, reason: string) =>
+  apiFetch<SalesTaskSummary>(`/api/sales/project-tasks/${taskId}/cancel`, { method: "POST", accessToken: t, body: JSON.stringify({ reason }) })
+
+// ── How it is going (spec §2.3) ─────────────────────────────────────────────
+export const listProjectActivity = (t: string, id: string) =>
+  apiFetch<Array<{ id: string; at: string; byName: string | null; text: string }>>(`/api/sales/projects/${id}/activity`, { accessToken: t })
+
+export const getProjectDailyLog = (t: string, id: string, week?: string) =>
+  apiFetch<ProjectDailyLogView>(`/api/sales/projects/${id}/daily-log${week ? `?week=${week}` : ""}`, { accessToken: t })

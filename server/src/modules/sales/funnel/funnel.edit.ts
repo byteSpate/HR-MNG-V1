@@ -18,6 +18,7 @@ import { parseDateOnly } from "../../../utils/dates"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
 import { accountScopeFor, employeeIdFor, isSalesAdmin, OPPORTUNITY_NOT_VISIBLE } from "../sales.access"
+import { QUOTED_STAGES } from "../sales.stages"
 import type { EditFunnelCell } from "./funnel.validators"
 
 export const MEETING_NOT_OPEN = "That funnel meeting is not open"
@@ -190,21 +191,6 @@ export async function editFunnelCell(
     return { opportunityId, field: edit.field, value: edit.value }
   })
 }
-
-/**
- * The stages at which a quotation has gone out: Quotation submitted and the
- * two that can only follow it.
- *
- * A stage change is free-form — nothing forces a deal through Quotation
- * submitted on its way to Negotiation — so the stamp cannot key on that one
- * stage alone. A deal moved straight to Negotiation has been quoted as far as
- * anybody can tell, and would otherwise never enter the funnel.
- */
-const QUOTED_STAGES: ReadonlySet<string> = new Set([
-  "QUOTATION_SUBMITTED",
-  "NEGOTIATION",
-  "AWAITING_DECISION",
-])
 
 /**
  * Stamps the offer date the first time a deal reaches a quoted stage (§27.4),
