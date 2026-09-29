@@ -154,7 +154,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
             tabs={[
               { value: "workflow", label: "Workflow", content: <WorkflowPanel deal={deal} canManage={canManage} /> },
               { value: "status", label: "Status", content: <StatusPanel deal={deal} canManage={canManage} isSalesAdmin={isSalesAdmin} /> },
-              { value: "products", label: "Products", content: <LinesPanel deal={deal} canManage={canManage} /> },
+              { value: "products", label: deal.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <LinesPanel deal={deal} canManage={canManage} /> },
               ...(deal.status === "WON" ? [{ value: "money" as const, label: "Money", content: <MoneySection opportunityId={deal.id} /> }] : []),
               { value: "project", label: "Project", content: <OpportunityProjectPanel deal={deal} canStart={canStart} /> },
               { value: "documents", label: "Documents", content: <DocumentsPanel deal={deal} canManage={canManage} /> },

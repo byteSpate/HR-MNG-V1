@@ -164,6 +164,17 @@ describe("getProject", () => {
     expect(p.lines[0].done).toEqual({ at: NOW.toISOString(), byName: "Farah" })
   })
 
+  it("carries what a Module covers, so a Software Project can show it (spec §2.4)", async () => {
+    vi.mocked(prisma.project.findFirst).mockResolvedValue(projectRow({
+      opportunity: {
+        ...projectRow().opportunity,
+        lines: [{ ...projectRow().opportunity.lines[0], note: "Leave and attendance" }],
+      },
+    }) as any)
+    const p = await getProject("prj-1", USER)
+    expect(p.lines[0].note).toBe("Leave and attendance")
+  })
+
   it("says the Project is not visible rather than leaking that it exists", async () => {
     vi.mocked(prisma.project.findFirst).mockResolvedValue(null as any)
     await expect(getProject("prj-9", USER)).rejects.toThrow("That Project does not exist, or is not yours")

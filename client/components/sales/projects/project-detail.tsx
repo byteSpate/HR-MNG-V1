@@ -97,7 +97,7 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
             initialTab={initialTab}
             tabs={[
               { value: "details", label: "Details", content: <ProjectDetailsTab project={project} onSaved={onSaved} /> },
-              { value: "products", label: "Products", content: <ProjectProductsTab project={project} onSaved={onSaved} /> },
+              { value: "products", label: project.opportunity.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <ProjectProductsTab project={project} onSaved={onSaved} /> },
               { value: "status", label: "Status", content: <ProjectStatusTab project={project} onSaved={onSaved} /> },
             ]}
           />

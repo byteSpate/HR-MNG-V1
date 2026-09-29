@@ -1,10 +1,12 @@
 import { apiFetch } from "../client"
-import type { ProjectListRow, ProjectStatus, ProjectSummary } from "../types"
+import type { ProjectListRow, ProjectStatus, ProjectSummary, SalesTrack } from "../types"
 
 export interface ListProjectsQuery {
   status?: ProjectStatus
   managerEmployeeId?: string
   salesAccountId?: string
+  /** The Opportunity's track, so a list can show one track or both. */
+  track?: SalesTrack
 }
 
 export function listProjects(accessToken: string, query: ListProjectsQuery = {}): Promise<ProjectListRow[]> {

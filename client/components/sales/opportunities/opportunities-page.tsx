@@ -11,6 +11,7 @@ import {
   type ListOpportunitiesQuery,
 } from "@/lib/api/sales/opportunities"
 import { salesKeys } from "@/lib/api/sales/keys"
+import { TRACK_LABEL } from "@/lib/api/sales/stages"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunityStatus, OpportunitySummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -139,7 +140,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
         node: (
           <span className="block min-w-0">
             <span className="block truncate">{stageSentence(deal.status, deal.stage)}</span>
-            <StageBar status={deal.status} stage={deal.stage} className="mt-1 max-w-[9rem]" />
+            <StageBar status={deal.status} stage={deal.stage} track={deal.track} className="mt-1 max-w-[9rem]" />
           </span>
         ),
       }
@@ -181,7 +182,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
     case "lastActivity":
       return { node: <span>{`${daysSince(deal.lastActivityAt)}d ago`}</span> }
     case "track":
-      return { node: <span>{deal.track === "NETWORKING" ? "Networking" : deal.track}</span> }
+      return { node: <span>{TRACK_LABEL[deal.track]}</span> }
   }
 }
 

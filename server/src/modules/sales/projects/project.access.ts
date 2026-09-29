@@ -17,7 +17,7 @@ export const PROJECT_INCLUDE = {
       lines: {
         orderBy: { order: "asc" as const },
         select: {
-          id: true, product: true, oemBrand: true, model: true, quantity: true, lineValue: true, marginPercent: true, order: true,
+          id: true, product: true, oemBrand: true, model: true, quantity: true, lineValue: true, marginPercent: true, note: true, order: true,
           supplier: { select: { name: true } },
           projectTicks: { select: { projectId: true, doneAt: true, doneBy: true } },
         },

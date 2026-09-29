@@ -487,6 +487,8 @@ export interface ProjectLineSummary {
   supplierName: string | null
   lineValue: string | null
   marginPercent: string | null
+  /** "What it covers", on a Software Opportunity's Modules (spec §2.4). */
+  note: string | null
   done: { at: string; byName: string | null } | null
 }
 

@@ -35,6 +35,13 @@ const STAGE_LABEL: Record<string, string> = {
   QUOTATION_SUBMITTED: "Quotation submitted",
   NEGOTIATION: "Quotation Revision",
   AWAITING_DECISION: "Awaiting decision",
+  // Software Development stages (spec §2.4). The team's own funnel sheet calls
+  // Negotiation "Quotation Revision", and that is deliberate, so it stays.
+  REQUIREMENT_GATHERING: "Requirement gathering",
+  BRD_SENT: "BRD sent",
+  SRS_SENT: "SRS sent",
+  PROPOSAL_SUBMITTED: "Proposal submitted",
+  PROPOSAL_REVISION: "Proposal revision",
 }
 
 const STATUS_TONE: Record<string, string> = {
