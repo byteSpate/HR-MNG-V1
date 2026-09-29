@@ -14,6 +14,12 @@ import type { NextConfig } from "next";
  * with a Bearer token, which needs no cookie.
  */
 const nextConfig: NextConfig = {
+  // Next's dev server rejects cross-origin requests (HMR websocket, RSC
+  // fetches on client-side navigation) by default — only same-origin
+  // localhost is trusted. A `trycloudflare.com` quick tunnel serves the app
+  // under a different, randomly-generated hostname each run, so without this
+  // every click after the first SSR page load gets torn down as unauthorized.
+  allowedDevOrigins: ["*.trycloudflare.com"],
   async rewrites() {
     const apiOrigin = process.env.API_ORIGIN
     if (!apiOrigin) {

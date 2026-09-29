@@ -413,7 +413,7 @@ function OpportunityFields({
           <span className={`block text-[12px] font-medium ${TONE.muted}`}>Track</span>
           <p className="mt-1 text-[13px]">{TRACK_LABEL[deal!.track]}</p>
           <p className={`mt-1 text-[12px] ${TONE.muted}`}>
-            The track can only change while the Opportunity has no products or modules.
+            The track is fixed once the Opportunity has products or modules, is in the funnel, is closed, or is linked by a Hand-over.
           </p>
         </div>
       )}
