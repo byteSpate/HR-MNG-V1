@@ -41,7 +41,16 @@ export function RecordTabs<T extends string>({ tabs, initialTab }: { tabs: Recor
     <Tabs value={current} onValueChange={(v) => choose(v as T)} className="mt-4 gap-3">
       <TabsList variant="line" className="w-full justify-start overflow-y-hidden border-b border-[#E4E9EF] pb-0">
         {tabs.map((t) => (
-          <TabsTrigger key={t.value} value={t.value} className="gap-1.5 text-[12.5px] font-bold">
+          <TabsTrigger
+            key={t.value}
+            value={t.value}
+            // The shared trigger draws its underline 5px below the tab, outside
+            // this 32px bar, and the bar clips it, so it never showed. Here it sits
+            // on the tab's own bottom edge, inside the bar. It grows out from the
+            // middle in 200ms (transform and opacity only) and does not move for
+            // reduced motion.
+            className="gap-1.5 text-[12.5px] font-bold group-data-horizontal/tabs:after:bottom-0 after:origin-center after:scale-x-50 after:transition-[opacity,transform] after:duration-200 after:ease-out data-active:after:scale-x-100 motion-reduce:after:transition-none"
+          >
             {t.icon ? <t.icon className="size-3.5 shrink-0" aria-hidden /> : null}
             {t.label}
           </TabsTrigger>
