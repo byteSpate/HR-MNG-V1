@@ -7,7 +7,7 @@ const moneyOrNull = (value: Money | null) => (value === null ? null : toMoneyStr
 export function presentLine(row: any): OpportunityLineSummary {
   return {
     id: row.id, opportunityId: row.opportunityId, product: row.product,
-    oemBrand: row.oemBrand ?? null, model: row.model ?? null, quantity: row.quantity ?? null,
+    oemBrand: row.oemBrand ?? null, model: row.model ?? null, partNo: row.partNo ?? null, quantity: row.quantity ?? null,
     unitValue: row.unitValue == null ? null : toMoneyString(dec(row.unitValue)),
     lineValue: row.lineValue == null ? null : toMoneyString(dec(row.lineValue)),
     marginPercent: row.marginPercent == null ? null : dec(row.marginPercent).toFixed(2),

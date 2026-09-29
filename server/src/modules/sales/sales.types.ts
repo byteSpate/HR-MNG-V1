@@ -17,6 +17,8 @@ export interface OpportunityLineSummary {
   product: string
   oemBrand: string | null
   model: string | null
+  /** The maker's part number (SKU). Networking products only. */
+  partNo: string | null
   quantity: number | null
   unitValue: string | null
   lineValue: string | null
@@ -484,6 +486,7 @@ export interface ProjectLineSummary {
   product: string
   oemBrand: string | null
   model: string | null
+  partNo: string | null
   quantity: number | null
   supplierName: string | null
   lineValue: string | null

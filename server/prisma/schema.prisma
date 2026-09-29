@@ -2924,6 +2924,9 @@ model OpportunityLine {
   product       String
   oemBrand      String?
   model         String?
+  /// The maker's part number (SKU), like FG-100F-BDL. Optional, and only on a
+  /// Networking product: a Software module has no part number.
+  partNo        String?
   /// Nullable because some lines are services, not units.
   quantity      Int?
   unitValue     Decimal? @db.Decimal(14, 2)
