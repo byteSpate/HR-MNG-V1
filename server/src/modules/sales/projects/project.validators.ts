@@ -43,6 +43,19 @@ export const updateMilestoneSchema = z.object({
   done: z.boolean().optional(),
 }).refine((b) => Object.keys(b).length > 0, { message: "Nothing was changed" })
 
+/** A Project Task carries only what to do, a date and who does it (spec §2.1). */
+export const addProjectTaskSchema = z.object({
+  title: z.string().trim().min(2, "Say what needs to be done").max(180),
+  dueOn: dateOnly,
+  assigneeEmployeeId: z.string().uuid(),
+})
+export type AddProjectTaskBody = z.infer<typeof addProjectTaskSchema>
+
+export const cancelProjectTaskSchema = z.object({
+  reason: z.string().trim().min(2, "Say why the task is cancelled").max(500),
+})
+export type CancelProjectTaskBody = z.infer<typeof cancelProjectTaskSchema>
+
 export type ListProjectQuery = z.infer<typeof listProjectSchema>
 export type UpdateProjectBody = z.infer<typeof updateProjectSchema>
 export type SetProjectTeamBody = z.infer<typeof setProjectTeamSchema>

@@ -8,6 +8,7 @@ vi.mock("../../../config/prisma", () => ({
     salesAccount: { findUnique: vi.fn() },
     opportunity: { findFirst: vi.fn() },
     project: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+    projectMilestone: { createMany: vi.fn() },
     journalLine: { aggregate: vi.fn() },
     auditLog: { create: vi.fn() },
     event: { create: vi.fn() },
@@ -26,7 +27,7 @@ const NOW = new Date("2026-09-28T10:00:00.000Z")
 const d = (v: string) => new Prisma.Decimal(v)
 
 const OPP = {
-  id: "opp-1", serial: "BS-OPP-00001", name: "Core refresh", status: "WON",
+  id: "opp-1", serial: "BS-OPP-00001", name: "Core refresh", status: "WON", track: "NETWORKING",
   salesAccountId: "acc-1", ownerEmployeeId: "emp-1", project: null,
 }
 const projectRow = (o: Record<string, unknown> = {}) => ({
@@ -70,6 +71,21 @@ describe("startProject", () => {
     expect(p.serial).toBe("BS-PRJ-00001")
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
+  })
+
+  it("starts a Software Project with the five milestones", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ ...OPP, track: "SOFTWARE_DEVELOPMENT" } as any)
+    await startProject("opp-1", USER)
+    expect(prisma.projectMilestone.createMany).toHaveBeenCalledWith({
+      data: ["Design", "Development", "Testing", "UAT", "Deployment"].map((title, order) => ({
+        projectId: "prj-1", title, order,
+      })),
+    })
+  })
+
+  it("starts a Networking Project with no milestones", async () => {
+    await startProject("opp-1", USER)
+    expect(prisma.projectMilestone.createMany).not.toHaveBeenCalled()
   })
 
   it("issues the next serial in the series", async () => {

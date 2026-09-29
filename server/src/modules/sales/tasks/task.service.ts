@@ -329,6 +329,7 @@ export async function listTasks(
     ...(query.origin ? { origin: query.origin } : {}),
     ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
     ...(query.opportunityId ? { opportunityId: query.opportunityId } : {}),
+    ...(query.projectId ? { projectId: query.projectId } : {}),
     ...(query.meetingId ? { meetingId: query.meetingId } : {}),
     ...(query.mine ? { assignedToEmployeeId: employeeId ?? "__none__" } : {}),
   }

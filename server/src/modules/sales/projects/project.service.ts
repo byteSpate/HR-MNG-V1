@@ -20,6 +20,9 @@ type Client = typeof prisma
 const ALREADY_HAS_PROJECT = "This Opportunity already has a Project."
 export const asClient = (tx: Prisma.TransactionClient) => tx as unknown as Client
 
+/** The stages a Software Project is delivered through (spec §2.4). */
+export const SOFTWARE_MILESTONES = ["Design", "Development", "Testing", "UAT", "Deployment"] as const
+
 async function namesForUsers(client: Client, userIds: string[]): Promise<Map<string, string>> {
   if (userIds.length === 0) return new Map()
   const users = await client.user.findMany({
@@ -67,7 +70,7 @@ async function startProjectOnce(opportunityId: string, actor: AccessTokenPayload
     const employeeId = await employeeIdFor(actor, asClient(tx))
     const opp = await tx.opportunity.findFirst({
       where: { AND: [{ id: opportunityId }, { salesAccount: accountScopeFor(actor, employeeId) }] },
-      select: { id: true, serial: true, name: true, status: true, salesAccountId: true, ownerEmployeeId: true, project: { select: { id: true } } },
+      select: { id: true, serial: true, name: true, status: true, track: true, salesAccountId: true, ownerEmployeeId: true, project: { select: { id: true } } },
     })
     if (!opp) throw new AppError(404, OPPORTUNITY_NOT_VISIBLE)
     if (!isSalesAdmin(actor) && employeeId !== opp.ownerEmployeeId) {
@@ -83,6 +86,14 @@ async function startProjectOnce(opportunityId: string, actor: AccessTokenPayload
       },
       include: PROJECT_INCLUDE,
     })
+    // A Software Project starts with the five stages of its track already
+    // there, undated: they are the vocabulary the team works in, not work
+    // somebody has committed to. A Networking Project gets none.
+    if (opp.track === "SOFTWARE_DEVELOPMENT") {
+      await tx.projectMilestone.createMany({
+        data: SOFTWARE_MILESTONES.map((title, order) => ({ projectId: row.id, title, order })),
+      })
+    }
     await writeAudit(tx, {
       entity: "PROJECT", entityId: row.id, action: "CREATE", changedBy: actor.sub,
       after: { serial, opportunityId: opp.id, managerEmployeeId: opp.ownerEmployeeId },
@@ -92,7 +103,9 @@ async function startProjectOnce(opportunityId: string, actor: AccessTokenPayload
       actorUserId: actor.sub, subjectEmployeeId: opp.ownerEmployeeId, managerEmployeeId: null,
       title: `${serial} started for ${opp.serial}`, meta: opp.name, href: `/projects/${row.id}`,
     })
-    return summarise(asClient(tx), row, actor, employeeId)
+    // The row was read before the milestones existed, so it is read again
+    // rather than summarised from a Project that no longer matches the table.
+    return rereadProject(tx, row.id, actor)
   })
 }
 

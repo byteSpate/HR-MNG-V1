@@ -13,6 +13,7 @@ const taskPriority = z.enum(["LOW", "NORMAL", "HIGH"])
 export const createTaskSchema = z.object({
   salesAccountId: z.string().uuid(),
   opportunityId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
   meetingId: z.string().uuid().optional(),
   title: z.string().trim().min(2, "Give the task a title").max(180),
   detail: z.string().trim().max(2000).optional(),
@@ -44,9 +45,10 @@ export const listTaskSchema = z.object({
   status: z.enum(["PENDING", "DONE", "CANCELLED"]).optional(),
   // "now" is due today or overdue: the overview's "Tasks due or overdue" row.
   due: z.enum(["overdue", "today", "now", "week"]).optional(),
-  origin: z.enum(["SELF", "FUNNEL_MEETING"]).optional(),
+  origin: z.enum(["SELF", "FUNNEL_MEETING", "PROJECT"]).optional(),
   salesAccountId: z.string().uuid().optional(),
   opportunityId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
   meetingId: z.string().uuid().optional(),
   mine: z
     .enum(["true", "false"])
