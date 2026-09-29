@@ -56,6 +56,7 @@ import { downloadBlob } from "@/components/payroll/payroll-shared"
 import { MeetingFormDialog } from "@/components/sales/meetings/meeting-dialogs"
 import { OpportunityFormDialog } from "@/components/sales/opportunities/opportunity-form-dialog"
 import { shortDay } from "@/components/sales/shared/sales-shared"
+import { ProjectLogRows } from "@/components/sales/weekly/project-log-rows"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -308,6 +309,15 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
               Due by the end of {dayLabel(week.deadlineDay)}.
               {week.lastSubmittedAt ? ` Last submitted ${shortDay(week.lastSubmittedAt)}.` : ""}
             </p>
+            {/* A gap is worth saying out loud, and never worth blocking: a
+                person can submit a week with lines still missing (spec §2.2). */}
+            {week.counts.missingDailyLogs > 0 && !readOnly ? (
+              <p className="mt-1.5 text-[12px] font-semibold text-[#8A5E0C]">
+                {week.counts.missingDailyLogs} Daily Log line
+                {week.counts.missingDailyLogs === 1 ? " is" : "s are"} missing this week. You can still
+                submit.
+              </p>
+            ) : null}
           </div>
           {readOnly ? null : (
             <div className="flex flex-wrap gap-2">
@@ -496,7 +506,7 @@ function DayBlock({ day, weekKey, readOnly }: { day: WeeklyDay; weekKey: string;
       </div>
 
       <div className="grid gap-3 px-3.5 py-3">
-        {day.accounts.length === 0 && day.otherWork.length === 0 ? (
+        {day.accounts.length === 0 && day.otherWork.length === 0 && day.projects.length === 0 ? (
           <p className={`text-[12px] ${TONE.muted}`}>
             {labelled
               ? "The office was closed."
@@ -511,6 +521,11 @@ function DayBlock({ day, weekKey, readOnly }: { day: WeeklyDay; weekKey: string;
         ))}
 
         <OtherWork day={day} weekKey={weekKey} readOnly={shut} />
+
+        {/* The Daily Log, under Other work (spec §2.2). On a day off (holiday,
+            leave, weekly off) the server sends a row only where a line was
+            already written, and it is read-only: nothing is owed on that day. */}
+        <ProjectLogRows day={day} date={day.date} readOnly={shut || labelled} />
       </div>
     </section>
   )

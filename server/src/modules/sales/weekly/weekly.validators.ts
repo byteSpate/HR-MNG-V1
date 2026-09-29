@@ -9,6 +9,22 @@ const weeklyDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a YYYY-MM-D
 export const weekQuerySchema = z.object({ week: weeklyDate.optional() })
 
 /**
+ * One Daily Log line (spec §2.2). "No work" and a line are alternatives: with
+ * no text and no tick there is nothing to record, and a silent blank day is
+ * exactly what the gap marker is for.
+ */
+export const saveProjectLogSchema = z.object({
+  date: weeklyDate,
+  projectId: z.string().uuid(),
+  noWork: z.boolean(),
+  text: z.string().trim().max(2000).nullable().default(null),
+}).refine((b) => b.noWork || (b.text ?? "").trim().length > 0, {
+  message: "Write what you did, or tick No work on this Project today",
+  path: ["text"],
+})
+export type SaveProjectLogBody = z.infer<typeof saveProjectLogSchema>
+
+/**
  * The typed lines for one account on one day (§26.7, §26.8). Next step is
  * kept only where the account has no open deal; the service decides that.
  */

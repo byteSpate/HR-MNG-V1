@@ -245,6 +245,10 @@ export async function updateTask(id: string, body: UpdateTaskBody, actor: Access
  * outcome and offers the next follow-up; Cancelled needs a reason; reopening
  * clears whatever closed it, and the audit row keeps what that was.
  */
+export const PROJECT_TASK_CANCEL =
+  "Only the Project Manager or a Sales Admin can cancel a Project Task. Ask them to cancel it on the Project's Tasks tab."
+export const PROJECT_TASK_CANCELLED = "This Project Task was cancelled by the Project Manager. Ask them to add it again."
+
 export async function changeTaskStatus(
   id: string,
   body: ChangeTaskStatusBody,
@@ -255,6 +259,14 @@ export async function changeTaskStatus(
     const current = await taskForWrite(tx, id, actor)
     if (current.status === body.status) {
       throw new AppError(400, `This task is already ${TASK_STATUS_LABEL[body.status].toLowerCase()}`)
+    }
+
+    // The Project Manager owns the plan: cancelling a Project Task, and undoing
+    // that, happens on the Project (project.task.service.ts), never from the
+    // assignee's own list.
+    if (current.origin === "PROJECT") {
+      if (body.status === "CANCELLED") throw new AppError(403, PROJECT_TASK_CANCEL)
+      if (current.status === "CANCELLED") throw new AppError(403, PROJECT_TASK_CANCELLED)
     }
 
     const cleared = { outcome: null, cancelReason: null, completedAt: null, completedBy: null }
@@ -329,6 +341,7 @@ export async function listTasks(
     ...(query.origin ? { origin: query.origin } : {}),
     ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
     ...(query.opportunityId ? { opportunityId: query.opportunityId } : {}),
+    ...(query.projectId ? { projectId: query.projectId } : {}),
     ...(query.meetingId ? { meetingId: query.meetingId } : {}),
     ...(query.mine ? { assignedToEmployeeId: employeeId ?? "__none__" } : {}),
   }

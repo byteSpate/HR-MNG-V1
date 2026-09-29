@@ -74,6 +74,7 @@ function whereFor(employeeId: string, query: FunnelQuery, now: Date): Prisma.Opp
   }
 
   if (query.status) where.status = query.status
+  if (query.track) where.track = query.track
   if (query.salesAccountId) where.salesAccountId = query.salesAccountId
   // Applied after `status` on purpose: asking to hide closed deals wins over
   // asking to see one, because the two together are a contradiction and the

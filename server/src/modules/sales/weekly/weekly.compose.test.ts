@@ -35,6 +35,10 @@ const input = (overrides: Partial<ComposeInput> = {}): ComposeInput => ({
   openTasks: [],
   notes: [],
   otherWork: [],
+  projects: [],
+  loggedProjects: [],
+  projectLogs: [],
+  today: day("2026-09-14"),
   ...overrides,
 })
 
@@ -190,6 +194,119 @@ describe("composeWeek", () => {
         tasksDone: [{ id: "task-1", salesAccountId: "acc-1", title: "Send the profile", completedAt: at("2026-09-16T05:00:00.000Z") }],
       })
     )
-    expect(week.counts).toEqual({ accounts: 2, communications: 2, meetings: 1, dealChanges: 1, tasksDone: 1 })
+    expect(week.counts).toEqual({
+      accounts: 2, communications: 2, meetings: 1, dealChanges: 1, tasksDone: 1, missingDailyLogs: 0,
+    })
+  })
+})
+
+describe("composeWeek: the Daily Log rows", () => {
+  const PROJECT = { id: "prj-1", serial: "BS-PRJ-00001", name: "Firewall" }
+  const line = (date: string, text: string) => ({
+    id: `log-${date}`, projectId: "prj-1", date: day(date), noWork: false, text,
+  })
+  /** The rows of one day, keyed by the date, so a test can ask about a day. */
+  const rowsByDate = (week: ReturnType<typeof composeWeek>) =>
+    Object.fromEntries(week.days.map((d) => [d.date.toISOString().slice(0, 10), d.projects]))
+
+  it("shows a Project row each working day, marks gaps, and never on leave", () => {
+    const week = composeWeek(input({
+      projects: [PROJECT],
+      projectLogs: [line("2026-09-14", "Racked it")],
+      // Wednesday is the 16th: a holiday, so it is never missing.
+      holidays: [{ date: day("2026-09-16"), name: "Eid-e-Milad", type: "GENERAL" }],
+      today: day("2026-09-15"),
+    }))
+    const byDate = rowsByDate(week)
+    expect(byDate["2026-09-14"][0]).toMatchObject({ logId: "log-2026-09-14", text: "Racked it", missing: false })
+    // Monday has a line, Tuesday has come and has none.
+    expect(byDate["2026-09-15"][0].missing).toBe(true)
+    // Wednesday is a holiday: nothing is asked, so there is no row at all.
+    // An empty row would hide the "office was closed" note on the page.
+    expect(byDate["2026-09-16"]).toEqual([])
+  })
+
+  it("keeps a line that was written before the day became a holiday or leave, and never calls it missing", () => {
+    const week = composeWeek(input({
+      projects: [PROJECT],
+      projectLogs: [line("2026-09-16", "Came in anyway")],
+      holidays: [{ date: day("2026-09-16"), name: "Eid-e-Milad", type: "GENERAL" }],
+      today: day("2026-09-16"),
+    }))
+    expect(rowsByDate(week)["2026-09-16"]).toHaveLength(1)
+    expect(rowsByDate(week)["2026-09-16"][0]).toMatchObject({ text: "Came in anyway", missing: false })
+  })
+
+  it("sends no Project row on a day off, so the page can say the office was closed", () => {
+    const week = composeWeek(input({
+      projects: [PROJECT],
+      leaves: [{ startDate: day("2026-09-15"), endDate: day("2026-09-15"), startSession: "FULL", endSession: "FULL" }],
+      today: day("2026-09-16"),
+    }))
+    expect(rowsByDate(week)["2026-09-15"]).toEqual([])
+  })
+
+  it("counts the missing lines, so the week header can say how many", () => {
+    // Sunday 13th to Wednesday the 16th have all come, and the shift's only
+    // weekly off is Friday, which is not one of the week's five days. So four
+    // days owe a line and Thursday the 17th does not.
+    const week = composeWeek(input({ projects: [PROJECT], today: day("2026-09-16") }))
+    expect(week.counts.missingDailyLogs).toBe(4)
+  })
+
+  it("counts nothing missing when the person is not on any Project", () => {
+    const week = composeWeek(input({ today: day("2026-09-16") }))
+    expect(week.counts.missingDailyLogs).toBe(0)
+    expect(week.days.every((d) => d.projects.length === 0)).toBe(true)
+  })
+
+  it("never marks a day still to come as missing", () => {
+    const week = composeWeek(input({ projects: [PROJECT], today: day("2026-09-14") }))
+    const byDate = rowsByDate(week)
+    expect(byDate["2026-09-14"][0].missing).toBe(true)
+    expect(byDate["2026-09-15"][0].missing).toBe(false)
+    expect(byDate["2026-09-17"][0].missing).toBe(false)
+  })
+
+  it("says No work for a day the person ticked No work on", () => {
+    const week = composeWeek(input({
+      projects: [PROJECT],
+      projectLogs: [{ id: "log-1", projectId: "prj-1", date: day("2026-09-14"), noWork: true, text: null }],
+      today: day("2026-09-14"),
+    }))
+    expect(rowsByDate(week)["2026-09-14"][0]).toMatchObject({ noWork: true, text: null, missing: false })
+  })
+
+  it("keeps a Project the person logged but which is no longer in progress, only on the days it has a line", () => {
+    const week = composeWeek(input({
+      projects: [],
+      loggedProjects: [PROJECT],
+      projectLogs: [line("2026-09-14", "Racked it")],
+      today: day("2026-09-16"),
+    }))
+    const byDate = rowsByDate(week)
+    expect(byDate["2026-09-14"][0]).toMatchObject({ text: "Racked it", missing: false })
+    // The Project is done, so the other days have no row at all — not a row
+    // saying nothing is missing.
+    expect(byDate["2026-09-15"]).toEqual([])
+  })
+
+  it("keeps the Saturday before the week, but never marks it missing", () => {
+    const week = composeWeek(input({
+      projects: [PROJECT],
+      projectLogs: [line("2026-09-12", "Office discussion")],
+      today: day("2026-09-16"),
+    }))
+    const saturday = week.days[0]
+    expect(saturday.date).toEqual(SATURDAY)
+    expect(saturday.projects[0]).toMatchObject({ text: "Office discussion", missing: false })
+    // The Saturday's own line is never counted as missing; the four days after
+    // it that have come and have no line are.
+    expect(week.counts.missingDailyLogs).toBe(4)
+  })
+
+  it("drops the Saturday when the only thing on it is a Project row with no line", () => {
+    const week = composeWeek(input({ projects: [PROJECT], today: day("2026-09-16") }))
+    expect(week.days.map((d) => d.date)).not.toContain(SATURDAY)
   })
 })

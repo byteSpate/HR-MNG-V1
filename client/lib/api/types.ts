@@ -2716,7 +2716,7 @@ export interface EmailDispatchPage {
 // here surfaces as a runtime undefined rather than a type error. Read the two
 // files side by side when changing either.
 
-export type SalesTrack = "NETWORKING"
+export type SalesTrack = "NETWORKING" | "SOFTWARE_DEVELOPMENT"
 
 export type OpportunityStatus = "ONGOING" | "WON" | "LOST" | "CANCELLED"
 
@@ -2733,6 +2733,13 @@ export type OpportunityStage =
   | "QUOTATION_SUBMITTED"
   | "NEGOTIATION"
   | "AWAITING_DECISION"
+  // Software Development stages (spec 2026-09-28 §2.4). `lib/api/sales/stages.ts`
+  // says which track may use which; the union only holds the values.
+  | "REQUIREMENT_GATHERING"
+  | "BRD_SENT"
+  | "SRS_SENT"
+  | "PROPOSAL_SUBMITTED"
+  | "PROPOSAL_REVISION"
 
 export interface OpportunityLineSummary {
   id: string
@@ -2772,6 +2779,8 @@ export interface OpportunitySummary {
   /** Products whose margin cannot be worked out: no Total price, or no percentage. */
   unmarginedLineCount: number
   expectedCloseDate: string | null
+  /** Set once the quotation or proposal has gone out: it is then in the funnel. */
+  offeredOn: string | null
   oemAccountManager: string | null
   status: OpportunityStatus
   statusReason: string | null
@@ -2798,6 +2807,12 @@ export interface OpportunitySummary {
   amountDiffersFromLines: boolean
   /** The Project started from this Won Opportunity (ADR 0005), at most one. */
   project: { id: string; serial: string; name: string; status: ProjectStatus } | null
+  /** Whether the requirement includes software. Null until answered, and the
+      Hand-over is offered only once it is Yes (spec §2.5). */
+  softwareNeeded: boolean | null
+  /** The Hand-over link (spec §2.5). Exactly one of the two is set. */
+  handedOverFrom: { id: string; serial: string; name: string } | null
+  handedOverTo: { id: string; serial: string; name: string } | null
   /** Whether this viewer may change the deal. Decided by the server: the
       directory is shared, so seeing one and working it are different. */
   canManage: boolean
@@ -3207,7 +3222,7 @@ export interface ListMeetingsQuery {
 
 export type SalesTaskStatus = "PENDING" | "DONE" | "CANCELLED"
 export type SalesTaskPriority = "LOW" | "NORMAL" | "HIGH"
-export type SalesTaskOrigin = "SELF" | "FUNNEL_MEETING"
+export type SalesTaskOrigin = "SELF" | "FUNNEL_MEETING" | "PROJECT"
 /** overdue: before today. today. now: today or overdue. week: today and the six days after. */
 export type TaskDueFilter = "overdue" | "today" | "now" | "week"
 
@@ -3335,11 +3350,24 @@ export interface WeeklyOtherWork {
   text: string
 }
 
+/** One Project row on one day of the Weekly Report: the Daily Log (spec §2.2). */
+export interface WeekProjectRow {
+  projectId: string
+  serial: string
+  name: string
+  logId: string | null
+  noWork: boolean
+  text: string | null
+  /** A working day that has come, for an In Progress Project, with no line. */
+  missing: boolean
+}
+
 export interface WeeklyDay {
   date: string
   label: WeeklyDayLabel | null
   accounts: WeeklyAccountRow[]
   otherWork: WeeklyOtherWork[]
+  projects: WeekProjectRow[]
 }
 
 export interface WeeklyCounts {
@@ -3348,6 +3376,8 @@ export interface WeeklyCounts {
   meetings: number
   dealChanges: number
   tasksDone: number
+  /** Daily Log lines the person could have written this week and did not. */
+  missingDailyLogs: number
 }
 
 export interface WeeklyReportDetail {
@@ -3497,6 +3527,8 @@ export type FunnelSort = "offeredOn" | "status" | "amount" | "expectedCloseDate"
 export interface FunnelQueryOptions {
   employeeId?: string
   status?: OpportunityStatus
+  /** The track, so the grid can show one track's sheet rather than both. */
+  track?: SalesTrack
   salesAccountId?: string
   hideClosed?: boolean
   changedLastWeek?: boolean
@@ -3581,6 +3613,8 @@ export interface ProjectLineSummary {
   supplierName: string | null
   lineValue: string | null
   marginPercent: string | null
+  /** "What it covers", on a Software Opportunity's Modules (spec §2.4). */
+  note: string | null
   done: { at: string; byName: string | null } | null
 }
 
@@ -3605,6 +3639,13 @@ export interface ProjectSummary {
   statusReason: string | null
   completedAt: string | null
   milestones: ProjectMilestoneSummary[]
+  /** How far along the work is (spec §2.3). Null, never 0%, when no task counts. */
+  progress: { done: number; total: number; percent: number } | null
+  /** Open and late tasks per person, the Project Manager included. */
+  people: Array<{ employeeId: string; fullName: string; open: number; late: number }>
+  /** Null when there is nothing honest to say: finished, cancelled, or not yet started. */
+  health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  openTaskCount: number
   lines: ProjectLineSummary[]
   canManage: boolean
   canTick: boolean
@@ -3618,11 +3659,31 @@ export interface ProjectListRow {
   name: string
   salesAccountName: string
   opportunitySerial: string
+  /** The Opportunity's track, so a list can show Networking or Software. */
+  track: SalesTrack
   managerName: string
   status: ProjectStatus
   dueOn: string | null
   milestonesDone: number
   milestonesTotal: number
+}
+
+/** The Project's Daily Log for one week: a day each, a team member each (spec §2.2). */
+export interface ProjectDailyLogView {
+  weekStart: string
+  days: Array<{
+    date: string
+    people: Array<{
+      employeeId: string
+      fullName: string
+      /** Why the day is not an ordinary working day, or null when it is one. */
+      label: string | null
+      noWork: boolean
+      text: string | null
+      /** A working day that has come, on a Project in progress, with no line. */
+      missing: boolean
+    }>
+  }>
 }
 
 /**

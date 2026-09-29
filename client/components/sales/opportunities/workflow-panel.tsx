@@ -11,12 +11,11 @@ import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunitySummary } from "@/lib/api/types"
 import { CheckboxField, Field, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { OPPORTUNITY_STATUS_LABEL, STAGE_LABEL, STAGE_WAITING_ON, daysSince } from "@/components/sales/shared/sales-shared"
+import { stagesFor } from "@/lib/api/sales/stages"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-/** The stages, in the order the bar draws them. */
-const STAGES = Object.keys(STAGE_LABEL) as OpportunityStage[]
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import { onDate } from "@/components/sales/opportunities/lines-panel"
@@ -81,7 +80,8 @@ export function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; c
         >
           <Select value={deal.stage} onValueChange={(v) => v && stageMutation.mutate(v as OpportunityStage)} disabled={!isOpen || stageMutation.isPending}>
             <SelectTrigger className="w-full"><SelectValue>{(v: string | null) => STAGE_LABEL[(v ?? deal.stage) as OpportunityStage]}</SelectValue></SelectTrigger>
-            <SelectContent>{STAGES.map((s) => <SelectItem key={s} value={s}>{STAGE_LABEL[s]}</SelectItem>)}</SelectContent>
+            {/* The track decides the stages: a Networking Opportunity has no BRD to send. */}
+            <SelectContent>{stagesFor(deal.track).map((s) => <SelectItem key={s} value={s}>{STAGE_LABEL[s]}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
       ) : (
@@ -101,7 +101,7 @@ export function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; c
         </div>
       ) : null}
 
-      <StageBar status={deal.status} stage={deal.stage} className="mt-2.5 max-w-[16rem]" />
+      <StageBar status={deal.status} stage={deal.stage} track={deal.track} className="mt-2.5 max-w-[16rem]" />
 
       {isOpen ? (
         <div className="mt-1.5 text-[11.5px] text-[#6B7789]">

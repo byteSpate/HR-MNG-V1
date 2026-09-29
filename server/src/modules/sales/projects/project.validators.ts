@@ -8,6 +8,7 @@ export const listProjectSchema = z.object({
   status: projectStatus.optional(),
   managerEmployeeId: z.string().uuid().optional(),
   salesAccountId: z.string().uuid().optional(),
+  track: z.enum(["NETWORKING", "SOFTWARE_DEVELOPMENT"]).optional(),
 })
 
 export const updateProjectSchema = z.object({
@@ -41,6 +42,23 @@ export const updateMilestoneSchema = z.object({
   dueOn: dateOnly.nullable().optional(),
   done: z.boolean().optional(),
 }).refine((b) => Object.keys(b).length > 0, { message: "Nothing was changed" })
+
+/**
+ * A Project Task carries only what to do, a date and who does it (spec §2.1).
+ * No assignee means the caller: the page cannot know who is asking, the
+ * server does, so a person taking their own work sends nothing.
+ */
+export const addProjectTaskSchema = z.object({
+  title: z.string().trim().min(2, "Say what needs to be done").max(180),
+  dueOn: dateOnly,
+  assigneeEmployeeId: z.string().uuid().optional(),
+})
+export type AddProjectTaskBody = z.infer<typeof addProjectTaskSchema>
+
+export const cancelProjectTaskSchema = z.object({
+  reason: z.string().trim().min(2, "Say why the task is cancelled").max(500),
+})
+export type CancelProjectTaskBody = z.infer<typeof cancelProjectTaskSchema>
 
 export type ListProjectQuery = z.infer<typeof listProjectSchema>
 export type UpdateProjectBody = z.infer<typeof updateProjectSchema>

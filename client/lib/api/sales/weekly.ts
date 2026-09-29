@@ -84,3 +84,13 @@ export function getEmployeeWeek(
     { accessToken }
   )
 }
+
+/** One Daily Log line, written in the Weekly Report (spec §2.2). */
+export function saveProjectLog(accessToken: string, body: { date: string; projectId: string; noWork: boolean; text: string | null }): Promise<void> {
+  return apiFetch<void>("/api/sales/weekly/project-log", { method: "PUT", accessToken, body: JSON.stringify(body) })
+}
+
+/** A person takes back a line they wrote. Only their own. */
+export function removeProjectLog(accessToken: string, id: string): Promise<void> {
+  return apiFetch<void>(`/api/sales/weekly/project-log/${id}`, { method: "DELETE", accessToken })
+}

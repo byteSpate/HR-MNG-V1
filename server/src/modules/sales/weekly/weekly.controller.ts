@@ -18,7 +18,8 @@ import {
 } from "./weekly.service"
 import { getWeeklyCopy, previewMyWeek, submitMyWeek, type WeeklyFile } from "./weekly.submit"
 import { contentDisposition } from "../minutes/minutes.pdf"
-import { addOtherWorkSchema, saveWeeklyNoteSchema, weekQuerySchema } from "./weekly.validators"
+import { addOtherWorkSchema, saveProjectLogSchema, saveWeeklyNoteSchema, weekQuerySchema } from "./weekly.validators"
+import { removeProjectLog, saveProjectLog } from "./weekly.dailylog"
 
 /**
  * A weekly report PDF. Never cached: a copy is downloaded by name, and a
@@ -63,6 +64,20 @@ export async function removeOtherWorkHandler(
   next: NextFunction
 ) {
   try { await removeOtherWork(req.params.id, req.user!); return res.status(204).send() }
+  catch (err) { return next(err) }
+}
+
+export async function saveProjectLogHandler(req: Request, res: Response, next: NextFunction) {
+  try { await saveProjectLog(saveProjectLogSchema.parse(req.body), req.user!); return res.status(204).send() }
+  catch (err) { return next(err) }
+}
+
+export async function removeProjectLogHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try { await removeProjectLog(req.params.id, req.user!); return res.status(204).send() }
   catch (err) { return next(err) }
 }
 

@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { RiAddLine } from "@remixicon/react"
@@ -12,6 +11,8 @@ import {
   ConfirmDeleteDialog, ConfirmDialog, DialogActions, Field, FormError, PanelAlert, TONE, toMessage,
 } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
+import { ProjectActivityPanel } from "@/components/sales/projects/project-activity-panel"
+import type { Tone } from "@/components/dashboard/types"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import {
   PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE, PROJECT_STATUSES, REASON_NEEDED,
@@ -45,6 +46,14 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
 
   const open = project.milestones.filter((m) => m.doneAt === null).length
   const needsReason = REASON_NEEDED[chosen]
+  const health: { label: string; tone: Tone } | null =
+    project.health === "ON_TRACK"
+      ? { label: "On track", tone: "green" }
+      : project.health === "AT_RISK"
+        ? { label: "At risk", tone: "yellow" }
+        : project.health === "LATE"
+          ? { label: "Late", tone: "red" }
+          : null
 
   const saveStatus = useMutation({
     mutationFn: () => changeProjectStatus(accessToken!, project.id, { status: chosen, ...(reason.trim() ? { reason: reason.trim() } : {}) }),
@@ -84,6 +93,49 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
 
   return (
     <div className="grid gap-4">
+      {/* How it is going (spec §2.3), above the status, because it is the
+          thing a Project Manager opens this tab to find out. */}
+      <Panel>
+        <PanelHeading title="How it is going" />
+        <div className="flex flex-wrap items-center gap-2">
+          {health ? <Tag label={health.label} tone={health.tone} /> : null}
+          <span className={project.progress ? "text-[13px]" : "text-[13px] text-[#6B7789]"}>
+            {project.progress
+              ? `${project.progress.done} of ${project.progress.total} tasks done (${project.progress.percent}%)`
+              : "No tasks yet"}
+          </span>
+        </div>
+
+        {project.people.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[22rem] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-[#E4E9EF]">
+                  <th className="py-1.5 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">Person</th>
+                  <th className="py-1.5 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">Open tasks</th>
+                  <th className="py-1.5 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">Late tasks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {project.people.map((person) => (
+                  <tr key={person.employeeId} className="border-b border-[#EEF1F5] last:border-b-0">
+                    <td className="py-1.5 pr-3 text-[13px]">{person.fullName}</td>
+                    <td className="py-1.5 pr-3 text-[13px]">{person.open}</td>
+                    <td className={`py-1.5 pr-3 text-[13px] ${person.late > 0 ? "text-[#B03A3A]" : ""}`}>
+                      {person.late}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        <p className={`mt-3 text-[11.5px] ${TONE.muted}`}>
+          At risk means a task is due in the next 3 days. Late means a task or the finish date has passed.
+        </p>
+      </Panel>
+
       <Panel>
         <PanelHeading title="Status" />
         {error ? <PanelAlert>{error}</PanelAlert> : null}
@@ -197,21 +249,24 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
         ) : null}
       </Panel>
 
-      {/* Known gap (spec §1.9): the Project's own activity list needs a history
-          endpoint Phase 1 does not build. The Opportunity's Timeline History
-          is the record until then, and saying so beats a silent absence. */}
-      <p className={`text-[11.5px] ${TONE.muted}`}>
-        To see what happened,{" "}
-        <Link href={`/sales/opportunities/${project.opportunity.id}?tab=timeline`} className="font-semibold text-[#17191C] underline">
-          open the Opportunity&apos;s Timeline History tab
-        </Link>
-        .
-      </p>
+      <Panel>
+        <PanelHeading title="Activity" />
+        <ProjectActivityPanel projectId={project.id} />
+      </Panel>
 
       <ConfirmDialog
         open={confirming}
         title="Complete this Project?"
-        body={`${open} milestone${open === 1 ? " is" : "s are"} not ticked yet. Complete anyway?`}
+        body={
+          [
+            open > 0 ? `${open} milestone${open === 1 ? " is" : "s are"} not ticked` : "",
+            project.openTaskCount > 0
+              ? `${project.openTaskCount} task${project.openTaskCount === 1 ? " is" : "s are"} still open`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" and ") + "."
+        }
         confirmLabel="Complete"
         pending={saveStatus.isPending}
         onCancel={() => setConfirming(false)}

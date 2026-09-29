@@ -9,8 +9,10 @@ import {
   getMyWeekHandler,
   listTeamWeekHandler,
   removeOtherWorkHandler,
+  removeProjectLogHandler,
   saveWeeklyNoteHandler,
   previewMyWeekHandler,
+  saveProjectLogHandler,
   submitMyWeekHandler,
   weeklyCopyHandler,
 } from "./weekly.controller"
@@ -24,6 +26,11 @@ router.get("/weekly", requireAuth, requireSales(), getMyWeekHandler)
 router.put("/weekly/notes", requireAuth, requireSales(), saveWeeklyNoteHandler)
 router.post("/weekly/other-work", requireAuth, requireSales(), addOtherWorkHandler)
 router.delete("/weekly/other-work/:id", requireAuth, requireSales(), removeOtherWorkHandler)
+// The Daily Log: one line per Project per day, written in the same week
+// (spec §2.2). 204, because a saved line is answered by the week that comes
+// back from the page's own read.
+router.put("/weekly/project-log", requireAuth, requireSales(), saveProjectLogHandler)
+router.delete("/weekly/project-log/:id", requireAuth, requireSales(), removeProjectLogHandler)
 // Submitting keeps the copy and answers with that same file; a kept copy
 // downloads again exactly as it was (§26.17).
 // A look at the week as it would print, keeping nothing (the owner's ask,

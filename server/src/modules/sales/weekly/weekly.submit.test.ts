@@ -7,6 +7,7 @@ vi.mock("../../../config/env", () => ({
 vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    project: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
     employee: { findUnique: vi.fn() },
     shift: { findMany: vi.fn() },
@@ -86,6 +87,7 @@ beforeEach(() => {
   vi.mocked(prisma.salesCommunication.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.salesMeeting.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.opportunity.findMany).mockResolvedValue([] as never)
+  vi.mocked(prisma.project.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.event.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.salesTask.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.weeklyReport.findUnique).mockResolvedValue(report() as never)

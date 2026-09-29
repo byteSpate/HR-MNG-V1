@@ -3,7 +3,21 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { RiAlertLine, RiErrorWarningLine, RiEyeLine, RiGlobalLine, RiGroupLine, RiMapPinLine } from "@remixicon/react"
+import {
+  RiAlertLine,
+  RiCalendar2Line,
+  RiContactsLine,
+  RiErrorWarningLine,
+  RiEyeLine,
+  RiFlashlightLine,
+  RiFolder3Line,
+  RiGlobalLine,
+  RiGroupLine,
+  RiHistoryLine,
+  RiInformationLine,
+  RiMapPinLine,
+  RiTaskLine,
+} from "@remixicon/react"
 
 import { getSalesAccount } from "@/lib/api/sales/accounts"
 import { ApiError } from "@/lib/api/client"
@@ -175,12 +189,13 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
         <RecordTabs
           initialTab={initialTab}
           tabs={[
-            { value: "about", label: "About", content: <AccountAboutPanel account={accountQuery.data} isSalesAdmin={isSalesAdmin} /> },
-            { value: "contacts", label: "Contacts", content: <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
-            { value: "opportunities", label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
-            { value: "projects", label: "Projects", content: <AccountProjectsPanel accountId={accountId} /> },
+            { value: "about", icon: RiInformationLine, label: "About", content: <AccountAboutPanel account={accountQuery.data} isSalesAdmin={isSalesAdmin} /> },
+            { value: "contacts", icon: RiContactsLine, label: "Contacts", content: <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
+            { value: "opportunities", icon: RiFlashlightLine, label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
+            { value: "projects", icon: RiFolder3Line, label: "Projects", content: <AccountProjectsPanel accountId={accountId} /> },
             {
               value: "timeline",
+              icon: RiHistoryLine,
               label: "Timeline History",
               content: (
                 <div className="grid gap-4">
@@ -193,8 +208,8 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
                 </div>
               ),
             },
-            { value: "meetings", label: "Meetings", content: <MeetingsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
-            { value: "tasks", label: "Tasks", content: <TasksPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
+            { value: "meetings", icon: RiCalendar2Line, label: "Meetings", content: <MeetingsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
+            { value: "tasks", icon: RiTaskLine, label: "Tasks", content: <TasksPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
           ]}
         />
       ) : null}

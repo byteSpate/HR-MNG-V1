@@ -51,6 +51,7 @@ export const funnelQuerySchema = z.object({
   /** Whose funnel. Absent means the caller's own. */
   employeeId: z.string().uuid().optional(),
   status: z.enum(["ONGOING", "WON", "LOST", "CANCELLED"]).optional(),
+  track: z.enum(["NETWORKING", "SOFTWARE_DEVELOPMENT"]).optional(),
   salesAccountId: z.string().uuid().optional(),
   /** Drop Lost and Cancelled from the grid entirely. */
   hideClosed: z

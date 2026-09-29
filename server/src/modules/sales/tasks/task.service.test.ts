@@ -243,3 +243,33 @@ describe("who sees tasks", () => {
     await expect(getTask("task-9", USER)).rejects.toMatchObject({ statusCode: 404 })
   })
 })
+
+describe("a Project Task on the Tasks page", () => {
+  const projectTask = (overrides: Record<string, unknown> = {}) =>
+    task({ origin: "PROJECT", projectId: "prj-1", ...overrides })
+
+  it("lets the assignee mark it done, as for any task", async () => {
+    vi.mocked(prisma.salesTask.findFirst).mockResolvedValue(projectTask() as any)
+    const result = await changeTaskStatus("task-1", { status: "DONE" } as any, USER, NOW)
+    expect(result.status).toBe("DONE")
+  })
+
+  it("does not let the assignee cancel it, because only the Project Manager may", async () => {
+    vi.mocked(prisma.salesTask.findFirst).mockResolvedValue(projectTask() as any)
+    await expect(changeTaskStatus("task-1", { status: "CANCELLED", reason: "No time" } as any, USER, NOW))
+      .rejects.toThrow("Only the Project Manager or a Sales Admin can cancel a Project Task. Ask them to cancel it on the Project's Tasks tab.")
+    expect(prisma.salesTask.update).not.toHaveBeenCalled()
+  })
+
+  it("does not let the assignee bring a cancelled one back", async () => {
+    vi.mocked(prisma.salesTask.findFirst).mockResolvedValue(projectTask({ status: "CANCELLED", cancelReason: "Not needed" }) as any)
+    await expect(changeTaskStatus("task-1", { status: "PENDING" } as any, USER, NOW))
+      .rejects.toThrow("This Project Task was cancelled by the Project Manager. Ask them to add it again.")
+    expect(prisma.salesTask.update).not.toHaveBeenCalled()
+  })
+
+  it("still lets a person cancel their own ordinary task", async () => {
+    const result = await changeTaskStatus("task-1", { status: "CANCELLED", reason: "Customer went quiet" } as any, USER, NOW)
+    expect(result.status).toBe("CANCELLED")
+  })
+})

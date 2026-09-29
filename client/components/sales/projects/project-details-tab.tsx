@@ -251,7 +251,7 @@ function TeamDialog({
         <DialogHeader>
           <DialogTitle>Edit the Project Team</DialogTitle>
           <DialogDescription>
-            Only the {project.salesAccount.name} account&apos;s Owner and collaborators can be on the team.
+            {`Only the ${project.salesAccount.name} account's Owner and collaborators can be on the team.`}
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">

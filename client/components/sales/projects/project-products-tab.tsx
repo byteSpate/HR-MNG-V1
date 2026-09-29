@@ -34,6 +34,9 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
   // A price column only when at least one line has one. A column of "No price
   // yet" is a column that says nothing.
   const anyPriced = project.lines.some((l) => l.lineValue !== null)
+  // A Software Opportunity's lines are Modules (spec §2.4): a name, what it
+  // covers and a price. OEM, quantity and supplier are for bought goods.
+  const modules = project.opportunity.track === "SOFTWARE_DEVELOPMENT"
 
   const rows = project.lines.map((l) => [
     {
@@ -44,9 +47,13 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
         </span>
       ),
     },
-    { node: <span className={l.oemBrand ? undefined : TONE.muted}>{l.oemBrand ?? "Not set"}</span> },
-    { node: <span className={l.quantity === null ? TONE.muted : undefined}>{l.quantity ?? "Not set"}</span> },
-    { node: <span className={l.supplierName ? undefined : TONE.muted}>{l.supplierName ?? "Not set"}</span> },
+    ...(modules
+      ? [{ node: <span className={l.note ? undefined : TONE.muted}>{l.note ?? "Not set"}</span> }]
+      : [
+          { node: <span className={l.oemBrand ? undefined : TONE.muted}>{l.oemBrand ?? "Not set"}</span> },
+          { node: <span className={l.quantity === null ? TONE.muted : undefined}>{l.quantity ?? "Not set"}</span> },
+          { node: <span className={l.supplierName ? undefined : TONE.muted}>{l.supplierName ?? "Not set"}</span> },
+        ]),
     ...(anyPriced
       ? [{ node: <span>{l.lineValue ? taka(l.lineValue) : <span className={TONE.muted}>No price yet</span>}</span> }]
       : []),
@@ -84,14 +91,26 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
         .
       </p>
       <PanelTable
-        cols="minmax(0,2fr) minmax(0,1fr) minmax(0,0.6fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.2fr)"
-        headers={["Product", "OEM", "Quantity", "Supplier", ...(anyPriced ? ["Total price"] : []), "Done"]}
+        cols={
+          modules
+            ? "minmax(0,2fr) minmax(0,2fr) minmax(0,1fr) minmax(0,1.2fr)"
+            : "minmax(0,2fr) minmax(0,1fr) minmax(0,0.6fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.2fr)"
+        }
+        headers={
+          modules
+            ? ["Module", "What it covers", ...(anyPriced ? ["Price"] : []), "Done"]
+            : ["Product", "OEM", "Quantity", "Supplier", ...(anyPriced ? ["Total price"] : []), "Done"]
+        }
         rows={rows}
         isLoading={false}
         isError={false}
         onRetry={() => tick.reset()}
-        emptyTitle="No products yet"
-        emptyBody="The Opportunity has no products yet."
+        emptyTitle={modules ? "No modules yet" : "No products yet"}
+        emptyBody={
+          modules
+            ? "The Opportunity has no modules yet."
+            : "The Opportunity has no products yet."
+        }
         // Nothing on this list can be created from here: a product belongs to
         // the Opportunity, so an empty state has nowhere to send anybody.
         onEmptyAction={() => tick.reset()}

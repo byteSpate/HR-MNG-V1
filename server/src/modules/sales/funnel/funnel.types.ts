@@ -58,9 +58,9 @@ export interface FunnelRow {
   accountName: string
 
   /**
-   * Headed "Project Name" in the grid because that is what the business calls
-   * it, though the field is `Opportunity.name` and no Project table exists
-   * (§27.6). The glossary note behind the `?` says so.
+   * The Opportunity's own name, headed "Opportunity name" in the grid. It was
+   * headed "Project Name" on the team's sheet, but a Project is now its own
+   * record (ADR 0005), and this field is `Opportunity.name`.
    */
   projectName: string
 

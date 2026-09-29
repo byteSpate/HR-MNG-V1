@@ -21,6 +21,7 @@ import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.pr
 import { presentChanges, resolveNames } from "../accounts/history.present"
 import { createTaskIn } from "../tasks/task.service"
 import { stampOfferedOn } from "../funnel/funnel.edit"
+import { stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
 import { ensureCustomerForAccount } from "../../customer/customer.link"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
@@ -35,6 +36,15 @@ const HISTORY_LIMIT = 100
 export const STATUS_WORD: Record<string, string> = {
   ONGOING: "Ongoing", WON: "Won", LOST: "Lost", CANCELLED: "Cancelled",
 }
+
+/** The track chooses the stage list and the line fields, so it needs a bare Opportunity. */
+export const TRACK_CLOSED = "This Opportunity is closed, so its track cannot change."
+export const TRACK_HANDED_OVER = "This Opportunity is linked by a Hand-over, so its track cannot change."
+export const TRACK_IN_FUNNEL = "This Opportunity is already in the funnel, so its track cannot change."
+export const TRACK_LOCKED = "Remove the products first. The track can only change while the Opportunity has no products or modules."
+
+/** The supplier-before-Won rule is for bought goods; a Software Opportunity buys nothing. */
+export const supplierRuleApplies = (track: string) => track === "NETWORKING"
 
 export const INCLUDE = {
   owner: { select: { id: true, fullName: true } },
@@ -52,6 +62,10 @@ export const INCLUDE = {
   lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
   // The delivery work started from this Won Opportunity (ADR 0005), at most one.
   project: { select: { id: true, serial: true, name: true, status: true } },
+  // The Hand-over link, so a page can show "handed over from" and "handed to"
+  // without a second read (spec §2.5).
+  handedOverFrom: { select: { id: true, serial: true, name: true } },
+  handedOverTo: { select: { id: true, serial: true, name: true } },
 } as const
 
 /** Whether `actor` may write to this deal, decided from its parent account. */
@@ -190,6 +204,7 @@ export async function listOpportunities(query: ListOpportunityQuery, actor: Acce
     salesAccount: accountScopeFor(actor, employeeId),
     ...(query.status ? { status: query.status } : {}),
     ...(query.stage ? { stage: query.stage } : {}),
+    ...(query.track ? { track: query.track } : {}),
     ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
     ...(query.ownerEmployeeId ? { ownerEmployeeId: query.ownerEmployeeId } : {}),
     ...(query.mine ? { ownerEmployeeId: employeeId ?? "__none__" } : {}),
@@ -315,6 +330,19 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
       }
     }
     stage("name", body.name, current.name)
+    // The track decides which stages and which line fields are allowed, so it
+    // can only move while the Opportunity is bare: nothing to reinterpret.
+    if (body.track !== undefined && body.track !== current.track) {
+      if (current.status !== "ONGOING") throw new AppError(409, TRACK_CLOSED)
+      if (current.handedOverFrom || current.handedOverTo) throw new AppError(409, TRACK_HANDED_OVER)
+      // Once it is in the funnel its offer date stays, and the stage goes back.
+      if (current.offeredOn) throw new AppError(409, TRACK_IN_FUNNEL)
+      if (current.lines.length > 0) throw new AppError(409, TRACK_LOCKED)
+      data.stage = "REQUIREMENT_RECEIVED"
+      data.stageChangedAt = new Date()
+      before.stage = current.stage
+      after.stage = "REQUIREMENT_RECEIVED"
+    }
     stage("track", body.track, current.track)
     if (body.amount !== undefined) stage("amount", body.amount === null ? null : dec(body.amount), current.amount)
     if (body.expectedCloseDate !== undefined) stage("expectedCloseDate", day(body.expectedCloseDate), current.expectedCloseDate)
@@ -336,6 +364,11 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
     const current = await loadForWrite(tx, id, actor)
     if (current.status !== "ONGOING") {
       throw new AppError(409, "This Opportunity is closed, so you cannot move its stage.")
+    }
+    // A stage from the other track would be a value nothing downstream knows
+    // how to read, so it is refused here rather than stored.
+    if (!stageFitsTrack(body.stage, current.track)) {
+      throw new AppError(400, WRONG_TRACK_STAGE[current.track])
     }
     if (current.stage === body.stage) return presentOpportunity(current)
     const now = new Date()
@@ -383,7 +416,7 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
     // Task 16: a supplier bill is filled from the deal's product lines, so
     // every line needs one before the deal can be Won. A deal with no
     // lines at all is allowed, as today.
-    if (body.status === "WON") {
+    if (body.status === "WON" && supplierRuleApplies(current.track)) {
       const missing = current.lines.filter((l) => !l.supplierId).map((l) => l.product)
       if (missing.length > 0) {
         throw new AppError(400, `Pick a supplier for every product before marking this Opportunity won. Missing: ${missing.join(", ")}.`)

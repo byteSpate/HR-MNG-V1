@@ -7,7 +7,7 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { RiErrorWarningLine, RiInboxLine, RiRefreshLine } from "@remixicon/react"
+import { RiCalendarEventLine, RiErrorWarningLine, RiInboxLine, RiRefreshLine } from "@remixicon/react"
 
 import { listMeetings } from "@/lib/api/sales/meetings"
 import { salesKeys } from "@/lib/api/sales/keys"
@@ -95,6 +95,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
         sub="Visits, meetings at our office and online calls, by day. Everyone attending on our side gets them in the 00:01 email."
         cta="Schedule a meeting"
         onCta={() => setScheduleOpen(true)}
+        ctaIcon={RiCalendarEventLine}
       />
 
       {/* Hidden while loading: a filter beside a skeleton reads as an answer

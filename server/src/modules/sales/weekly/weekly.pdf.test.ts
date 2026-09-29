@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { renderWeeklyHtml, weeklyFileName, type WeeklyDocument } from "./weekly.pdf"
+import { renderWeeklyHtml, weeklyFileName, type WeeklyDocument, type WeeklyProjectLine } from "./weekly.pdf"
 
 const day = (value: string) => new Date(`${value}T00:00:00.000Z`)
 
@@ -36,20 +36,22 @@ const document = (overrides: Partial<WeeklyDocument> = {}): WeeklyDocument => ({
   submittedLate: false,
   submittedAt: new Date("2026-09-17T11:42:00.000Z"),
   updatedAt: null,
-  counts: { accounts: 1, communications: 1, meetings: 0, dealChanges: 0, tasksDone: 0 },
+  counts: { accounts: 1, communications: 1, meetings: 0, dealChanges: 0, tasksDone: 0, missingDailyLogs: 0 },
   days: [
-    { date: day("2026-09-13"), label: null, accounts: [row()], otherWork: [] },
+    { date: day("2026-09-13"), label: null, accounts: [row()], otherWork: [], projects: [] },
     {
       date: day("2026-09-16"),
       label: { kind: "HOLIDAY", text: "Eid-e-Milad" },
       accounts: [],
       otherWork: [],
+      projects: [],
     },
     {
       date: day("2026-09-17"),
       label: null,
       accounts: [],
       otherWork: [{ id: "ow-1", date: day("2026-09-17"), text: "Office discussion" }],
+      projects: [],
     },
   ],
   logo: null,
@@ -70,7 +72,7 @@ describe("renderWeeklyHtml", () => {
 
   it("prints the week's real counts", () => {
     const html = renderWeeklyHtml(
-      document({ counts: { accounts: 3, communications: 7, meetings: 2, dealChanges: 1, tasksDone: 4 } })
+      document({ counts: { accounts: 3, communications: 7, meetings: 2, dealChanges: 1, tasksDone: 4, missingDailyLogs: 2 } })
     )
     for (const [figure, caption] of [
       ["3", "Accounts worked on"],
@@ -115,6 +117,7 @@ describe("renderWeeklyHtml", () => {
             label: null,
             accounts: [row({ deals: [], requirement: "No open requirement", nextStep: "Meet the IT team" })],
             otherWork: [],
+            projects: [],
           },
         ],
       })
@@ -162,10 +165,50 @@ describe("renderWeeklyHtml", () => {
             label: null,
             accounts: [row({ challenges: "<script>alert(1)</script>" })],
             otherWork: [],
+            projects: [],
           },
         ],
       })
     )
+    expect(html).not.toContain("<script>alert(1)</script>")
+    expect(html).toContain("&lt;script&gt;")
+  })
+})
+
+describe("the Daily Log in the PDF", () => {
+  const projectRow = (overrides: Partial<WeeklyProjectLine> = {}): WeeklyProjectLine => ({
+    projectId: "prj-1", serial: "BS-PRJ-00001", name: "Core refresh",
+    logId: null, noWork: false, text: null, missing: false, ...overrides,
+  })
+  const withProjects = (projects: WeeklyProjectLine[]) =>
+    document({ days: [{ date: day("2026-09-13"), label: null, accounts: [], otherWork: [], projects }] })
+
+  it("prints what the person wrote, with the Project it was about", () => {
+    const html = renderWeeklyHtml(withProjects([
+      projectRow({ logId: "log-1", text: "Racked the firewall" }),
+    ]))
+    expect(html).toContain("BS-PRJ-00001 Core refresh: Racked the firewall")
+  })
+
+  it("says No work on this Project today, rather than printing nothing", () => {
+    const html = renderWeeklyHtml(withProjects([projectRow({ logId: "log-1", noWork: true })]))
+    expect(html).toContain("BS-PRJ-00001 Core refresh: No work on this Project today")
+  })
+
+  it("says No Daily Log for a day with no line, so the gap is visible on paper", () => {
+    const html = renderWeeklyHtml(withProjects([projectRow({ missing: true })]))
+    expect(html).toContain("BS-PRJ-00001 Core refresh: No Daily Log")
+  })
+
+  it("prints nothing for a Project row that is neither written nor missing", () => {
+    const html = renderWeeklyHtml(withProjects([projectRow()]))
+    expect(html).not.toContain("BS-PRJ-00001")
+  })
+
+  it("escapes the text, so a line can never put markup into the report", () => {
+    const html = renderWeeklyHtml(withProjects([
+      projectRow({ logId: "log-1", text: "<script>alert(1)</script>" }),
+    ]))
     expect(html).not.toContain("<script>alert(1)</script>")
     expect(html).toContain("&lt;script&gt;")
   })
