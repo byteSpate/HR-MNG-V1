@@ -7,6 +7,8 @@ import {
   RiArrowRightLine,
   RiCalendarEventLine,
   RiErrorWarningLine,
+  RiFilter3Line,
+  RiFileChartLine,
   RiHourglassLine,
   RiUserSearchLine,
   RiZzzLine,
@@ -84,6 +86,9 @@ const ACTION_ICON: Record<string, RemixiconComponentType> = {
   meetings: MEETING_ICON,
   tasks: TASK_ICON,
   minutes: MINUTES_ICON,
+  // The two rows that had no picture: last week's reports, and funnels not reviewed.
+  weekly: RiFileChartLine,
+  funnel: RiFilter3Line,
   closing: RiCalendarEventLine,
   unverified: RiUserSearchLine,
   quiet: RiZzzLine,

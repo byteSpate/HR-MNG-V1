@@ -1,5 +1,16 @@
 "use client"
 
+import {
+  RiBuilding2Line,
+  RiFlagLine,
+  RiGlobalLine,
+  RiGroupLine,
+  RiMapPinLine,
+  RiMessage2Line,
+  RiUserStarLine,
+  type RemixiconComponentType,
+} from "@remixicon/react"
+
 import type { SalesAccountSummary } from "@/lib/api/types"
 import { CommentPanel } from "@/components/sales/shared/comment-panel"
 import { TONE } from "@/components/dashboard/record-kit"
@@ -18,28 +29,34 @@ export function AccountAboutPanel({
   account: SalesAccountSummary
   isSalesAdmin: boolean
 }) {
-  const rows: { label: string; value: string }[] = [
-    { label: "Owner", value: account.ownerName },
+  const rows: { label: string; value: string; icon: RemixiconComponentType }[] = [
+    { label: "Owner", value: account.ownerName, icon: RiUserStarLine },
     {
       label: "Collaborators",
       value: account.assignees.length > 0 ? account.assignees.map((a) => a.fullName).join(", ") : "None",
+      icon: RiGroupLine,
     },
-    { label: "Industry", value: account.industry || "Not recorded" },
-    { label: "Website", value: account.website || "Not recorded" },
-    { label: "Address", value: account.address || "Not recorded" },
-    { label: "Status", value: ACCOUNT_STATUS_LABEL[account.status] },
+    { label: "Industry", value: account.industry || "Not recorded", icon: RiBuilding2Line },
+    { label: "Website", value: account.website || "Not recorded", icon: RiGlobalLine },
+    { label: "Address", value: account.address || "Not recorded", icon: RiMapPinLine },
+    { label: "Status", value: ACCOUNT_STATUS_LABEL[account.status], icon: RiFlagLine },
   ]
-  if (account.statusReason) rows.push({ label: "Status reason", value: account.statusReason })
+  if (account.statusReason) rows.push({ label: "Status reason", value: account.statusReason, icon: RiMessage2Line })
 
   return (
     <div className="grid gap-4">
       <Panel>
       <PanelHeading title="About" />
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-2">
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-3.5 text-[13px] sm:grid-cols-2">
         {rows.map((row) => (
-          <div key={row.label} className="flex flex-wrap items-baseline gap-x-2">
-            <dt className={TONE.muted}>{row.label}</dt>
-            <dd className="font-semibold">{row.value}</dd>
+          <div key={row.label} className="flex items-start gap-2.5">
+            <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+              <row.icon className="size-3.5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <dt className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>{row.label}</dt>
+              <dd className="font-semibold [overflow-wrap:anywhere]">{row.value}</dd>
+            </div>
           </div>
         ))}
       </dl>

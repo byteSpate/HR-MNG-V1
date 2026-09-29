@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { RiCheckboxCircleLine, RiFolder3Line, RiPauseCircleLine, RiPlayCircleLine } from "@remixicon/react"
 import { useQuery } from "@tanstack/react-query"
 
 import { listProjects } from "@/lib/api/sales/projects"
@@ -10,6 +11,9 @@ import { useSession } from "@/lib/auth/session-context"
 import type { ProjectListRow, SalesTrack } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, TONE } from "@/components/dashboard/record-kit"
+import { projectStats } from "@/components/sales/shared/sales-stats"
+import { sized } from "@/components/sales/shared/sized-cell"
+import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
 import { TRACKS, TRACK_LABEL } from "@/lib/api/sales/stages"
 import type { TableCell } from "@/components/dashboard/types"
 import {
@@ -72,9 +76,25 @@ export function ProjectsPage() {
 
   const isFiltered = status !== "" || track !== ""
 
+  // Counted from the rows on this list, so a tile always agrees with the
+  // table. The server sends at most 200, and the tile says so at that point.
+  const projects = useMemo(() => query.data ?? [], [query.data])
+  const stats = useMemo<SalesStat[]>(() => {
+    const c = projectStats(projects)
+    const scope = projects.length >= 200 ? "In the first 200 loaded" : "On this list"
+    return [
+      { label: "Projects", value: String(c.total), sub: scope, icon: RiFolder3Line },
+      { label: "In progress", value: String(c.inProgress), sub: "Work is moving", icon: RiPlayCircleLine },
+      { label: "Blocked or on hold", value: String(c.stuck), sub: "Work is not moving", icon: RiPauseCircleLine },
+      { label: "Completed", value: String(c.completed), sub: "Delivered", icon: RiCheckboxCircleLine },
+    ]
+  }, [projects])
+
   return (
     <>
       <PageHeader kicker="Sales" title="Projects" sub="Delivery work for Won Opportunities." />
+
+      <SalesStatRow stats={stats} isLoading={query.isPending} isError={query.isError} />
 
       {/* Hidden while the first page loads (UI rule 4): a filter that appears
           after the data and changes it under the reader is a jump, not a
@@ -118,9 +138,11 @@ export function ProjectsPage() {
       ) : null}
 
       <PanelTable
+        title="Delivery work"
+        emptyIcon={RiFolder3Line}
         cols="minmax(0,2fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto minmax(0,1fr) minmax(0,1.1fr) minmax(0,0.8fr)"
         headers={["Project", "Account", "Opportunity", "Track", "Project Manager", "Status", "Finish date", "Milestones"]}
-        rows={(query.data ?? []).map(rowCells)}
+        rows={projects.map((p) => rowCells(p).map(sized))}
         isLoading={query.isPending}
         isError={query.isError}
         onRetry={() => query.refetch()}

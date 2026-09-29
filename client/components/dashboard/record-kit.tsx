@@ -13,6 +13,7 @@ import {
   RiPencilLine,
   RiQuestionLine,
   RiRefreshLine,
+  type RemixiconComponentType,
 } from "@remixicon/react"
 
 import { DataTable } from "@/components/dashboard/data-table"
@@ -208,6 +209,8 @@ export function PanelTable({
   emptyAction,
   emptyActionIcon,
   onEmptyAction,
+  title = "",
+  emptyIcon: EmptyIcon,
 }: {
   cols: string
   headers: string[]
@@ -231,6 +234,10 @@ export function PanelTable({
    */
   emptyActionIcon?: ReactNode
   onEmptyAction: () => void
+  /** A title on the table's card, as the Leave page has ("All leave requests"). Omitted, the table has none, as before. */
+  title?: string
+  /** What the empty list is about, as a picture. Omitted, the inbox glyph is used, as before. */
+  emptyIcon?: RemixiconComponentType
 }) {
   if (isLoading) return <TableLoading cols={cols} headers={headers} />
 
@@ -264,7 +271,7 @@ export function PanelTable({
       <PanelShell>
         <div className="flex flex-col items-center gap-3 py-10 text-center">
           <span className="flex size-9 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
-            <RiInboxLine className="size-5" aria-hidden />
+            {EmptyIcon ? <EmptyIcon className="size-5" aria-hidden /> : <RiInboxLine className="size-5" aria-hidden />}
           </span>
           <div>
             <div className="text-[13.5px] font-bold">{emptyTitle}</div>
@@ -286,7 +293,7 @@ export function PanelTable({
     )
   }
 
-  return <DataTable title="" action="" cols={cols} headers={headers} rows={rows} />
+  return <DataTable title={title} action="" cols={cols} headers={headers} rows={rows} />
 }
 
 /** The bordered white surface every panel state is drawn on. */

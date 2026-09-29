@@ -10,6 +10,7 @@ export function PageHeader({
   cta,
   onCta,
   aside,
+  ctaIcon: CtaIcon,
 }: {
   kicker: string
   title: string
@@ -35,6 +36,8 @@ export function PageHeader({
    * the tabs, which is where it was.
    */
   aside?: ReactNode
+  /** A small picture in front of the `cta` words. Optional: without one the button is unchanged. */
+  ctaIcon?: RemixiconComponentType
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 pt-5 pb-4 sm:items-end sm:pt-7 sm:pb-5.5">
@@ -51,6 +54,7 @@ export function PageHeader({
               onClick={onCta}
               className="h-auto shrink-0 rounded-md bg-[#17191C] px-4 py-2.5 text-[13px] font-bold text-white transition-transform hover:bg-[#0E1012] active:translate-y-px motion-reduce:transition-none"
             >
+              {CtaIcon ? <CtaIcon className="size-4" aria-hidden /> : null}
               {cta}
             </Button>
           ) : null}
@@ -65,6 +69,7 @@ export function MiniStat({
   value,
   sub,
   icon: Icon,
+  index,
 }: {
   label: string
   value: string
@@ -75,9 +80,24 @@ export function MiniStat({
    * tiles whose subject has no obvious picture.
    */
   icon?: RemixiconComponentType
+  /**
+   * Opt in to motion by passing the tile's place in its row. The tile then
+   * rises in (260ms) after `index * 40ms`, capped at six steps so a long row
+   * never keeps the last tile waiting, and lifts 1px on hover. Left out, the
+   * tile is exactly what it was, so no other page changes.
+   */
+  index?: number
 }) {
+  const moving = index !== undefined
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+    <div
+      className={
+        moving
+          ? "rise-in rounded-md border border-[#E4E9EF] bg-white px-5 py-4 transition-[transform,box-shadow] duration-180 ease-out hover:-translate-y-px hover:shadow-[0_8px_20px_-12px_rgba(28,39,51,0.28)] motion-reduce:transition-none"
+          : "rounded-md border border-[#E4E9EF] bg-white px-5 py-4"
+      }
+      style={moving ? { animationDelay: `${Math.min(index, 6) * 40}ms` } : undefined}
+    >
       <div className="flex items-center gap-1.5">
         {Icon ? <Icon className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden /> : null}
         <div className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">{label}</div>

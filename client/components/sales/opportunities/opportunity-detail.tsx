@@ -3,7 +3,20 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { RiErrorWarningLine, RiEyeLine } from "@remixicon/react"
+import {
+  RiBox3Line,
+  RiCalendar2Line,
+  RiChat3Line,
+  RiErrorWarningLine,
+  RiEyeLine,
+  RiFileTextLine,
+  RiFlagLine,
+  RiFolder3Line,
+  RiHistoryLine,
+  RiMoneyDollarCircleLine,
+  RiRouteLine,
+  RiTaskLine,
+} from "@remixicon/react"
 
 import { getOpportunity } from "@/lib/api/sales/opportunities"
 import { salesKeys } from "@/lib/api/sales/keys"
@@ -201,16 +214,17 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
           <RecordTabs<DealTab>
             initialTab={initialTab}
             tabs={[
-              { value: "workflow", label: "Workflow", content: <WorkflowPanel deal={deal} canManage={canManage} /> },
-              { value: "status", label: "Status", content: <StatusPanel deal={deal} canManage={canManage} isSalesAdmin={isSalesAdmin} /> },
-              { value: "products", label: deal.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <LinesPanel deal={deal} canManage={canManage} /> },
-              ...(deal.status === "WON" ? [{ value: "money" as const, label: "Money", content: <MoneySection opportunityId={deal.id} /> }] : []),
-              { value: "project", label: "Project", content: <OpportunityProjectPanel deal={deal} canStart={canStart} /> },
-              { value: "documents", label: "Documents", content: <DocumentsPanel deal={deal} canManage={canManage} /> },
-              { value: "meetings", label: "Meetings", content: <MeetingsPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} /> },
-              { value: "tasks", label: "Tasks", content: <TasksPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} /> },
+              { value: "workflow", icon: RiRouteLine, label: "Workflow", content: <WorkflowPanel deal={deal} canManage={canManage} /> },
+              { value: "status", icon: RiFlagLine, label: "Status", content: <StatusPanel deal={deal} canManage={canManage} isSalesAdmin={isSalesAdmin} /> },
+              { value: "products", icon: RiBox3Line, label: deal.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <LinesPanel deal={deal} canManage={canManage} /> },
+              ...(deal.status === "WON" ? [{ value: "money" as const, icon: RiMoneyDollarCircleLine, label: "Money", content: <MoneySection opportunityId={deal.id} /> }] : []),
+              { value: "project", icon: RiFolder3Line, label: "Project", content: <OpportunityProjectPanel deal={deal} canStart={canStart} /> },
+              { value: "documents", icon: RiFileTextLine, label: "Documents", content: <DocumentsPanel deal={deal} canManage={canManage} /> },
+              { value: "meetings", icon: RiCalendar2Line, label: "Meetings", content: <MeetingsPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} /> },
+              { value: "tasks", icon: RiTaskLine, label: "Tasks", content: <TasksPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} /> },
               {
                 value: "comments",
+                icon: RiChat3Line,
                 label: "Comments",
                 content: (
                   <CommentPanel
@@ -230,6 +244,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
               },
               {
                 value: "timeline",
+                icon: RiHistoryLine,
                 label: "Timeline History",
                 content: (
                   <div className="grid gap-4">

@@ -1,5 +1,12 @@
 "use client"
 
+import {
+  RiBookOpenLine,
+  RiBox3Line,
+  RiInformationLine,
+  RiPulseLine,
+  RiTaskLine,
+} from "@remixicon/react"
 import Link from "next/link"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 
@@ -98,11 +105,11 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
           <RecordTabs<ProjectTab>
             initialTab={initialTab}
             tabs={[
-              { value: "details", label: "Details", content: <ProjectDetailsTab project={project} onSaved={onSaved} /> },
-              { value: "products", label: project.opportunity.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <ProjectProductsTab project={project} onSaved={onSaved} /> },
-              { value: "status", label: "Status", content: <ProjectStatusTab project={project} onSaved={onSaved} /> },
-              { value: "tasks", label: "Tasks", content: <ProjectTasksTab project={project} /> },
-              { value: "daily-log", label: "Daily Log", content: <ProjectDailyLogTab project={project} /> },
+              { value: "details", icon: RiInformationLine, label: "Details", content: <ProjectDetailsTab project={project} onSaved={onSaved} /> },
+              { value: "products", icon: RiBox3Line, label: project.opportunity.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <ProjectProductsTab project={project} onSaved={onSaved} /> },
+              { value: "status", icon: RiPulseLine, label: "Status", content: <ProjectStatusTab project={project} onSaved={onSaved} /> },
+              { value: "tasks", icon: RiTaskLine, label: "Tasks", content: <ProjectTasksTab project={project} /> },
+              { value: "daily-log", icon: RiBookOpenLine, label: "Daily Log", content: <ProjectDailyLogTab project={project} /> },
             ]}
           />
         </>
