@@ -2747,6 +2747,20 @@ enum OpportunityStage {
   NEGOTIATION
   /// Waiting on the customer, with nothing left for us to do but chase.
   AWAITING_DECISION
+  // ── Software Development stages (spec 2026-09-28 §2.4). A Software
+  // Opportunity uses REQUIREMENT_RECEIVED, these five, NEGOTIATION and
+  // AWAITING_DECISION. `sales.stages.ts` says which stage belongs to which
+  // track; the enum only holds the values.
+  /// Waiting on us. Finding out what the customer needs.
+  REQUIREMENT_GATHERING
+  /// Waiting on the customer. We sent the BRD; they are checking it.
+  BRD_SENT
+  /// Waiting on the customer. We sent the SRS; they are checking it.
+  SRS_SENT
+  /// Waiting on the customer. The Proposal is with them. Joins the funnel.
+  PROPOSAL_SUBMITTED
+  /// Waiting on us. The customer asked for changes to the Proposal.
+  PROPOSAL_REVISION
 }
 
 model Opportunity {
@@ -2764,6 +2778,13 @@ model Opportunity {
   meeting   SalesMeeting? @relation("OpportunityOrigin", fields: [meetingId], references: [id], onDelete: SetNull)
 
   track SalesTrack @default(NETWORKING)
+
+  /// The Networking Opportunity this Software one was handed over from
+  /// (CONTEXT.md, Hand-over). Unique: one Hand-over per Networking
+  /// Opportunity. Restrict: the link is a record and is never broken.
+  handedOverFromId String?      @unique
+  handedOverFrom   Opportunity? @relation("HandOver", fields: [handedOverFromId], references: [id], onDelete: Restrict)
+  handedOverTo     Opportunity? @relation("HandOver")
 
   /// Was `projectName` in the first analysis. Renamed: the business calls it
   /// the Opportunity Name and the examples are "Routing", "Firewall Upgrade" —
@@ -2979,6 +3000,8 @@ model Project {
   team       ProjectTeamMember[]
   milestones ProjectMilestone[]
   lineTicks  ProjectLineDone[]
+  tasks      SalesTask[]
+  dailyLogs  ProjectDailyLog[]
 
   @@index([salesAccountId])
   @@index([managerEmployeeId, status])
@@ -3211,6 +3234,8 @@ enum SalesTaskOrigin {
   SELF
   /// Management gave it at a Saturday funnel meeting (phase 6).
   FUNNEL_MEETING
+  /// Work on a Project, given by its Project Manager or taken by a team member.
+  PROJECT
 }
 
 enum SalesTaskPriority {
@@ -3241,9 +3266,11 @@ model SalesTask {
   opportunity     Opportunity?   @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
   meetingId       String?
   meeting         SalesMeeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
-  /// Phase 5 will add this relation. The column exists now, so that will be a
-  /// relation change and not a backfill.
+  /// Set for a Project Task (spec 2026-09-28 §2.1). SetNull: nothing deletes
+  /// a Project today, and if something ever does, the work stays on the
+  /// person's list.
   projectId       String?
+  project         Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
   /// Phase 6 made good on the other half: an action item given at a Saturday
   /// review (§27.13). SetNull, not Cascade — deleting a meeting must not
   /// delete the work it handed out.
@@ -3276,6 +3303,7 @@ model SalesTask {
   @@index([assignedToEmployeeId, status, dueOn])
   @@index([funnelMeetingId])
   @@index([salesAccountId, status])
+  @@index([projectId, status])
 }
 
 /// Where a minutes document stands. Stored rather than worked out, because
@@ -3415,9 +3443,10 @@ model WeeklyReport {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  copies    WeeklyReportCopy[]
-  notes     WeeklyAccountNote[]
-  otherWork WeeklyOtherWork[]
+  copies       WeeklyReportCopy[]
+  notes        WeeklyAccountNote[]
+  otherWork    WeeklyOtherWork[]
+  projectLogs  ProjectDailyLog[]
 
   @@unique([employeeId, weekStart])
   @@index([weekStart, status])
@@ -3487,6 +3516,28 @@ model WeeklyOtherWork {
   updatedAt DateTime @updatedAt
 
   @@index([weeklyReportId, date])
+}
+
+/// One line of Project work on one day, written in the Weekly Report
+/// (spec 2026-09-28 §2.2): what the person did, or that they did no work on
+/// that Project that day. No hours: this is not a timesheet.
+model ProjectDailyLog {
+  id             String       @id @default(uuid())
+  weeklyReportId String
+  weeklyReport   WeeklyReport @relation(fields: [weeklyReportId], references: [id], onDelete: Cascade)
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// Date only, UTC midnight.
+  date           DateTime
+  noWork         Boolean      @default(false)
+  /// Required unless noWork.
+  text           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([weeklyReportId, projectId, date])
+  @@index([projectId, date])
 }
 
 /// The minutes template, on Sales Settings (§25.20, §25.30). One row, id 1,
