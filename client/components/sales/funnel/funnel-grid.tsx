@@ -13,6 +13,7 @@ import { useState } from "react"
 import { RiArrowUpSLine, RiErrorWarningLine } from "@remixicon/react"
 
 import { FieldHelp, PanelNotice, TONE } from "@/components/dashboard/record-kit"
+import { FUNNEL_NAME_HEADING, FUNNEL_NAME_HELP } from "./funnel-labels"
 import { taka } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import type { FunnelCellField, FunnelGrid, FunnelRow, FunnelSort } from "@/lib/api/types"
@@ -175,13 +176,8 @@ export function FunnelGridTable({
                 {head("account", "Account", "w-48")}
                 <th scope="col" className="w-48 px-2 py-2 text-left font-medium">
                   <span className="inline-flex items-center gap-1">
-                    Project Name
-                    {/* The business calls it this; the field is the deal's own
-                        name and no Project table exists (§27.6). */}
-                    <FieldHelp label="Project Name">
-                      The Opportunity&apos;s name. The funnel sheet calls it Project Name, so the
-                      heading is kept. It is not a Project record.
-                    </FieldHelp>
+                    {FUNNEL_NAME_HEADING}
+                    <FieldHelp label={FUNNEL_NAME_HEADING}>{FUNNEL_NAME_HELP}</FieldHelp>
                   </span>
                 </th>
                 {head("useCase", "Use Case", "w-44")}
