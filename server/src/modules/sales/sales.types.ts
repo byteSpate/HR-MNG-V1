@@ -521,6 +521,8 @@ export interface ProjectListRow {
   name: string
   salesAccountName: string
   opportunitySerial: string
+  /** The Opportunity's track, so a list can show Networking or Software. */
+  track: string
   managerName: string
   status: ProjectStatusValue
   dueOn: string | null

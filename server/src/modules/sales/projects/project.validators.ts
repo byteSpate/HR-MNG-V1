@@ -8,6 +8,7 @@ export const listProjectSchema = z.object({
   status: projectStatus.optional(),
   managerEmployeeId: z.string().uuid().optional(),
   salesAccountId: z.string().uuid().optional(),
+  track: z.enum(["NETWORKING", "SOFTWARE_DEVELOPMENT"]).optional(),
 })
 
 export const updateProjectSchema = z.object({

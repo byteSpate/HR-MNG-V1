@@ -109,11 +109,13 @@ export async function listProjects(query: ListProjectQuery, actor: AccessTokenPa
       ...(query.status ? { status: query.status } : {}),
       ...(query.managerEmployeeId ? { managerEmployeeId: query.managerEmployeeId } : {}),
       ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
+      // The track lives on the Opportunity; a Project always has exactly one.
+      ...(query.track ? { opportunity: { track: query.track } } : {}),
     },
     select: {
       id: true, serial: true, name: true, status: true, dueOn: true,
       salesAccount: { select: { name: true } },
-      opportunity: { select: { serial: true } },
+      opportunity: { select: { serial: true, track: true } },
       manager: { select: { fullName: true } },
       milestones: { select: { doneAt: true } },
     },
@@ -122,7 +124,7 @@ export async function listProjects(query: ListProjectQuery, actor: AccessTokenPa
   })
   return rows.map((r) => ({
     id: r.id, serial: r.serial, name: r.name, salesAccountName: r.salesAccount.name,
-    opportunitySerial: r.opportunity.serial, managerName: r.manager.fullName, status: r.status,
+    opportunitySerial: r.opportunity.serial, track: r.opportunity.track, managerName: r.manager.fullName, status: r.status,
     dueOn: r.dueOn ? r.dueOn.toISOString().slice(0, 10) : null,
     milestonesDone: r.milestones.filter((m) => m.doneAt !== null).length,
     milestonesTotal: r.milestones.length,

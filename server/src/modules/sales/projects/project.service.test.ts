@@ -186,6 +186,20 @@ describe("listProjects", () => {
     expect(where).not.toHaveProperty("salesAccountId")
   })
 
+  it("filters Projects by the Opportunity's track", async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as any)
+    await listProjects({ track: "SOFTWARE_DEVELOPMENT" } as any, USER)
+    const where = vi.mocked(prisma.project.findMany).mock.calls[0][0]!.where as any
+    expect(where.opportunity).toEqual({ track: "SOFTWARE_DEVELOPMENT" })
+  })
+
+  it("leaves the track out of the where when no track was asked for", async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as any)
+    await listProjects({}, USER)
+    const where = vi.mocked(prisma.project.findMany).mock.calls[0][0]!.where as any
+    expect(where).not.toHaveProperty("opportunity")
+  })
+
   it("counts done and total milestones per row", async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([
       {

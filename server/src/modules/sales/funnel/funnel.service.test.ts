@@ -119,6 +119,16 @@ describe("getFunnel: membership and filters", () => {
     expect(dealArgs().where.status).toBeUndefined()
   })
 
+  it("filters the funnel by track", async () => {
+    await getFunnel({ ...QUERY, track: "SOFTWARE_DEVELOPMENT" } as never, USER)
+    expect(dealArgs().where.track).toBe("SOFTWARE_DEVELOPMENT")
+  })
+
+  it("leaves the track out when no track was asked for", async () => {
+    await getFunnel(QUERY as never, USER)
+    expect(dealArgs().where).not.toHaveProperty("track")
+  })
+
   it("hides closed deals when asked, and that beats a status filter", async () => {
     // Asking for LOST and also to hide closed deals is a contradiction. The
     // narrower answer is the safer one.
