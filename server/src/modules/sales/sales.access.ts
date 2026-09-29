@@ -153,16 +153,16 @@ export async function requireOpportunityAccess(
   opportunityId: string,
   actor: AccessTokenPayload,
   client: typeof prisma = prisma
-): Promise<{ opportunityId: string; salesAccountId: string; ownerEmployeeId: string; employeeId: string | null }> {
+): Promise<{ opportunityId: string; salesAccountId: string; ownerEmployeeId: string; employeeId: string | null; track: string }> {
   const employeeId = await employeeIdFor(actor, client)
   const opportunity = await client.opportunity.findFirst({
     where: {
       AND: [{ id: opportunityId }, { salesAccount: accountScopeFor(actor, employeeId) }],
     },
-    select: { id: true, salesAccountId: true, ownerEmployeeId: true },
+    select: { id: true, salesAccountId: true, ownerEmployeeId: true, track: true },
   })
   if (!opportunity) throw new AppError(404, OPPORTUNITY_NOT_VISIBLE)
-  return { opportunityId: opportunity.id, salesAccountId: opportunity.salesAccountId, ownerEmployeeId: opportunity.ownerEmployeeId, employeeId }
+  return { opportunityId: opportunity.id, salesAccountId: opportunity.salesAccountId, ownerEmployeeId: opportunity.ownerEmployeeId, track: opportunity.track, employeeId }
 }
 
 /** Reads use the same inherited account scope; opportunity ids reveal no wider directory. */

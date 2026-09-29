@@ -25,11 +25,14 @@ const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "sales@example.com",
   mustChangePassword: false, salesRole: "SALES_USER",
 } as any
-const OPP = { id: "opp-1", salesAccountId: "account-1", salesAccount: { ownerEmployeeId: "emp-1" } }
+const OPP = { id: "opp-1", salesAccountId: "account-1", track: "NETWORKING", salesAccount: { ownerEmployeeId: "emp-1" } }
 const LINE = {
   id: "line-1", opportunityId: "opp-1", product: "Switch", oemBrand: "Cisco",
   model: null, quantity: 2, unitValue: dec("100"), lineValue: null,
   note: null, order: 0, createdAt: new Date("2026-09-09"), updatedAt: new Date("2026-09-09"),
+  // The parent Opportunity's track, which decides whether this line is a
+  // Networking product or a Software module.
+  opportunity: { track: "NETWORKING" },
 }
 
 beforeEach(() => {
@@ -164,5 +167,50 @@ describe("OEM suggestions", () => {
         } },
       }),
     }))
+  })
+})
+
+describe("modules on a Software Opportunity", () => {
+  const SOFTWARE = () => vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ ...OPP, track: "SOFTWARE_DEVELOPMENT" } as any)
+
+  it("refuses Networking fields on a Software module", async () => {
+    SOFTWARE()
+    await expect(addOpportunityLine("opp-1", { product: "HR module", model: "X1" } as any, USER))
+      .rejects.toThrow("A module has a name, what it covers, and a price. OEM, model, quantity, unit price, margin and supplier are for Networking products.")
+    expect(prisma.opportunityLine.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a supplier on a Software module", async () => {
+    SOFTWARE()
+    await expect(addOpportunityLine("opp-1", { product: "HR module", supplierId: "s1" } as any, USER))
+      .rejects.toThrow("A module has a name, what it covers, and a price.")
+  })
+
+  it("lets an empty Networking field through, because clearing is not setting", async () => {
+    SOFTWARE()
+    await addOpportunityLine("opp-1", { product: "HR module", model: "", oemBrand: null } as any, USER)
+    expect(prisma.opportunityLine.create).toHaveBeenCalled()
+  })
+
+  it("adds a module with a name, what it covers and a price", async () => {
+    SOFTWARE()
+    await addOpportunityLine("opp-1", { product: "HR module", note: "Leave and attendance", lineValue: "250000" } as any, USER)
+    expect(prisma.opportunityLine.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ product: "HR module", note: "Leave and attendance" }),
+    }))
+  })
+
+  it("refuses Networking fields when a module is edited", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({
+      ...LINE, opportunity: { track: "SOFTWARE_DEVELOPMENT" },
+    } as any)
+    await expect(updateOpportunityLine("line-1", { quantity: 4 } as any, USER))
+      .rejects.toThrow("A module has a name, what it covers, and a price.")
+  })
+
+  it("still takes every Networking field on a Networking product", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue(LINE as any)
+    await updateOpportunityLine("line-1", { quantity: 4 } as any, USER)
+    expect(prisma.opportunityLine.update).toHaveBeenCalled()
   })
 })
