@@ -52,6 +52,10 @@ export const salesKeys = {
   // ── projects (2026-09-28) ───────────────────────────────────────────────
   projects: (filters: Record<string, unknown> = {}) => ["sales", "projects", filters] as const,
   project: (id: string) => ["sales", "projects", id] as const,
+  // Under the Project prefix, so `salesKeys.project(id)` invalidates them too.
+  projectTasks: (id: string) => ["sales", "projects", id, "tasks"] as const,
+  projectActivity: (id: string) => ["sales", "projects", id, "activity"] as const,
+  projectDailyLog: (id: string, week: string | null) => ["sales", "projects", id, "daily-log", week] as const,
 
   // ── comments ────────────────────────────────────────────────────────────
   comments: (entity: string, entityId: string) => ["sales", "comments", entity, entityId] as const,
