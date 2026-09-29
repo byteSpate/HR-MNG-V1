@@ -2805,6 +2805,9 @@ export interface OpportunitySummary {
   amountDiffersFromLines: boolean
   /** The Project started from this Won Opportunity (ADR 0005), at most one. */
   project: { id: string; serial: string; name: string; status: ProjectStatus } | null
+  /** Whether the requirement includes software. Null until answered, and the
+      Hand-over is offered only once it is Yes (spec §2.5). */
+  softwareNeeded: boolean | null
   /** The Hand-over link (spec §2.5). Exactly one of the two is set. */
   handedOverFrom: { id: string; serial: string; name: string } | null
   handedOverTo: { id: string; serial: string; name: string } | null

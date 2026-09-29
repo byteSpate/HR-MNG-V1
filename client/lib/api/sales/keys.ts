@@ -32,6 +32,9 @@ export const salesKeys = {
   accountMargin: (id: string) => ["sales", "account-margin", id] as const,
 
   // ── opportunities ───────────────────────────────────────────────────────
+  /** Who may own a Software Opportunity, for the Hand-over dialog (spec §2.5). */
+  handOverOwners: (id: string) => ["sales", "opportunities", id, "handover-owners"] as const,
+
   /**
    * Filters are part of the key, so two filter settings are two cache entries
    * rather than one that flickers between answers.

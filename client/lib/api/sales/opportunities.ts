@@ -216,3 +216,19 @@ export function addDocumentLink(
 export function removeDocumentLink(accessToken: string, linkId: string): Promise<void> {
   return apiFetch<void>(`/api/sales/documents/${linkId}`, { method: "DELETE", accessToken })
 }
+
+/** Who may own the Software Opportunity this one is handed to (spec §2.5). */
+export function listHandOverOwners(accessToken: string, id: string): Promise<Array<{ id: string; fullName: string }>> {
+  return apiFetch<Array<{ id: string; fullName: string }>>(`/api/sales/opportunities/${id}/handover-owners`, { accessToken })
+}
+
+/** Hands the software part over, once, and answers with the new Opportunity. */
+export function handOverToSoftware(
+  accessToken: string,
+  id: string,
+  body: { name?: string; ownerEmployeeId: string }
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/handover`, {
+    method: "POST", accessToken, body: JSON.stringify(body),
+  })
+}
