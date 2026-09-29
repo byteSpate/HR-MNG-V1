@@ -43,6 +43,8 @@ export interface SalesAccountSummary {
       whenever the status leaves ACTIVE and clears it on the way back, so a
       status badge is never shown without the sentence explaining it. */
   statusReason: string | null
+  /** A signed link to the visiting card picture, or null when there is none. */
+  visitingCardUrl: string | null
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number

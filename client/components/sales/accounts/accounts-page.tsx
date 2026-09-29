@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import {
   RiAddLine,
   RiAlertLine,
@@ -19,6 +20,7 @@ import {
   listAllSalesAccounts,
   listSalesAccounts,
   listSalesEligibleEmployees,
+  setVisitingCard,
 } from "@/lib/api/sales/accounts"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
@@ -37,6 +39,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/shared/sales-shared"
 import { accountStats } from "@/components/sales/shared/sales-stats"
+import { VisitingCardPicker } from "@/components/sales/accounts/visiting-card-picker"
 import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -140,6 +143,8 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   const [website, setWebsite] = useState("")
   const [address, setAddress] = useState("")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
+  // Held until the account is saved: the picture needs the new account's id.
+  const [cardFile, setCardFile] = useState<File | null>(null)
 
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const canCreate = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
@@ -184,6 +189,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
     setWebsite("")
     setAddress("")
     setAssigneeIds([])
+    setCardFile(null)
     setFormError(null)
   }
 
@@ -193,11 +199,27 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   }
 
   const createMutation = useMutation({
-    mutationFn: (body: CreateSalesAccountBody) => createSalesAccount(accessToken!, body),
-    onSuccess: () => {
+    // Two calls, because a picture goes as a file and the account as JSON. The
+    // account comes first: if the card then fails, the account still exists and
+    // the person is told, in words, where to add the card instead. Never the
+    // other way round, which would upload a picture for an account that failed.
+    mutationFn: async ({ body, card }: { body: CreateSalesAccountBody; card: File | null }) => {
+      const created = await createSalesAccount(accessToken!, body)
+      if (!card) return { created, cardProblem: null as string | null }
+      try {
+        await setVisitingCard(accessToken!, created.id, card)
+        return { created, cardProblem: null as string | null }
+      } catch (err) {
+        return { created, cardProblem: toMessage(err) }
+      }
+    },
+    onSuccess: ({ created, cardProblem }) => {
       setCreateOpen(false)
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts"] })
       queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
+      if (cardProblem) {
+        toast.warning(`${created.name} was created, but the visiting card did not upload. ${cardProblem} Open the account and add the card there.`, { duration: 9000 })
+      }
     },
     onError: (err) => {
       setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
@@ -217,12 +239,15 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
     }
 
     createMutation.mutate({
-      name: name.trim(),
-      ownerEmployeeId,
-      industry: industry.trim() || undefined,
-      website: website.trim() || undefined,
-      address: address.trim() || undefined,
-      assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
+      body: {
+        name: name.trim(),
+        ownerEmployeeId,
+        industry: industry.trim() || undefined,
+        website: website.trim() || undefined,
+        address: address.trim() || undefined,
+        assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
+      },
+      card: cardFile,
     })
   }
 
@@ -382,6 +407,14 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
 
               <Field label="Address" htmlFor="sa-address" hint="Optional.">
                 <Input id="sa-address" value={address} onChange={(e) => setAddress(e.target.value)} />
+              </Field>
+
+              <Field
+                label="Visiting card"
+                hint="Optional."
+                help="A photo or scan of the customer's visiting card. You can also add or change it later on the account page."
+              >
+                <VisitingCardPicker file={cardFile} onChange={setCardFile} disabled={createMutation.isPending} />
               </Field>
 
               {employees.length > 0 ? (
