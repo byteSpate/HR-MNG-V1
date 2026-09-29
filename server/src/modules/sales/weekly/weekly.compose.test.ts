@@ -221,8 +221,29 @@ describe("composeWeek: the Daily Log rows", () => {
     expect(byDate["2026-09-14"][0]).toMatchObject({ logId: "log-2026-09-14", text: "Racked it", missing: false })
     // Monday has a line, Tuesday has come and has none.
     expect(byDate["2026-09-15"][0].missing).toBe(true)
-    // Wednesday is a holiday: the row is there, and it is nobody's fault.
-    expect(byDate["2026-09-16"][0].missing).toBe(false)
+    // Wednesday is a holiday: nothing is asked, so there is no row at all.
+    // An empty row would hide the "office was closed" note on the page.
+    expect(byDate["2026-09-16"]).toEqual([])
+  })
+
+  it("keeps a line that was written before the day became a holiday or leave, and never calls it missing", () => {
+    const week = composeWeek(input({
+      projects: [PROJECT],
+      projectLogs: [line("2026-09-16", "Came in anyway")],
+      holidays: [{ date: day("2026-09-16"), name: "Eid-e-Milad", type: "GENERAL" }],
+      today: day("2026-09-16"),
+    }))
+    expect(rowsByDate(week)["2026-09-16"]).toHaveLength(1)
+    expect(rowsByDate(week)["2026-09-16"][0]).toMatchObject({ text: "Came in anyway", missing: false })
+  })
+
+  it("sends no Project row on a day off, so the page can say the office was closed", () => {
+    const week = composeWeek(input({
+      projects: [PROJECT],
+      leaves: [{ startDate: day("2026-09-15"), endDate: day("2026-09-15"), startSession: "FULL", endSession: "FULL" }],
+      today: day("2026-09-16"),
+    }))
+    expect(rowsByDate(week)["2026-09-15"]).toEqual([])
   })
 
   it("counts the missing lines, so the week header can say how many", () => {

@@ -72,6 +72,18 @@ describe("a Project's Daily Log for one week", () => {
     ])
   })
 
+  it("adds the Saturday before the week when somebody wrote a line on it", async () => {
+    vi.mocked(prisma.projectDailyLog.findMany).mockResolvedValue([
+      { date: day("2026-09-26"), noWork: false, text: "Office discussion", weeklyReport: { employeeId: "emp-2" } },
+    ] as any)
+    const view = await getProjectDailyLog("prj-1", {}, USER)
+    expect(view.days.map((d) => d.date)).toEqual([
+      "2026-09-26", "2026-09-27", "2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01",
+    ])
+    // The Saturday is the person's own extra day, so it is never a gap.
+    expect(view.days[0].people[0]).toMatchObject({ text: "Office discussion", missing: false })
+  })
+
   it("has one row per team member on every day", async () => {
     const view = await getProjectDailyLog("prj-1", {}, USER)
     expect(view.days.every((d) => d.people.length === 1)).toBe(true)
@@ -137,12 +149,12 @@ describe("a Project's Daily Log for one week", () => {
     expect(view.days[1].people[1].text).toBeNull()
   })
 
-  it("asks for a week, not the whole history", async () => {
+  it("asks for a week, from the Saturday before it, not the whole history", async () => {
     await getProjectDailyLog("prj-1", {}, USER)
     expect(prisma.projectDailyLog.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         projectId: "prj-1",
-        date: { gte: day("2026-09-27"), lte: day("2026-10-01") },
+        date: { gte: day("2026-09-26"), lte: day("2026-10-01") },
       }),
     }))
   })

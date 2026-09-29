@@ -370,15 +370,19 @@ export function composeWeek(input: ComposeInput): WeekView {
     const logFor = (projectId: string) =>
       input.projectLogs.find((l) => l.projectId === projectId && key(l.date) === key(date))
     const projects: WeekProjectRow[] = [
-      // In progress now: a row every day, and a gap on the days with no line.
-      ...input.projects.map((p) => {
+      // In progress now: a row every working day, and a gap on the days with
+      // no line. A day off (holiday, leave, weekly off) asks for nothing, so it
+      // gets a row only when a line was already written there. Sending an
+      // empty row would hide the page's "office was closed" note.
+      ...input.projects.flatMap((p) => {
         const log = logFor(p.id)
+        if (dayLabel !== null && !log) return []
         const missing = due && !log
         if (missing) counts.missingDailyLogs++
-        return {
+        return [{
           projectId: p.id, serial: p.serial, name: p.name, logId: log?.id ?? null,
           noWork: log?.noWork ?? false, text: log?.text ?? null, missing,
-        }
+        }]
       }),
       // Logged earlier this week but no longer in progress: the line stays
       // visible, and the other days say nothing at all rather than reporting

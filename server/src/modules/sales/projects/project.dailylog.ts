@@ -5,7 +5,7 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import { officeToday } from "../../attendance/attendance.time"
 import { resolveShift } from "../../attendance/attendance.grid"
 import type { ProjectDailyLogView } from "../sales.types"
-import { dayLabelOf, weekDays, weekEndOf, weekStartOf } from "../weekly/weekly.dates"
+import { dayLabelOf, saturdayBefore, weekDays, weekEndOf, weekStartOf } from "../weekly/weekly.dates"
 import { loadProjectRow } from "./project.access"
 
 /**
@@ -29,7 +29,10 @@ export async function getProjectDailyLog(
     throw new AppError(400, `${query.week} is not a date on the calendar`)
   }
   const weekStart = weekStartOf(anchor)
-  const from = weekStart
+  // From the Saturday before: a person may write a line on it (the Weekly
+  // Report allows it), and a line written there must show here too.
+  const saturday = saturdayBefore(weekStart)
+  const from = saturday
   const to = weekEndOf(weekStart)
   const memberIds = row.team.map((m) => m.employeeId)
   const [shifts, holidays, leaves, people, logs] = await Promise.all([
@@ -54,9 +57,13 @@ export async function getProjectDailyLog(
   // day-by-day history of a Project's status, so there is nothing to say
   // about a day the Project was not yet running.
   const inProgress = row.status === "IN_PROGRESS"
+  // The Saturday is shown only when somebody wrote on it, as on the Weekly
+  // Report, and it is never a gap: it is an extra day, not one that is owed.
+  const hasSaturday = logs.some((l) => l.date.getTime() === saturday.getTime())
+  const days = hasSaturday ? [saturday, ...weekDays(weekStart)] : weekDays(weekStart)
   return {
     weekStart: formatDateOnly(weekStart),
-    days: weekDays(weekStart).map((date) => ({
+    days: days.map((date) => ({
       date: formatDateOnly(date),
       people: people.map((p) => {
         const label = dayLabelOf(date, {
@@ -75,7 +82,7 @@ export async function getProjectDailyLog(
           label: label?.text ?? null,
           noWork: log?.noWork ?? false,
           text: log?.text ?? null,
-          missing: inProgress && !log && label === null && date.getTime() <= today.getTime(),
+          missing: inProgress && !log && label === null && date.getTime() !== saturday.getTime() && date.getTime() <= today.getTime(),
         }
       }),
     })),
