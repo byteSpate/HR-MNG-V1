@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Field, PanelAlert, PanelTable, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Input } from "@/components/ui/input"
 import { TASK_STATUS_LABEL } from "@/components/sales/shared/sales-shared"
-import { projectTaskChoices } from "@/components/sales/shared/task-choices"
+import { projectTaskChoices, taskPeople } from "@/components/sales/shared/task-choices"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -52,10 +52,10 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
   // The Project Manager gives tasks to others, and the "who" box starts on the
   // manager. A team member takes work for themselves: the page sends no name and
   // the server reads who is asking, so the page never has to guess.
-  const people = [
+  const people = taskPeople(
     { employeeId: project.manager.employeeId, fullName: project.manager.fullName },
-    ...project.team.map((m) => ({ employeeId: m.employeeId, fullName: m.fullName })),
-  ]
+    project.team.map((m) => ({ employeeId: m.employeeId, fullName: m.fullName })),
+  )
   const mayAdd = project.canManage || project.canTick
   const who = assigneeId || project.manager.employeeId
 

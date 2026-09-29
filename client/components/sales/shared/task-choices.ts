@@ -23,3 +23,12 @@ export function projectTaskChoices(
   const pending = task.status === "PENDING"
   return { done: pending && task.canManage, cancel: pending && projectCanManage }
 }
+
+/**
+ * Who a task can be given to: the Project Manager, then the team. The manager
+ * is often on the team as well, and a person listed twice is a duplicate row
+ * for the eye and a duplicate key for React, so each person appears once.
+ */
+export function taskPeople<T extends { employeeId: string }>(manager: T, team: T[]): T[] {
+  return [manager, ...team.filter((m) => m.employeeId !== manager.employeeId)]
+}

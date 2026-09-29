@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { removeProjectLog, saveProjectLog } from "@/lib/api/sales/weekly"
+import { projectLogBody } from "@/lib/project-log-payload"
 import { useSession } from "@/lib/auth/session-context"
 import type { WeeklyDay } from "@/lib/api/types"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -47,8 +48,8 @@ export function ProjectLogRows({
   }
 
   const save = useMutation({
-    mutationFn: ({ projectId, text, noWork }: { projectId: string; text: string | null; noWork: boolean }) =>
-      saveProjectLog(accessToken!, { date, projectId, noWork, text }),
+    mutationFn: ({ projectId, text, noWork }: { projectId: string; text: string; noWork: boolean }) =>
+      saveProjectLog(accessToken!, projectLogBody(date, projectId, { text, noWork })),
     onSuccess: async (_data, vars) => {
       setError(null)
       setEditing((e) => ({ ...e, [vars.projectId]: false }))
@@ -157,7 +158,7 @@ export function ProjectLogRows({
                     onClick={() =>
                       save.mutate({
                         projectId: project.projectId,
-                        text: noWork ? null : draft.trim(),
+                        text: draft,
                         noWork,
                       })
                     }
