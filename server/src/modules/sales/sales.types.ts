@@ -112,6 +112,8 @@ export interface SalesAccountSummary {
    * status badge is never rendered without the sentence explaining it.
    */
   statusReason: string | null
+  /** A signed link to the visiting card picture, or null when there is none. */
+  visitingCardUrl: string | null
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number

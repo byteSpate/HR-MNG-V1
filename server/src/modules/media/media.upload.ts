@@ -86,6 +86,9 @@ function withErrorTranslation(handler: RequestHandler, limits: MediaLimits): Req
 }
 
 export const avatarUpload = withErrorTranslation(build(AVATAR_LIMITS), AVATAR_LIMITS)
+// A visiting card is a photo or scan, so it takes the avatar's image formats and
+// its 5 MB ceiling. No fourth limit constant.
+export const cardUpload = withErrorTranslation(build(AVATAR_LIMITS), AVATAR_LIMITS)
 export const documentUpload = withErrorTranslation(build(DOCUMENT_LIMITS), DOCUMENT_LIMITS)
 // An asset photo is the same size class as a scanned contract, and a second
 // limit constant is a second thing to keep in step.
