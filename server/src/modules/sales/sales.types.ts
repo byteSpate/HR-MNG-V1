@@ -525,6 +525,24 @@ export interface ProjectSummary {
   updatedAt: string
 }
 
+/** The Project's Daily Log for one week: a day each, a team member each (spec §2.2). */
+export interface ProjectDailyLogView {
+  weekStart: string
+  days: Array<{
+    date: string
+    people: Array<{
+      employeeId: string
+      fullName: string
+      /** Why the day is not an ordinary working day, or null when it is one. */
+      label: string | null
+      noWork: boolean
+      text: string | null
+      /** A working day that has come, on a Project in progress, with no line. */
+      missing: boolean
+    }>
+  }>
+}
+
 export interface ProjectListRow {
   id: string
   serial: string

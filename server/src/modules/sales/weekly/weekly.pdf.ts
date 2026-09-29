@@ -55,11 +55,22 @@ export interface WeeklyRow {
   taskId: string | null
 }
 
+export interface WeeklyProjectLine {
+  projectId: string
+  serial: string
+  name: string
+  logId: string | null
+  noWork: boolean
+  text: string | null
+  missing: boolean
+}
+
 export interface WeeklyDay {
   date: Date
   label: DayLabel | null
   accounts: WeeklyRow[]
   otherWork: Array<{ id: string; date: Date; text: string }>
+  projects: WeeklyProjectLine[]
 }
 
 export interface WeeklyDocument {
@@ -78,6 +89,7 @@ export interface WeeklyDocument {
     meetings: number
     dealChanges: number
     tasksDone: number
+    missingDailyLogs: number
   }
   days: WeeklyDay[]
   /** A data URI, or null when the logo file is missing. */
@@ -210,11 +222,28 @@ function dayBlock(day: WeeklyDay): string {
 
   // Only for a working day with nothing on it: a labelled day already says why.
   const nothing =
-    day.accounts.length === 0 && day.otherWork.length === 0 && !day.label
+    day.accounts.length === 0 && day.otherWork.length === 0 && day.projects.length === 0 && !day.label
       ? '<p class="nothing">Nothing recorded on this day.</p>'
       : ""
 
-  return `<section class="block">${head}${table}${other}${nothing}</section>`
+  // The Daily Log prints under Other work, in the same words the page uses, so
+  // a gap is visible on paper as well as on screen. A row with neither a line
+  // nor a gap is not printed at all.
+  const projectLines = day.projects
+    .map((project) => {
+      const head = `${escapeHtml(project.serial)} ${escapeHtml(project.name)}: `
+      const body = project.logId === null
+        ? (project.missing ? "No Daily Log" : null)
+        : (project.noWork ? "No work on this Project today" : prose(project.text ?? ""))
+      return body === null ? "" : `<li>${head}${body}</li>`
+    })
+    .filter((line) => line !== "")
+  const projects =
+    projectLines.length === 0
+      ? ""
+      : `<div class="other"><span class="other-head">Project work</span><ul>${projectLines.join("")}</ul></div>`
+
+  return `<section class="block">${head}${table}${other}${projects}${nothing}</section>`
 }
 
 /** The whole document, as one self-contained HTML string. */
