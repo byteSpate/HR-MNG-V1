@@ -57,7 +57,7 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                   Person
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Deals
+                  Opportunities
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
                   Quoted

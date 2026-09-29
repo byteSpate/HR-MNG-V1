@@ -22,7 +22,7 @@ import type { EditFunnelCell } from "./funnel.validators"
 
 export const MEETING_NOT_OPEN = "That funnel meeting is not open"
 export const MEETING_ADMIN_ONLY = "Only a Sales Admin can make a change on behalf of a funnel meeting"
-export const OFFER_DATE_REQUIRED = "A quoted deal keeps its offer date. Change it, but it cannot be cleared"
+export const OFFER_DATE_REQUIRED = "A quoted Opportunity keeps its offer date. You can change it, but you cannot clear it"
 
 /** The columns the grid may write. */
 type Writable = EditFunnelCell["field"]

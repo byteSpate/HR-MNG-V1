@@ -70,7 +70,7 @@ export function FunnelRowDetail({
     <div className="grid gap-6 md:grid-cols-2">
       <div>
         <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
-          Remarks on this deal
+          Remarks on this Opportunity
         </h4>
 
         {/* Derived, never stored (§27.8). It sits above the remarks because it
@@ -83,8 +83,8 @@ export function FunnelRowDetail({
 
         {row.remarks.length === 0 ? (
           <p className={cn("mt-2 text-sm", TONE.muted)}>
-            Nothing written on this deal yet. Remarks are the deal&apos;s own comments — the funnel
-            keeps no separate notes.
+            Nothing written on this Opportunity yet. Remarks are the Opportunity&apos;s own comments.
+            The funnel keeps no separate notes.
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
@@ -125,7 +125,7 @@ export function FunnelRowDetail({
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               maxLength={4000}
-              placeholder="What is blocking this deal?"
+              placeholder="What is blocking this Opportunity?"
               className="mt-2 w-full rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
             />
             {error ? <PanelAlert>{toMessage(error)}</PanelAlert> : null}
@@ -144,11 +144,11 @@ export function FunnelRowDetail({
 
       <div>
         <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
-          Products on this deal
+          Products on this Opportunity
         </h4>
 
         {row.lines.length === 0 ? (
-          <p className={cn("mt-2 text-sm", TONE.muted)}>No products on this deal yet.</p>
+          <p className={cn("mt-2 text-sm", TONE.muted)}>No products on this Opportunity yet.</p>
         ) : (
           // Every line, in the deal's own order: the grid's brand, model and
           // quantity cells are only the first of these.
@@ -183,7 +183,7 @@ export function FunnelRowDetail({
           href={`/sales/opportunities/${row.opportunityId}`}
           className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#1F4E79] hover:underline"
         >
-          Open the deal
+          Open the Opportunity
           <RiArrowRightLine className="size-4" aria-hidden />
         </Link>
       </div>

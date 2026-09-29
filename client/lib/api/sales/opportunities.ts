@@ -1,6 +1,7 @@
 import { apiFetch } from "../client"
 import type {
   CreateOpportunityBody,
+  DocumentLinkSummary,
   OpportunityLineBody,
   OpportunityLineSummary,
   OpportunityHistory,
@@ -86,7 +87,8 @@ export function changeOpportunityStage(
 export function changeOpportunityStatus(
   accessToken: string,
   id: string,
-  body: { status: OpportunityStatus; statusReason?: string }
+  // Ongoing is not here: Won, Lost and Cancelled are final (spec §1.4).
+  body: { status: Exclude<OpportunityStatus, "ONGOING">; statusReason?: string }
 ): Promise<OpportunitySummary> {
   return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/status`, {
     method: "PATCH",
@@ -184,4 +186,33 @@ export function setSoftwareNeeded(
     accessToken,
     body: JSON.stringify({ softwareNeeded }),
   })
+}
+
+/** Fixes a status set by mistake. Sales Admin or Super Admin only (spec §1.4). */
+export function correctOpportunityStatus(
+  accessToken: string,
+  id: string,
+  body: { status: OpportunityStatus; reason: string }
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/correct-status`, {
+    method: "POST", accessToken, body: JSON.stringify(body),
+  })
+}
+
+export function listDocumentLinks(accessToken: string, opportunityId: string): Promise<DocumentLinkSummary[]> {
+  return apiFetch<DocumentLinkSummary[]>(`/api/sales/opportunities/${opportunityId}/documents`, { accessToken })
+}
+
+export function addDocumentLink(
+  accessToken: string,
+  opportunityId: string,
+  body: { name: string; url: string; stage?: OpportunityStage }
+): Promise<DocumentLinkSummary> {
+  return apiFetch<DocumentLinkSummary>(`/api/sales/opportunities/${opportunityId}/documents`, {
+    method: "POST", accessToken, body: JSON.stringify(body),
+  })
+}
+
+export function removeDocumentLink(accessToken: string, linkId: string): Promise<void> {
+  return apiFetch<void>(`/api/sales/documents/${linkId}`, { method: "DELETE", accessToken })
 }

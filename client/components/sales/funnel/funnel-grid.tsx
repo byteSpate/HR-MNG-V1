@@ -92,9 +92,9 @@ export function FunnelGridTable({
       <div className="rounded-lg border border-[#E4E9EF] bg-white px-6 py-10 text-center">
         {filtersActive ? (
           <>
-            <p className="text-sm font-medium text-[#1B2733]">No deals match these filters</p>
+            <p className="text-sm font-medium text-[#1B2733]">No Opportunities match these filters</p>
             <p className={cn("mt-1 text-sm", TONE.muted)}>
-              Deals are quoted, but none of them passes the filters above.
+              Opportunities are quoted, but none of them passes the filters above.
             </p>
             <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilters}>
               Clear the filters
@@ -104,7 +104,7 @@ export function FunnelGridTable({
           <>
             <p className="text-sm font-medium text-[#1B2733]">Nothing quoted yet</p>
             <p className={cn("mt-1 text-sm", TONE.muted)}>
-              A deal joins the funnel when its quotation is submitted, and stays here afterwards.
+              An Opportunity joins the funnel when its quotation is submitted, and stays here afterwards.
             </p>
           </>
         )}
@@ -152,7 +152,7 @@ export function FunnelGridTable({
           read as a bug, so the page says which is which. */}
       {grid.truncated ? (
         <PanelNotice>
-          Showing the first {grid.rows.length} of {grid.totals.quotedCount} deals. The totals cover
+          Showing the first {grid.rows.length} of {grid.totals.quotedCount} Opportunities. The totals cover
           all {grid.totals.quotedCount}. Narrow the filters to see the rest.
         </PanelNotice>
       ) : null}
@@ -172,8 +172,8 @@ export function FunnelGridTable({
                     {/* The business calls it this; the field is the deal's own
                         name and no Project table exists (§27.6). */}
                     <FieldHelp label="Project Name">
-                      The deal&apos;s name. It is called Project Name on the funnel sheet, so the
-                      heading is kept — but there is no separate project record behind it.
+                      The Opportunity&apos;s name. The funnel sheet calls it Project Name, so the
+                      heading is kept. It is not a Project record.
                     </FieldHelp>
                   </span>
                 </th>
@@ -182,7 +182,7 @@ export function FunnelGridTable({
                 {head("model", "Model", "w-32")}
                 {head("qty", "Qty", "w-20")}
                 {head("amount", "Amount", "w-32 text-right")}
-                {head("status", "Deal Status", "w-32")}
+                {head("status", "Opportunity Status", "w-32")}
                 {head("stage", "Stage", "w-40")}
                 {head("closing", "Tentative Closing", "w-36")}
                 {head("lostTo", "Lost To", "w-52")}

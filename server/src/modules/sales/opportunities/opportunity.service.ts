@@ -31,7 +31,12 @@ import type { OpportunityHistory, OpportunityHistoryEntry, TimelineItem } from "
 const MS_PER_DAY = 86_400_000
 const HISTORY_LIMIT = 100
 
-const INCLUDE = {
+/** How a status reads in a sentence. Shared with the correction route. */
+export const STATUS_WORD: Record<string, string> = {
+  ONGOING: "Ongoing", WON: "Won", LOST: "Lost", CANCELLED: "Cancelled",
+}
+
+export const INCLUDE = {
   owner: { select: { id: true, fullName: true } },
   // Assignments come along so the payload can answer "may this viewer change
   // it". The directory is shared, so seeing a deal and being able to work it
@@ -45,6 +50,8 @@ const INCLUDE = {
     },
   },
   lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
+  // The delivery work started from this Won Opportunity (ADR 0005), at most one.
+  project: { select: { id: true, serial: true, name: true, status: true } },
 } as const
 
 /** Whether `actor` may write to this deal, decided from its parent account. */
@@ -273,7 +280,7 @@ export async function getOpportunity(id: string, actor: AccessTokenPayload) {
   return presentOpportunity(row, canManageDeal(row, actor, employeeId))
 }
 
-async function loadForWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {
+export async function loadForWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {
   const employeeId = await employeeIdFor(actor, asClient(tx))
   const row = await tx.opportunity.findFirst({
     where: { AND: [{ id }, { salesAccount: accountScopeFor(actor, employeeId) }] },
@@ -327,7 +334,9 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
 export async function changeOpportunityStage(id: string, body: ChangeOpportunityStageBody, actor: AccessTokenPayload) {
   return prisma.$transaction(async (tx) => {
     const current = await loadForWrite(tx, id, actor)
-    if (current.status !== "ONGOING") throw new AppError(409, "Reopen this Opportunity before changing its stage")
+    if (current.status !== "ONGOING") {
+      throw new AppError(409, "This Opportunity is closed, so you cannot move its stage.")
+    }
     if (current.stage === body.stage) return presentOpportunity(current)
     const now = new Date()
     // Reaching Quotation submitted is the moment a deal joins the funnel, and
@@ -363,23 +372,13 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
   return prisma.$transaction(async (tx) => {
     const current = await loadForWrite(tx, id, actor)
     if (current.status === body.status) return presentOpportunity(current)
-    if ((body.status === "LOST" || body.status === "CANCELLED") && !body.statusReason?.trim()) {
-      throw new AppError(400, `${body.status === "LOST" ? "Lost" : "Cancelled"} Opportunities require a reason`)
+    // Won, Lost and Cancelled are final (spec 2026-09-28 §1.4). A Sales
+    // Admin corrects a mistake through correctOpportunityStatus.
+    if (current.status !== "ONGOING") {
+      throw new AppError(409, `This Opportunity is already ${STATUS_WORD[current.status]}. If this is a mistake, a Sales Admin can correct it.`)
     }
-    // A Won deal with money on it must stay Won (final review Fix 5).
-    // Leaving Won clears closedAt or the Won status, which hides the deal's
-    // Money section and drops it from the Deals list, while its posted
-    // invoices and journals stay in the ledger. A cancelled PO leaves
-    // nothing behind, so it does not count. Receipts and supplier payments
-    // need an invoice or a bill first, so these two checks cover them.
-    if (current.status === "WON") {
-      const [pos, bills] = await Promise.all([
-        tx.customerPo.count({ where: { opportunityId: id, status: { not: "CANCELLED" } } }),
-        tx.supplierBill.count({ where: { opportunityId: id } }),
-      ])
-      if (pos > 0 || bills > 0) {
-        throw new AppError(409, "This deal has money recorded on it, so it must stay Won. Ask Finance for help.")
-      }
+    if ((body.status === "LOST" || body.status === "CANCELLED") && !body.statusReason?.trim()) {
+      throw new AppError(400, `${STATUS_WORD[body.status]} Opportunities need a reason`)
     }
     // Task 16: a supplier bill is filled from the deal's product lines, so
     // every line needs one before the deal can be Won. A deal with no
@@ -387,16 +386,14 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
     if (body.status === "WON") {
       const missing = current.lines.filter((l) => !l.supplierId).map((l) => l.product)
       if (missing.length > 0) {
-        throw new AppError(400, `Pick a supplier for every product before marking this deal won. Missing: ${missing.join(", ")}.`)
+        throw new AppError(400, `Pick a supplier for every product before marking this Opportunity won. Missing: ${missing.join(", ")}.`)
       }
     }
     const now = new Date()
     const data: Prisma.OpportunityUpdateInput = {
       status: body.status, lastActivityAt: now,
       statusReason: body.status === "LOST" || body.status === "CANCELLED" ? body.statusReason!.trim() : null,
-      ...(body.status === "ONGOING"
-        ? { closedAt: null }
-        : current.status === "ONGOING" ? { closedAt: now } : {}),
+      closedAt: now,
       ...(body.status === "WON" && current.wonByEmployeeId === null
         ? { wonBy: { connect: { id: current.ownerEmployeeId } } } : {}),
     }
@@ -413,9 +410,7 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
       type: body.status === "WON" ? "sales.opportunity.won" : "sales.opportunity.closed",
       entity: "OPPORTUNITY", entityId: id, actorUserId: actor.sub,
       subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
-      title: body.status === "ONGOING"
-        ? `${current.serial} reopened`
-        : `${current.serial} marked ${body.status.toLowerCase()}`,
+      title: `${current.serial} marked ${body.status.toLowerCase()}`,
       meta: body.statusReason ?? null, href: `/opportunities/${id}`,
     })
     return presentOpportunity(updated)

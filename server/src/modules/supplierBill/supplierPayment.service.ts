@@ -64,7 +64,7 @@ async function toStoredAllocations(
     // belonging to different deals. A payment settles one deal, so a bill
     // from any other deal is refused even when the supplier matches.
     if (bill.opportunityId !== deal.id) {
-      throw new AppError(400, `Bill ${bill.billNumber} is on a different deal. Record a separate payment on that deal.`)
+      throw new AppError(400, `Bill ${bill.billNumber} is on a different Opportunity. Record a separate payment on that Opportunity.`)
     }
     if (input.currency === "BDT") {
       // Design: "A US dollar bill is paid in US dollars only" — a taka

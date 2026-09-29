@@ -286,7 +286,7 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
     [week.counts.accounts, "Accounts worked on"],
     [week.counts.communications, "Calls and messages"],
     [week.counts.meetings, "Meetings"],
-    [week.counts.dealChanges, "Deals changed"],
+    [week.counts.dealChanges, "Opportunities changed"],
     [week.counts.tasksDone, "Tasks done"],
   ]
 
@@ -457,7 +457,7 @@ function AccountsThisWeek({
                   </p>
                 ) : (
                   <p className={`mt-1 text-[12px] ${TONE.muted}`}>
-                    No next step on this deal.{" "}
+                    No next step on this Opportunity.{" "}
                     <Link href={`/sales/opportunities/${deal.id}`} className="underline">
                       Set one
                     </Link>
@@ -584,7 +584,7 @@ function AccountBlock({
       ) : null}
 
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <Field label="Challenges" hint="The problem the customer has, that is why they need this deal.">
+        <Field label="Challenges" hint="The problem the customer has, that is why they need this Opportunity.">
           <Textarea
             rows={2}
             aria-label={`Challenges on ${row.accountName}`}
@@ -608,7 +608,7 @@ function AccountBlock({
 
       {row.deals.length === 0 ? (
         <div className="mt-2">
-          <Field label="Next step" hint="Kept here while this account has no open deal.">
+          <Field label="Next step" hint="Kept here while this account has no open Opportunity.">
             <Input
               aria-label={`Next step for ${row.accountName}`}
               value={nextStep}

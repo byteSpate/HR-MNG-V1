@@ -8,12 +8,13 @@ import { createSupplierBill, updateSupplierBill, type SupplierBillInput, type Su
 import { listSuppliers } from "@/lib/api/supplier"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
-import type { DealMoneyProductLine, DealMoneySupplierBill, SupplierBill } from "@/lib/api/types"
+import type { DealMoneyProductLine, DealMoneySupplierBill, SupplierBill, VatMethod } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { VatChoice, vatIncomplete } from "./vat-choice"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -32,10 +33,15 @@ interface LineDraft {
   kind: "GOODS" | "SERVICE"
   amount: string
   vatCodeId: string
+  vatMethod: VatMethod
+  vatRatePercent: string
 }
 
 function blankLine(firstVatCodeId: string): LineDraft {
-  return { description: "", kind: "GOODS", amount: "", vatCodeId: firstVatCodeId }
+  return {
+    description: "", kind: "GOODS", amount: "",
+    vatCodeId: firstVatCodeId, vatMethod: "CODE", vatRatePercent: "",
+  }
 }
 
 /** One draft line per product line from this supplier, description = product
@@ -50,6 +56,8 @@ function seedLines(supplierId: string, productLines: DealMoneyProductLine[], fir
     kind: "GOODS",
     amount: "",
     vatCodeId: firstVatCodeId,
+    vatMethod: "CODE" as const,
+    vatRatePercent: "",
   }))
 }
 
@@ -116,6 +124,8 @@ export function BillDialog({
           kind: l.kind,
           amount: bill.currency === "USD" && l.sourceAmount ? l.sourceAmount : l.amount,
           vatCodeId: l.vatCodeId,
+          vatMethod: l.vatMethod,
+          vatRatePercent: l.vatMethod === "MANUAL" ? (l.vatRatePercent ?? "") : "",
         }))
       : []
   )
@@ -140,11 +150,17 @@ export function BillDialog({
   const update = (i: number, patch: Partial<LineDraft>) =>
     setLines((all) => all.map((l, j) => (j === i ? { ...l, ...patch } : l)))
 
-  const rateOf = (id: string) => Number(codes.find((c) => c.id === (id || codes[0]?.id))?.ratePercent ?? 0)
+  // A typed line previews at the typed %; a code line at the code's rate
+  // (spec 2026-09-28 §1.6).
+  const rateOf = (l: LineDraft) =>
+    l.vatMethod === "MANUAL" ? Number(l.vatRatePercent) || 0 : rateByCode(l.vatCodeId)
+  const rateByCode = (id: string) => Number(codes.find((c) => c.id === (id || codes[0]?.id))?.ratePercent ?? 0)
   const net = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)
-  const vat = lines.reduce((s, l) => s + Math.round((Number(l.amount) || 0) * rateOf(l.vatCodeId)) / 100, 0)
+  const vat = lines.reduce((s, l) => s + (Math.round((Number(l.amount) || 0) * rateOf(l)) / 100), 0)
 
-  const linesComplete = lines.every((l) => l.description.trim() && Number(l.amount) > 0 && (l.vatCodeId || codes[0]))
+  const linesComplete = lines.every(
+    (l) => l.description.trim() && Number(l.amount) > 0 && (l.vatCodeId || codes[0]) && !vatIncomplete(l)
+  )
   const canSubmit = Boolean(supplierId && billNumber.trim() && date && dueDate && lines.length > 0 && linesComplete)
 
   const save = useMutation({
@@ -165,6 +181,8 @@ export function BillDialog({
           amount: l.amount,
           ...(currency === "USD" ? { sourceAmount: l.amount } : {}),
           vatCodeId: l.vatCodeId || codes[0]?.id || "",
+          vatMethod: l.vatMethod,
+          ...(l.vatMethod === "MANUAL" ? { vatRatePercent: l.vatRatePercent } : {}),
         })),
       }
       return bill ? updateSupplierBill(accessToken!, bill.id, input) : createSupplierBill(accessToken!, input)
@@ -191,7 +209,7 @@ export function BillDialog({
           <div className="space-y-3">
             {productLineSuppliers.length > 0 ? (
               <div className="space-y-1.5">
-                <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>On this deal</h3>
+                <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>On this Opportunity</h3>
                 <div className="flex flex-wrap gap-1.5">
                   {productLineSuppliers.map((s) => (
                     <Button
@@ -311,16 +329,9 @@ export function BillDialog({
                   onChange={(e) => update(i, { amount: e.target.value })}
                   placeholder={`Amount (${currency})`}
                 />
-                <select
-                  aria-label={`Line ${i + 1} VAT`}
-                  className={`${SELECT} sm:col-span-4`}
-                  value={line.vatCodeId || codes[0]?.id || ""}
-                  onChange={(e) => update(i, { vatCodeId: e.target.value })}
-                >
-                  {codes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <div className="sm:col-span-4">
+                  <VatChoice index={i} value={line} codes={codes} onChange={(patch) => update(i, patch)} />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"

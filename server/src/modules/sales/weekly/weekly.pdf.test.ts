@@ -76,7 +76,7 @@ describe("renderWeeklyHtml", () => {
       ["3", "Accounts worked on"],
       ["7", "Calls and messages"],
       ["2", "Meetings"],
-      ["1", "Deals changed"],
+      ["1", "Opportunities changed"],
       ["4", "Tasks done"],
     ]) {
       expect(html).toContain(caption)

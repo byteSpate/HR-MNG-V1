@@ -113,7 +113,7 @@ export function SupplierAgeingPage() {
 
       <PanelTable
         cols="1.4fr 1.2fr 0.9fr 0.9fr 1fr 0.9fr"
-        headers={["Supplier", "What", "Deal", "Due", "Outstanding", "Overdue"]}
+        headers={["Supplier", "What", "Opportunity", "Due", "Outstanding", "Overdue"]}
         rows={rows}
         isLoading={ageing.isPending}
         isError={ageing.isError}

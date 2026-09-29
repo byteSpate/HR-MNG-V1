@@ -29,7 +29,7 @@ export function assertMoneyAllowed(
 ): void {
   const reason = moneyNotRecordedReason(deal, goLiveDate)
   if (reason === "NOT_WON") {
-    throw new AppError(400, `${deal.serial} is not won yet. Money can be recorded only on a won deal.`)
+    throw new AppError(400, `${deal.serial} is not won yet. Money can be recorded only on a won Opportunity.`)
   }
   if (reason === "WON_BEFORE_GO_LIVE") {
     throw new AppError(

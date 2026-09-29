@@ -43,6 +43,12 @@ export const salesKeys = {
   opportunityHistory: (id: string) => ["sales", "opportunities", id, "history"] as const,
   /** Product, brand and model values already used on deals the viewer can see. */
   lineSuggestions: (field: string, q: string) => ["sales", "suggestions", field, q] as const,
+  /** Document links on one Opportunity. */
+  opportunityDocuments: (id: string) => ["sales", "opportunities", id, "documents"] as const,
+
+  // ── projects (2026-09-28) ───────────────────────────────────────────────
+  projects: (filters: Record<string, unknown> = {}) => ["sales", "projects", filters] as const,
+  project: (id: string) => ["sales", "projects", id] as const,
 
   // ── comments ────────────────────────────────────────────────────────────
   comments: (entity: string, entityId: string) => ["sales", "comments", entity, entityId] as const,
@@ -121,4 +127,13 @@ export function opportunityWriteKeys(id: string) {
     // One small read per open account page is cheaper than a stale total.
     ["sales", "account-margin"] as const,
   ]
+}
+
+/**
+ * Everything a Project write can make stale: the Project, the lists, and its
+ * Opportunity's page. Every Project write returns the whole `ProjectSummary`,
+ * so the open Project is usually set from the response rather than refetched.
+ */
+export function projectWriteKeys(projectId: string, opportunityId: string) {
+  return [salesKeys.project(projectId), ["sales", "projects"] as const, salesKeys.opportunity(opportunityId)]
 }

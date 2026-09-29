@@ -168,7 +168,7 @@ export async function releaseLateCost(
 
   await postSystemJournal(tx, {
     date: toLedgerDate(new Date()),
-    narration: "Cost of goods sold, bill received after the deal was fully invoiced",
+    narration: "Cost of goods sold, bill received after the Opportunity was fully invoiced",
     source: { module: "CUSTOMER", refId: `bill:${billId}`, event: "COST_RELEASE" },
     lines,
     createdBy: actorUserId,

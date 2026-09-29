@@ -14,10 +14,25 @@ export interface WaitingForApprovalRow {
   amount: string
   preparedBy: string
   preparedAt: string
+  /**
+   * The VAT rates a person typed by hand on this draft's lines, 2 decimals,
+   * lowest first, no repeats. Empty when every line used a VAT code
+   * (spec 2026-09-28 §1.6). The approver needs to see these: they are the
+   * only VAT on the document that no Settings value explains.
+   */
+  typedVatRates: string[]
 }
 
 function grossOf(lines: Array<{ amount: Prisma.Decimal; vatAmount: Prisma.Decimal }>): string {
   return lines.reduce((s, l) => s.plus(l.amount).plus(l.vatAmount), ZERO).toFixed(2)
+}
+
+/** The distinct typed rates on a set of lines, so the approver can see them. */
+function typedRatesOf(lines: Array<{ vatMethod?: string; vatRatePercent?: Prisma.Decimal | null }>): string[] {
+  const rates = lines
+    .filter((l) => l.vatMethod === "MANUAL" && l.vatRatePercent != null)
+    .map((l) => new Prisma.Decimal(l.vatRatePercent!).toFixed(2))
+  return [...new Set(rates)].sort((a, b) => Number(a) - Number(b))
 }
 
 interface Draft {
@@ -30,6 +45,7 @@ interface Draft {
   amount: string
   createdBy: string
   createdAt: Date
+  typedVatRates: string[]
 }
 
 /**
@@ -45,7 +61,7 @@ export async function listWaitingForApproval(): Promise<WaitingForApprovalRow[]>
       select: {
         id: true, invoiceNumber: true, createdBy: true, createdAt: true,
         customer: { select: { legalName: true } },
-        lines: { select: { amount: true, vatAmount: true } },
+        lines: { select: { amount: true, vatAmount: true, vatMethod: true, vatRatePercent: true } },
         po: { select: { opportunity: { select: { id: true, serial: true } } } },
       },
     }),
@@ -54,7 +70,7 @@ export async function listWaitingForApproval(): Promise<WaitingForApprovalRow[]>
       select: {
         id: true, billNumber: true, createdBy: true, createdAt: true,
         supplier: { select: { name: true } },
-        lines: { select: { amount: true, vatAmount: true } },
+        lines: { select: { amount: true, vatAmount: true, vatMethod: true, vatRatePercent: true } },
         opportunity: { select: { id: true, serial: true } },
       },
     }),
@@ -83,25 +99,25 @@ export async function listWaitingForApproval(): Promise<WaitingForApprovalRow[]>
       kind: "INVOICE", id: i.id, number: i.invoiceNumber,
       dealId: i.po.opportunity.id, dealSerial: i.po.opportunity.serial,
       party: i.customer.legalName, amount: grossOf(i.lines),
-      createdBy: i.createdBy, createdAt: i.createdAt,
+      createdBy: i.createdBy, createdAt: i.createdAt, typedVatRates: typedRatesOf(i.lines),
     })),
     ...bills.map((b): Draft => ({
       kind: "SUPPLIER_BILL", id: b.id, number: b.billNumber,
       dealId: b.opportunity.id, dealSerial: b.opportunity.serial,
       party: b.supplier.name, amount: grossOf(b.lines),
-      createdBy: b.createdBy, createdAt: b.createdAt,
+      createdBy: b.createdBy, createdAt: b.createdAt, typedVatRates: typedRatesOf(b.lines),
     })),
     ...customerCreditNotes.map((cn): Draft => ({
       kind: "CUSTOMER_CREDIT_NOTE", id: cn.id, number: `Credit note on ${cn.invoice.invoiceNumber}`,
       dealId: cn.invoice.po.opportunity.id, dealSerial: cn.invoice.po.opportunity.serial,
       party: cn.customer.legalName, amount: grossOf(cn.lines),
-      createdBy: cn.createdBy, createdAt: cn.createdAt,
+      createdBy: cn.createdBy, createdAt: cn.createdAt, typedVatRates: [],
     })),
     ...supplierCreditNotes.map((cn): Draft => ({
       kind: "SUPPLIER_CREDIT_NOTE", id: cn.id, number: `Credit note on ${cn.bill.billNumber}`,
       dealId: cn.bill.opportunity.id, dealSerial: cn.bill.opportunity.serial,
       party: cn.supplier.name, amount: grossOf(cn.lines),
-      createdBy: cn.createdBy, createdAt: cn.createdAt,
+      createdBy: cn.createdBy, createdAt: cn.createdAt, typedVatRates: [],
     })),
   ]
 
@@ -122,6 +138,7 @@ export async function listWaitingForApproval(): Promise<WaitingForApprovalRow[]>
       party: d.party, amount: d.amount,
       preparedBy: nameById.get(d.createdBy) ?? "Unknown",
       preparedAt: d.createdAt.toISOString(),
+      typedVatRates: d.typedVatRates,
     }))
 }
 

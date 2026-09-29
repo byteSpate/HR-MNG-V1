@@ -211,13 +211,13 @@ function TaskForm({
 
       {accountId ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Deal" htmlFor="task-deal" hint="Optional.">
+          <Field label="Opportunity" htmlFor="task-deal" hint="Optional.">
             <Select value={dealId || NONE} onValueChange={(v) => setDealId(!v || v === NONE ? "" : v)}>
               <SelectTrigger id="task-deal" className="w-full">
-                <SelectValue>{(v: string | null) => deals.find((d) => d.id === v)?.serial ?? "Not about one deal"}</SelectValue>
+                <SelectValue>{(v: string | null) => deals.find((d) => d.id === v)?.serial ?? "Not about one Opportunity"}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>Not about one deal</SelectItem>
+                <SelectItem value={NONE}>Not about one Opportunity</SelectItem>
                 {deals.map((deal) => (
                   <SelectItem key={deal.id} value={deal.id}>{`${deal.serial} · ${deal.name}`}</SelectItem>
                 ))}

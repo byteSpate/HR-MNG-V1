@@ -101,7 +101,7 @@ function money(deals: { amount: unknown }[]): { count: number; value: string; un
   }
 }
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`
+const plural = (count: number, word: string, many = `${word}s`) => `${count} ${count === 1 ? word : many}`
 const sumCounts = (values: number[]) => values.reduce((a, b) => a + b, 0)
 const withUnpriced = (text: string, unpriced: number) =>
   unpriced > 0 ? `${text}, ${unpriced} with no price yet` : text
@@ -372,7 +372,7 @@ async function actionRows(
     mine
       ? {
           key: "funnel",
-          label: "Deals in your funnel",
+          label: "Opportunities in your funnel",
           count: myFunnelOpen,
           // Informational, not a queue: a full funnel is the good outcome.
           // Colouring it as work would make the number read as a warning.
@@ -414,7 +414,7 @@ async function actionRows(
       key: "quiet",
       label: `Quiet for ${QUIET_DAYS}+ days`,
       count: quiet,
-      detail: quiet === 0 ? "Every open deal has moved recently" : "No activity recorded",
+      detail: quiet === 0 ? "Every open Opportunity has moved recently" : "No activity recorded",
       tone: toneFor.queue(quiet),
       href: `/opportunities?quiet=${QUIET_DAYS}`,
     },
@@ -422,7 +422,7 @@ async function actionRows(
       key: "stuck",
       label: `Stuck in one stage ${STUCK_DAYS}+ days`,
       count: stuck,
-      detail: stuck === 0 ? "Every open deal has changed stage recently" : "Stage has not moved",
+      detail: stuck === 0 ? "Every open Opportunity has changed stage recently" : "Stage has not moved",
       tone: toneFor.queue(stuck),
       href: `/opportunities?stuck=${STUCK_DAYS}`,
     },
@@ -496,7 +496,7 @@ function marginStat(label: string, total: MarginTotal, period: string): Dashboar
   // What could not be counted, named rather than folded in as zero.
   const gaps = [
     total.missing > 0 ? `${plural(total.missing, "product")} with no margin yet` : null,
-    total.dealsWithoutProducts > 0 ? `${plural(total.dealsWithoutProducts, "won deal")} with no products` : null,
+    total.dealsWithoutProducts > 0 ? `${plural(total.dealsWithoutProducts, "won Opportunity", "won Opportunities")} with no products` : null,
   ]
     .filter(Boolean)
     .join(", ")
@@ -509,8 +509,8 @@ function marginStat(label: string, total: MarginTotal, period: string): Dashboar
     sub: gaps
       ? gaps
       : total.counted === 0
-        ? `No deals won in ${period}`
-        : `From ${plural(total.counted, "product")} on won deals in ${period}`,
+        ? `No Opportunities won in ${period}`
+        : `From ${plural(total.counted, "product")} on won Opportunities in ${period}`,
     tag: "Margin",
     tone: toneFor.informational(),
     icon: "margin",
@@ -565,7 +565,7 @@ function bandOne(
       {
         label: labels.achievement,
         value: bdt(current.won),
-        sub: withUnpriced("Value of the deals won", year.currentUnpriced),
+        sub: withUnpriced("Value of the Opportunities won", year.currentUnpriced),
         tag: "Won",
         tone: toneFor.informational(),
         icon: "won",
@@ -601,7 +601,7 @@ function bandOne(
         sub: withUnpriced(
           year.yearlyTarget !== null && year.yearlyTarget.greaterThan(0)
             ? `${Math.round(percentOf(year.yearWon, year.yearlyTarget))}% of the yearly target`
-            : `${plural(year.yearDeals, "deal")} won in ${calendarYear}`,
+            : `${plural(year.yearDeals, "Opportunity", "Opportunities")} won in ${calendarYear}`,
           year.yearUnpriced
         ),
         tag: "Won",
@@ -753,7 +753,7 @@ export async function getSalesDashboard(
       stats: bandOne(year, pipeline, { period: workedPeriod, allTime: workedAllTime }, {
         target: "Team Target",
         achievement: "Team Achievement",
-        dealsWon: "Team Deals Won",
+        dealsWon: "Team Opportunities Won",
         yearlyTarget: "Team Yearly Target",
         yearlyAchievement: "Team Yearly Achievement",
         marginWon: "Team Margin Won",
@@ -820,7 +820,7 @@ export async function getSalesDashboard(
     stats: bandOne(year, pipeline, { period: workedPeriod, allTime: workedAllTime }, {
       target: "Quarterly Target",
       achievement: "Quarterly Achievement",
-      dealsWon: "Deals Won",
+      dealsWon: "Opportunities Won",
       yearlyTarget: "Yearly Target",
       yearlyAchievement: "Yearly Achievement",
       marginWon: "Margin Won",

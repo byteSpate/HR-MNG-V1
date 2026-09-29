@@ -67,6 +67,8 @@ export interface OpportunitySummary {
   lineTotal: string
   unpricedLineCount: number
   amountDiffersFromLines: boolean
+  /** The Project started from this Won Opportunity (ADR 0005), at most one. */
+  project: { id: string; serial: string; name: string; status: ProjectStatusValue } | null
   /** Whether this viewer may change the deal. The directory is shared, so
       seeing one and being able to work it are different questions. */
   canManage: boolean
@@ -435,4 +437,93 @@ export interface SalesDashboardPayload {
    * measured.
    */
   notBuilt: string[]
+}
+
+/**
+ * A link to a file kept outside the app, with the Stage it belongs to
+ * (spec 2026-09-28 §1.5). Every version stays: nothing is overwritten.
+ */
+export interface DocumentLinkSummary {
+  id: string
+  opportunityId: string
+  name: string
+  url: string
+  stage: string
+  createdBy: string
+  createdByName: string | null
+  createdAt: string
+  canRemove: boolean
+}
+
+/** A Project's own status. Separate from its Opportunity's: the delivery work
+ *  moves on after the sale is Won (spec 2026-09-28 §1.7). */
+export type ProjectStatusValue = "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "ON_HOLD" | "COMPLETED" | "CANCELLED"
+
+export interface ProjectTeamMemberSummary {
+  employeeId: string
+  fullName: string
+  responsibility: string | null
+  /** False once they stop being the account's Owner or a collaborator. */
+  onAccount: boolean
+}
+
+export interface ProjectMilestoneSummary {
+  id: string
+  title: string
+  dueOn: string | null
+  doneAt: string | null
+  order: number
+}
+
+export interface ProjectLineSummary {
+  id: string
+  product: string
+  oemBrand: string | null
+  model: string | null
+  quantity: number | null
+  supplierName: string | null
+  lineValue: string | null
+  marginPercent: string | null
+  done: { at: string; byName: string | null } | null
+}
+
+export interface ProjectSummary {
+  id: string
+  serial: string
+  name: string
+  opportunity: { id: string; serial: string; name: string; track: string }
+  salesAccount: { id: string; name: string }
+  manager: { employeeId: string; fullName: string; onAccount: boolean }
+  team: ProjectTeamMemberSummary[]
+  startOn: string | null
+  dueOn: string | null
+  priority: "LOW" | "NORMAL" | "HIGH"
+  budget: string | null
+  value: string | null
+  plannedCost: string | null
+  /** Finance and Super Admin only; null for everyone else, and `canSeeCost` says which. */
+  spentSoFar: string | null
+  canSeeCost: boolean
+  status: ProjectStatusValue
+  statusReason: string | null
+  completedAt: string | null
+  milestones: ProjectMilestoneSummary[]
+  lines: ProjectLineSummary[]
+  canManage: boolean
+  canTick: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectListRow {
+  id: string
+  serial: string
+  name: string
+  salesAccountName: string
+  opportunitySerial: string
+  managerName: string
+  status: ProjectStatusValue
+  dueOn: string | null
+  milestonesDone: number
+  milestonesTotal: number
 }

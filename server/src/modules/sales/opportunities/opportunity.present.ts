@@ -46,6 +46,9 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     wonByEmployeeId: row.wonByEmployeeId ?? null,
     lastActivityAt: row.lastActivityAt.toISOString(), createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(), lines: rows.map(presentLine),
+    // The Project started from this Opportunity, or null. Its money stays on
+    // the Opportunity, so this is a link and nothing more.
+    project: row.project ? { id: row.project.id, serial: row.project.serial, name: row.project.name, status: row.project.status } : null,
     lineTotal: toMoneyString(total), unpricedLineCount: rows.length - priced.length,
     // `priced.length`, not `rows.length`. Lines nobody has costed are not
     // summed as zero, so when none of them carries a value there is no line

@@ -309,7 +309,7 @@ export function MeetingsPanel({
       {meetings.length === 0 ? (
         <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
           {opportunityId
-            ? "No meetings about this deal yet."
+            ? "No meetings about this Opportunity yet."
             : "No meetings on this account yet. A visit, a meeting at our office or an online call goes here, with who comes from both sides."}
         </p>
       ) : (

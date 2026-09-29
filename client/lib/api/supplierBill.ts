@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import type { SupplierAgeingRow, SupplierBill, SupplierBillListRow, SupplierControlTieOut } from "./types"
+import type { SupplierAgeingRow, SupplierBill, SupplierBillListRow, SupplierControlTieOut, VatMethod } from "./types"
 
 export interface SupplierBillLineInput {
   description: string
@@ -7,6 +7,9 @@ export interface SupplierBillLineInput {
   amount: string
   sourceAmount?: string
   vatCodeId: string
+  /** Omit both to take the VAT code's rate. */
+  vatMethod?: VatMethod
+  vatRatePercent?: string
 }
 
 export interface SupplierBillInput {

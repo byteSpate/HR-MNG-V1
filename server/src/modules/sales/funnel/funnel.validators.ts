@@ -98,7 +98,7 @@ export const editFunnelCellSchema = z.discriminatedUnion("field", [
   // not erased.
   z.object({
     field: z.literal("offeredOn"),
-    value: z.string({ error: "A quoted deal keeps its offer date. Change it, but it cannot be cleared" }).pipe(dateOnly),
+    value: z.string({ error: "A quoted Opportunity keeps its offer date. Change it, but it cannot be cleared" }).pipe(dateOnly),
   }),
   z.object({ field: z.literal("expectedCloseDate"), value: dateOnly.nullable() }),
   z.object({ field: z.literal("amount"), value: money.nullable() }),

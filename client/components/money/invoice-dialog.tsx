@@ -6,14 +6,14 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { createInvoice, updateInvoice, type InvoiceInput } from "@/lib/api/invoice"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
-import type { CustomerPo, DealMoneyInvoice, Invoice, VatCode } from "@/lib/api/types"
+import type { CustomerPo, DealMoneyInvoice, Invoice, VatCode, VatMethod } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-
-const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+import { vatFieldsFor } from "@/lib/vat-payload"
+import { VatChoice } from "./vat-choice"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -30,7 +30,16 @@ interface LineDraft {
    *  in edit mode — see the note on `invoice` below. */
   remaining: string
   vatCodeId: string
+  vatMethod: VatMethod
+  vatRatePercent: string
   amount: string
+  /**
+   * True once the person has changed the VAT control. While it is false the
+   * line sends no VAT at all, so the server copies its PO line (spec
+   * §1.6). An edit starts as true, so what is already saved on the invoice
+   * is re-sent rather than silently replaced by the PO line's rate.
+   */
+  vatTouched: boolean
 }
 
 /**
@@ -77,7 +86,10 @@ export function InvoiceDialog({
   const [dueDate, setDueDate] = useState(invoice ? invoice.dueDate.slice(0, 10) : "")
   const [lines, setLines] = useState<LineDraft[]>(() => {
     if (invoice) {
-      return invoice.lines.map((l) => ({ poLineId: l.poLineId, description: l.description, remaining: "", vatCodeId: l.vatCodeId, amount: l.amount }))
+      return invoice.lines.map((l) => ({
+        poLineId: l.poLineId, description: l.description, remaining: "", vatCodeId: l.vatCodeId,
+        vatMethod: l.vatMethod, vatRatePercent: l.vatRatePercent ?? "", vatTouched: true, amount: l.amount,
+      }))
     }
     return (po?.lines ?? [])
       .filter((l) => Number(l.amount) - lineInvoiced(l) > 0.004)
@@ -86,6 +98,9 @@ export function InvoiceDialog({
         description: l.description,
         remaining: (Number(l.amount) - lineInvoiced(l)).toFixed(2),
         vatCodeId: l.vatCodeId,
+        vatMethod: l.vatMethod,
+        vatRatePercent: l.vatMethod === "MANUAL" ? (l.vatRatePercent ?? "") : "",
+        vatTouched: false,
         amount: "",
       }))
   })
@@ -93,10 +108,11 @@ export function InvoiceDialog({
   const update = (poLineId: string, patch: Partial<LineDraft>) =>
     setLines((all) => all.map((l) => (l.poLineId === poLineId ? { ...l, ...patch } : l)))
 
-  const rateOf = (id: string) => Number(codes.find((c) => c.id === id)?.ratePercent ?? 0)
+  const rateOf = (l: LineDraft) =>
+    l.vatMethod === "MANUAL" ? Number(l.vatRatePercent) || 0 : Number(codes.find((c) => c.id === l.vatCodeId)?.ratePercent ?? 0)
   const filled = lines.filter((l) => Number(l.amount) > 0)
   const net = filled.reduce((s, l) => s + Number(l.amount), 0)
-  const vat = filled.reduce((s, l) => s + Math.round((Number(l.amount) || 0) * rateOf(l.vatCodeId)) / 100, 0)
+  const vat = filled.reduce((s, l) => s + Math.round((Number(l.amount) || 0) * rateOf(l)) / 100, 0)
 
   const canSubmit = Boolean(invoiceNumber.trim() && date && filled.length > 0)
 
@@ -106,7 +122,12 @@ export function InvoiceDialog({
         invoiceNumber: invoiceNumber.trim(),
         date,
         dueDate: dueDate || undefined,
-        lines: filled.map((l) => ({ poLineId: l.poLineId, description: l.description.trim() || undefined, amount: l.amount, vatCodeId: l.vatCodeId })),
+        lines: filled.map((l) => ({
+          poLineId: l.poLineId,
+          description: l.description.trim() || undefined,
+          amount: l.amount,
+          ...(l.vatTouched ? vatFieldsFor(l) : {}),
+        })),
       }
       if (invoice) return updateInvoice(accessToken!, invoice.id, rest)
       const input: InvoiceInput = { poId: po!.id, ...rest }
@@ -178,18 +199,14 @@ export function InvoiceDialog({
                     onChange={(e) => update(line.poLineId, { amount: e.target.value })}
                     placeholder="Amount"
                   />
-                  <select
-                    aria-label={`${line.description} VAT`}
-                    className={`${SELECT} sm:col-span-3`}
-                    value={line.vatCodeId}
-                    onChange={(e) => update(line.poLineId, { vatCodeId: e.target.value })}
-                  >
-                    {codes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="sm:col-span-3">
+                    <VatChoice
+                      index={lines.indexOf(line)}
+                      value={line}
+                      codes={codes}
+                      onChange={(patch) => update(line.poLineId, { ...patch, vatTouched: true })}
+                    />
+                  </div>
                 </div>
               ))}
 

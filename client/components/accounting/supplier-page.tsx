@@ -227,7 +227,7 @@ function SupplierDialog({
         <DialogHeader>
           <DialogTitle>{supplier ? `Edit ${supplier.name}` : "New supplier"}</DialogTitle>
           <DialogDescription>
-            Star Tech, Smart Technologies, or any other company we buy from for a deal.
+            Star Tech, Smart Technologies, or any other company we buy from for an Opportunity.
           </DialogDescription>
         </DialogHeader>
 

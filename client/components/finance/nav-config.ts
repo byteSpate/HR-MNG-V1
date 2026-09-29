@@ -52,9 +52,9 @@ export const navGroups: NavGroup[] = [
   },
   {
     // All of a deal's money is on its own page; these are the ways in.
-    label: "Deals & money",
+    label: "Opportunities & money",
     items: [
-      { label: "Deals", href: "/finance/accounting/deals", icon: "RiBriefcaseLine" },
+      { label: "Opportunities", href: "/finance/accounting/deals", icon: "RiBriefcaseLine" },
       { label: "Waiting for approval", href: "/finance/accounting/approvals", icon: "RiCheckboxCircleLine" },
       { label: "Customer ageing", href: "/finance/accounting/customer-ageing", icon: "RiTimeLine" },
       { label: "Supplier ageing", href: "/finance/accounting/supplier-ageing", icon: "RiTimeLine" },

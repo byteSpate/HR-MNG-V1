@@ -88,7 +88,7 @@ function DealMoneyPageInner({ opportunityId }: { opportunityId: string }) {
       <PageHeader
         kicker="Accounting"
         title={`${deal.serial} · ${deal.name}`}
-        sub="The deal's own money, in one place."
+        sub="The Opportunity's own money, in one place."
         aside={
           <Link
             href={`/sales/opportunities/${opportunityId}`}

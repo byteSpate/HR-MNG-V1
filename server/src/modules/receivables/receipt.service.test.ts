@@ -95,7 +95,7 @@ describe("createReceipt", () => {
 
     await expect(createReceipt({
       opportunityId: "opp-1", date: "2026-11-10", amount: "100", allocations: [{ invoiceId: "inv-9", amount: "100" }],
-    } as any, FINANCE)).rejects.toThrow("Invoice INV-9 is on a different deal. Record a separate receipt on that deal.")
+    } as any, FINANCE)).rejects.toThrow("Invoice INV-9 is on a different Opportunity. Record a separate receipt on that Opportunity.")
   })
 
   it("refuses an invoice that is not approved", async () => {

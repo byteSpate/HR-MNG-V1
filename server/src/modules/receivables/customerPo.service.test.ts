@@ -16,7 +16,10 @@ vi.mock("./receivables.access", () => ({
   isFinance: vi.fn(() => true),
 }))
 vi.mock("../customer/customer.link", () => ({ ensureCustomerForAccount: vi.fn() }))
-vi.mock("./receivables.vat", () => ({ loadActiveVatRates: vi.fn() }))
+vi.mock("./receivables.vat", async () => ({
+  loadActiveVatRates: vi.fn(),
+  resolveLineVat: (await vi.importActual<typeof import("./receivables.vat")>("./receivables.vat")).resolveLineVat,
+}))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
@@ -38,7 +41,7 @@ const SALES_USER = { sub: "u-s", role: "EMPLOYEE", salesRole: "SALES_USER", emai
 
 const PO_INPUT = {
   opportunityId: "opp-1", customerPoNumber: "PO-778", date: "2026-09-23",
-  lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15" }],
+  lines: [{ description: "Firewall", kind: "GOODS" as const, quantity: "10", unitPrice: "80000", vatCodeId: "vat-15", vatMethod: "CODE" as const }],
 }
 
 function arrangeDeal(over: Partial<{ status: string; serial: string; closedAt: Date | null }> = {}) {
@@ -76,7 +79,7 @@ describe("createCustomerPo", () => {
   it("refuses a PO on a deal that is not Won", async () => {
     arrangeDeal({ status: "ONGOING", serial: "BS-OPP-00003" })
     await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow(
-      "BS-OPP-00003 is not won yet. Money can be recorded only on a won deal."
+      "BS-OPP-00003 is not won yet. Money can be recorded only on a won Opportunity."
     )
   })
 
@@ -99,6 +102,19 @@ describe("createCustomerPo", () => {
         lines: { create: [expect.objectContaining({ quantity: "10.00", unitPrice: "80000.00", amount: "800000.00", order: 0 })] },
       }),
     }))
+  })
+
+  it("saves a typed VAT rate on the PO line and keeps its VAT code", async () => {
+    arrangeDeal()
+    vi.mocked(prisma.customerPo.create).mockResolvedValue({ id: "po1", serial: "BS-CPO-00001" } as any)
+
+    await createCustomerPo({
+      ...PO_INPUT,
+      lines: [{ ...PO_INPUT.lines[0], vatMethod: "MANUAL" as const, vatRatePercent: "7.50" }],
+    }, FINANCE)
+
+    const data = vi.mocked(prisma.customerPo.create).mock.calls[0][0].data as any
+    expect(data.lines.create[0]).toMatchObject({ vatCodeId: "vat-15", vatMethod: "MANUAL", vatRatePercent: "7.50" })
   })
 
   it("says plainly when the PO number is already taken for this customer", async () => {
@@ -131,7 +147,7 @@ describe("listCustomerPos", () => {
   it("makes a sales user name the deal when listing", async () => {
     const { isFinance } = await import("./receivables.access")
     vi.mocked(isFinance).mockReturnValue(false)
-    await expect(listCustomerPos({}, SALES_USER)).rejects.toThrow("Choose a deal to list its customer POs")
+    await expect(listCustomerPos({}, SALES_USER)).rejects.toThrow("Choose an Opportunity to list its customer POs")
   })
 })
 

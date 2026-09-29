@@ -20,17 +20,17 @@ export async function assertDealAccess(
   actor: AccessTokenPayload,
   opportunityId: string
 ) {
-  if (!isFinance(actor) && !actor.salesRole) throw new AppError(403, "You do not have access to this deal")
+  if (!isFinance(actor) && !actor.salesRole) throw new AppError(403, "You do not have access to this Opportunity")
 
   const deal = await client.opportunity.findUnique({
     where: { id: opportunityId },
     select: { id: true, serial: true, name: true, status: true, salesAccountId: true, closedAt: true },
   })
-  if (!deal) throw new AppError(404, "Deal not found")
+  if (!deal) throw new AppError(404, "Opportunity not found")
   if (isFinance(actor)) return deal
 
   const scope = accountScopeFor(actor, await employeeIdFor(actor))
   const visible = await client.salesAccount.count({ where: { AND: [{ id: deal.salesAccountId }, scope] } })
-  if (visible === 0) throw new AppError(403, "You do not have access to this deal")
+  if (visible === 0) throw new AppError(403, "You do not have access to this Opportunity")
   return deal
 }

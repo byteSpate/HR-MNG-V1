@@ -26,8 +26,8 @@ const PO = {
   id: "po1", serial: "BS-CPO-00001", status: "OPEN", customerId: "c1",
   customer: { id: "c1", legalName: "Bengal Group", paymentDays: 30, billingAddress: "House 12, Road 5, Gulshan, Dhaka" },
   lines: [
-    { id: "pl1", description: "Firewall", kind: "GOODS", amount: d("800000"), vatCodeId: "vat-15", invoiceLines: [{ amount: d("300000") }] },
-    { id: "pl2", description: "Installation", kind: "SERVICE", amount: d("100000"), vatCodeId: "vat-15", invoiceLines: [] },
+    { id: "pl1", description: "Firewall", kind: "GOODS", amount: d("800000"), vatCodeId: "vat-15", vatMethod: "CODE", invoiceLines: [{ amount: d("300000") }] },
+    { id: "pl2", description: "Installation", kind: "SERVICE", amount: d("100000"), vatCodeId: "vat-15", vatMethod: "CODE", invoiceLines: [] },
   ],
 }
 
@@ -38,6 +38,17 @@ const INPUT = {
 
 function uniqueViolation() {
   return { code: "P2002" }
+}
+
+/** The same PO, with a VAT % typed by hand on its first line. */
+function poWithTypedVat() {
+  return {
+    ...PO,
+    lines: [
+      { ...PO.lines[0], amount: d("800000"), invoiceLines: [], vatMethod: "MANUAL", vatRatePercent: d("7.50") },
+      PO.lines[1],
+    ],
+  }
 }
 
 beforeEach(() => {
@@ -57,7 +68,7 @@ describe("createInvoice", () => {
       data: expect.objectContaining({
         invoiceNumber: "INV-2026-041", customerId: "c1", poId: "po1", createdBy: FINANCE.sub,
         dueDate: new Date("2026-10-23"),
-        lines: { create: [{ poLineId: "pl1", description: "Firewall", amount: "500000.00", vatCodeId: "vat-15", vatAmount: "75000.00" }] },
+        lines: { create: [{ poLineId: "pl1", description: "Firewall", amount: "500000.00", vatCodeId: "vat-15", vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "75000.00" }] },
       }),
     }))
   })
@@ -111,6 +122,26 @@ describe("createInvoice", () => {
     await expect(createInvoice(INPUT, FINANCE)).rejects.toThrow(
       "Add Bengal Group's billing address first. It is printed on the invoice."
     )
+  })
+
+  it("copies a typed VAT rate from the PO line when the invoice line says nothing (Review Focus 2)", async () => {
+    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue(poWithTypedVat() as any)
+    vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv3" } as any)
+
+    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "1000" }] }, FINANCE)
+
+    const data = vi.mocked(prisma.invoice.create).mock.calls[0][0].data as any
+    expect(data.lines.create[0]).toMatchObject({ vatMethod: "MANUAL", vatRatePercent: "7.50", vatAmount: "75.00" })
+  })
+
+  it("uses the code rate when the invoice line picks the code again", async () => {
+    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue(poWithTypedVat() as any)
+    vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv4" } as any)
+
+    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "1000", vatMethod: "CODE" }] }, FINANCE)
+
+    const data = vi.mocked(prisma.invoice.create).mock.calls[0][0].data as any
+    expect(data.lines.create[0]).toMatchObject({ vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "150.00" })
   })
 })
 

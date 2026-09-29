@@ -40,7 +40,7 @@ export async function ensureCustomerForAccount(
     const linked = await tx.customer.update({ where: { id: sameName.id }, data: { salesAccountId }, select: SELECT })
     await writeAudit(tx, {
       entity: "CUSTOMER", entityId: linked.id, action: "UPDATE", changedBy: actorUserId,
-      after: { salesAccountId }, note: "Linked to its sales account when a deal was Won",
+      after: { salesAccountId }, note: "Linked to its Sales Account when an Opportunity was Won",
     })
     return linked
   }
@@ -58,7 +58,7 @@ export async function ensureCustomerForAccount(
   })
   await writeAudit(tx, {
     entity: "CUSTOMER", entityId: created.id, action: "CREATE", changedBy: actorUserId,
-    after: { legalName: created.legalName }, note: "Created when the account's deal was Won",
+    after: { legalName: created.legalName }, note: "Created when the account's Opportunity was Won",
   })
   return created
 }

@@ -11,7 +11,7 @@ describe("assertMoneyAllowed", () => {
   it("refuses a deal that is not Won", () => {
     expect(() =>
       assertMoneyAllowed({ serial: "BS-OPP-00005", status: "ONGOING", closedAt: null }, "2026-11-01")
-    ).toThrow("BS-OPP-00005 is not won yet. Money can be recorded only on a won deal.")
+    ).toThrow("BS-OPP-00005 is not won yet. Money can be recorded only on a won Opportunity.")
   })
 
   it("allows a deal Won on go-live day", () => {

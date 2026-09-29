@@ -140,7 +140,7 @@ function countsStrip(document: WeeklyDocument): string {
     [document.counts.accounts, "Accounts worked on"],
     [document.counts.communications, "Calls and messages"],
     [document.counts.meetings, "Meetings"],
-    [document.counts.dealChanges, "Deals changed"],
+    [document.counts.dealChanges, "Opportunities changed"],
     [document.counts.tasksDone, "Tasks done"],
   ]
   return `<section class="counts">${cells
@@ -194,7 +194,7 @@ function dayBlock(day: WeeklyDay): string {
       : `<table>
           <thead>
             <tr>
-              <th>Account</th><th>Project</th><th>Visited</th><th>Requirement</th>
+              <th>Account</th><th>Opportunity</th><th>Visited</th><th>Requirement</th>
               <th>Pending Task</th><th>Challenges</th><th>Gap</th><th>Application</th><th>Next step</th>
             </tr>
           </thead>

@@ -43,7 +43,7 @@ export const FLOW: FlowStep[] = [
     id: "record",
     title: "Record",
     body: "The daily work, and mostly not done in this section at all. A payroll run is approved, an expense claim is reimbursed, a supplier bill is entered, someone leaves and is settled. Anything those modules do not cover is typed as a journal by hand.",
-    pages: ["Payroll", "Employee expenses", "Settlements", "Expenses", "Deals", "Waiting for approval"],
+    pages: ["Payroll", "Employee expenses", "Settlements", "Expenses", "Opportunities", "Waiting for approval"],
   },
   {
     id: "post",
@@ -350,11 +350,11 @@ export const HELP: Record<string, HelpEntry> = {
 
   "accounting/customers": {
     title: "Customers",
-    lede: "Every company we invoice, and what they owe. This is the Customer record itself; the PO, invoice, receipt and credit note for a deal are recorded on that deal's own Money section.",
+    lede: "Every company we invoice, and what they owe. This is the Customer record itself; the PO, invoice, receipt and credit note for an Opportunity are recorded on that Opportunity's own Money section.",
     step: "setup",
     connects: {
-      fedBy: ["Added by hand here, or automatically the day a Sales Account's first deal is Won"],
-      feeds: ["Deals", "Customer ageing"],
+      fedBy: ["Added by hand here, or automatically the day a Sales Account's first Opportunity is Won"],
+      feeds: ["Opportunities", "Customer ageing"],
     },
     reading: [
       {
@@ -382,15 +382,15 @@ export const HELP: Record<string, HelpEntry> = {
       {
         title: "Finance adds a new customer before the first invoice",
         steps: [
-          "A deal is agreed with Smart Technologies, and the first invoice is due next month.",
+          "An Opportunity is agreed with Smart Technologies, and the first invoice is due next month.",
           "Add them here with their legal name, billing address and BIN, before that invoice is written.",
           "Set payment days to whatever was agreed. Thirty if nothing unusual was discussed.",
-          "The invoice, created on the deal's own Money section, picks this record rather than a name typed fresh each time.",
+          "The invoice, created on the Opportunity's own Money section, picks this record rather than a name typed fresh each time.",
         ],
       },
     ],
     watchFor: [
-      "A Customer is created automatically the day a Sales Account's first deal is Won, or linked to an existing one with the same legal name.",
+      "A Customer is created automatically the day a Sales Account's first Opportunity is Won, or linked to an existing one with the same legal name.",
     ],
   },
 
@@ -399,8 +399,8 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "Every company we buy from. The Supplier record itself; what we owe them is on Supplier ageing.",
     step: "setup",
     connects: {
-      fedBy: ["Added by hand here, or by picking \"+ Add a new supplier\" on a deal's product line in the Sales Hub"],
-      feeds: ["Deals", "Supplier ageing"],
+      fedBy: ["Added by hand here, or by picking \"+ Add a new supplier\" on an Opportunity's product line in the Sales Hub"],
+      feeds: ["Opportunities", "Supplier ageing"],
     },
     reading: [
       {
@@ -431,11 +431,11 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     scenarios: [
       {
-        title: "Buying hardware for a new deal",
+        title: "Buying hardware for a new Opportunity",
         steps: [
-          "The deal needs firewalls from Smart Technologies, a supplier we have not used before.",
+          "The Opportunity needs firewalls from Smart Technologies, a supplier we have not used before.",
           "Add them here with a thirty-day payment term, before the purchase order goes out.",
-          "The bill is then entered on the deal's own Money section against this record, rather than a name typed fresh each time.",
+          "The bill is then entered on the Opportunity's own Money section against this record, rather than a name typed fresh each time.",
         ],
       },
     ],
@@ -1520,8 +1520,8 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "What is still owed on every approved bill, grouped by how far past its due date it is. It is also where the payables account is checked against the bills behind it.",
     step: "read",
     connects: {
-      fedBy: ["Deals, where supplier bills, payments and credit notes are entered"],
-      feeds: ["Pay supplier, on the deal page, where these bills are offered"],
+      fedBy: ["Opportunities, where supplier bills, payments and credit notes are entered"],
+      feeds: ["Pay supplier, on the Opportunity page, where these bills are offered"],
     },
     reading: [
       NUMBER_CONVENTIONS,
@@ -1537,11 +1537,11 @@ export const HELP: Record<string, HelpEntry> = {
     does: [
       {
         name: "Read what is owed",
-        body: "Per bill, with its supplier, deal, due date and bucket. Nothing is changed from here.",
+        body: "Per bill, with its supplier, Opportunity, due date and bucket. Nothing is changed from here.",
       },
       {
-        name: "Open the deal",
-        body: "Click the Deal cell on any row to open that deal's Money section, where the bill was made and can be paid.",
+        name: "Open the Opportunity",
+        body: "Click the Opportunity cell on any row to open that Opportunity's Money section, where the bill was made and can be paid.",
       },
     ],
     scenarios: [
@@ -1549,7 +1549,7 @@ export const HELP: Record<string, HelpEntry> = {
         title: "Deciding what to pay this week",
         steps: [
           "Open Supplier ageing and read the over-90 and 61 to 90 buckets first.",
-          "Click the deal on a row to open its Money section, then click Pay supplier there.",
+          "Click the Opportunity on a row to open its Money section, then click Pay supplier there.",
         ],
       },
     ],
@@ -1563,8 +1563,8 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "What is still owed by every customer, grouped by how far past its due date each invoice is. Also where the receivables account is checked against the invoices behind it, and where a customer statement is produced.",
     step: "read",
     connects: {
-      fedBy: ["Deals, where invoices, receipts and customer credit notes are entered"],
-      feeds: ["Record payment received, on the deal page, where these invoices are offered"],
+      fedBy: ["Opportunities, where invoices, receipts and customer credit notes are entered"],
+      feeds: ["Record payment received, on the Opportunity page, where these invoices are offered"],
     },
     reading: [
       NUMBER_CONVENTIONS,
@@ -1580,11 +1580,11 @@ export const HELP: Record<string, HelpEntry> = {
     does: [
       {
         name: "Read what is owed",
-        body: "Per invoice, with the customer, deal, due date and bucket. Nothing is changed from here.",
+        body: "Per invoice, with the customer, Opportunity, due date and bucket. Nothing is changed from here.",
       },
       {
-        name: "Open the deal",
-        body: "Click the Deal cell on any row to open that deal's Money section, where the invoice was made and can be paid.",
+        name: "Open the Opportunity",
+        body: "Click the Opportunity cell on any row to open that Opportunity's Money section, where the invoice was made and can be paid.",
       },
       {
         name: "Download a statement",
@@ -1606,18 +1606,18 @@ export const HELP: Record<string, HelpEntry> = {
   },
 
   "accounting/deals": {
-    title: "Deals",
-    lede: "Every deal won since go-live, and its money in one place: the customer's PO, what we bought, what we invoiced, and what was paid. Open a deal to see or add any of it.",
+    title: "Opportunities",
+    lede: "Every Opportunity won since go-live, and its money in one place: the customer's PO, what we bought, what we invoiced, and what was paid. Open one to see or add any of it.",
     step: "record",
     connects: {
-      fedBy: ["Won deals in the Sales Hub", "Customers", "Suppliers", "VAT codes"],
+      fedBy: ["Won Opportunities in the Sales Hub", "Customers", "Suppliers", "VAT codes"],
       feeds: ["Waiting for approval", "Customer ageing", "Supplier ageing", "VAT summary"],
     },
     reading: [
       NUMBER_CONVENTIONS,
       {
         name: "The four numbers",
-        body: "Sold, Cost, Profit and Still owed, at the top of a deal's Money section. Sold is approved invoices, less approved credit notes. Cost is what the deal's supplier bills cost, counted when the goods are invoiced. Profit is Sold minus Cost. Still owed is what the customer has not paid yet. A draft never changes any of these four numbers; only approved documents do. Cost and Profit are shown to Finance and Super Admin only; a sales person sees Sold and Still owed.",
+        body: "Sold, Cost, Profit and Still owed, at the top of an Opportunity's Money section. Sold is approved invoices, less approved credit notes. Cost is what the Opportunity's supplier bills cost, counted when the goods are invoiced. Profit is Sold minus Cost. Still owed is what the customer has not paid yet. A draft never changes any of these four numbers; only approved documents do. Cost and Profit are shown to Finance and Super Admin only; a sales person sees Sold and Still owed.",
       },
       {
         name: "Customer PO, Bought, Invoiced, Paid",
@@ -1626,16 +1626,16 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     does: [
       {
-        name: "Open a deal",
-        body: "Search by deal, customer, PO, invoice or bill number, or click a row to open that deal's Money section.",
+        name: "Open an Opportunity",
+        body: "Search by Opportunity, customer, PO, invoice or bill number, or click a row to open that Opportunity's Money section.",
       },
       {
         name: "Record the customer PO",
-        body: "The customer's own PO number, date and lines. Can be edited or cancelled with a reason until it has an invoice. Available to Finance, a Super Admin, or the deal's own sales person.",
+        body: "The customer's own PO number, date and lines. Can be edited or cancelled with a reason until it has an invoice. Available to Finance, a Super Admin, or the Opportunity's own sales person.",
       },
       {
         name: "Add a supplier bill",
-        body: "Supplier and lines are filled in from the deal's product lines. Finance types the bill number, real prices and VAT, then it goes to Waiting for approval.",
+        body: "Supplier and lines are filled in from the Opportunity's product lines. Finance types the bill number, real prices and VAT, then it goes to Waiting for approval.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
@@ -1645,12 +1645,12 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Record payment received",
-        body: "Saved and counted at once. No approval needed. Cannot be more than the deal's invoices still owe; there are no advances.",
+        body: "Saved and counted at once. No approval needed. Cannot be more than the Opportunity's invoices still owe; there are no advances.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
         name: "Pay supplier",
-        body: "Saved and counted at once. No approval needed. Cannot be more than the deal's bills from that supplier still owe.",
+        body: "Saved and counted at once. No approval needed. Cannot be more than the Opportunity's bills from that supplier still owe.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
@@ -1661,37 +1661,37 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     scenarios: [
       {
-        title: "A deal, start to finish",
+        title: "An Opportunity, start to finish",
         steps: [
-          "A deal for firewalls is marked Won in the Sales Hub. Every product line already has a supplier.",
-          "On the deal's Money section, the customer's PO is recorded.",
+          "An Opportunity for firewalls is marked Won in the Sales Hub. Every product line already has a supplier.",
+          "On the Opportunity's Money section, the customer's PO is recorded.",
           "Finance clicks Add supplier bill; the supplier and lines are already filled in. It waits for approval.",
           "A Super Admin approves it. Finance clicks Create invoice on the PO; it also waits for approval.",
-          "A Super Admin approves the invoice. Sold now shows on the deal.",
+          "A Super Admin approves the invoice. Sold now shows on the Opportunity.",
           "The customer pays. Finance clicks Record payment received; it counts at once and Still owed drops.",
           "Finance clicks Pay supplier when the supplier is paid.",
         ],
       },
     ],
     watchFor: [
-      "Only deals Won on or after go-live day can have money recorded. Older deals are not in the app.",
+      "Only Opportunities Won on or after go-live day can have money recorded. Older ones are not in the app.",
       "A US dollar bill can only be paid in US dollars. Any exchange difference posts on its own.",
-      "Nobody needs to leave the deal page except a Super Admin, who works one list, Waiting for approval.",
+      "Nobody needs to leave the Opportunity page except a Super Admin, who works one list, Waiting for approval.",
     ],
   },
 
   "accounting/approvals": {
     title: "Waiting for approval",
-    lede: "Every draft invoice, supplier bill and credit note, across all deals, oldest first. A Super Admin checks each one before it posts.",
+    lede: "Every draft invoice, supplier bill and credit note, across all Opportunities, oldest first. A Super Admin checks each one before it posts.",
     step: "post",
     connects: {
-      fedBy: ["Deals, wherever a bill, invoice or credit note is saved as a draft"],
-      feeds: ["The deal's own Money section, once a row is approved or sent back"],
+      fedBy: ["Opportunities, wherever a bill, invoice or credit note is saved as a draft"],
+      feeds: ["The Opportunity's own Money section, once a row is approved or sent back"],
     },
     does: [
       {
         name: "Open a draft",
-        body: "Click a row to open the deal it belongs to, with that draft shown.",
+        body: "Click a row to open the Opportunity it belongs to, with that draft shown.",
       },
       {
         name: "Approve",
@@ -1700,7 +1700,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Send back",
-        body: "Only for a draft invoice or supplier bill, not a credit note. Needs a note saying what is wrong. The draft leaves this list and shows the note on the deal page. When the person who prepared it saves it again, the note clears and it comes back on this list.",
+        body: "Only for a draft invoice or supplier bill, not a credit note. Needs a note saying what is wrong. The draft leaves this list and shows the note on the Opportunity page. When the person who prepared it saves it again, the note clears and it comes back on this list.",
         roles: ["SUPER_ADMIN"],
       },
     ],
@@ -1710,7 +1710,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "Finance enters a supplier bill with the wrong unit price.",
           "A Super Admin sends it back with a note: \"Check the price against the supplier's PDF.\"",
-          "Finance opens the deal, fixes the price and saves the bill again. The note clears.",
+          "Finance opens the Opportunity, fixes the price and saves the bill again. The note clears.",
           "The bill is back on Waiting for approval. A Super Admin approves it.",
         ],
       },

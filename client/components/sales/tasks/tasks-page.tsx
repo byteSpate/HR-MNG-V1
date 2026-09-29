@@ -235,7 +235,7 @@ export function TasksPage({
         emptyBody={
           isFiltered
             ? "No task matches every filter at once. Widening one of them is usually enough."
-            : "A task is one thing to do by a date, like calling back or sending a quote. Make one here, from an account, or from a deal's next step."
+            : "A task is one thing to do by a date, like calling back or sending a quote. Make one here, from an account, or from an Opportunity's next step."
         }
         emptyAction={isFiltered ? "Clear filters" : "New task"}
         emptyActionIcon={isFiltered ? <RiArrowRightLine className="size-4" aria-hidden /> : undefined}

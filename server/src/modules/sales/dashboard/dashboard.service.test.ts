@@ -142,8 +142,8 @@ describe("targets on the sales dashboard", () => {
     const achievement = stat(payload, "Quarterly Achievement")
     expect(achievement?.value).toBe(bdt(dec("500000.00")))
     // The count has a tile of its own; this one is the money.
-    expect(stat(payload, "Deals Won")?.value).toBe("1")
-    expect(stat(payload, "Deals Won")?.sub).toBe("Q3 2026")
+    expect(stat(payload, "Opportunities Won")?.value).toBe("1")
+    expect(stat(payload, "Opportunities Won")?.sub).toBe("Q3 2026")
   })
 
   it("shows how far the quarter is against its target, with a tone from the rate policy", async () => {
@@ -188,7 +188,7 @@ describe("targets on the sales dashboard", () => {
     expect(withTarget.stats.slice(0, 4).map((s) => s.label)).toEqual([
       "Quarterly Target",
       "Quarterly Achievement",
-      "Deals Won",
+      "Opportunities Won",
       "Against Target",
     ])
   })
@@ -250,6 +250,24 @@ describe("margin on the sales dashboard", () => {
     expect(yearly?.sub).toMatch(/1 product with no margin yet/)
   })
 
+  it("says Opportunities, not deals, and pluralises it properly", async () => {
+    // The plural of "Opportunity" is not "Opportunitys".
+    deals({
+      won: [
+        { amount: "500000.00", closedAt: "2026-07-20T06:00:00.000Z", lines: [] },
+        { amount: "200000.00", closedAt: "2026-07-21T06:00:00.000Z", lines: [] },
+      ],
+    })
+
+    const payload = await getSalesDashboard({ now: NOW }, USER)
+    // Icon names are code, not words a person reads.
+    const text = JSON.stringify(payload).replace(/"icon":"[a-z-]+"/g, "")
+
+    expect(text).toMatch(/2 won Opportunities with no products/)
+    expect(text).not.toMatch(/Opportunitys/)
+    expect(text).not.toMatch(/\bdeals?\b/i)
+  })
+
   it("names won deals that have no products, since their margin cannot be known", async () => {
     deals({ won: [{ amount: "500000.00", closedAt: "2026-07-20T06:00:00.000Z", lines: [] }] })
 
@@ -257,7 +275,7 @@ describe("margin on the sales dashboard", () => {
 
     const margin = stat(payload, "Margin Won")
     expect(margin?.value).toMatch(/no margin yet/i)
-    expect(margin?.sub).toMatch(/1 won deal with no products/)
+    expect(margin?.sub).toMatch(/1 won Opportunity with no products/)
   })
 
   it("does not count margin on deals that are still open", async () => {
@@ -516,7 +534,7 @@ describe("the team roll-up", () => {
     expect(stat(payload, "Team Target")?.value).toBe(bdt(dec("3300000.00")))
     expect(stat(payload, "Team Yearly Target")?.value).toBe(bdt(dec("6000000.00")))
     // Rahim's only win was in Q2, so nobody has won a deal this quarter.
-    expect(stat(payload, "Team Deals Won")?.value).toBe("0")
+    expect(stat(payload, "Team Opportunities Won")?.value).toBe("0")
   })
 
   it("gives an admin both bands, not a stripped payload", async () => {

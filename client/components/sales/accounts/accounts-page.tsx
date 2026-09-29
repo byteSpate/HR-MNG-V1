@@ -240,8 +240,8 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   const emptyBody =
     scope === "all"
       ? canCreate
-        ? "Create the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and deals against it."
-        : "A Sales Admin creates the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and deals against it."
+        ? "Create the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and Opportunities against it."
+        : "A Sales Admin creates the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and Opportunities against it."
       : canCreate
         ? // On this page `canCreate` means Sales Admin: a Super Admin never
           // gets here, having been redirected above.

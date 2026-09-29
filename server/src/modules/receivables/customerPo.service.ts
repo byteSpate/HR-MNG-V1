@@ -7,7 +7,7 @@ import { ensureCustomerForAccount } from "../customer/customer.link"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { assertMoneyAllowed } from "../dealMoney/dealMoney.goLive"
 import { assertDealAccess, isFinance } from "./receivables.access"
-import { loadActiveVatRates } from "./receivables.vat"
+import { loadActiveVatRates, resolveLineVat } from "./receivables.vat"
 import type {
   CancelCustomerPoInput,
   CreateCustomerPoInput,
@@ -72,16 +72,22 @@ export async function prefillPoLines(opportunityId: string, actor: AccessTokenPa
   }
 }
 
-function lineRows(lines: CreateCustomerPoInput["lines"]) {
-  return lines.map((l, i) => ({
-    description: l.description.trim(),
-    kind: l.kind,
-    quantity: new Prisma.Decimal(l.quantity).toFixed(2),
-    unitPrice: new Prisma.Decimal(l.unitPrice).toFixed(2),
-    amount: new Prisma.Decimal(l.quantity).times(l.unitPrice).toFixed(2),
-    vatCodeId: l.vatCodeId,
-    order: i,
-  }))
+function lineRows(lines: CreateCustomerPoInput["lines"], rates: Map<string, Prisma.Decimal>) {
+  return lines.map((l, i) => {
+    const amount = new Prisma.Decimal(l.quantity).times(l.unitPrice)
+    const vat = resolveLineVat(l, rates, amount)
+    return {
+      description: l.description.trim(),
+      kind: l.kind,
+      quantity: new Prisma.Decimal(l.quantity).toFixed(2),
+      unitPrice: new Prisma.Decimal(l.unitPrice).toFixed(2),
+      amount: amount.toFixed(2),
+      vatCodeId: vat.vatCodeId,
+      vatMethod: vat.vatMethod,
+      vatRatePercent: vat.vatRatePercent,
+      order: i,
+    }
+  })
 }
 
 export async function createCustomerPo(input: CreateCustomerPoInput, actor: AccessTokenPayload) {
@@ -91,9 +97,9 @@ export async function createCustomerPo(input: CreateCustomerPoInput, actor: Acce
       assertMoneyAllowed(deal, env.SALES_GO_LIVE)
 
       const customer = await ensureCustomerForAccount(tx, deal.salesAccountId, "throw-on-conflict", actor.sub)
-      await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
+      const rates = await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
 
-      const lines = lineRows(input.lines)
+      const lines = lineRows(input.lines, rates)
 
       const po = await tx.customerPo.create({
         data: {
@@ -110,7 +116,7 @@ export async function createCustomerPo(input: CreateCustomerPoInput, actor: Acce
       })
       await writeAudit(tx, {
         entity: "CUSTOMER_PO", entityId: po.id, action: "CREATE", changedBy: actor.sub,
-        after: { serial: po.serial, customerPoNumber: po.customerPoNumber },
+        after: { serial: po.serial, customerPoNumber: po.customerPoNumber, vat: lines.map((l) => ({ method: l.vatMethod, rate: l.vatRatePercent })) },
       })
       return po
     })
@@ -136,8 +142,8 @@ export async function updateCustomerPo(id: string, input: UpdateCustomerPoInput,
       const existing = await loadEditable(tx, id, actor)
       if (existing.status !== "OPEN") throw new AppError(409, "Only an open PO can be edited")
 
-      await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
-      const lines = lineRows(input.lines)
+      const rates = await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
+      const lines = lineRows(input.lines, rates)
 
       await tx.customerPoLine.deleteMany({ where: { poId: id } })
 
@@ -151,7 +157,10 @@ export async function updateCustomerPo(id: string, input: UpdateCustomerPoInput,
         },
         include: PO_INCLUDE,
       })
-      await writeAudit(tx, { entity: "CUSTOMER_PO", entityId: id, action: "UPDATE", changedBy: actor.sub })
+      await writeAudit(tx, {
+        entity: "CUSTOMER_PO", entityId: id, action: "UPDATE", changedBy: actor.sub,
+        after: { vat: lines.map((l) => ({ method: l.vatMethod, rate: l.vatRatePercent })) },
+      })
       return po
     })
   } catch (err) {
@@ -185,7 +194,7 @@ export async function listCustomerPos(
   actor: AccessTokenPayload
 ) {
   if (!isFinance(actor)) {
-    if (!filter.opportunityId) throw new AppError(400, "Choose a deal to list its customer POs")
+    if (!filter.opportunityId) throw new AppError(400, "Choose an Opportunity to list its customer POs")
     await assertDealAccess(prisma, actor, filter.opportunityId)
   }
   return prisma.customerPo.findMany({

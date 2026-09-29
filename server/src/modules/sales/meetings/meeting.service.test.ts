@@ -165,7 +165,7 @@ describe("scheduling a meeting", () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(null)
 
     await expect(createMeeting({ ...BASE, opportunityId: "opp-9" } as any, USER))
-      .rejects.toThrow(/deal/i)
+      .rejects.toThrow(/Opportunity/i)
     expect(prisma.opportunity.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "opp-9", salesAccountId: "account-1" },
     }))

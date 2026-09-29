@@ -95,7 +95,7 @@ export async function createTaskIn(tx: Prisma.TransactionClient, input: NewTask,
       where: { id: input.opportunityId, salesAccountId: access.accountId },
       select: { id: true },
     })
-    if (!deal) throw new AppError(400, "That deal is not on this account")
+    if (!deal) throw new AppError(400, "That Opportunity is not on this account")
   }
   if (input.meetingId) {
     const meeting = await tx.salesMeeting.findFirst({
@@ -186,7 +186,7 @@ async function requireOnAccount(
     kind === "deal"
       ? await tx.opportunity.findFirst({ where, select: { id: true } })
       : await tx.salesMeeting.findFirst({ where, select: { id: true } })
-  if (!found) throw new AppError(400, `That ${kind} is not on this account`)
+  if (!found) throw new AppError(400, `That ${kind === "deal" ? "Opportunity" : kind} is not on this account`)
 }
 
 export async function updateTask(id: string, body: UpdateTaskBody, actor: AccessTokenPayload): Promise<SalesTaskSummary> {

@@ -1,26 +1,49 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import { Prisma } from "../../generated/prisma/client"
-import { loadActiveVatRates, vatFor } from "./receivables.vat"
+import { resolveLineVat } from "./receivables.vat"
+import { poLineSchema } from "./customerPo.validators"
 
-const d = (v: string) => new Prisma.Decimal(v)
+const rates = new Map([["code-15", new Prisma.Decimal("15.00")]])
+const amount = new Prisma.Decimal("1000.00")
 
-describe("vatFor", () => {
-  it("rounds VAT to the paisa, per line", () => {
-    expect(vatFor(d("333.33"), d("15")).toFixed(2)).toBe("50.00")
-    expect(vatFor(d("100"), d("0")).toFixed(2)).toBe("0.00")
+describe("resolveLineVat", () => {
+  it("uses the VAT code's rate and saves it on the line", () => {
+    expect(resolveLineVat({ vatCodeId: "code-15", vatMethod: "CODE" }, rates, amount)).toEqual({
+      vatCodeId: "code-15", vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "150.00",
+    })
+  })
+
+  it("uses a typed rate and still keeps the VAT code", () => {
+    expect(resolveLineVat({ vatCodeId: "code-15", vatMethod: "MANUAL", vatRatePercent: "7.5" }, rates, amount)).toEqual({
+      vatCodeId: "code-15", vatMethod: "MANUAL", vatRatePercent: "7.50", vatAmount: "75.00",
+    })
+  })
+
+  it("allows a typed rate of 0", () => {
+    expect(resolveLineVat({ vatCodeId: "code-15", vatMethod: "MANUAL", vatRatePercent: "0" }, rates, amount).vatAmount).toBe("0.00")
+  })
+
+  it("rounds to the paisa like the code rate does", () => {
+    const r = resolveLineVat({ vatCodeId: "code-15", vatMethod: "MANUAL", vatRatePercent: "7.25" }, rates, new Prisma.Decimal("333.33"))
+    expect(r.vatAmount).toBe("24.17")
   })
 })
 
-describe("loadActiveVatRates", () => {
-  it("refuses an unknown or inactive VAT code", async () => {
-    const client = { vatCode: { findMany: vi.fn().mockResolvedValue([]) } }
-    await expect(loadActiveVatRates(client as any, ["vat-x"])).rejects.toThrow("This VAT code does not exist, or has been turned off.")
+describe("PO line VAT choice (Review Focus 1)", () => {
+  const base = { description: "Firewall", kind: "GOODS", quantity: "1", unitPrice: "100", vatCodeId: "11111111-1111-4111-8111-111111111111" }
+
+  it("defaults to the VAT code", () => {
+    expect(poLineSchema.parse(base).vatMethod).toBe("CODE")
   })
 
-  it("returns a rate per active code, de-duplicating ids", async () => {
-    const client = { vatCode: { findMany: vi.fn().mockResolvedValue([{ id: "vat-15", ratePercent: d("15") }]) } }
-    const rates = await loadActiveVatRates(client as any, ["vat-15", "vat-15"])
-    expect(rates.get("vat-15")?.toFixed(2)).toBe("15.00")
-    expect(client.vatCode.findMany).toHaveBeenCalledWith({ where: { id: { in: ["vat-15"] }, isActive: true } })
+  it("refuses a typed method with no rate", () => {
+    const result = poLineSchema.safeParse({ ...base, vatMethod: "MANUAL" })
+    expect(result.success).toBe(false)
+    expect(result.error!.issues[0].message).toBe("Type the VAT %, or choose a VAT code.")
+  })
+
+  it("refuses a rate over 100 or with three decimals", () => {
+    expect(poLineSchema.safeParse({ ...base, vatMethod: "MANUAL", vatRatePercent: "100.01" }).success).toBe(false)
+    expect(poLineSchema.safeParse({ ...base, vatMethod: "MANUAL", vatRatePercent: "7.555" }).success).toBe(false)
   })
 })

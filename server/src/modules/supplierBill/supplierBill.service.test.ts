@@ -29,7 +29,7 @@ const INPUT = {
   currency: "BDT" as const,
   opportunityId: "opp-1",
   lines: [
-    { description: "Firewalls", kind: "GOODS" as const, amount: "800000", vatCodeId: "vat-std" },
+    { description: "Firewalls", kind: "GOODS" as const, amount: "800000", vatCodeId: "vat-std", vatMethod: "CODE" as const },
   ],
 }
 
@@ -51,7 +51,7 @@ beforeEach(() => {
 describe("bill and deals", () => {
   it("refuses a bill tagged to a deal that is not Won", async () => {
     vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ id: "opp-1", status: "ONGOING", serial: "BS-OPP-00001", closedAt: null } as any)
-    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("BS-OPP-00001 is not won yet. Money can be recorded only on a won deal.")
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("BS-OPP-00001 is not won yet. Money can be recorded only on a won Opportunity.")
   })
 
   it("refuses a bill tagged to a deal Won before go-live", async () => {
@@ -63,11 +63,23 @@ describe("bill and deals", () => {
 
   it("refuses a bill tagged to a deal that does not exist", async () => {
     vi.mocked(prisma.opportunity.findUnique).mockResolvedValue(null)
-    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("This bill points to a deal that does not exist.")
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow("This bill points to an Opportunity that does not exist.")
   })
 })
 
 describe("createSupplierBill", () => {
+  it("works out VAT from a typed rate on a bill line", async () => {
+    vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1", status: "DRAFT" } as any)
+
+    await createSupplierBill({
+      ...INPUT,
+      lines: [{ ...INPUT.lines[0], amount: "2000", vatMethod: "MANUAL" as const, vatRatePercent: "5" }],
+    }, ACTOR)
+
+    const data = vi.mocked(prisma.supplierBill.create).mock.calls[0][0].data as any
+    expect(data.lines.create[0]).toMatchObject({ vatMethod: "MANUAL", vatRatePercent: "5.00", vatAmount: "100.00" })
+  })
+
   it("creates a DRAFT bill with its lines in one transaction", async () => {
     vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1", status: "DRAFT" } as any)
 

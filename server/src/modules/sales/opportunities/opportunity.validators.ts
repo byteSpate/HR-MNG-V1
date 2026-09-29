@@ -55,9 +55,16 @@ export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
 
 export const changeOpportunityStageSchema = z.object({ stage: opportunityStage })
 export const changeOpportunityStatusSchema = z.object({
-  status: opportunityStatus,
+  // Ongoing is not here: Won, Lost and Cancelled are final (spec 2026-09-28
+  // §1.4). A mistake is corrected by a Sales Admin on /correct-status.
+  status: z.enum(["WON", "LOST", "CANCELLED"]),
   statusReason: z.string().trim().max(500).optional(),
 })
+export const correctOpportunityStatusSchema = z.object({
+  status: opportunityStatus,
+  reason: z.string().trim().min(2, "Say why the status is being corrected").max(500),
+})
+export type CorrectOpportunityStatusBody = z.infer<typeof correctOpportunityStatusSchema>
 export const changeOpportunityNextStepSchema = z.object({
   nextStep: z.string().trim().max(500).nullable().optional(),
   nextStepDueOn: dateOnly.nullable().optional(),
@@ -120,3 +127,12 @@ export const setSoftwareNeededSchema = z.object({
   softwareNeeded: z.boolean().nullable(),
 })
 export type SetSoftwareNeededBody = z.infer<typeof setSoftwareNeededSchema>
+
+/** A web address for a file kept outside the app (spec 2026-09-28 §1.5). */
+export const addDocumentLinkSchema = z.object({
+  name: z.string().trim().min(1, "Give the link a name, like SRS v1").max(120),
+  url: z.string().trim().max(2000).url("Paste the full web address")
+    .refine((v) => v.startsWith("https://"), "The web address must start with https://"),
+  stage: opportunityStage.optional(),
+})
+export type AddDocumentLinkBody = z.infer<typeof addDocumentLinkSchema>

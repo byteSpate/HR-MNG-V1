@@ -86,7 +86,7 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
       // different deals. A receipt settles one deal, so an invoice from any
       // other deal is refused even when the customer matches.
       if (invoice.po.opportunityId !== deal.id) {
-        throw new AppError(400, `Invoice ${invoice.invoiceNumber} is on a different deal. Record a separate receipt on that deal.`)
+        throw new AppError(400, `Invoice ${invoice.invoiceNumber} is on a different Opportunity. Record a separate receipt on that Opportunity.`)
       }
     }
 

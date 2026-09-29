@@ -106,7 +106,7 @@ describe("making a task", () => {
 
   it("refuses a deal or a meeting from another account", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(null)
-    await expect(createTask({ ...BASE, opportunityId: "opp-9" } as any, USER)).rejects.toThrow(/deal/i)
+    await expect(createTask({ ...BASE, opportunityId: "opp-9" } as any, USER)).rejects.toThrow(/Opportunity/i)
     expect(prisma.opportunity.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "opp-9", salesAccountId: "account-1" },
     }))

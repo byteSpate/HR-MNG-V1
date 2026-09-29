@@ -242,6 +242,10 @@ model Employee {
   funnelMeetingsRan        FunnelMeeting[]          @relation("FunnelMeetingRanBy")
   funnelMeetingAttendances FunnelMeetingAttendee[]  @relation("FunnelMeetingAttendee")
   funnelReviews            FunnelMeetingReview[]    @relation("FunnelMeetingReviewSubject")
+  // Projects (spec 2026-09-28). Two separate relations because the two roles
+  // are genuinely different: running a Project, and being on its Team.
+  managedProjects          Project[]                @relation("ProjectManager")
+  projectTeams             ProjectTeamMember[]      @relation("ProjectTeamMember")
 }
 
 enum EmployeeChangeField {
@@ -2053,6 +2057,15 @@ model VatCode {
   @@index([isActive])
 }
 
+/// Where a line's VAT rate came from (spec 2026-09-28 §1.6). CODE: the VAT
+/// code's rate from Settings, copied onto the line when it is written.
+/// MANUAL: a rate typed on this line. Either way `vatRatePercent` is the rate
+/// that was used, so a later change to the code never moves the line.
+enum VatMethod {
+  CODE
+  MANUAL
+}
+
 enum SupplierDocStatus {
   DRAFT
   APPROVED
@@ -2126,6 +2139,10 @@ model SupplierBillLine {
 
   vatCodeId String
   vatCode   VatCode @relation(fields: [vatCodeId], references: [id])
+  vatMethod      VatMethod @default(CODE)
+  /// The rate actually used on this line. Filled for old lines by the
+  /// migration, from their VAT code.
+  vatRatePercent Decimal?  @db.Decimal(5, 2)
   vatAmount Decimal @db.Decimal(14, 2)
 
   creditNoteLines SupplierCreditNoteLine[]
@@ -2306,6 +2323,10 @@ model CustomerPoLine {
   amount      Decimal      @db.Decimal(14, 2)
   vatCodeId   String
   vatCode     VatCode      @relation(fields: [vatCodeId], references: [id])
+  vatMethod      VatMethod @default(CODE)
+  /// The rate actually used on this line. Filled for old lines by the
+  /// migration, from their VAT code.
+  vatRatePercent Decimal?  @db.Decimal(5, 2)
   order       Int          @default(0)
 
   invoiceLines InvoiceLine[]
@@ -2365,6 +2386,10 @@ model InvoiceLine {
   amount      Decimal @db.Decimal(14, 2)
   vatCodeId   String
   vatCode     VatCode @relation(fields: [vatCodeId], references: [id])
+  vatMethod      VatMethod @default(CODE)
+  /// The rate actually used on this line. Filled for old lines by the
+  /// migration, from their VAT code.
+  vatRatePercent Decimal?  @db.Decimal(5, 2)
   vatAmount   Decimal @db.Decimal(14, 2)
 
   creditNoteLines CustomerCreditNoteLine[]
@@ -2563,6 +2588,8 @@ model SalesAccount {
   meetings       SalesMeeting[]
   tasks          SalesTask[]
   weeklyNotes    WeeklyAccountNote[]
+  /// The delivery work on this account's Won Opportunities (ADR 0005).
+  projects       Project[]
 
   // Receivables & payables, Phase 1. Set the day this account's first
   // Opportunity is Won (Phase 3 wires the hook); absent for accounts with
@@ -2836,6 +2863,10 @@ model Opportunity {
   meetings SalesMeeting[]    @relation("MeetingOpportunity")
   tasks    SalesTask[]
 
+  /// The delivery work for this Won Opportunity (ADR 0005). One at most.
+  project       Project?
+  documentLinks OpportunityDocumentLink[]
+
   // Receivables & payables, Phase 1: the back-relation for
   // JournalLine.opportunityId. Empty until Phase 2/3 post against a deal.
   journalLines     JournalLine[]
@@ -2892,11 +2923,125 @@ model OpportunityLine {
   supplierId String?
   supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
+  /// The "Done" ticks this line carries on the Project it belongs to.
+  projectTicks ProjectLineDone[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([opportunityId, order])
   @@index([supplierId])
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+/// The delivery work for one Won Opportunity (ADR 0005). Started by a person,
+/// never made automatically. Its money stays on the Opportunity.
+model Project {
+  id     String @id @default(uuid())
+  /// BS-PRJ-00001, IdCounter "PRJ".
+  serial String @unique
+  name   String
+
+  opportunityId  String       @unique
+  opportunity    Opportunity  @relation(fields: [opportunityId], references: [id])
+  /// Copied from the Opportunity at start, so lists filter by account
+  /// without a join. An Opportunity never changes account.
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id])
+
+  managerEmployeeId String
+  manager           Employee @relation("ProjectManager", fields: [managerEmployeeId], references: [id])
+
+  /// Date only, UTC midnight.
+  startOn  DateTime?
+  dueOn    DateTime?
+  priority SalesTaskPriority @default(NORMAL)
+  /// Null is "no budget", never ৳0.
+  budget   Decimal?          @db.Decimal(14, 2)
+
+  status       ProjectStatus @default(NOT_STARTED)
+  /// Required for BLOCKED, ON_HOLD and CANCELLED.
+  statusReason String?
+  completedAt  DateTime?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team       ProjectTeamMember[]
+  milestones ProjectMilestone[]
+  lineTicks  ProjectLineDone[]
+
+  @@index([salesAccountId])
+  @@index([managerEmployeeId, status])
+  @@index([status])
+}
+
+/// Someone on the Project Team, picked from the account's Owner and
+/// collaborators, with their own responsibility in their own words.
+model ProjectTeamMember {
+  id             String   @id @default(uuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee @relation("ProjectTeamMember", fields: [employeeId], references: [id])
+  responsibility String?
+
+  @@unique([projectId, employeeId])
+  @@index([employeeId])
+}
+
+model ProjectMilestone {
+  id        String    @id @default(uuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  /// Date only, UTC midnight.
+  dueOn     DateTime?
+  doneAt    DateTime?
+  /// The user id that ticked it.
+  doneBy    String?
+  order     Int       @default(0)
+
+  @@index([projectId, order])
+}
+
+/// The "Done" tick on one of the Opportunity's lines, seen from its Project.
+/// The line itself is never copied.
+model ProjectLineDone {
+  id                String          @id @default(uuid())
+  projectId         String
+  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  opportunityLineId String
+  opportunityLine   OpportunityLine @relation(fields: [opportunityLineId], references: [id], onDelete: Cascade)
+  doneBy            String
+  doneAt            DateTime        @default(now())
+
+  @@unique([projectId, opportunityLineId])
+}
+
+/// A web address for a file kept outside the app (Google Drive, for example),
+/// with the Stage it belongs to. Every version stays; nothing is overwritten.
+model OpportunityDocumentLink {
+  id            String           @id @default(uuid())
+  opportunityId String
+  opportunity   Opportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  name          String
+  url           String
+  stage         OpportunityStage
+  /// The user id that added it.
+  createdBy     String
+  createdAt     DateTime         @default(now())
+
+  @@index([opportunityId, createdAt])
 }
 
 /// The same rows render as **Remarks** on a Sales Account and **Comments** on

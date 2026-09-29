@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import type { CustomerPo, PrefillLine, SaleLineKind } from "./types"
+import type { CustomerPo, PrefillLine, SaleLineKind, VatMethod } from "./types"
 
 export interface CustomerPoInput {
   opportunityId: string
@@ -12,6 +12,9 @@ export interface CustomerPoInput {
     quantity: string
     unitPrice: string
     vatCodeId: string
+    /** Omit both to take the VAT code's rate. */
+    vatMethod?: VatMethod
+    vatRatePercent?: string
   }>
 }
 

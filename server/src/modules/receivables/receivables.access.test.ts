@@ -46,16 +46,16 @@ describe("assertDealAccess", () => {
     vi.mocked(prisma.opportunity.findUnique).mockResolvedValue(DEAL as any)
     vi.mocked(employeeIdFor).mockResolvedValue("emp-2")
     vi.mocked(prisma.salesAccount.count).mockResolvedValue(0)
-    await expect(assertDealAccess(prisma as any, SALES_USER, "opp-1")).rejects.toThrow("You do not have access to this deal")
+    await expect(assertDealAccess(prisma as any, SALES_USER, "opp-1")).rejects.toThrow("You do not have access to this Opportunity")
   })
 
   it("refuses an employee with no sales role, without reading the deal", async () => {
-    await expect(assertDealAccess(prisma as any, EMPLOYEE, "opp-1")).rejects.toThrow("You do not have access to this deal")
+    await expect(assertDealAccess(prisma as any, EMPLOYEE, "opp-1")).rejects.toThrow("You do not have access to this Opportunity")
     expect(prisma.opportunity.findUnique).not.toHaveBeenCalled()
   })
 
   it("404s a deal that does not exist", async () => {
     vi.mocked(prisma.opportunity.findUnique).mockResolvedValue(null)
-    await expect(assertDealAccess(prisma as any, FINANCE, "nope")).rejects.toThrow("Deal not found")
+    await expect(assertDealAccess(prisma as any, FINANCE, "nope")).rejects.toThrow("Opportunity not found")
   })
 })

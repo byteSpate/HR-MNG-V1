@@ -36,6 +36,13 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
+/** The rates a person typed by hand, 2 decimals, lowest first. Shown so an
+ *  approver can see VAT that no VAT code explains (spec 2026-09-28 §1.6). */
+function typedVatRates(lines: DealMoneyInvoice["lines"]): string[] {
+  const rates = lines.filter((l) => l.vatMethod === "MANUAL").map((l) => l.vatRatePercent ?? "")
+  return [...new Set(rates)].sort((a, b) => Number(a) - Number(b))
+}
+
 function invoiceTotals(inv: DealMoneyInvoice): { net: number; vat: number; total: number } {
   const net = inv.lines.reduce((s, l) => s + Number(l.amount), 0)
   const vat = inv.lines.reduce((s, l) => s + Number(l.vatAmount), 0)
@@ -212,6 +219,7 @@ export function InvoicedPart({
         <ul className="space-y-3">
           {invoices.map((inv) => {
             const { total } = invoiceTotals(inv)
+            const typedRates = typedVatRates(inv.lines)
             const status = invoiceStatus(inv)
             // Approve and Send back, together. Only a Super Admin can reach
             // this at all (the route requires it), and a Super Admin has no
@@ -275,6 +283,11 @@ export function InvoicedPart({
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <span className="mr-2 text-[13px] font-bold">{formatMoney(total.toFixed(2), "BDT")}</span>
+                    {typedRates.length > 0 ? (
+                      <span className="mr-2 rounded bg-[#FDF8EE] px-1.5 py-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">
+                        Typed VAT {typedRates.map((r) => `${r}%`).join(", ")}
+                      </span>
+                    ) : null}
                     {actions.length > 0 ? <RowActions actions={actions} /> : null}
                   </div>
                 </div>

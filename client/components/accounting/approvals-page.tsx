@@ -53,7 +53,21 @@ function rowCells(dealsBase: string, row: WaitingForApprovalRow): TableCell[] {
     approvalCell(href, row.number),
     approvalCell(href, row.dealSerial),
     approvalCell(href, row.party),
-    approvalCell(href, formatMoney(row.amount, "BDT")),
+    approvalCell(
+      href,
+      row.typedVatRates.length > 0 ? (
+        <span className="flex items-center gap-2">
+          <span>{formatMoney(row.amount, "BDT")}</span>
+          {/* Typed VAT is the only VAT on the document that no VAT code
+              explains, so the approver has to see it (spec 2026-09-28 §1.6). */}
+          <span className="rounded bg-[#FDF8EE] px-1.5 py-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">
+            Typed VAT {row.typedVatRates.map((r) => `${r}%`).join(", ")}
+          </span>
+        </span>
+      ) : (
+        formatMoney(row.amount, "BDT")
+      )
+    ),
     approvalCell(href, row.preparedBy),
     approvalCell(href, formatDate(row.preparedAt)),
   ]
@@ -87,7 +101,7 @@ export function ApprovalsPage() {
 
       <PanelTable
         cols="1fr 1.2fr 0.9fr 1.2fr 0.9fr 1.1fr 0.9fr"
-        headers={["What", "Number", "Deal", "Customer or supplier", "Amount", "Prepared by", "Date"]}
+        headers={["What", "Number", "Opportunity", "Customer or supplier", "Amount", "Prepared by", "Date"]}
         rows={rows}
         isLoading={approvals.isPending}
         isError={approvals.isError}

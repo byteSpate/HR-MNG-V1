@@ -73,7 +73,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
     <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-[#E4E9EF] bg-white px-4 py-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[#5F6B7C]">Deal status</span>
+          <span className="text-xs font-medium text-[#5F6B7C]">Opportunity status</span>
           <Select
             value={value.status ?? ALL}
             onValueChange={(next) =>
@@ -149,7 +149,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
               />
             </dd>
             <dd className={cn("text-xs", TONE.muted)}>
-              {totals.quotedCount} {totals.quotedCount === 1 ? "deal" : "deals"}
+              {totals.quotedCount} {totals.quotedCount === 1 ? "Opportunity" : "Opportunities"}
             </dd>
           </div>
           <div className="text-right">
@@ -161,7 +161,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
               />
             </dd>
             <dd className={cn("text-xs", TONE.muted)}>
-              {totals.stillOpenCount} {totals.stillOpenCount === 1 ? "deal" : "deals"}
+              {totals.stillOpenCount} {totals.stillOpenCount === 1 ? "Opportunity" : "Opportunities"}
             </dd>
           </div>
           {/* Said out loud rather than folded into the totals as zero. */}

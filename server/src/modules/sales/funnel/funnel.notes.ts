@@ -15,8 +15,8 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import { employeeIdFor, isSalesAdmin } from "../sales.access"
 import { ADMIN_ONLY, lockMeeting } from "./funnel.meeting"
 
-export const NOTE_DEAL_MISSING = "That deal does not exist"
-export const NOTE_NOT_QUOTED = "That deal has not been quoted, so it is not in the funnel"
+export const NOTE_DEAL_MISSING = "That Opportunity does not exist"
+export const NOTE_NOT_QUOTED = "That Opportunity has not been quoted, so it is not in the funnel"
 
 export async function addManagementNote(
   meetingId: string,
