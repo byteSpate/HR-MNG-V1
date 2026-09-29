@@ -38,6 +38,9 @@ export const STATUS_WORD: Record<string, string> = {
 }
 
 /** The track chooses the stage list and the line fields, so it needs a bare Opportunity. */
+export const TRACK_CLOSED = "This Opportunity is closed, so its track cannot change."
+export const TRACK_HANDED_OVER = "This Opportunity is linked by a Hand-over, so its track cannot change."
+export const TRACK_IN_FUNNEL = "This Opportunity is already in the funnel, so its track cannot change."
 export const TRACK_LOCKED = "Remove the products first. The track can only change while the Opportunity has no products or modules."
 
 /** The supplier-before-Won rule is for bought goods; a Software Opportunity buys nothing. */
@@ -330,7 +333,11 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
     // The track decides which stages and which line fields are allowed, so it
     // can only move while the Opportunity is bare: nothing to reinterpret.
     if (body.track !== undefined && body.track !== current.track) {
-      if (current.status !== "ONGOING" || current.lines.length > 0) throw new AppError(409, TRACK_LOCKED)
+      if (current.status !== "ONGOING") throw new AppError(409, TRACK_CLOSED)
+      if (current.handedOverFrom || current.handedOverTo) throw new AppError(409, TRACK_HANDED_OVER)
+      // Once it is in the funnel its offer date stays, and the stage goes back.
+      if (current.offeredOn) throw new AppError(409, TRACK_IN_FUNNEL)
+      if (current.lines.length > 0) throw new AppError(409, TRACK_LOCKED)
       data.stage = "REQUIREMENT_RECEIVED"
       data.stageChangedAt = new Date()
       before.stage = current.stage

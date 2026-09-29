@@ -696,10 +696,31 @@ describe("Software Development track", () => {
       .rejects.toThrow("Remove the products first. The track can only change while the Opportunity has no products or modules.")
   })
 
-  it("refuses a track change on a closed Opportunity", async () => {
+  it("refuses a track change on a closed Opportunity, and says it is closed", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ status: "WON" }) as any)
     await expect(updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER))
-      .rejects.toThrow("Remove the products first. The track can only change while the Opportunity has no products or modules.")
+      .rejects.toThrow("This Opportunity is closed, so its track cannot change.")
+  })
+
+  it("refuses a track change on the Networking side of a Hand-over", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(
+      opportunity({ handedOverTo: { id: "opp-2", serial: "BS-OPP-00002", name: "Core refresh (Software)" } }) as any)
+    await expect(updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER))
+      .rejects.toThrow("This Opportunity is linked by a Hand-over, so its track cannot change.")
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+  })
+
+  it("refuses a track change on the Software side of a Hand-over", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(
+      opportunity({ track: "SOFTWARE_DEVELOPMENT", handedOverFrom: { id: "opp-0", serial: "BS-OPP-00000", name: "Core refresh" } }) as any)
+    await expect(updateOpportunity("opp-1", { track: "NETWORKING" } as any, USER))
+      .rejects.toThrow("This Opportunity is linked by a Hand-over, so its track cannot change.")
+  })
+
+  it("refuses a track change once the Opportunity is in the funnel, because its stage would go back but its offer date would stay", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ offeredOn: new Date("2026-09-01T00:00:00.000Z") }) as any)
+    await expect(updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER))
+      .rejects.toThrow("This Opportunity is already in the funnel, so its track cannot change.")
   })
 
   it("records the stage reset in the audit, so History shows the move", async () => {
