@@ -13,7 +13,6 @@ const taskPriority = z.enum(["LOW", "NORMAL", "HIGH"])
 export const createTaskSchema = z.object({
   salesAccountId: z.string().uuid(),
   opportunityId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional(),
   meetingId: z.string().uuid().optional(),
   title: z.string().trim().min(2, "Give the task a title").max(180),
   detail: z.string().trim().max(2000).optional(),

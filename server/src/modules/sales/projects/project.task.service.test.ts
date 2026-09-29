@@ -138,6 +138,38 @@ describe("Project Tasks", () => {
     }))
   })
 
+  it("gives the task to the caller when no assignee is sent, so a page never has to guess who is asking", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
+    await addProjectTask("prj-1", { title: "My task", dueOn: "2026-10-02" }, USER)
+    expect(vi.mocked(prisma.salesTask.create).mock.calls[0][0].data).toMatchObject({
+      assignedToEmployeeId: "emp-2", assignedByEmployeeId: null,
+    })
+  })
+
+  it("gives the Project Manager's own task to the Project Manager when no assignee is sent", async () => {
+    await addProjectTask("prj-1", { title: "My task", dueOn: "2026-10-02" }, USER)
+    expect(vi.mocked(prisma.salesTask.create).mock.calls[0][0].data).toMatchObject({ assignedToEmployeeId: "emp-1" })
+  })
+
+  it("says the person is not on the team when a Sales Admin with no place on it sends no assignee", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-9" } } as any)
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({ fullName: "Admin Anwar" } as any)
+    await expect(addProjectTask("prj-1", { title: "X task", dueOn: "2026-10-02" }, ADMIN))
+      .rejects.toThrow("Admin Anwar is not on this Project's team. Add them to the team first.")
+  })
+
+  it("marks a task as the caller's to close only when the caller is its assignee", async () => {
+    vi.mocked(prisma.salesTask.findMany).mockResolvedValue([
+      TASK({ id: "mine", assignedToEmployeeId: "emp-1" }), TASK({ id: "theirs", assignedToEmployeeId: "emp-2" }),
+    ] as any)
+    const asManager = await listProjectTasks("prj-1", USER)
+    // The Project Manager may cancel any task, but closing one is the assignee's.
+    expect(asManager.map((t) => [t.id, t.canManage])).toEqual([["mine", true], ["theirs", false]])
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
+    const asMember = await listProjectTasks("prj-1", USER)
+    expect(asMember.map((t) => [t.id, t.canManage])).toEqual([["mine", false], ["theirs", true]])
+  })
+
   it("lists the Project's tasks", async () => {
     const tasks = await listProjectTasks("prj-1", USER)
     expect(prisma.salesTask.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { projectId: "prj-1" } }))
