@@ -186,7 +186,7 @@ async function requireOnAccount(
     kind === "deal"
       ? await tx.opportunity.findFirst({ where, select: { id: true } })
       : await tx.salesMeeting.findFirst({ where, select: { id: true } })
-  if (!found) throw new AppError(400, `That ${kind} is not on this account`)
+  if (!found) throw new AppError(400, `That ${kind === "deal" ? "Opportunity" : kind} is not on this account`)
 }
 
 export async function updateTask(id: string, body: UpdateTaskBody, actor: AccessTokenPayload): Promise<SalesTaskSummary> {

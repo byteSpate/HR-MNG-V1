@@ -70,7 +70,7 @@ export function FunnelRowDetail({
     <div className="grid gap-6 md:grid-cols-2">
       <div>
         <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
-          Remarks on this deal
+          Remarks on this Opportunity
         </h4>
 
         {/* Derived, never stored (§27.8). It sits above the remarks because it
@@ -83,8 +83,8 @@ export function FunnelRowDetail({
 
         {row.remarks.length === 0 ? (
           <p className={cn("mt-2 text-sm", TONE.muted)}>
-            Nothing written on this deal yet. Remarks are the deal&apos;s own comments — the funnel
-            keeps no separate notes.
+            Nothing written on this Opportunity yet. Remarks are the Opportunity&apos;s own comments.
+            The funnel keeps no separate notes.
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
@@ -144,7 +144,7 @@ export function FunnelRowDetail({
 
       <div>
         <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
-          Products on this deal
+          Products on this Opportunity
         </h4>
 
         {row.lines.length === 0 ? (
@@ -183,7 +183,7 @@ export function FunnelRowDetail({
           href={`/sales/opportunities/${row.opportunityId}`}
           className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#1F4E79] hover:underline"
         >
-          Open the deal
+          Open the Opportunity
           <RiArrowRightLine className="size-4" aria-hidden />
         </Link>
       </div>

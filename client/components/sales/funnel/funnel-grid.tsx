@@ -172,8 +172,8 @@ export function FunnelGridTable({
                     {/* The business calls it this; the field is the deal's own
                         name and no Project table exists (§27.6). */}
                     <FieldHelp label="Project Name">
-                      The deal&apos;s name. It is called Project Name on the funnel sheet, so the
-                      heading is kept — but there is no separate project record behind it.
+                      The Opportunity&apos;s name. The funnel sheet calls it Project Name, so the
+                      heading is kept. It is not a Project record.
                     </FieldHelp>
                   </span>
                 </th>

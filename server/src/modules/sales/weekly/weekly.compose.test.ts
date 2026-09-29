@@ -117,7 +117,7 @@ describe("composeWeek", () => {
         tasksDone: [{ id: "task-1", salesAccountId: "acc-2", title: "Send the profile", completedAt: at("2026-09-16T05:00:00.000Z") }],
       })
     )
-    expect(dayOf(week, day("2026-09-15"))?.accounts[0].visited).toEqual(["Deal: Stage changed to OEM Pricing"])
+    expect(dayOf(week, day("2026-09-15"))?.accounts[0].visited).toEqual(["Opportunity: Stage changed to OEM Pricing"])
     expect(dayOf(week, day("2026-09-16"))?.accounts[0].visited).toEqual(["Task done: Send the profile"])
   })
 

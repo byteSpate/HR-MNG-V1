@@ -88,7 +88,7 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
       <Panel>
         <PanelHeading title="Opportunities" />
         <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
-          Deals on this account are open only to its owner, its collaborators and Sales Admins.
+          Only the owner, the collaborators and Sales Admins can open the Opportunities on this account.
         </p>
       </Panel>
     )
@@ -114,8 +114,8 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
       {deals.length > 0 ? <MarginWon accountId={account.id} /> : null}
       {deals.length === 0 ? (
         <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
-          No deals on this account yet. A deal is one thing being sold here — a firewall upgrade, a
-          switching refresh — with its own stage, value and next step.
+          No Opportunities on this account yet. An Opportunity is one thing we may sell here, like a
+          firewall upgrade or a switching refresh. It has its own stage, value and next step.
         </p>
       ) : (
         <ul className="-mx-2 divide-y divide-[#EEF1F5]">

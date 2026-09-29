@@ -134,7 +134,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
             {!canManage ? (
               <p className="mt-3 flex items-start gap-1.5 rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 py-2 text-[12px] leading-relaxed text-[#5F6B7C]">
                 <RiEyeLine className="mt-px size-3.5 shrink-0" aria-hidden />
-                You can see this deal because its account is shared in All Accounts, but only the
+                You can see this Opportunity because its account is shared in All Accounts, but only the
                 people who work that account can change it.
               </p>
             ) : null}

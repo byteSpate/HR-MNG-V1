@@ -27,6 +27,8 @@ export function DocumentsPanel({ deal, canManage }: { deal: OpportunitySummary; 
   const [error, setError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
 
+  // Says why "Add link" is off, instead of leaving a dead button.
+  const badAddress = url.trim() !== "" && !url.trim().startsWith("https://")
   const key = salesKeys.opportunityDocuments(deal.id)
   const query = useQuery({ queryKey: key, queryFn: () => listDocumentLinks(accessToken!, deal.id), enabled: !!accessToken })
 
@@ -57,6 +59,11 @@ export function DocumentsPanel({ deal, canManage }: { deal: OpportunitySummary; 
           <Button type="button" disabled={!name.trim() || !url.trim().startsWith("https://") || add.isPending} onClick={() => add.mutate()} className="h-9 bg-[#17191C] text-[12px] font-bold text-white">
             {add.isPending ? "Saving…" : "Add link"}
           </Button>
+          {badAddress ? (
+            <p role="alert" className="text-[11.5px] font-semibold text-[#B03A3A] sm:col-span-3">
+              The web address must start with https://
+            </p>
+          ) : null}
           <p className={`text-[11.5px] sm:col-span-3 ${TONE.muted}`}>
             The link is saved with the current stage: {STAGE_LABEL[deal.stage]}.
           </p>

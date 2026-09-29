@@ -457,7 +457,7 @@ function AccountsThisWeek({
                   </p>
                 ) : (
                   <p className={`mt-1 text-[12px] ${TONE.muted}`}>
-                    No next step on this deal.{" "}
+                    No next step on this Opportunity.{" "}
                     <Link href={`/sales/opportunities/${deal.id}`} className="underline">
                       Set one
                     </Link>

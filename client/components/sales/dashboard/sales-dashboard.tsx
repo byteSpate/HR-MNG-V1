@@ -405,7 +405,7 @@ function TargetEditor({
         </DialogHeader>
 
         <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
-          A target is an amount of deal value, in taka, for the year. It is split equally over the
+          A target is an amount of Opportunity value, in taka, for the year. It is split equally over the
           quarters from the one it starts in. If a quarter falls short, the shortfall is added to the
           next quarter. Winning more than a quarter&rsquo;s target does not lower the next one.
         </p>
@@ -622,8 +622,8 @@ export function SalesDashboard() {
                   live rather than frozen at quarter end, because freezing them
                   would hide a correction. */}
               <p className={`mt-2 text-[11.5px] ${TONE.muted}`}>
-                Achievement is counted live. Reopening a won deal moves a past quarter&rsquo;s
-                figure, and the targets after it through the carry, and the audit log records why.
+                Achievement is counted live. If a Sales Admin corrects a Won Opportunity, a past
+                quarter&rsquo;s figure moves, and so do the targets after it. The audit log records why.
               </p>
             </Band>
           ) : null}

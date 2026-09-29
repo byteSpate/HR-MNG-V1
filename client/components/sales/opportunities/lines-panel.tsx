@@ -214,7 +214,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
         <PanelNotice>
           <span className="flex flex-wrap items-center gap-2">
             <span>
-              The deal value is {taka(deal.amount)}, but the products add up to {taka(deal.lineTotal)}.
+              The Opportunity value is {taka(deal.amount)}, but the products add up to {taka(deal.lineTotal)}.
             </span>
             {canManage ? (
               <Button
@@ -224,7 +224,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                 onClick={() => reconcile.mutate()}
                 className="h-auto p-0 text-[12px] font-bold text-[#8A5E0C] underline"
               >
-                Use products total as deal value
+                Use the products total as the Opportunity value
               </Button>
             ) : null}
           </span>
@@ -233,8 +233,8 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
 
       {deal.lines.length === 0 ? (
         <p className={`text-[12.5px] ${TONE.muted}`}>
-          No products yet. A deal can carry several products, each with its own quantity and
-          price; the deal value stays the figure the funnel reads.
+          No products yet. An Opportunity can have several products, each with its own quantity and
+          price. The Opportunity value stays the figure the funnel reads.
         </p>
       ) : (
         <ul>

@@ -833,8 +833,9 @@ function RequirementCard({
   return (
     <Card title="Was a requirement found?">
       <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
-        This meeting has no deal. Say whether the customer has a requirement: Yes makes a deal from this meeting, No
-        makes a follow-up task. The answer is needed before sending, and is fixed once the minutes are sent.
+        This meeting has no Opportunity yet. Say whether the customer has a requirement. Yes makes an
+        Opportunity from this meeting. No makes a follow-up task. You must answer before you send. The
+        answer is fixed once the minutes are sent.
       </p>
       {detail.requirementLocked ? (
         <p className="mt-3 text-[12.5px] font-semibold">
@@ -868,14 +869,14 @@ function RequirementCard({
             </p>
           ) : found === true && !dealMade ? (
             <p className={`mt-2 text-[12px] ${TONE.muted}`}>
-              Answered: a requirement was found. Press Yes, a requirement again to open the deal form.
+              Answered: a requirement was found. Press Yes, a requirement again to open the Opportunity form.
             </p>
           ) : null}
         </>
       )}
       {detail.originatedDeals.length > 0 ? (
         <p className="mt-3 text-[12.5px]">
-          Deal made from this meeting:{" "}
+          {detail.originatedDeals.length > 1 ? "Opportunities" : "Opportunity"} made from this meeting:{" "}
           {detail.originatedDeals.map((deal, i) => (
             <span key={deal.id}>
               {i > 0 ? ", " : ""}

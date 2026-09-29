@@ -410,8 +410,8 @@ export function FunnelPage() {
             />
           </div>
           <p className={cn("text-xs", TONE.muted)}>
-            Brand, model, quantity and the deal&apos;s status are changed on the deal itself. Open a
-            row to reach it.
+            Brand, model, quantity and the Opportunity&apos;s status are changed on the Opportunity
+            itself. Open a row to reach it.
           </p>
         </>
       ) : gridQuery.isError ? null : (

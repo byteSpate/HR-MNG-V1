@@ -371,8 +371,8 @@ const MODULES: ModuleEntry[] = [
     title: "A Supplier Bill",
     trigger: (
       <>
-        Smart Technologies bills ৳8,00,000 of firewalls bought for a Won deal, plus 15% VAT.
-        Finance enters the bill against the deal; a Super Admin other than the person who
+        Smart Technologies bills ৳8,00,000 of firewalls bought for a Won Opportunity, plus 15% VAT.
+        Finance enters the bill against the Opportunity; a Super Admin other than the person who
         entered it approves it, and only then does it post:
       </>
     ),
@@ -384,7 +384,7 @@ const MODULES: ModuleEntry[] = [
     note: (
       <>
         Paying it is Debit Trade Payables, Credit Bank, for what is cleared. A payment cannot be
-        more than the deal&apos;s bills from that supplier still owe; there are no advances. A
+        more than the Opportunity&apos;s bills from that supplier still owe; there are no advances. A
         credit note for returned goods runs the bill backwards for the part returned.
       </>
     ),
@@ -395,8 +395,8 @@ const MODULES: ModuleEntry[] = [
     title: "An Opportunity, Start to Finish",
     trigger: (
       <>
-        A deal for firewalls is marked Won, with a supplier already picked on every product line.
-        On the deal&apos;s own Money section: the sales person records the customer&apos;s PO,
+        An Opportunity for firewalls is marked Won, with a supplier already picked on every product line.
+        On the Opportunity&apos;s own Money section: the sales person records the customer&apos;s PO,
         Finance adds the supplier bill for ৳8,00,000 plus 15% VAT and a Super Admin approves it.
         Finance then creates the invoice for ৳10,00,000 plus 15% VAT, and a different Super Admin
         approves it:
@@ -410,10 +410,10 @@ const MODULES: ModuleEntry[] = [
     note: (
       <>
         In the same approval, the goods&apos; cost moves out of holding: Debit Hardware Purchase,
-        Credit Goods Bought for Won Deals, ৳8,00,000. When the customer pays, Finance clicks
-        Record payment received on the deal page; it is saved and counted at once, with no
+        Credit Goods Bought for Won Opportunities, ৳8,00,000. When the customer pays, Finance clicks
+        Record payment received on the Opportunity page; it is saved and counted at once, with no
         approval needed. When the supplier is paid, Finance clicks Pay supplier, also counted at
-        once. Every step, from the PO to the final payment, happens on this one deal page. Nobody
+        once. Every step, from the PO to the final payment, happens on this one Opportunity page. Nobody
         leaves it except a Super Admin, who works the Waiting for approval list.
       </>
     ),

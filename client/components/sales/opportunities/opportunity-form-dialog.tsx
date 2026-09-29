@@ -369,8 +369,8 @@ function OpportunityFields({
     <form onSubmit={handleSubmit} className="space-y-4">
       {!deal ? (
         <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
-          A deal on {account.name}. It starts at Requirement received and Ongoing — stage, products and
-          next step are set on the deal itself.
+          An Opportunity on {account.name}. It starts at Requirement received and Ongoing. You set the
+          stage, products and next step on the Opportunity itself.
           {fromMeeting ? ` It comes out of the meeting “${fromMeeting.title}”.` : ""}
         </p>
       ) : null}
@@ -470,7 +470,7 @@ function OpportunityFields({
         <div className="space-y-1.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2.5">
           <p className="text-[12px] leading-relaxed text-[#8A5E0C]">
             {chosenName ?? "This person"} is not on {account.name} yet, so they could not open this
-            deal. Adding them as a collaborator gives them the account as well.
+            Opportunity. Adding them as a collaborator gives them the account as well.
           </p>
           <CheckboxField
             label="Also add them to this account"

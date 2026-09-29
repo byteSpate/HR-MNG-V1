@@ -280,7 +280,7 @@ export function composeWeek(input: ComposeInput): WeekView {
   for (const change of input.dealChanges) {
     const row = rowFor(officeDateOf(change.at), change.salesAccountId)
     if (!row) continue
-    row.visited.push(`Deal: ${change.title}`)
+    row.visited.push(`Opportunity: ${change.title}`)
     counts.dealChanges++
   }
 

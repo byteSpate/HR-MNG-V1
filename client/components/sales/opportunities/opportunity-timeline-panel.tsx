@@ -44,7 +44,7 @@ export function OpportunityTimelinePanel({ opportunityId }: { opportunityId: str
         </PanelAlert>
       ) : (query.data?.items.length ?? 0) === 0 ? (
         <p className={`text-[12.5px] ${TONE.muted}`}>
-          Nothing has happened on this deal yet. Stage changes, comments and closures appear here.
+          Nothing has happened on this Opportunity yet. Stage changes, comments and closures appear here.
         </p>
       ) : (
         <ul>
