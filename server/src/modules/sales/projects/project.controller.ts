@@ -13,6 +13,7 @@ import {
   updateProjectSchema,
 } from "./project.validators"
 import { addProjectTask, cancelProjectTask, listProjectTasks } from "./project.task.service"
+import { listProjectActivity } from "./project.activity"
 
 export async function startProjectHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(201).json(await startProject(req.params.id, req.user!)) }
@@ -81,5 +82,10 @@ export async function addProjectTaskHandler(req: Request<{ id: string }>, res: R
 
 export async function cancelProjectTaskHandler(req: Request<{ taskId: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await cancelProjectTask(req.params.taskId, cancelProjectTaskSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function listProjectActivityHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await listProjectActivity(req.params.id, req.user!)) }
   catch (err) { return next(err) }
 }

@@ -1,8 +1,10 @@
 import { dec, sum, toMoneyString, type MoneyInput } from "../../payroll/payroll.money"
+import { officeDateOf } from "../../attendance/attendance.time"
 import { marginAmount } from "../sales.margin"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import type { ProjectSummary } from "../sales.types"
 import { canManageProject, peopleOf, type ProjectRow } from "./project.access"
+import { healthOf, peopleNumbers, progressOf } from "./project.numbers"
 
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
 const moneyOrNull = (v: MoneyInput | null | undefined) => (v == null ? null : toMoneyString(dec(v)))
@@ -24,6 +26,13 @@ export function presentProject(
   const people = peopleOf(row.salesAccount)
   const canManage = canManageProject(ctx.actor, ctx.employeeId, row.managerEmployeeId)
   const onTeam = ctx.employeeId !== null && row.team.some((m) => m.employeeId === ctx.employeeId)
+  const today = officeDateOf(new Date())
+  // The Project Manager and the team, each once. A manager who is also on the
+  // team is one person, not two rows of work.
+  const everyone = [
+    { employeeId: row.manager.id, fullName: row.manager.fullName },
+    ...row.team.map((m) => ({ employeeId: m.employeeId, fullName: m.employee.fullName })),
+  ].filter((p, i, all) => all.findIndex((x) => x.employeeId === p.employeeId) === i)
   return {
     id: row.id, serial: row.serial, name: row.name,
     opportunity: { id: row.opportunity.id, serial: row.opportunity.serial, name: row.opportunity.name, track: row.opportunity.track },
@@ -41,6 +50,11 @@ export function presentProject(
     status: row.status, statusReason: row.statusReason,
     completedAt: row.completedAt?.toISOString() ?? null,
     milestones: row.milestones.map((m) => ({ id: m.id, title: m.title, dueOn: day(m.dueOn), doneAt: m.doneAt?.toISOString() ?? null, order: m.order })),
+    // How it is going (spec §2.3), worked out from the Project's own tasks.
+    progress: progressOf(row.tasks),
+    people: peopleNumbers(row.tasks, everyone, today),
+    health: healthOf(row, row.tasks, today),
+    openTaskCount: row.tasks.filter((t) => t.status === "PENDING").length,
     lines: row.opportunity.lines.map((l) => {
       const tick = l.projectTicks.find((t) => t.projectId === row.id)
       return {

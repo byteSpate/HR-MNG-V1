@@ -511,6 +511,13 @@ export interface ProjectSummary {
   statusReason: string | null
   completedAt: string | null
   milestones: ProjectMilestoneSummary[]
+  /** How far along the work is (spec §2.3). Null, never 0%, when no task counts. */
+  progress: { done: number; total: number; percent: number } | null
+  /** Open and late tasks per person, the Project Manager included. */
+  people: Array<{ employeeId: string; fullName: string; open: number; late: number }>
+  /** Null when there is nothing honest to say: finished, cancelled, or not yet started. */
+  health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  openTaskCount: number
   lines: ProjectLineSummary[]
   canManage: boolean
   canTick: boolean

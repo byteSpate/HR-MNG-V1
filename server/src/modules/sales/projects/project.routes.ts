@@ -4,7 +4,7 @@ import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
 import {
   addMilestoneHandler, addProjectTaskHandler, cancelProjectTaskHandler, changeProjectStatusHandler,
-  getProjectHandler, listProjectsHandler, listProjectTasksHandler,
+  getProjectHandler, listProjectActivityHandler, listProjectsHandler, listProjectTasksHandler,
   removeMilestoneHandler, setProjectTeamHandler, startProjectHandler, tickLineHandler,
   untickLineHandler, updateMilestoneHandler, updateProjectHandler,
 } from "./project.controller"
@@ -27,6 +27,7 @@ router.patch("/projects/:id", requireAuth, requireSales(), updateProjectHandler)
 router.put("/projects/:id/team", requireAuth, requireSales(), setProjectTeamHandler)
 router.patch("/projects/:id/status", requireAuth, requireSales(), changeProjectStatusHandler)
 router.post("/projects/:id/milestones", requireAuth, requireSales(), addMilestoneHandler)
+router.get("/projects/:id/activity", requireAuth, requireSales(), listProjectActivityHandler)
 router.get("/projects/:id/tasks", requireAuth, requireSales(), listProjectTasksHandler)
 router.post("/projects/:id/tasks", requireAuth, requireSales(), addProjectTaskHandler)
 router.put("/projects/:id/lines/:lineId/done", requireAuth, requireSales(), tickLineHandler)

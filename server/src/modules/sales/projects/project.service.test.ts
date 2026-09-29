@@ -44,6 +44,7 @@ const projectRow = (o: Record<string, unknown> = {}) => ({
   },
   team: [{ employeeId: "emp-2", responsibility: "Install", employee: { id: "emp-2", fullName: "Karim" } }],
   milestones: [],
+  tasks: [],
   ...o,
 })
 
