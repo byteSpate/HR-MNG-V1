@@ -116,7 +116,7 @@ export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
                           ) : cell.missing ? (
                             <span className="font-semibold">No Daily Log</span>
                           ) : (
-                            <span className={TONE.muted}>—</span>
+                            <span className={TONE.muted}>Nothing yet</span>
                           )}
                         </td>
                       )

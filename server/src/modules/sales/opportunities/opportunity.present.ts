@@ -35,6 +35,8 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     marginAmount: margin.value,
     unmarginedLineCount: margin.missing,
     expectedCloseDate: row.expectedCloseDate?.toISOString().slice(0, 10) ?? null,
+    // Set once the quotation or proposal goes out: the Opportunity is then in the funnel.
+    offeredOn: row.offeredOn?.toISOString().slice(0, 10) ?? null,
     oemAccountManager: row.oemAccountManager ?? null, status: row.status,
     statusReason: row.statusReason ?? null, closedAt: row.closedAt?.toISOString() ?? null,
     stage: row.stage, stageChangedAt: row.stageChangedAt.toISOString(),

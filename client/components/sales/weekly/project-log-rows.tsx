@@ -16,9 +16,8 @@ const OUTLINE = "h-9 shrink-0 rounded-md border border-[#E4E9EF] bg-white px-3 t
  * The Daily Log rows of one day of the viewer's own week (spec §2.2).
  *
  * One line per Project in progress: what they did, or "No work on this
- * Project today". A day that is a holiday, a weekly off or leave still shows
- * its rows, because the server sends them — but they are not flagged missing,
- * and a line written anyway is kept.
+ * Project today". A day that is a holiday, a weekly off or leave gets a row
+ * only where a line was already written, and it is read-only.
  *
  * A gap is an amber edge and a sentence, never a disabled Submit: a missing
  * line is something to notice, not a rule that blocks the week.
@@ -36,6 +35,9 @@ export function ProjectLogRows({
   const queryClient = useQueryClient()
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [ticks, setTicks] = useState<Record<string, boolean>>({})
+  // A saved line reads as plain text. The boxes come back only when the person
+  // presses Edit, so Edit does something and a saved line is not shown twice.
+  const [editing, setEditing] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
 
   const refresh = async () => {
@@ -47,7 +49,11 @@ export function ProjectLogRows({
   const save = useMutation({
     mutationFn: ({ projectId, text, noWork }: { projectId: string; text: string | null; noWork: boolean }) =>
       saveProjectLog(accessToken!, { date, projectId, noWork, text }),
-    onSuccess: async () => { setError(null); await refresh() },
+    onSuccess: async (_data, vars) => {
+      setError(null)
+      setEditing((e) => ({ ...e, [vars.projectId]: false }))
+      await refresh()
+    },
     onError: (err) => setError(toMessage(err)),
   })
 
@@ -95,13 +101,14 @@ export function ProjectLogRows({
                   <span className="text-[12px]">
                     {project.noWork ? <span className={TONE.muted}>No work</span> : project.text}
                   </span>
-                  {readOnly ? null : (
+                  {readOnly || editing[project.projectId] ? null : (
                     <>
                       <Button
                         type="button"
                         variant="link"
                         className="h-auto p-0 text-[11.5px] font-bold underline"
                         onClick={() => {
+                          setEditing((e) => ({ ...e, [project.projectId]: true }))
                           setDrafts((d) => ({ ...d, [project.projectId]: project.text ?? "" }))
                           setTicks((t) => ({ ...t, [project.projectId]: project.noWork }))
                         }}
@@ -122,7 +129,7 @@ export function ProjectLogRows({
                 </div>
               ) : null}
 
-              {readOnly ? null : (
+              {readOnly || (saved && !editing[project.projectId]) ? null : (
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Input
                     aria-label={`What did you do on ${project.name}?`}
@@ -157,6 +164,20 @@ export function ProjectLogRows({
                   >
                     Save
                   </Button>
+                  {saved && editing[project.projectId] ? (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-[11.5px] font-bold text-[#5F6B7C] underline"
+                      onClick={() => {
+                        setEditing((e) => ({ ...e, [project.projectId]: false }))
+                        setDrafts((d) => Object.fromEntries(Object.entries(d).filter(([id]) => id !== project.projectId)))
+                        setTicks((t) => Object.fromEntries(Object.entries(t).filter(([id]) => id !== project.projectId)))
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  ) : null}
                 </div>
               )}
             </li>

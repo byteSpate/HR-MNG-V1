@@ -47,6 +47,7 @@ export interface OpportunitySummary {
   /** Products whose margin cannot be worked out: no Total price, or no percentage. */
   unmarginedLineCount: number
   expectedCloseDate: string | null
+  offeredOn: string | null
   oemAccountManager: string | null
   status: OpportunityStatus
   statusReason: string | null

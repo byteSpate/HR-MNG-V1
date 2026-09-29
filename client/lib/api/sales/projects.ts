@@ -53,7 +53,7 @@ export const untickProjectLine = (t: string, id: string, lineId: string) => send
 export const listProjectTasks = (t: string, id: string) =>
   apiFetch<SalesTaskSummary[]>(`/api/sales/projects/${id}/tasks`, { accessToken: t })
 
-export const addProjectTask = (t: string, id: string, body: { title: string; dueOn: string; assigneeEmployeeId: string }) =>
+export const addProjectTask = (t: string, id: string, body: { title: string; dueOn: string; assigneeEmployeeId?: string }) =>
   apiFetch<SalesTaskSummary>(`/api/sales/projects/${id}/tasks`, { method: "POST", accessToken: t, body: JSON.stringify(body) })
 
 export const cancelProjectTask = (t: string, taskId: string, reason: string) =>

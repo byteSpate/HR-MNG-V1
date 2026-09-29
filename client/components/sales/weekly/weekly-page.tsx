@@ -522,12 +522,10 @@ function DayBlock({ day, weekKey, readOnly }: { day: WeeklyDay; weekKey: string;
 
         <OtherWork day={day} weekKey={weekKey} readOnly={shut} />
 
-        {/* The Daily Log, under Other work (spec §2.2). A labelled day — a
-            holiday, leave, a weekly off — still shows its rows, because the
-            server sends them; they are simply never marked as a gap. */}
-        {day.label ? null : (
-          <ProjectLogRows day={day} date={day.date} readOnly={shut} />
-        )}
+        {/* The Daily Log, under Other work (spec §2.2). On a day off (holiday,
+            leave, weekly off) the server sends a row only where a line was
+            already written, and it is read-only: nothing is owed on that day. */}
+        <ProjectLogRows day={day} date={day.date} readOnly={shut || labelled} />
       </div>
     </section>
   )

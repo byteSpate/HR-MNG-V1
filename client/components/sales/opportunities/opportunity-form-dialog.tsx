@@ -249,7 +249,11 @@ function OpportunityFields({
         ? account.ownerName
         : null)
   const ownerChanged = deal ? ownerId !== deal.ownerEmployeeId : true
-  const trackEditable = !deal || (deal.status === "ONGOING" && deal.lines.length === 0)
+  // The server also refuses a track change once the Opportunity is in the funnel
+  // or linked by a Hand-over, so the picker is not offered then either.
+  const trackEditable =
+    !deal ||
+    (deal.status === "ONGOING" && deal.lines.length === 0 && !deal.handedOverFrom && !deal.handedOverTo && !deal.offeredOn)
   const onAccount =
     ownerId === account.ownerEmployeeId || account.assignees.some((a) => a.id === ownerId)
   const needsAssignment = !!ownerId && ownerChanged && !onAccount

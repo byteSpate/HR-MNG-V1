@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Field, PanelAlert, PanelTable, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Input } from "@/components/ui/input"
 import { TASK_STATUS_LABEL } from "@/components/sales/shared/sales-shared"
+import { projectTaskChoices } from "@/components/sales/shared/task-choices"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -48,17 +49,15 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
     enabled: !!accessToken,
   })
 
-  // The Project Manager gives tasks to others; a team member takes one for
-  // themselves, so the "who" box is fixed for them.
+  // The Project Manager gives tasks to others, and the "who" box starts on the
+  // manager. A team member takes work for themselves: the page sends no name and
+  // the server reads who is asking, so the page never has to guess.
   const people = [
     { employeeId: project.manager.employeeId, fullName: project.manager.fullName },
     ...project.team.map((m) => ({ employeeId: m.employeeId, fullName: m.fullName })),
   ]
-  const viewerId = project.team.some((m) => m.employeeId === project.manager.employeeId)
-    ? project.manager.employeeId
-    : project.team.find((m) => m.onAccount)?.employeeId ?? project.manager.employeeId
   const mayAdd = project.canManage || project.canTick
-  const mine = assigneeId || viewerId
+  const who = assigneeId || project.manager.employeeId
 
   const invalidate = async () => {
     // The numbers on the Status tab move with the tasks, and the person's own
@@ -70,7 +69,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
   const add = useMutation({
     mutationFn: () =>
       addProjectTask(accessToken!, project.id, {
-        title, dueOn, assigneeEmployeeId: project.canManage ? mine : viewerId,
+        title, dueOn, ...(project.canManage ? { assigneeEmployeeId: who } : {}),
       }),
     onSuccess: async () => {
       setTitle(""); setDueOn(""); setAdding(false); setError(null)
@@ -116,29 +115,34 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
       node: (
         <span className="flex flex-wrap items-center gap-2">
           {/* The assignee closes their own task; the Manager cancels one. */}
-          {task.status === "PENDING" && task.canManage ? (
-            <>
-              <Button
-                type="button"
-                variant="link"
-                disabled={done.isPending}
-                onClick={() => done.mutate(task)}
-                className="h-auto p-0 text-[12px] font-bold underline"
-              >
-                Mark done
-              </Button>
-              {project.canManage ? (
-                <Button
-                  type="button"
-                  variant="link"
-                  onClick={() => setCancelling(task)}
-                  className="h-auto p-0 text-[12px] font-bold text-[#5F6B7C] underline"
-                >
-                  Cancel
-                </Button>
-              ) : null}
-            </>
-          ) : null}
+          {(() => {
+            const choices = projectTaskChoices(task, project.canManage)
+            return (
+              <>
+                {choices.done ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    disabled={done.isPending}
+                    onClick={() => done.mutate(task)}
+                    className="h-auto p-0 text-[12px] font-bold underline"
+                  >
+                    Mark done
+                  </Button>
+                ) : null}
+                {choices.cancel ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setCancelling(task)}
+                    className="h-auto p-0 text-[12px] font-bold text-[#5F6B7C] underline"
+                  >
+                    Cancel
+                  </Button>
+                ) : null}
+              </>
+            )
+          })()}
         </span>
       ),
     },
@@ -188,7 +192,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
             <Field label="Who" htmlFor="pt-who" hint="Project Manager or team.">
               <select
                 id="pt-who"
-                value={mine}
+                value={who}
                 onChange={(e) => setAssigneeId(e.target.value)}
                 className={SELECT}
               >

@@ -25,6 +25,7 @@ import { useSession } from "@/lib/auth/session-context"
 import type { SalesMeetingSummary, SalesTaskSummary } from "@/lib/api/types"
 import { Tag } from "@/components/dashboard/tag"
 import { PanelAlert, RowActions, toMessage, type RowAction } from "@/components/dashboard/record-kit"
+import { generalTaskChoices } from "@/components/sales/shared/task-choices"
 import {
   MeetingFormDialog,
   MeetingStatusDialog,
@@ -370,13 +371,17 @@ export function taskActions(
   handlers: { onDone: () => void; onCancel: () => void; onEdit: () => void; onReopen: () => void }
 ): RowAction[] {
   if (!task.canManage) return []
+  const choices = generalTaskChoices(task)
   if (task.status === "PENDING") {
     return [
       { kind: "custom", label: "Done", icon: <RiCheckLine className="size-3.5" aria-hidden />, onClick: handlers.onDone },
-      { kind: "custom", label: "Cancel", icon: <RiCloseLine className="size-3.5" aria-hidden />, onClick: handlers.onCancel },
+      ...(choices.cancel
+        ? [{ kind: "custom" as const, label: "Cancel", icon: <RiCloseLine className="size-3.5" aria-hidden />, onClick: handlers.onCancel }]
+        : []),
       { kind: "edit", label: "Edit", onClick: handlers.onEdit },
     ]
   }
+  if (!choices.reopen) return []
   return [
     {
       kind: "custom",

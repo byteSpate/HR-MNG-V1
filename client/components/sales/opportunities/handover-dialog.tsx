@@ -89,6 +89,15 @@ export function HandOverDialog({
         >
           {owners.isPending ? (
             <Skeleton className="h-9 w-full" />
+          ) : owners.isError ? (
+            // Broken is not the same as empty: an empty list means nobody fits,
+            // a failed one means we do not know yet.
+            <p role="alert" className="text-[12.5px] font-semibold text-[#B03A3A]">
+              The list of people could not be loaded.{" "}
+              <button type="button" className="underline" onClick={() => owners.refetch()}>
+                Try again
+              </button>
+            </p>
           ) : (
             <select
               id="handover-owner"
@@ -117,7 +126,7 @@ export function HandOverDialog({
           onCancel={() => onOpenChange(false)}
           onSubmit={() => save.mutate()}
           pending={save.isPending}
-          disabled={none || owners.isPending || !ownerId || name.trim().length < 2}
+          disabled={none || owners.isPending || owners.isError || !ownerId || name.trim().length < 2}
         />
       </DialogContent>
     </Dialog>
