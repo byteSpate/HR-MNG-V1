@@ -17,6 +17,7 @@ import type {
 } from "./project.validators"
 
 type Client = typeof prisma
+const ALREADY_HAS_PROJECT = "This Opportunity already has a Project."
 export const asClient = (tx: Prisma.TransactionClient) => tx as unknown as Client
 
 async function namesForUsers(client: Client, userIds: string[]): Promise<Map<string, string>> {
@@ -49,6 +50,19 @@ export async function summarise(client: Client, row: ProjectRow, actor: AccessTo
  * automatic. The Opportunity Owner or a Sales Admin presses Start project.
  */
 export async function startProject(opportunityId: string, actor: AccessTokenPayload): Promise<ProjectSummary> {
+  try {
+    return await startProjectOnce(opportunityId, actor)
+  } catch (err) {
+    // Two people pressing Start project together: the unique index on
+    // Project.opportunityId lets one through. Say what happened, not "500".
+    if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
+      throw new AppError(409, ALREADY_HAS_PROJECT)
+    }
+    throw err
+  }
+}
+
+async function startProjectOnce(opportunityId: string, actor: AccessTokenPayload): Promise<ProjectSummary> {
   return prisma.$transaction(async (tx) => {
     const employeeId = await employeeIdFor(actor, asClient(tx))
     const opp = await tx.opportunity.findFirst({
@@ -60,7 +74,7 @@ export async function startProject(opportunityId: string, actor: AccessTokenPayl
       throw new AppError(403, "Only the Opportunity Owner or a Sales Admin can start its Project.")
     }
     if (opp.status !== "WON") throw new AppError(409, "Only a Won Opportunity can have a Project.")
-    if (opp.project) throw new AppError(409, "This Opportunity already has a Project.")
+    if (opp.project) throw new AppError(409, ALREADY_HAS_PROJECT)
     const serial = await nextProjectSerial(tx)
     const row = await tx.project.create({
       data: {

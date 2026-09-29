@@ -90,6 +90,12 @@ describe("startProject", () => {
     await expect(startProject("opp-1", USER)).rejects.toThrow("This Opportunity already has a Project.")
   })
 
+  it("says so in plain words when two people start the Project at the same moment", async () => {
+    // The unique index on Project.opportunityId is the backstop for the check above.
+    vi.mocked(prisma.project.create).mockRejectedValue(Object.assign(new Error("Unique constraint failed"), { code: "P2002" }))
+    await expect(startProject("opp-1", USER)).rejects.toThrow("This Opportunity already has a Project.")
+  })
+
   it("refuses someone who is neither the Opportunity Owner nor a Sales Admin", async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
     await expect(startProject("opp-1", USER)).rejects.toThrow("Only the Opportunity Owner or a Sales Admin can start its Project.")

@@ -12,6 +12,7 @@ import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/d
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { vatFieldsFor } from "@/lib/vat-payload"
 import { VatChoice } from "./vat-choice"
 
 function today(): string {
@@ -125,7 +126,7 @@ export function InvoiceDialog({
           poLineId: l.poLineId,
           description: l.description.trim() || undefined,
           amount: l.amount,
-          ...(l.vatTouched ? { vatCodeId: l.vatCodeId, vatMethod: l.vatMethod, vatRatePercent: l.vatRatePercent } : {}),
+          ...(l.vatTouched ? vatFieldsFor(l) : {}),
         })),
       }
       if (invoice) return updateInvoice(accessToken!, invoice.id, rest)
