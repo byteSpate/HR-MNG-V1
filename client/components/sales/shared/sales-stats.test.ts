@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { accountStats, opportunityStats, projectStats, taskStats } from "./sales-stats"
+import { accountStats, opportunityStats, taskStats } from "./sales-stats"
 
 test("counts accounts by status and the ones that need a new owner", () => {
   const stats = accountStats([
@@ -46,19 +46,6 @@ test("gives no value at all, not zero, when no Ongoing Opportunity has a price",
   const stats = opportunityStats([{ status: "ONGOING", amount: null }, { status: "WON", amount: "5" }])
   assert.equal(stats.ongoingValue, null)
   assert.equal(stats.ongoingUnpriced, 1)
-})
-
-test("counts Projects by status, with Blocked and On hold together", () => {
-  const stats = projectStats([
-    { status: "NOT_STARTED" },
-    { status: "IN_PROGRESS" },
-    { status: "IN_PROGRESS" },
-    { status: "BLOCKED" },
-    { status: "ON_HOLD" },
-    { status: "COMPLETED" },
-    { status: "CANCELLED" },
-  ])
-  assert.deepEqual(stats, { total: 7, notStarted: 1, inProgress: 2, stuck: 2, completed: 1 })
 })
 
 test("counts pending, overdue, due-today and Project tasks, and ignores done and cancelled ones", () => {

@@ -41,18 +41,6 @@ export function opportunityStats(list: Array<{ status: string; amount: string | 
   }
 }
 
-export function projectStats(list: Array<{ status: string }>) {
-  const count = (...statuses: string[]) => list.filter((p) => statuses.includes(p.status)).length
-  return {
-    total: list.length,
-    notStarted: count("NOT_STARTED"),
-    inProgress: count("IN_PROGRESS"),
-    // Blocked and On hold are both "work that is not moving".
-    stuck: count("BLOCKED", "ON_HOLD"),
-    completed: count("COMPLETED"),
-  }
-}
-
 export function taskStats(
   list: Array<{ status: string; dueOn: string; overdue: boolean; origin: string }>,
   today: string,

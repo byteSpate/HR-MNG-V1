@@ -3652,6 +3652,13 @@ export interface ProjectSummary {
   people: Array<{ employeeId: string; fullName: string; open: number; late: number }>
   /** Null when there is nothing honest to say: finished, cancelled, or not yet started. */
   health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  /** Days to the finish date, negative once it has passed. Null with no date or a finished Project. */
+  daysLeft: number | null
+  /** Whole days of silence on a Project in progress that has gone quiet, else null. */
+  quietDays: number | null
+  lastUpdateAt: string
+  /** The Daily Log line written most recently. `text` is null on a day marked as no work. */
+  latestLog: { date: string; byName: string | null; text: string | null; noWork: boolean } | null
   openTaskCount: number
   lines: ProjectLineSummary[]
   canManage: boolean
@@ -3673,6 +3680,14 @@ export interface ProjectListRow {
   dueOn: string | null
   milestonesDone: number
   milestonesTotal: number
+  health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  /** Null, never 0, when no task counts. */
+  progressPercent: number | null
+  openTasks: number
+  lateTasks: number
+  daysLeft: number | null
+  quietDays: number | null
+  lastUpdateAt: string
 }
 
 /** The Project's Daily Log for one week: a day each, a team member each (spec §2.2). */
