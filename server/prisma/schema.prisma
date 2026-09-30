@@ -2741,14 +2741,10 @@ enum OpportunityStatus {
 /// buckets, and a configurable list means last quarter's chart silently
 /// rewrites itself when somebody edits it.
 enum OpportunityStage {
+  // ── Shared by both tracks. A Software Opportunity starts at
+  // REQUIREMENT_RECEIVED. A Networking Opportunity starts at ASSIGNED_QUALIFIED.
   /// Waiting on us to start. They have said what they need; nothing worked out yet.
   REQUIREMENT_RECEIVED
-  /// Waiting on us. Sizing, topology, the HLD if one is being written.
-  SOLUTION_DESIGN
-  /// Waiting on the OEM. Price, availability, special bid. We cannot quote yet.
-  OEM_PRICING
-  /// Waiting on the customer. They have our number.
-  QUOTATION_SUBMITTED
   /// Both sides. They came back; commercial back-and-forth.
   NEGOTIATION
   /// Waiting on the customer, with nothing left for us to do but chase.
@@ -2767,6 +2763,20 @@ enum OpportunityStage {
   PROPOSAL_SUBMITTED
   /// Waiting on us. The customer asked for changes to the Proposal.
   PROPOSAL_REVISION
+  // ── Networking stages (spec 2026-09-30). In this order. Stage 4 onward joins
+  // the funnel and stamps the offer date. Won, Lost and Cancelled stay a status.
+  /// Waiting on us. The Opportunity is assigned and checked to be real.
+  ASSIGNED_QUALIFIED
+  /// Waiting on us. Finding out the need and designing the solution.
+  DISCOVERY_DESIGN
+  /// Waiting on the customer or the OEM. Checking the design works.
+  TECHNICAL_VALIDATION
+  /// Both sides. The offer is made, and the price is talked over.
+  COMMERCIAL_NEGOTIATION
+  /// Waiting on the customer. Their approval and buying steps.
+  CUSTOMER_PROCUREMENT
+  /// Nothing left to chase. The purchase order has arrived.
+  PO_RECEIVED
 }
 
 model Opportunity {
@@ -2844,7 +2854,7 @@ model Opportunity {
   useCase String?
 
   /// The date we quoted, date-only at UTC midnight. Stamped when `stage`
-  /// first reaches QUOTATION_SUBMITTED, and editable afterwards, because the
+  /// first reaches COMMERCIAL_NEGOTIATION, and editable afterwards, because the
   /// real offer date is often earlier than the day somebody updated the
   /// system.
   ///
