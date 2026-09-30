@@ -16,6 +16,7 @@ import type { Currency, Prisma } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
 import { computePayslip } from "./payroll.calc"
 import { pickRate } from "./payroll.fx"
+import { loadPayrollSettings } from "./payroll.settings"
 import { dec, REPORTING_CURRENCY } from "./payroll.money"
 import type { ComponentInput } from "./payroll.types"
 
@@ -139,10 +140,14 @@ export async function preflight(month: number, year: number): Promise<PreflightR
 
   const summaries = await getMonthlySummary(SYSTEM_ACTOR, month, year)
   const roster = await loadPayrollRoster(month, year)
+  const { deductLossOfPay } = await loadPayrollSettings(prisma)
 
   // Blocker 2 — no unapproved attendance. Listed by name: a gate that says
   // "cannot process" gets worked around, one that names who gets cleared.
-  const pending = summaries.filter((s) => s.pendingApproval > 0)
+  // Only when pay depends on attendance. With loss of pay switched off, an
+  // unapproved day cannot change a single payslip, so blocking the run on it
+  // would be a gate with nothing behind it.
+  const pending = deductLossOfPay ? summaries.filter((s) => s.pendingApproval > 0) : []
   if (pending.length > 0) {
     blockers.push({
       code: "UNAPPROVED_ATTENDANCE",
@@ -233,6 +238,7 @@ export async function preflight(month: number, year: number): Promise<PreflightR
         absent: summary.absent,
         onPaidLeave: summary.onPaidLeave,
         onUnpaidLeave: summary.onUnpaidLeave,
+        deductLossOfPay,
       })
 
       if (result.netPay.isNegative()) {

@@ -835,6 +835,22 @@ model PayrollAdjustment {
   @@index([year, month, payslipId])
 }
 
+// Company-wide payroll rules an administrator can switch, one row keyed
+// "payroll". A missing row means every default below, so a database that has
+// never seen this table behaves exactly as payroll always has.
+model PayrollSetting {
+  id                      String   @id @default("payroll")
+  // When false, absent days and unpaid leave do not lower pay. The payslip
+  // still records them; it just does not charge for them.
+  deductLossOfPay         Boolean  @default(true)
+  // When false, a lost or damaged asset is never taken from salary: the
+  // "recover from payroll" step is refused and a run skips any recovery
+  // deduction already waiting. The recovery record itself is kept.
+  recoverAssetsFromSalary Boolean  @default(true)
+  updatedBy               String?
+  updatedAt               DateTime @updatedAt
+}
+
 // The shared change log. Polymorphic `entity` + `entityId` rather than one
 // typed audit table per module, because the read pattern is always "what
 // happened to this thing" — and it already audits employee documents,

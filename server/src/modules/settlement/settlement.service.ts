@@ -32,6 +32,7 @@ import {
 } from "./settlement.calc"
 import { settlementEvent } from "./settlement.events"
 import { EXIT_POLICIES } from "./settlement.policy"
+import { loadPayrollSettings } from "../payroll/payroll.settings"
 import type { OverrideSettlementBody, SettlementRejectBody } from "./settlement.validators"
 
 const SYSTEM_ACTOR: AccessTokenPayload = {
@@ -182,12 +183,15 @@ export async function calculateSettlement(employeeId: string, actorUserId: strin
     countsAsWages: c.countsAsWages,
   }))
 
+  const { deductLossOfPay } = await loadPayrollSettings(prisma)
   const pending = computePendingSalary({
     basic: dec(structure.basic),
     components,
     calendarDays,
     daysEmployed,
-    lopDays: summary ? summary.absent + summary.onUnpaidLeave : 0,
+    // Days after the last working day are still not paid. Only the attendance
+    // part follows the company rule for loss of pay.
+    lopDays: summary && deductLossOfPay ? summary.absent + summary.onUnpaidLeave : 0,
     workingDays: summary?.workingDays ?? 0,
     present: summary?.present ?? 0,
     onPaidLeave: summary?.onPaidLeave ?? 0,

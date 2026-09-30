@@ -22,6 +22,7 @@ import { periodStatusFor } from "../posting/posting.preflight"
 import { monthWindow, toLedgerDate } from "../accounting/accounting.utils"
 import { payrollRunEvent, payslipPublishedEvent } from "./payroll.events"
 import { computePayslip } from "./payroll.calc"
+import { loadPayrollSettings } from "./payroll.settings"
 import { resolveRateOrThrow } from "./payroll.fx"
 import { bdtTotal, dec, type Money, REPORTING_CURRENCY, toMoneyString } from "./payroll.money"
 import {
@@ -513,6 +514,9 @@ export async function processRun(id: string, actorUserId: string) {
     // to clear them by hand.
     await tx.payslip.deleteMany({ where: { payrollRunId: id } })
 
+    // Read inside the transaction, so a run uses the rule that was in force
+    // when it was processed. The payslip then freezes the result.
+    const { deductLossOfPay, recoverAssetsFromSalary } = await loadPayrollSettings(tx)
     const summaries = await getMonthlySummary(SYSTEM_ACTOR, run.month, run.year)
     const summaryByEmployee = new Map(summaries.map((s) => [s.employee.id, s]))
 
@@ -520,7 +524,15 @@ export async function processRun(id: string, actorUserId: string) {
       rosterIds.length === 0
         ? []
         : await tx.payrollAdjustment.findMany({
-            where: { employeeId: { in: rosterIds }, month: run.month, year: run.year, payslipId: null },
+            where: {
+              employeeId: { in: rosterIds },
+              month: run.month,
+              year: run.year,
+              payslipId: null,
+              // A recovery already waiting stays waiting, and untouched, while
+              // the company does not take assets from salary.
+              ...(recoverAssetsFromSalary ? {} : { NOT: { code: "ASSET_RECOVERY" } }),
+            },
           })
     // Only APPROVED claims with both payslipId and settlementId null, and
     // only for employees in this run. A claim already on a settlement must
@@ -600,6 +612,7 @@ export async function processRun(id: string, actorUserId: string) {
         absent: summary.absent,
         onPaidLeave: summary.onPaidLeave,
         onUnpaidLeave: summary.onUnpaidLeave,
+        deductLossOfPay,
       })
 
       const counter = await tx.idCounter.upsert({

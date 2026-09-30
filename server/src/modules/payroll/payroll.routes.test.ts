@@ -11,9 +11,15 @@ vi.mock("./payroll.service", () => ({
   deleteSalaryStructure: vi.fn(),
 }))
 
+vi.mock("./payroll.settings", () => ({
+  getPayrollSettings: vi.fn(),
+  updatePayrollSettings: vi.fn(),
+}))
+
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import * as service from "./payroll.service"
+import * as settings from "./payroll.settings"
 
 type TestRole = "EMPLOYEE" | "REPORTING_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | "FINANCE_OFFICER"
 
@@ -174,5 +180,65 @@ describe("DELETE /api/payroll/salary-structures/:id", () => {
     const res = await request(app).delete(url).set("Authorization", auth(role))
     expect(res.status).toBe(200)
     expect(service.deleteSalaryStructure).toHaveBeenCalledWith("struct-1", "actor-1")
+  })
+})
+
+describe("/api/payroll/settings", () => {
+  it("401s with no Authorization header", async () => {
+    expect((await request(app).get("/api/payroll/settings")).status).toBe(401)
+  })
+
+  it.each<TestRole>(["EMPLOYEE", "REPORTING_MANAGER"])("403s a read for %s", async (role) => {
+    const res = await request(app).get("/api/payroll/settings").set("Authorization", auth(role))
+    expect(res.status).toBe(403)
+  })
+
+  it.each<TestRole>(["HR_ADMIN", "FINANCE_OFFICER", "SUPER_ADMIN"])("200s a read for %s", async (role) => {
+    vi.mocked(settings.getPayrollSettings).mockResolvedValue({ deductLossOfPay: true, recoverAssetsFromSalary: true })
+    const res = await request(app).get("/api/payroll/settings").set("Authorization", auth(role))
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ deductLossOfPay: true, recoverAssetsFromSalary: true })
+  })
+
+  it.each<TestRole>(["EMPLOYEE", "REPORTING_MANAGER", "HR_ADMIN"])("403s a change for %s", async (role) => {
+    const res = await request(app)
+      .patch("/api/payroll/settings")
+      .set("Authorization", auth(role))
+      .send({ deductLossOfPay: false })
+    expect(res.status).toBe(403)
+    expect(settings.updatePayrollSettings).not.toHaveBeenCalled()
+  })
+
+  it.each<TestRole>(["FINANCE_OFFICER", "SUPER_ADMIN"])("200s a change for %s", async (role) => {
+    vi.mocked(settings.updatePayrollSettings).mockResolvedValue({ deductLossOfPay: false, recoverAssetsFromSalary: true })
+    const res = await request(app)
+      .patch("/api/payroll/settings")
+      .set("Authorization", auth(role))
+      .send({ deductLossOfPay: false })
+    expect(res.status).toBe(200)
+    expect(settings.updatePayrollSettings).toHaveBeenCalledWith("actor-1", { deductLossOfPay: false })
+  })
+
+  it("accepts the asset switch alone", async () => {
+    vi.mocked(settings.updatePayrollSettings).mockResolvedValue({ deductLossOfPay: true, recoverAssetsFromSalary: false })
+    const res = await request(app)
+      .patch("/api/payroll/settings")
+      .set("Authorization", auth("FINANCE_OFFICER"))
+      .send({ recoverAssetsFromSalary: false })
+    expect(res.status).toBe(200)
+    expect(settings.updatePayrollSettings).toHaveBeenCalledWith("actor-1", { recoverAssetsFromSalary: false })
+  })
+
+  it("400s an empty change", async () => {
+    const res = await request(app).patch("/api/payroll/settings").set("Authorization", auth("SUPER_ADMIN")).send({})
+    expect(res.status).toBe(400)
+  })
+
+  it("400s when the value is not a boolean", async () => {
+    const res = await request(app)
+      .patch("/api/payroll/settings")
+      .set("Authorization", auth("SUPER_ADMIN"))
+      .send({ deductLossOfPay: "no" })
+    expect(res.status).toBe(400)
   })
 })

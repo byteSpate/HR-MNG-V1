@@ -342,6 +342,13 @@ export interface ExpenseReportRow {
   /** Zero is the thing an approver looks for. */
   receipts: number
   paidOn: string | null
+  /** The day the claim was sent. */
+  submittedOn: string
+  /** Set when a foreign claim is approved. Null for BDT and for pending claims. */
+  fxRateToBdt: string | null
+  amountBdt: string | null
+  reviewedOn: string | null
+  reviewNote: string | null
 }
 
 export interface ExpenseReport {
@@ -465,4 +472,11 @@ export interface SettlementOverrideInput {
   outstandingDeductions?: number
   assetRecoveries?: number
   reason: string
+}
+
+/** Company-wide payroll rules. False means absent days and unpaid leave never lower pay. */
+export interface PayrollSettings {
+  deductLossOfPay: boolean
+  /** False means a lost or damaged asset is never taken from salary. */
+  recoverAssetsFromSalary: boolean
 }
