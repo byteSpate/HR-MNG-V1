@@ -25,3 +25,24 @@ export const TRACK_LABEL: Record<SalesTrack, string> = {
 
 /** Every track, in the order the picker offers them. */
 export const TRACKS: SalesTrack[] = ["NETWORKING", "SOFTWARE_DEVELOPMENT"]
+
+/**
+ * The two Networking stages that show a box for links to files kept outside
+ * the app (Google Drive). The box never blocks a stage change: with no link it
+ * only says so. Links are the same rows as the Documents tab, tagged with the
+ * stage they were added at.
+ */
+export const STAGE_LINK_FIELDS: Partial<
+  Record<OpportunityStage, { title: string; empty: string; namePlaceholder: string }>
+> = {
+  DISCOVERY_DESIGN: {
+    title: "Design files",
+    empty: "No design file link added yet.",
+    namePlaceholder: "Design v1",
+  },
+  COMMERCIAL_NEGOTIATION: {
+    title: "Quotation documents",
+    empty: "No quotation link added yet.",
+    namePlaceholder: "Quotation v1",
+  },
+}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { NETWORKING_STAGES, SOFTWARE_STAGES, stagesFor } from "./stages"
+import { NETWORKING_STAGES, SOFTWARE_STAGES, STAGE_LINK_FIELDS, stagesFor } from "./stages"
 
 test("Networking has the six stages, in order", () => {
   assert.deepEqual(NETWORKING_STAGES, [
@@ -20,4 +20,12 @@ test("Software keeps its eight stages", () => {
 test("each track offers its own stages", () => {
   assert.equal(stagesFor("NETWORKING"), NETWORKING_STAGES)
   assert.equal(stagesFor("SOFTWARE_DEVELOPMENT"), SOFTWARE_STAGES)
+})
+
+test("only Discovery and Commercial ask for a link, in easy words", () => {
+  assert.deepEqual(Object.keys(STAGE_LINK_FIELDS).sort(), ["COMMERCIAL_NEGOTIATION", "DISCOVERY_DESIGN"])
+  assert.equal(STAGE_LINK_FIELDS.DISCOVERY_DESIGN?.title, "Design files")
+  assert.equal(STAGE_LINK_FIELDS.DISCOVERY_DESIGN?.empty, "No design file link added yet.")
+  assert.equal(STAGE_LINK_FIELDS.COMMERCIAL_NEGOTIATION?.title, "Quotation documents")
+  assert.equal(STAGE_LINK_FIELDS.COMMERCIAL_NEGOTIATION?.empty, "No quotation link added yet.")
 })

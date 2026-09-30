@@ -11,13 +11,14 @@ import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunitySummary } from "@/lib/api/types"
 import { CheckboxField, Field, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { OPPORTUNITY_STATUS_LABEL, STAGE_LABEL, STAGE_WAITING_ON, daysSince } from "@/components/sales/shared/sales-shared"
-import { stagesFor } from "@/lib/api/sales/stages"
+import { STAGE_LINK_FIELDS, stagesFor } from "@/lib/api/sales/stages"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
+import { StageLinks } from "@/components/sales/opportunities/stage-links"
 import { onDate } from "@/components/sales/opportunities/lines-panel"
 
 /**
@@ -92,7 +93,7 @@ export function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; c
         </div>
       )}
 
-      {stageChanged ? (
+      {stageChanged && !STAGE_LINK_FIELDS[deal.stage] ? (
         <div className="mt-3">
           <PanelNotice>
             Stage changed. Do you want to add a document link for this stage?{" "}
@@ -108,6 +109,8 @@ export function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; c
           {daysSince(deal.stageChangedAt)} days in this stage
         </div>
       ) : null}
+
+      <StageLinks deal={deal} canManage={canManage && isOpen} />
 
       {canManage ? <div className="mt-4 border-t border-[#E4E9EF] pt-4">
         <Field
