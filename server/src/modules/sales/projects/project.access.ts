@@ -26,9 +26,19 @@ export const PROJECT_INCLUDE = {
   },
   team: { include: { employee: { select: { id: true, fullName: true } } }, orderBy: { employee: { fullName: "asc" as const } } },
   milestones: { orderBy: [{ order: "asc" as const }, { dueOn: "asc" as const }] },
-  // Enough of each task to work out progress, per-person counts and health
-  // (spec §2.3). Nothing more: those three numbers need a status and a date.
-  tasks: { select: { status: true, dueOn: true, assignedToEmployeeId: true } },
+  // Enough of each task to work out progress, per-person counts, health and
+  // the last update (spec §2.3, 2026-09-30). Nothing more.
+  tasks: { select: { status: true, dueOn: true, assignedToEmployeeId: true, updatedAt: true } },
+  // The Daily Log line written most recently: shown on the Overview tab, and
+  // one of the things that count as an update.
+  dailyLogs: {
+    orderBy: { updatedAt: "desc" as const },
+    take: 1,
+    select: {
+      date: true, text: true, noWork: true, updatedAt: true,
+      weeklyReport: { select: { employee: { select: { fullName: true } } } },
+    },
+  },
 } satisfies Prisma.ProjectInclude
 
 export type ProjectRow = Prisma.ProjectGetPayload<{ include: typeof PROJECT_INCLUDE }>
