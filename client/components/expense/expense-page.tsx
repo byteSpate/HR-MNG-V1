@@ -655,22 +655,22 @@ export function ExpensePage() {
         ) : null}
 
         {/*
-          Administrators only. It was shown to everyone, on the reasoning that
-          the server scopes staff to their own claims anyway — true, but not
-          the point: reporting is an administrative act, and a staff member
-          looking at their own five rows does not need a date-range report
-          under them to do it. Their claims are already on this page.
+          Everyone who can see this page. The server decides whose claims a
+          report holds from the caller's own token, so staff get only their
+          own whatever they ask for, and only Finance and HR can pick a person.
+          Staff asked for a PDF of their own claims, with every field.
         */}
-        {isAdmin ? (
+        {isAdmin || isStaff ? (
           <div className="space-y-4">
             <div>
-              <div className="text-[15px] font-bold">Reports</div>
+              <div className="text-[15px] font-bold">{isAdmin ? "Reports" : "Download my expenses"}</div>
               <p className="mt-1 text-[12.5px] text-[#5F6B7C]">
-                Claims for any date range, by person or across everybody, as a PDF or a
-                spreadsheet.
+                {isAdmin
+                  ? "Claims for any date range, by person or across everybody, as a PDF or a spreadsheet."
+                  : "Pick the dates. Then download your claims as a PDF or a spreadsheet. The PDF shows every detail of each claim."}
               </p>
             </div>
-            <ExpenseReports accessToken={accessToken!} people={reviewPeople} />
+            <ExpenseReports accessToken={accessToken!} people={isAdmin ? reviewPeople : undefined} />
           </div>
         ) : null}
       </div>
