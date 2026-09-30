@@ -125,6 +125,15 @@ test("calls a Software Opportunity's lines Modules, and a Networking one's Produ
   assert.match(html(summary({ lines: [] })), /The Opportunity has no products yet\./)
 })
 
+test("says 'No finish date' once, without a second 'Finish date Not set' beside it", () => {
+  const none = html(summary({ dueOn: null, daysLeft: null } as Partial<ProjectSummary>))
+  assert.match(none, /No finish date/)
+  assert.doesNotMatch(none, /Finish date\s*(<!-- -->)?\s*Not set/)
+  assert.doesNotMatch(none, /Not set<\/span>/)
+  // With a date, the date is shown next to the days left, as before.
+  assert.match(html(summary()), /Finish date 05\/10\/2026/)
+})
+
 test("says 1 task and 1 product, not 1 tasks and 1 products", () => {
   const one = html(summary({
     progress: { done: 1, total: 1, percent: 100 },

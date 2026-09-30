@@ -17,7 +17,7 @@ import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { ProjectListRow, SalesTrack } from "@/lib/api/types"
 import {
-  dayText, daysLeftText, filterByHealth, HEALTH_LABEL, HEALTH_TONE, listEmptyState,
+  daysLeftText, filterByHealth, finishDateLine, HEALTH_LABEL, HEALTH_TONE, listEmptyState,
   overviewScope, overviewStats, progressText, quietText, type ProjectHealth,
 } from "@/lib/project-overview"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -73,7 +73,7 @@ function rowCells(p: ProjectListRow): TableCell[] {
           <span className={p.daysLeft !== null && p.daysLeft < 0 ? "font-semibold text-[#B03A3A]" : undefined}>
             {daysLeftText(p.daysLeft, p.status)}
           </span>
-          <div className={`text-[11.5px] ${TONE.muted}`}>{dayText(p.dueOn)}</div>
+          {finishDateLine(p.dueOn) ? <div className={`text-[11.5px] ${TONE.muted}`}>{finishDateLine(p.dueOn)}</div> : null}
         </div>
       ),
     },
