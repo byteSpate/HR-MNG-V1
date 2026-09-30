@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express"
 
+import { AppError } from "../../../middleware/errorHandler"
+
 import {
   createSalesAccount,
   updateSalesAccount,
@@ -11,6 +13,8 @@ import {
   listSalesEligibleEmployees,
 } from "./account.service"
 import { removeVisitingCard, setVisitingCard } from "./account.card"
+import { getAccountProfile, updateAccountProfile } from "./account.profile"
+import { updateAccountProfileSchema } from "./account.profile.validators"
 import { addContact, listContacts, setContactStatus, setPrimaryContact, updateContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
@@ -53,6 +57,35 @@ export async function getSalesAccountHandler(
 ) {
   try {
     return res.status(200).json(await getSalesAccount(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getAccountProfileHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await getAccountProfile(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function updateAccountProfileHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    // The refusal is the sentence alone. The shared error handler prefixes a
+    // Zod failure with its field path ("custom.add.0.question: ..."), which is
+    // not easy English for the person who reads it on this form.
+    const parsed = updateAccountProfileSchema.safeParse(req.body)
+    if (!parsed.success) throw new AppError(400, parsed.error.issues[0]?.message ?? "Check the answers and try again.")
+    return res.status(200).json(await updateAccountProfile(req.params.id, parsed.data, req.user!))
   } catch (err) {
     return next(err)
   }

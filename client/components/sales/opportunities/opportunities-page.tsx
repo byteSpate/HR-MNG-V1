@@ -48,7 +48,7 @@ const STAGGER_MAX_STEPS = 6
  * The column picker exists on this list and nowhere else (R11).
  *
  * Seven columns by default and six more available: this list is wide enough
- * that somebody tracking OEM pricing wants different columns from somebody
+ * that somebody tracking the offer wants different columns from somebody
  * chasing close dates. A picker over a five-column table would be furniture,
  * which is why no other table here has one.
  */

@@ -9,9 +9,10 @@ const marginPercent = z
   .regex(/^-?\d{1,3}(\.\d{1,2})?$/, "Enter the margin as a percentage with up to two decimal places, like 12.5")
   .refine((value) => Math.abs(Number(value)) <= 100, "A margin is between -100% and 100%")
 const opportunityStage = z.enum([
-  "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING",
-  "QUOTATION_SUBMITTED", "NEGOTIATION", "AWAITING_DECISION",
+  "REQUIREMENT_RECEIVED", "NEGOTIATION", "AWAITING_DECISION",
   "REQUIREMENT_GATHERING", "BRD_SENT", "SRS_SENT", "PROPOSAL_SUBMITTED", "PROPOSAL_REVISION",
+  "ASSIGNED_QUALIFIED", "DISCOVERY_DESIGN", "TECHNICAL_VALIDATION",
+  "COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED",
 ])
 const salesTrack = z.enum(["NETWORKING", "SOFTWARE_DEVELOPMENT"])
 const opportunityStatus = z.enum(["ONGOING", "WON", "LOST", "CANCELLED"])

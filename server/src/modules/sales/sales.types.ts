@@ -565,3 +565,44 @@ export interface ProjectListRow {
   milestonesDone: number
   milestonesTotal: number
 }
+
+// ── Company profile (spec 2026-09-30) ──────────────────────────────────────
+export type ProfileQuestionTypeValue = "YES_NO" | "TEXT" | "NUMBER" | "CHOICE"
+
+export interface ProfileQuestionView {
+  key: string
+  text: string
+  type: ProfileQuestionTypeValue
+  /** Yes/No only: the follow-up asked when the answer is Yes. */
+  detailLabel: string | null
+  /** Pick list only. */
+  options: string[] | null
+  answer: string | null
+  detail: string | null
+  answeredByName: string | null
+  answeredAt: string | null
+}
+
+export interface ProfileGroupView {
+  key: string
+  title: string
+  questions: ProfileQuestionView[]
+}
+
+export interface CustomAnswerView {
+  id: string
+  question: string
+  answer: string
+  answeredByName: string | null
+  answeredAt: string
+}
+
+export interface AccountProfile {
+  groups: ProfileGroupView[]
+  custom: CustomAnswerView[]
+  /** Ready-made questions with an answer, and how many there are. Own questions are not counted. */
+  answered: number
+  total: number
+  /** Whether the viewer may change the profile: the owner, a collaborator, or a Sales Admin. */
+  canManage: boolean
+}

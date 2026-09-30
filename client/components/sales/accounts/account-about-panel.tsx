@@ -12,24 +12,17 @@ import {
 } from "@remixicon/react"
 
 import type { SalesAccountSummary } from "@/lib/api/types"
-import { CommentPanel } from "@/components/sales/shared/comment-panel"
 import { TONE } from "@/components/dashboard/record-kit"
 import { ACCOUNT_STATUS_LABEL } from "@/components/sales/shared/sales-shared"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
-import { VisitingCardPanel } from "@/components/sales/accounts/visiting-card-panel"
+import { CompanyProfilePanel } from "@/components/sales/accounts/company-profile-panel"
 
 /**
  * What the app knows about this account that is not a person or a list of
  * things: one row per fact, with "Not recorded" rather than a blank, so an
  * empty field never reads as an oversight rather than a choice.
  */
-export function AccountAboutPanel({
-  account,
-  isSalesAdmin,
-}: {
-  account: SalesAccountSummary
-  isSalesAdmin: boolean
-}) {
+export function AccountAboutPanel({ account }: { account: SalesAccountSummary }) {
   const rows: { label: string; value: string; icon: RemixiconComponentType }[] = [
     { label: "Owner", value: account.ownerName, icon: RiUserStarLine },
     {
@@ -46,9 +39,8 @@ export function AccountAboutPanel({
 
   return (
     <div className="grid gap-4">
-      {/* The facts on the left, the card beside them from `lg` up. On a narrow
-          screen the card sits under the facts, before the Remarks. */}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+      {/* The visiting card is not here. It holds the contact details of the
+          person the team met, so it lives on the Contacts tab. */}
       <Panel>
       <PanelHeading title="About" />
       <dl className="grid grid-cols-1 gap-x-6 gap-y-3.5 text-[13px] sm:grid-cols-2">
@@ -65,22 +57,8 @@ export function AccountAboutPanel({
         ))}
       </dl>
       </Panel>
-      <VisitingCardPanel account={account} />
-      </div>
 
-      {/* "Remarks" here and "Comments" on an Opportunity, from one component.
-          That is the business's own vocabulary and the two labels must not be
-          made consistent with each other. */}
-      <CommentPanel
-        entity="SALES_ACCOUNT"
-        entityId={account.id}
-        label="Remarks"
-        // Customer feedback is offered on an Opportunity only: feedback is
-        // always about a specific Opportunity, and the server no longer
-        // refuses the row, so the restriction lives here.
-        kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
-        canWrite={account.canManage}
-      />
+      <CompanyProfilePanel accountId={account.id} />
     </div>
   )
 }

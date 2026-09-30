@@ -2729,10 +2729,8 @@ export type OpportunityStatus = "ONGOING" | "WON" | "LOST" | "CANCELLED"
  * in the past tense — "Lost, at Negotiation".
  */
 export type OpportunityStage =
+  // Shared by both tracks. A Software Opportunity starts at REQUIREMENT_RECEIVED.
   | "REQUIREMENT_RECEIVED"
-  | "SOLUTION_DESIGN"
-  | "OEM_PRICING"
-  | "QUOTATION_SUBMITTED"
   | "NEGOTIATION"
   | "AWAITING_DECISION"
   // Software Development stages (spec 2026-09-28 §2.4). `lib/api/sales/stages.ts`
@@ -2742,6 +2740,13 @@ export type OpportunityStage =
   | "SRS_SENT"
   | "PROPOSAL_SUBMITTED"
   | "PROPOSAL_REVISION"
+  // Networking stages (spec 2026-09-30), in order.
+  | "ASSIGNED_QUALIFIED"
+  | "DISCOVERY_DESIGN"
+  | "TECHNICAL_VALIDATION"
+  | "COMMERCIAL_NEGOTIATION"
+  | "CUSTOMER_PROCUREMENT"
+  | "PO_RECEIVED"
 
 export interface OpportunityLineSummary {
   id: string
@@ -3707,4 +3712,51 @@ export interface DocumentLinkSummary {
   createdByName: string | null
   createdAt: string
   canRemove: boolean
+}
+
+// ── Company profile (spec 2026-09-30) ──────────────────────────────────────
+export type ProfileQuestionType = "YES_NO" | "TEXT" | "NUMBER" | "CHOICE"
+
+export interface ProfileQuestionView {
+  key: string
+  text: string
+  type: ProfileQuestionType
+  detailLabel: string | null
+  options: string[] | null
+  answer: string | null
+  detail: string | null
+  answeredByName: string | null
+  answeredAt: string | null
+}
+
+export interface ProfileGroupView {
+  key: string
+  title: string
+  questions: ProfileQuestionView[]
+}
+
+export interface CustomAnswerView {
+  id: string
+  question: string
+  answer: string
+  answeredByName: string | null
+  answeredAt: string
+}
+
+export interface AccountProfile {
+  groups: ProfileGroupView[]
+  custom: CustomAnswerView[]
+  answered: number
+  total: number
+  canManage: boolean
+}
+
+/** Only what changed. A null answer clears it. */
+export interface UpdateAccountProfileBody {
+  answers?: Record<string, { answer: string; detail?: string } | null>
+  custom?: {
+    add?: Array<{ question: string; answer: string }>
+    update?: Array<{ id: string; question: string; answer: string }>
+    remove?: string[]
+  }
 }

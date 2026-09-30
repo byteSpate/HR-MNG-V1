@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { NETWORKING_STAGES, QUOTED_STAGES, SOFTWARE_STAGES, stageFitsTrack, stagesFor } from "./sales.stages"
+import {
+  firstStageFor, NETWORKING_STAGES, QUOTED_STAGES, SOFTWARE_STAGES, stageFitsTrack, stagesFor,
+} from "./sales.stages"
 
 describe("stages per track", () => {
-  it("keeps the six Networking stages as they are", () => {
+  it("gives Networking its six stages in order", () => {
     expect(NETWORKING_STAGES).toEqual([
-      "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING", "QUOTATION_SUBMITTED", "NEGOTIATION", "AWAITING_DECISION",
+      "ASSIGNED_QUALIFIED", "DISCOVERY_DESIGN", "TECHNICAL_VALIDATION",
+      "COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED",
     ])
   })
 
@@ -17,16 +20,29 @@ describe("stages per track", () => {
     expect(stagesFor("NETWORKING")).toBe(NETWORKING_STAGES)
   })
 
-  it("says which stage fits which track", () => {
-    expect(stageFitsTrack("BRD_SENT", "NETWORKING")).toBe(false)
-    expect(stageFitsTrack("OEM_PRICING", "SOFTWARE_DEVELOPMENT")).toBe(false)
-    expect(stageFitsTrack("NEGOTIATION", "SOFTWARE_DEVELOPMENT")).toBe(true)
+  it("starts each track at its own first stage", () => {
+    expect(firstStageFor("NETWORKING")).toBe("ASSIGNED_QUALIFIED")
+    expect(firstStageFor("SOFTWARE_DEVELOPMENT")).toBe("REQUIREMENT_RECEIVED")
   })
 
-  it("puts a Software Opportunity in the funnel from Proposal Submitted", () => {
+  it("says which stage fits which track", () => {
+    expect(stageFitsTrack("BRD_SENT", "NETWORKING")).toBe(false)
+    expect(stageFitsTrack("DISCOVERY_DESIGN", "SOFTWARE_DEVELOPMENT")).toBe(false)
+    // The old Networking first stage now belongs to Software only.
+    expect(stageFitsTrack("REQUIREMENT_RECEIVED", "NETWORKING")).toBe(false)
+    expect(stageFitsTrack("NEGOTIATION", "SOFTWARE_DEVELOPMENT")).toBe(true)
+    expect(stageFitsTrack("PO_RECEIVED", "NETWORKING")).toBe(true)
+  })
+
+  it("puts a Networking Opportunity in the funnel from stage 4, and a Software one from Proposal submitted", () => {
+    for (const stage of ["COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED"]) {
+      expect(QUOTED_STAGES.has(stage)).toBe(true)
+    }
+    for (const stage of ["ASSIGNED_QUALIFIED", "DISCOVERY_DESIGN", "TECHNICAL_VALIDATION"]) {
+      expect(QUOTED_STAGES.has(stage)).toBe(false)
+    }
     expect(QUOTED_STAGES.has("PROPOSAL_SUBMITTED")).toBe(true)
     expect(QUOTED_STAGES.has("PROPOSAL_REVISION")).toBe(true)
     expect(QUOTED_STAGES.has("SRS_SENT")).toBe(false)
-    expect(QUOTED_STAGES.has("QUOTATION_SUBMITTED")).toBe(true)
   })
 })
