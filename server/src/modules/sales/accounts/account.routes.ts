@@ -3,6 +3,7 @@ import { Router } from "express"
 import { SalesRole } from "../../../generated/prisma/client"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { cardUpload } from "../../media/media.upload"
 import {
   addContactHandler,
   createSalesAccountHandler,
@@ -14,6 +15,8 @@ import {
   listSalesAccountsHandler,
   listSalesEligibleEmployeesHandler,
   logCommunicationHandler,
+  removeVisitingCardHandler,
+  setVisitingCardHandler,
   setContactStatusHandler,
   setPrimaryContactHandler,
   updateContactHandler,
@@ -32,6 +35,11 @@ router.post("/accounts", requireAuth, requireSales(SalesRole.SALES_ADMIN), creat
 // service narrows it to the owner, the collaborators and admins. An owner
 // fixing a typo on their own account should not need an admin.
 router.patch("/accounts/:id", requireAuth, requireSales(), updateSalesAccountHandler)
+// The visiting card is set and removed on its own path, because a picture goes
+// as a file upload and the account's other fields go as JSON. The same write
+// gate as editing the account applies inside the service.
+router.put("/accounts/:id/visiting-card", requireAuth, requireSales(), cardUpload, setVisitingCardHandler)
+router.delete("/accounts/:id/visiting-card", requireAuth, requireSales(), removeVisitingCardHandler)
 
 // Who the owner/collaborator pickers on the create form may offer — Sales
 // Admin only, same guard as creating the account itself.

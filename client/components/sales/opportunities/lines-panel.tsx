@@ -95,6 +95,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
   const [product, setProduct] = useState("")
   const [oemBrand, setOemBrand] = useState("")
   const [model, setModel] = useState("")
+  const [partNo, setPartNo] = useState("")
   const [quantity, setQuantity] = useState("")
   const [unitValue, setUnitValue] = useState("")
   const [lineValue, setLineValue] = useState("")
@@ -106,7 +107,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
   const [removing, setRemoving] = useState<OpportunityLineSummary | null>(null)
 
   const clearLineForm = () => {
-    setEditing(null); setProduct(""); setOemBrand(""); setModel("")
+    setEditing(null); setProduct(""); setOemBrand(""); setModel(""); setPartNo("")
     setQuantity(""); setUnitValue(""); setLineValue(""); setMarginPercent(""); setNote("")
     setSupplierId(""); setError(null)
   }
@@ -122,7 +123,8 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
       editing
         ? updateOpportunityLine(accessToken!, editing.id, {
             product: product.trim(), oemBrand: oemBrand.trim() || null,
-            model: model.trim() || null, quantity: quantity.trim() ? Number(quantity) : null,
+            model: model.trim() || null, partNo: partNo.trim() || null,
+            quantity: quantity.trim() ? Number(quantity) : null,
             unitValue: unitValue.trim() || null, lineValue: lineValue.trim() || null,
             marginPercent: marginPercent.trim() || null,
             note: note.trim() || null,
@@ -130,7 +132,8 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
           })
         : addOpportunityLine(accessToken!, deal.id, {
             product: product.trim(), oemBrand: oemBrand.trim() || undefined,
-            model: model.trim() || undefined, quantity: quantity.trim() ? Number(quantity) : undefined,
+            model: model.trim() || undefined, partNo: partNo.trim() || undefined,
+            quantity: quantity.trim() ? Number(quantity) : undefined,
             unitValue: unitValue.trim() || undefined, lineValue: lineValue.trim() || undefined,
             marginPercent: marginPercent.trim() || undefined,
             note: note.trim() || undefined,
@@ -154,7 +157,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
 
   const beginEdit = (line: OpportunityLineSummary) => {
     setEditing(line); setAdding(true); setProduct(line.product); setOemBrand(line.oemBrand ?? "")
-    setModel(line.model ?? ""); setQuantity(line.quantity?.toString() ?? "")
+    setModel(line.model ?? ""); setPartNo(line.partNo ?? ""); setQuantity(line.quantity?.toString() ?? "")
     setUnitValue(line.unitValue ?? ""); setLineValue(line.lineValue ?? ""); setNote(line.note ?? "")
     setSupplierId(line.supplier?.id ?? "")
     // "12.00" from the server reads as 12 in the field.
@@ -253,6 +256,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                     {[
                       line.oemBrand,
                       line.model,
+                      line.partNo ? `Part no ${line.partNo}` : null,
                       line.quantity !== null ? `Qty ${line.quantity}` : null,
                       line.supplier ? `Supplier: ${line.supplier.name}` : null,
                     ]
@@ -340,6 +344,13 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               <Input id="line-model" list="line-model-suggestions" autoComplete="off" value={model} onChange={(e) => setModel(e.target.value)} />
               <SuggestionList id="line-model-suggestions" field="model" q={model} />
             </Field>
+            <Field label="Part no" htmlFor="line-part-no" hint="Optional." help="The maker's part number, like FG-100F-BDL. It tells two options of the same model apart.">
+              <Input id="line-part-no" autoComplete="off" value={partNo} onChange={(e) => setPartNo(e.target.value)} maxLength={80} />
+            </Field>
+          </div>
+          )}
+          {modules ? null : (
+          <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Supplier" htmlFor="line-supplier" hint="Optional for now." help="Who we buy this product from. Every product needs one before the Opportunity can be marked Won.">
               <SupplierPicker value={supplierId} onChange={setSupplierId} />
             </Field>

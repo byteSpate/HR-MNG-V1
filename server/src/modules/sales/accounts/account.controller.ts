@@ -10,6 +10,7 @@ import {
   listSalesAccounts,
   listSalesEligibleEmployees,
 } from "./account.service"
+import { removeVisitingCard, setVisitingCard } from "./account.card"
 import { addContact, listContacts, setContactStatus, setPrimaryContact, updateContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
@@ -202,6 +203,31 @@ export async function updateSalesAccountHandler(
   try {
     const body = updateSalesAccountSchema.parse(req.body)
     return res.status(200).json(await updateSalesAccount(req.params.id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function setVisitingCardHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    // `req.file` is undefined when no file part came; the service says so in words.
+    return res.status(200).json(await setVisitingCard(req.params.id, req.file, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function removeVisitingCardHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await removeVisitingCard(req.params.id, req.user!))
   } catch (err) {
     return next(err)
   }

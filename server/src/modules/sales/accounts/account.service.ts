@@ -1,3 +1,4 @@
+import { visitingCardUrlOf } from "./account.card"
 import prisma from "../../../config/prisma"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
@@ -289,6 +290,7 @@ export async function createSalesAccount(
         // a reason. Spelled out rather than read back from the row, which is
         // what every other field here does.
         statusReason: null,
+        visitingCardUrl: null,
         ownerEmployeeId: owner.id,
         ownerName: owner.fullName,
         assigneeCount: extras.length,
@@ -390,6 +392,7 @@ type AccountRow = {
   address: string | null
   status: SalesAccountSummary["status"]
   statusReason: string | null
+  visitingCard: string | null
   ownerEmployeeId: string
   createdAt: Date
   owner: {
@@ -427,6 +430,8 @@ function toSummary(
     address: account.address,
     status: account.status,
     statusReason: account.statusReason,
+    // A signed link, or null. The stored value is a file-store path and is never sent.
+    visitingCardUrl: visitingCardUrlOf(account.visitingCard),
     ownerEmployeeId: account.ownerEmployeeId,
     ownerName: account.owner.fullName,
     assigneeCount: assignees.length,

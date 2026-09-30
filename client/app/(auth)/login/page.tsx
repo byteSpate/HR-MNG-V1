@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AUTH_LINK } from "../auth-form-ui"
 import { AuthShell } from "../auth-shell"
 import { AdminLoginForm } from "./admin-login-form"
+import { AlreadySignedIn } from "./already-signed-in"
 import { StaffLoginForm } from "./staff-login-form"
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function LoginPage() {
         </>
       }
     >
+      <AlreadySignedIn />
       {/* A segmented control, not the page-level underline tabs used inside
           the app: this picks which credential you are signing in with, so
           it should read as a switch rather than as navigation. */}

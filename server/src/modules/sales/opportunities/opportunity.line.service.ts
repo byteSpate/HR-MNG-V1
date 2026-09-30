@@ -16,9 +16,9 @@ const nullable = (value: string | null | undefined) =>
   value === undefined || value === null || value === "" ? null : value
 
 export const MODULE_FIELDS_REFUSED =
-  "A module has a name, what it covers, and a price. OEM, model, quantity, unit price, margin and supplier are for Networking products."
+  "A module has a name, what it covers, and a price. OEM, model, part number, quantity, unit price, margin and supplier are for Networking products."
 
-const NETWORKING_ONLY = ["oemBrand", "model", "quantity", "unitValue", "marginPercent", "supplierId"] as const
+const NETWORKING_ONLY = ["oemBrand", "model", "partNo", "quantity", "unitValue", "marginPercent", "supplierId"] as const
 
 /**
  * A Software Opportunity's lines are Modules (spec §2.4, CONTEXT.md Module):
@@ -72,7 +72,7 @@ export async function addOpportunityLine(
     const created = await tx.opportunityLine.create({
       data: {
         opportunityId, product: body.product, oemBrand: nullable(body.oemBrand),
-        model: nullable(body.model), quantity: body.quantity ?? null,
+        model: nullable(body.model), partNo: nullable(body.partNo), quantity: body.quantity ?? null,
         unitValue: body.unitValue === undefined ? null : dec(body.unitValue),
         // Deliberately not quantity × unitValue. Only an explicitly submitted value is stored.
         lineValue: body.lineValue === undefined ? null : dec(body.lineValue),
@@ -105,7 +105,7 @@ export async function updateOpportunityLine(
         data[field] = body[field]; before[field] = current[field]; after[field] = body[field]
       }
     }
-    for (const field of ["oemBrand", "model", "note"] as const) {
+    for (const field of ["oemBrand", "model", "partNo", "note"] as const) {
       if (body[field] !== undefined) {
         const next = nullable(body[field])
         if (next !== current[field]) { data[field] = next; before[field] = current[field]; after[field] = next }

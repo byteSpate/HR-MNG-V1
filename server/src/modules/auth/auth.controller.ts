@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express"
 
 import * as authService from "./auth.service"
+import { refreshLifetimeMs } from "./auth.utils"
 import { clearOwnAvatar, setDisplayName, uploadOwnAvatar } from "./auth.me"
 import { listSessions, revokeSession } from "./auth.sessions"
 import {
@@ -49,6 +50,20 @@ function refreshCookieOptions() {
   }
 }
 
+/**
+ * The cookie as it is set: the same options plus a lifetime equal to the
+ * refresh token's own. Without `maxAge` this is a session cookie, which the
+ * browser drops when it closes, so a person who signed in this morning is
+ * asked to sign in again this afternoon. It is renewed on every refresh, so it
+ * lasts while the person keeps coming back.
+ *
+ * Clearing uses the plain options above: a cookie is removed by matching its
+ * name, path and flags, and its lifetime plays no part.
+ */
+function refreshCookieSetOptions() {
+  return { ...refreshCookieOptions(), maxAge: refreshLifetimeMs() }
+}
+
 export async function loginHandler(req: Request, res: Response, next: NextFunction) {
   const parsed = adminLoginSchema.safeParse(req.body)
   if (!parsed.success) {
@@ -60,7 +75,7 @@ export async function loginHandler(req: Request, res: Response, next: NextFuncti
       parsed.data.password,
       sessionContext(req)
     )
-    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions())
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieSetOptions())
     return res.status(200).json({ accessToken, user })
   } catch (err) {
     return next(err)
@@ -78,7 +93,7 @@ export async function staffLoginHandler(req: Request, res: Response, next: NextF
       parsed.data.password,
       sessionContext(req)
     )
-    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions())
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieSetOptions())
     return res.status(200).json({ accessToken, user })
   } catch (err) {
     return next(err)
@@ -92,7 +107,7 @@ export async function refreshHandler(req: Request, res: Response, next: NextFunc
   }
   try {
     const { accessToken, refreshToken, user } = await authService.refresh(token, sessionContext(req))
-    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions())
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieSetOptions())
     return res.status(200).json({ accessToken, user })
   } catch (err) {
     return next(err)
@@ -225,7 +240,7 @@ export async function changePasswordHandler(req: Request, res: Response, next: N
       parsed.data.newPassword,
       sessionContext(req)
     )
-    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions())
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieSetOptions())
     return res.status(200).json({ accessToken, user })
   } catch (err) {
     return next(err)

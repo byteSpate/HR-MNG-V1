@@ -142,3 +142,25 @@ export function updateSalesAccount(
     body: JSON.stringify(body),
   })
 }
+
+/**
+ * Sets or replaces an account's visiting card. A picture goes as a file, not
+ * as JSON, so this is its own call and not a field of the create body.
+ */
+export function setVisitingCard(accessToken: string, id: string, file: File): Promise<{ visitingCardUrl: string | null }> {
+  const body = new FormData()
+  body.append("file", file)
+  // No Content-Type header: apiFetch lets the browser set the multipart boundary.
+  return apiFetch<{ visitingCardUrl: string | null }>(`/api/sales/accounts/${id}/visiting-card`, {
+    method: "PUT",
+    accessToken,
+    body,
+  })
+}
+
+export function removeVisitingCard(accessToken: string, id: string): Promise<{ visitingCardUrl: null }> {
+  return apiFetch<{ visitingCardUrl: null }>(`/api/sales/accounts/${id}/visiting-card`, {
+    method: "DELETE",
+    accessToken,
+  })
+}

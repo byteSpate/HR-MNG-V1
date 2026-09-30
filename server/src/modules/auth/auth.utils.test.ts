@@ -4,6 +4,7 @@ import {
   generateTemporaryPassword,
   hashPassword,
   hashToken,
+  refreshLifetimeMs,
   signAccessToken,
   toPublicUser,
   verifyAccessToken,
@@ -94,5 +95,24 @@ describe("toPublicUser", () => {
   it("includes employeeCode when passed", () => {
     const user = { id: "u1", email: "a@b.com", role: "EMPLOYEE" as const, isActive: true, mustChangePassword: false }
     expect(toPublicUser(user, "BS-EMP-00001").employeeCode).toBe("BS-EMP-00001")
+  })
+})
+
+describe("refresh lifetime", () => {
+  it("reads days, hours, minutes and seconds", () => {
+    expect(refreshLifetimeMs("7d")).toBe(7 * 86_400_000)
+    expect(refreshLifetimeMs("1d")).toBe(86_400_000)
+    expect(refreshLifetimeMs("12h")).toBe(12 * 3_600_000)
+    expect(refreshLifetimeMs("30m")).toBe(30 * 60_000)
+    expect(refreshLifetimeMs("90s")).toBe(90_000)
+  })
+
+  it("falls back to seven days for a setting it cannot read, as the token's own expiry does", () => {
+    expect(refreshLifetimeMs("a week")).toBe(7 * 86_400_000)
+    expect(refreshLifetimeMs("")).toBe(7 * 86_400_000)
+  })
+
+  it("uses the server's own setting when none is given", () => {
+    expect(refreshLifetimeMs()).toBeGreaterThan(0)
   })
 })
