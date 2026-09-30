@@ -10,6 +10,7 @@ import {
   RiPercentLine,
   RiPriceTag3Line,
   RiTimeLine,
+  RiWalletLine,
   type RemixiconComponentType,
 } from "@remixicon/react"
 
@@ -22,6 +23,7 @@ import { CostCategoriesPanel } from "./cost-categories-panel"
 import { DepartmentsPanel } from "./departments-panel"
 import { ExchangeRatesPanel } from "./exchange-rates-panel"
 import { LeaveTypesPanel } from "./leave-types-panel"
+import { PayrollSettingsPanel } from "./payroll-settings-panel"
 import { ShiftsPanel } from "./shifts-panel"
 import { VatCodesPanel } from "./vat-codes-panel"
 import { TONE } from "@/components/dashboard/record-kit"
@@ -87,6 +89,14 @@ const TABS: SettingsTab[] = [
     icon: RiExchangeDollarLine,
     roles: ["SUPER_ADMIN", "FINANCE_OFFICER"],
     Panel: ExchangeRatesPanel,
+  },
+  // Finance and Super Admin, matching the PATCH gate on /api/payroll/settings.
+  {
+    value: "payroll",
+    label: "Payroll",
+    icon: RiWalletLine,
+    roles: ["SUPER_ADMIN", "FINANCE_OFFICER"],
+    Panel: PayrollSettingsPanel,
   },
   {
     value: "vat-codes",

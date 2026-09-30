@@ -6,6 +6,7 @@ vi.mock("../../config/prisma", () => {
     asset: { findUnique: vi.fn() },
     assetAssignment: { findFirst: vi.fn(), findMany: vi.fn() },
     payrollAdjustment: { create: vi.fn() },
+    payrollSetting: { findUnique: vi.fn(async () => null) },
     employee: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
   }
@@ -235,6 +236,16 @@ describe("recoverFromPayroll", () => {
     })
     tx.payrollAdjustment.create.mockResolvedValue({ id: "adj-1" })
     tx.assetRecovery.update.mockResolvedValue({ id: "rec-1", adjustmentId: "adj-1", status: "PENDING" })
+  })
+
+  it("refuses, and creates nothing, when the company does not take assets from salary", async () => {
+    tx.payrollSetting.findUnique.mockResolvedValueOnce({ id: "payroll", deductLossOfPay: true, recoverAssetsFromSalary: false })
+
+    await expect(recoverFromPayroll("rec-1", hr)).rejects.toMatchObject({
+      statusCode: 409,
+      message: expect.stringContaining("turned off"),
+    })
+    expect(tx.payrollAdjustment.create).not.toHaveBeenCalled()
   })
 
   it("creates a DEDUCTION adjustment carrying the recovery's amount, currency and reason", async () => {

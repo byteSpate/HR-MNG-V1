@@ -109,3 +109,12 @@ export const adjustmentQuery = z.object({
   employeeId: z.string().optional(),
 })
 export type AdjustmentQuery = z.infer<typeof adjustmentQuery>
+
+export const payrollSettingsBody = z
+  .object({
+    deductLossOfPay: z.boolean(),
+    recoverAssetsFromSalary: z.boolean(),
+  })
+  .partial()
+  .refine((b) => Object.keys(b).length > 0, { message: "Send at least one setting to change." })
+export type PayrollSettingsBody = z.infer<typeof payrollSettingsBody>

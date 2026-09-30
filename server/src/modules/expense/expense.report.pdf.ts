@@ -89,29 +89,32 @@ function table(columns: Column[], body: Cell[][]): string {
 }
 
 /**
- * A report about one person drops the two columns naming them on every row —
- * they are already in the header, and repeating a name 40 times crowds out the
- * description, which is the column an approver actually reads.
+ * A report about one person drops the column naming them on every row — they
+ * are already in the header, and repeating a name 40 times crowds out the
+ * details, which is the column an approver actually reads.
+ *
+ * Every field of a claim is here, so an employee who downloads their own
+ * claims gets the whole record: when it was spent and sent, what it was, the
+ * route, the amount and its BDT value, who decided and when, the note, the
+ * receipts and the payslip that paid it. Related facts share a cell (a date
+ * with its second date underneath) so eleven facts fit ten columns.
  */
 function columnsFor(perPerson: boolean): Column[] {
-  const who: Column[] = perPerson
-    ? []
-    : [
-        { heading: "Code", numeric: false, width: "9%", nowrap: true },
-        { heading: "Employee", numeric: false, width: "14%" },
-      ]
+  const who: Column[] = perPerson ? [] : [{ heading: "Employee", numeric: false, width: "11%" }]
   return [
-    { heading: "Date", numeric: false, width: "8%", nowrap: true },
+    { heading: "Date spent", numeric: false, width: perPerson ? "9%" : "8%", nowrap: true },
     ...who,
     // Expense first, category under it. A reader scanning a printed page is
     // looking for "the water jar", not for "Other" — the category groups rows,
     // it does not identify them.
-    { heading: "Expense", numeric: false, width: perPerson ? "26%" : "18%" },
-    { heading: "Description", numeric: false, width: perPerson ? "18%" : "13%" },
-    { heading: "Route", numeric: false, width: perPerson ? "18%" : "12%" },
-    { heading: "Amount", width: "10%", nowrap: true },
+    { heading: "Expense", numeric: false, width: perPerson ? "18%" : "14%" },
+    { heading: "Details", numeric: false, width: perPerson ? "14%" : "11%" },
+    { heading: "Route", numeric: false, width: perPerson ? "13%" : "11%" },
+    { heading: "Amount", numeric: false, width: "13%" },
     { heading: "Status", numeric: false, width: "9%" },
-    { heading: "Receipts", width: "7%" },
+    { heading: "Note from reviewer", numeric: false, width: perPerson ? "11%" : "10%" },
+    { heading: "Receipts", width: "5%" },
+    { heading: "Payslip", numeric: false, width: "8%", nowrap: true },
   ]
 }
 
@@ -121,25 +124,43 @@ function route(row: ExpenseReportRow): string {
   return `${row.travelFrom ?? "?"} → ${row.travelTo ?? "?"}`
 }
 
+/** A main line with a smaller line under it. Both are escaped here. */
+function stacked(top: string, under: string | null): Cell {
+  return {
+    text: `<div class="nm">${escapeHtml(top)}</div>${under ? `<div class="ds">${escapeHtml(under)}</div>` : ""}`,
+    html: true,
+  }
+}
+
+function amountCell(row: ExpenseReportRow): Cell {
+  const main = `${row.amount} ${row.currency}`
+  if (row.amountBdt && row.fxRateToBdt) {
+    return stacked(main, `${row.amountBdt} BDT at ${row.fxRateToBdt}`)
+  }
+  // A foreign claim gets its rate when it is approved. Say so, so a blank is
+  // not read as a missing number.
+  if (row.currency !== "BDT") return stacked(main, "BDT value is set when approved")
+  return stacked(main, null)
+}
+
 function rowFor(row: ExpenseReportRow, perPerson: boolean): Cell[] {
-  const who: Cell[] = perPerson ? [] : [t(row.employee.employeeCode), t(row.employee.fullName)]
+  const who: Cell[] = perPerson ? [] : [stacked(row.employee.fullName, row.employee.employeeCode)]
   return [
-    t(row.expenseDate),
+    stacked(row.expenseDate, `Sent ${row.submittedOn}`),
     ...who,
-    // Name on top, category under it. A claim filed before the field existed
-    // falls back to its category, so the cell is never blank — an unnamed row
-    // is still a row somebody has to identify.
-    {
-      text: `<div class="nm">${escapeHtml(row.name ?? row.category.name)}</div><div class="ds">${escapeHtml(row.category.name)}</div>`,
-      html: true,
-    },
+    // A claim filed before the name field existed falls back to its category,
+    // so the cell is never blank — an unnamed row is still a row somebody has
+    // to identify.
+    stacked(row.name ?? row.category.name, row.category.name),
     t(row.description ?? ""),
     t(route(row)),
-    t(`${row.amount} ${row.currency}`),
-    t(STATUS_LABEL[row.status] ?? row.status),
+    amountCell(row),
+    stacked(STATUS_LABEL[row.status] ?? row.status, row.reviewedOn ? `on ${row.reviewedOn}` : null),
+    t(row.reviewNote ?? ""),
     // A claim with no receipt is the thing an approver is looking for, so it
     // says so in words rather than printing a nought to scan past.
     t(row.receipts === 0 ? "None" : String(row.receipts)),
+    t(row.paidOn ?? ""),
   ]
 }
 
@@ -256,7 +277,7 @@ export function renderExpenseReportHtml(
   </header>
   <div class="band">${totalsBand(report)}</div>
   ${body}
-  <p class="note">Generated by ${escapeHtml(companyName)} HR. Amounts are shown in the currency claimed and are never added across currencies.</p>
+  <p class="note">Generated by ${escapeHtml(companyName)} HR. Amounts are shown in the currency claimed and are never added across currencies. A BDT value uses the rate saved when the claim was approved.</p>
 </body></html>`
 }
 
@@ -279,9 +300,8 @@ export function reportFooterHtml(
 }
 
 /**
- * Landscape whenever the employee columns are present — nine columns including
- * a free-text description do not fit A4 portrait without shrinking the type
- * past readable.
+ * Always landscape. Ten columns, two of them free text, do not fit A4 portrait
+ * without shrinking the type past readable.
  */
 export async function renderExpenseReportPdf(report: ExpenseReport): Promise<Buffer> {
   const [logo, seal] = await Promise.all([brandAsset("logo"), brandAsset("seal")])
@@ -291,7 +311,7 @@ export async function renderExpenseReportPdf(report: ExpenseReport): Promise<Buf
   })
 
   return renderPdf(html, {
-    landscape: report.employee === null,
+    landscape: true,
     displayHeaderFooter: true,
     headerTemplate: "<span></span>",
     footerTemplate: reportFooterHtml(report, env.COMPANY_NAME, seal, env.COMPANY_ADDRESS),

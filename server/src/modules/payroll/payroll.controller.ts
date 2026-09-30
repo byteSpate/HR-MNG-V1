@@ -38,7 +38,9 @@ import {
   rejectRunBody,
   salaryStructureBody,
   salaryStructureUpdateBody,
+  payrollSettingsBody,
 } from "./payroll.validators"
+import { getPayrollSettings, updatePayrollSettings } from "./payroll.settings"
 
 type RequestWithId = Request<{ id: string }>
 
@@ -303,6 +305,23 @@ export async function emailRunHandler(req: RequestWithId, res: Response, next: N
 export async function emailStatusHandler(req: RequestWithId, res: Response, next: NextFunction) {
   try {
     return res.status(200).json(await getEmailStatus(req.params.id))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getSettingsHandler(_req: Request, res: Response, next: NextFunction) {
+  try {
+    return res.status(200).json(await getPayrollSettings())
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function updateSettingsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const body = payrollSettingsBody.parse(req.body)
+    return res.status(200).json(await updatePayrollSettings(req.user!.sub, body))
   } catch (err) {
     return next(err)
   }

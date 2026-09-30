@@ -340,3 +340,30 @@ describe("half-day loss of pay", () => {
     expect(result.payableDays.plus(result.lopDays).toFixed(2)).toBe("31.00")
   })
 })
+
+describe("loss of pay switched off (the company pays full salary)", () => {
+  it("pays the full month whatever the absence and unpaid leave", () => {
+    const result = computePayslip(input({ absent: 1, onUnpaidLeave: 2, deductLossOfPay: false }))
+    expect(result.lopDays.toFixed(2)).toBe("0.00")
+    expect(result.payableDays.toFixed(2)).toBe("31.00")
+    expect(result.grossPay.toFixed(2)).toBe("80000.00")
+    expect(result.netPay.toFixed(2)).toBe("72500.00")
+  })
+
+  it("adds no loss of pay line", () => {
+    const result = computePayslip(input({ absent: 5, deductLossOfPay: false }))
+    expect(result.breakdown.earnings.map((line) => line.code)).not.toContain("LOP_ADJUSTMENT")
+  })
+
+  it("still records the absence on the payslip", () => {
+    const result = computePayslip(input({ absent: 1, onUnpaidLeave: 2, deductLossOfPay: false }))
+    expect(result.breakdown.attendance).toMatchObject({ absent: 1, onUnpaidLeave: 2, lopDays: 0, payableDays: 31 })
+  })
+
+  it("keeps deducting when the setting is left out or true", () => {
+    const left = computePayslip(input({ absent: 1, onUnpaidLeave: 2 }))
+    const on = computePayslip(input({ absent: 1, onUnpaidLeave: 2, deductLossOfPay: true }))
+    expect(left.grossPay.toFixed(2)).toBe("72258.06")
+    expect(on.grossPay.toFixed(2)).toBe("72258.06")
+  })
+})

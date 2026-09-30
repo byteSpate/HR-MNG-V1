@@ -125,6 +125,12 @@ export interface PayslipInput {
   onPaidLeave: number
   /** The only leave that costs money. */
   onUnpaidLeave: number
+  /**
+   * When false, absent days and unpaid leave are recorded on the payslip but
+   * do not lower pay. Left out means true, so every existing caller keeps the
+   * rule it always had.
+   */
+  deductLossOfPay?: boolean
 }
 
 export interface PayslipResult {

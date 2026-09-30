@@ -9,6 +9,7 @@ vi.mock("../attendance/attendance.service", () => ({
 }))
 
 import prisma from "../../config/prisma"
+import { Prisma } from "../../generated/prisma/client"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import {
   getExpenseReport,
@@ -41,6 +42,10 @@ function claim(over: Partial<Record<string, unknown>> = {}) {
     travelFrom: "Gulshan 1",
     travelTo: "Motijheel",
     payslip: null,
+    createdAt: new Date("2026-07-15T08:00:00.000Z"),
+    fxRateToBdt: null,
+    reviewedAt: null,
+    reviewNote: null,
     _count: { attachments: 1 },
     ...over,
   }
@@ -115,6 +120,26 @@ describe("who a report may be about", () => {
     // Otherwise the header would name whoever filed the first claim.
     expect(report.employee).toBeNull()
     expect(report.rows).toHaveLength(2)
+  })
+})
+
+describe("the fields of a row", () => {
+  it("carries the sent date, the review date and the reviewer's note", async () => {
+    rows(claim({ reviewedAt: new Date("2026-07-16T09:00:00.000Z"), reviewNote: "Approved" }))
+    const report = await getExpenseReport(STAFF, { from: "2026-07-01", to: "2026-07-31" })
+    expect(report.rows[0]).toMatchObject({ submittedOn: "2026-07-15", reviewedOn: "2026-07-16", reviewNote: "Approved" })
+  })
+
+  it("gives the BDT value from the rate frozen at approval, without float error", async () => {
+    rows(claim({ currency: "USD", amount: new Prisma.Decimal("80.10"), fxRateToBdt: new Prisma.Decimal("122.5") }))
+    const report = await getExpenseReport(STAFF, { from: "2026-07-01", to: "2026-07-31" })
+    expect(report.rows[0]).toMatchObject({ fxRateToBdt: "122.500000", amountBdt: "9812.25" })
+  })
+
+  it("gives no BDT value for a BDT claim or a USD claim not yet approved", async () => {
+    rows(claim(), claim({ id: "claim-2", currency: "USD", fxRateToBdt: null }))
+    const report = await getExpenseReport(STAFF, { from: "2026-07-01", to: "2026-07-31" })
+    expect(report.rows.map((r) => [r.fxRateToBdt, r.amountBdt])).toEqual([[null, null], [null, null]])
   })
 })
 
