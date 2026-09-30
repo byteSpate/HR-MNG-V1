@@ -58,7 +58,7 @@ export function presentProject(
     lines: row.opportunity.lines.map((l) => {
       const tick = l.projectTicks.find((t) => t.projectId === row.id)
       return {
-        id: l.id, product: l.product, oemBrand: l.oemBrand, model: l.model, quantity: l.quantity,
+        id: l.id, product: l.product, oemBrand: l.oemBrand, model: l.model, partNo: l.partNo ?? null, quantity: l.quantity,
         // "What it covers" on a Software Opportunity's Modules (spec §2.4).
         note: l.note ?? null,
         supplierName: l.supplier?.name ?? null,

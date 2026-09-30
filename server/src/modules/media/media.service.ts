@@ -14,6 +14,14 @@ export function avatarPublicId(employeeId: string): string {
   return `hr/avatars/${employeeId}`
 }
 
+/**
+ * Stable per Sales Account, like an avatar: a new card replaces the old one
+ * and no orphaned pictures accumulate.
+ */
+export function visitingCardPublicId(accountId: string): string {
+  return `hr/sales/visiting-cards/${accountId}`
+}
+
 export function documentFolderPrefix(employeeId: string): string {
   return `hr/documents/${employeeId}/`
 }

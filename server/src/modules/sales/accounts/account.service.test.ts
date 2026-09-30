@@ -21,6 +21,11 @@ vi.mock("../../../config/prisma", () => ({
   },
 }))
 
+// The link is signed with the file store's keys, which a test has none of.
+vi.mock("./account.card", () => ({
+  visitingCardUrlOf: (stored: string | null) => (stored ? `https://cdn.test/${stored}` : null),
+}))
+
 import prisma from "../../../config/prisma"
 import { AppError } from "../../../middleware/errorHandler"
 import { dec } from "../../payroll/payroll.money"
@@ -28,6 +33,7 @@ import {
   createSalesAccount,
   getAccountHistory,
   getAccountMargin,
+  getSalesAccount,
   listSalesEligibleEmployees,
   updateSalesAccount,
 } from "./account.service"
@@ -942,5 +948,28 @@ describe("updateSalesAccount", () => {
       statusCode: 403,
     })
     expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("an account's visiting card in its payload", () => {
+  const row = (visitingCard: string | null) => ({
+    id: "acc-1", name: "Rising Group", industry: null, website: null, address: null,
+    status: "ACTIVE", statusReason: null, ownerEmployeeId: "emp-1", visitingCard,
+    createdAt: new Date("2026-09-05"),
+    owner: { fullName: "Karim", employmentStatus: "ACTIVE", lastWorkingDay: null, user: { salesRole: "SALES_USER", isActive: true } },
+    assignments: [],
+  })
+  const open = async (visitingCard: string | null) => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({ id: "acc-1", ownerEmployeeId: "emp-1" } as any)
+    vi.mocked(prisma.salesAccount.findUniqueOrThrow).mockResolvedValue(row(visitingCard) as any)
+    return getSalesAccount("acc-1", USER)
+  }
+
+  it("carries a link when the account has a card", async () => {
+    expect((await open("hr/sales/visiting-cards/acc-1#3")).visitingCardUrl).toBe("https://cdn.test/hr/sales/visiting-cards/acc-1#3")
+  })
+
+  it("carries null when it has none, never an empty link", async () => {
+    expect((await open(null)).visitingCardUrl).toBeNull()
   })
 })

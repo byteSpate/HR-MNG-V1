@@ -44,6 +44,7 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
         <span className="block min-w-0">
           <span className="block truncate font-semibold">{l.product}</span>
           {l.model ? <span className="block truncate text-[11.5px] text-[#6B7789]">{l.model}</span> : null}
+          {l.partNo ? <span className="block truncate text-[11.5px] text-[#6B7789]">Part no {l.partNo}</span> : null}
         </span>
       ),
     },

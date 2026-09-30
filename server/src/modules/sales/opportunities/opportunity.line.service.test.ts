@@ -20,6 +20,8 @@ import {
   addOpportunityLine, deleteOpportunityLine, reorderOpportunityLines,
   suggestOpportunityLineValues, updateOpportunityLine,
 } from "./opportunity.line.service"
+import { presentLine } from "./opportunity.present"
+import { createOpportunityLineSchema, updateOpportunityLineSchema } from "./opportunity.validators"
 
 const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "sales@example.com",
@@ -28,7 +30,7 @@ const USER = {
 const OPP = { id: "opp-1", salesAccountId: "account-1", track: "NETWORKING", salesAccount: { ownerEmployeeId: "emp-1" } }
 const LINE = {
   id: "line-1", opportunityId: "opp-1", product: "Switch", oemBrand: "Cisco",
-  model: null, quantity: 2, unitValue: dec("100"), lineValue: null,
+  model: null, partNo: null, quantity: 2, unitValue: dec("100"), lineValue: null,
   note: null, order: 0, createdAt: new Date("2026-09-09"), updatedAt: new Date("2026-09-09"),
   // The parent Opportunity's track, which decides whether this line is a
   // Networking product or a Software module.
@@ -176,7 +178,7 @@ describe("modules on a Software Opportunity", () => {
   it("refuses Networking fields on a Software module", async () => {
     SOFTWARE()
     await expect(addOpportunityLine("opp-1", { product: "HR module", model: "X1" } as any, USER))
-      .rejects.toThrow("A module has a name, what it covers, and a price. OEM, model, quantity, unit price, margin and supplier are for Networking products.")
+      .rejects.toThrow("A module has a name, what it covers, and a price. OEM, model, part number, quantity, unit price, margin and supplier are for Networking products.")
     expect(prisma.opportunityLine.create).not.toHaveBeenCalled()
   })
 
@@ -212,5 +214,64 @@ describe("modules on a Software Opportunity", () => {
     vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue(LINE as any)
     await updateOpportunityLine("line-1", { quantity: 4 } as any, USER)
     expect(prisma.opportunityLine.update).toHaveBeenCalled()
+  })
+})
+
+describe("a product's part number", () => {
+  it("is stored trimmed on a new product, and a blank one is stored as no part number", async () => {
+    await addOpportunityLine("opp-1", { product: "Firewall", partNo: "FG-100F-BDL" } as any, USER)
+    expect(vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data).toMatchObject({ partNo: "FG-100F-BDL" })
+    vi.clearAllMocks()
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(OPP as any)
+    vi.mocked(prisma.opportunityLine.aggregate).mockResolvedValue({ _max: { order: 1 } } as any)
+    vi.mocked(prisma.opportunityLine.create).mockResolvedValue({ ...LINE, order: 2 } as any)
+    await addOpportunityLine("opp-1", { product: "Firewall", partNo: "" } as any, USER)
+    expect(vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data).toMatchObject({ partNo: null })
+  })
+
+  it("is null when none is given", async () => {
+    await addOpportunityLine("opp-1", { product: "Firewall" } as any, USER)
+    expect(vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data).toMatchObject({ partNo: null })
+  })
+
+  it("can be added to a product later, and the history shows old beside new", async () => {
+    await updateOpportunityLine("line-1", { partNo: "FG-100F" } as any, USER)
+    expect(vi.mocked(prisma.opportunityLine.update).mock.calls[0][0].data).toMatchObject({ partNo: "FG-100F" })
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ before: { partNo: null }, after: { partNo: "FG-100F" } }),
+    }))
+  })
+
+  it("can be cleared by sending null", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, partNo: "FG-100F" } as any)
+    await updateOpportunityLine("line-1", { partNo: null } as any, USER)
+    expect(vi.mocked(prisma.opportunityLine.update).mock.calls[0][0].data).toMatchObject({ partNo: null })
+  })
+
+  it("is left alone when the same value is sent again, so History says nothing changed", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, partNo: "FG-100F" } as any)
+    await expect(updateOpportunityLine("line-1", { partNo: "FG-100F" } as any, USER)).resolves.toBeDefined()
+    expect(prisma.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it("is refused on a Software module, like the other Networking fields", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ ...OPP, track: "SOFTWARE_DEVELOPMENT" } as any)
+    await expect(addOpportunityLine("opp-1", { product: "HR module", partNo: "X1" } as any, USER))
+      .rejects.toThrow("A module has a name, what it covers, and a price. OEM, model, part number, quantity, unit price, margin and supplier are for Networking products.")
+    expect(prisma.opportunityLine.create).not.toHaveBeenCalled()
+  })
+
+  it("is answered on the line", () => {
+    const row = { ...LINE, id: "l1", partNo: "FG-100F", createdAt: new Date("2026-09-09"), updatedAt: new Date("2026-09-09") }
+    expect(presentLine(row).partNo).toBe("FG-100F")
+    expect(presentLine({ ...row, partNo: undefined }).partNo).toBeNull()
+  })
+
+  it("is limited to 80 characters and may be null on an edit", () => {
+    expect(createOpportunityLineSchema.safeParse({ product: "Firewall", partNo: "x".repeat(81) }).success).toBe(false)
+    expect(createOpportunityLineSchema.safeParse({ product: "Firewall", partNo: "x".repeat(80) }).success).toBe(true)
+    expect(updateOpportunityLineSchema.safeParse({ partNo: null }).success).toBe(true)
   })
 })

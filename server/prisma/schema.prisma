@@ -2572,6 +2572,12 @@ model SalesAccount {
   status       SalesAccountStatus @default(ACTIVE)
   statusReason String?
 
+  /// A photo or scan of the customer's visiting card, kept as
+  /// `cloudinaryPublicId#version` like an employee's profile picture (the path
+  /// is stable, so the version is what stops a replaced card being served from
+  /// a cache). Optional, and never the picture itself: see account.card.ts.
+  visitingCard String?
+
   /// The one employee answerable for this account. Always set, because
   /// reminders need somewhere to go.
   ownerEmployeeId String
@@ -2924,6 +2930,9 @@ model OpportunityLine {
   product       String
   oemBrand      String?
   model         String?
+  /// The maker's part number (SKU), like FG-100F-BDL. Optional, and only on a
+  /// Networking product: a Software module has no part number.
+  partNo        String?
   /// Nullable because some lines are services, not units.
   quantity      Int?
   unitValue     Decimal? @db.Decimal(14, 2)

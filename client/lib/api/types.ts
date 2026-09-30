@@ -43,6 +43,8 @@ export interface SalesAccountSummary {
       whenever the status leaves ACTIVE and clears it on the way back, so a
       status badge is never shown without the sentence explaining it. */
   statusReason: string | null
+  /** A signed link to the visiting card picture, or null when there is none. */
+  visitingCardUrl: string | null
   ownerEmployeeId: string
   ownerName: string
   assigneeCount: number
@@ -2747,6 +2749,8 @@ export interface OpportunityLineSummary {
   product: string
   oemBrand: string | null
   model: string | null
+  /** The maker's part number (SKU). Networking products only. */
+  partNo: string | null
   quantity: number | null
   /** Null means nobody has costed this line. Never render it as zero. */
   unitValue: string | null
@@ -2851,6 +2855,7 @@ export interface OpportunityLineBody {
   product: string
   oemBrand?: string
   model?: string
+  partNo?: string
   quantity?: number
   unitValue?: string
   lineValue?: string
@@ -2866,6 +2871,7 @@ export interface UpdateOpportunityLineBody {
   product?: string
   oemBrand?: string | null
   model?: string | null
+  partNo?: string | null
   quantity?: number | null
   unitValue?: string | null
   lineValue?: string | null
@@ -3609,6 +3615,7 @@ export interface ProjectLineSummary {
   product: string
   oemBrand: string | null
   model: string | null
+  partNo: string | null
   quantity: number | null
   supplierName: string | null
   lineValue: string | null

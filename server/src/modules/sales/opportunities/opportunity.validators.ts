@@ -86,6 +86,8 @@ export const createOpportunityLineSchema = z.object({
   product: z.string().trim().min(1, "A line needs a product").max(180),
   oemBrand: z.string().trim().max(120).optional(),
   model: z.string().trim().max(120).optional(),
+  // The maker's part number. Networking only; see assertModuleShape.
+  partNo: z.string().trim().max(80).optional(),
   quantity: z.number().int().positive().optional(),
   unitValue: money.optional(),
   lineValue: money.optional(),
@@ -107,6 +109,7 @@ export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
   .extend({
     oemBrand: z.string().trim().max(120).nullable().optional(),
     model: z.string().trim().max(120).nullable().optional(),
+    partNo: z.string().trim().max(80).nullable().optional(),
     quantity: z.number().int().positive().nullable().optional(),
     unitValue: money.nullable().optional(),
     lineValue: money.nullable().optional(),
