@@ -18,7 +18,7 @@ import { useSession } from "@/lib/auth/session-context"
 import type { ProjectListRow, SalesTrack } from "@/lib/api/types"
 import {
   dayText, daysLeftText, filterByHealth, HEALTH_LABEL, HEALTH_TONE, listEmptyState,
-  overviewScope, overviewStats, quietText, type ProjectHealth,
+  overviewScope, overviewStats, progressText, quietText, type ProjectHealth,
 } from "@/lib/project-overview"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, TONE } from "@/components/dashboard/record-kit"
@@ -64,9 +64,7 @@ function rowCells(p: ProjectListRow): TableCell[] {
       : { node: <span className={TONE.muted}>—</span> },
     {
       node: (
-        <span className={p.progressPercent === null ? TONE.muted : undefined}>
-          {p.progressPercent === null ? "No tasks yet" : `${p.progressPercent}%`}
-        </span>
+        <span className={p.progressPercent === null ? TONE.muted : undefined}>{progressText(p.progressPercent)}</span>
       ),
     },
     {

@@ -59,6 +59,11 @@ export function linesDone(lines: Array<{ done: unknown }>): { done: number; tota
   return { done: lines.filter((l) => l.done != null).length, total: lines.length }
 }
 
+/** The Progress cell. Null, never 0, when no task counts: "0%" would be a number about nothing. */
+export function progressText(progressPercent: number | null): string {
+  return progressPercent === null ? "No tasks yet" : `${progressPercent}%`
+}
+
 /** The most rows the server ever sends for a Projects list. */
 export const PROJECTS_ROW_CAP = 200
 

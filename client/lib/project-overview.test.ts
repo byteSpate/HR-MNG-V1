@@ -3,7 +3,7 @@ import test from "node:test"
 
 import {
   dayText, daysLeftText, filterByHealth, linesDone, listEmptyState, nextMilestone,
-  overviewScope, overviewStats, quietText,
+  overviewScope, overviewStats, progressText, quietText,
 } from "./project-overview"
 
 test("says days left in easy words, late ones as late", () => {
@@ -42,6 +42,13 @@ test("finds the next milestone: the earliest open one with a date, then the unda
   assert.equal(nextMilestone(list.filter((m) => m.dueOn === null || m.doneAt))?.title, "Undated")
   assert.equal(nextMilestone([list[0]]), null)
   assert.equal(nextMilestone([]), null)
+})
+
+test("says a Project with no tasks has no tasks yet, never 0% (Review Focus 1)", () => {
+  assert.equal(progressText(null), "No tasks yet")
+  assert.equal(progressText(0), "0%")
+  assert.equal(progressText(50), "50%")
+  assert.equal(progressText(100), "100%")
 })
 
 test("counts the products ticked done", () => {
