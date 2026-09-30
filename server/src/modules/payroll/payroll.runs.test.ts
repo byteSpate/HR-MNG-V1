@@ -15,9 +15,11 @@ vi.mock("../../config/prisma", () => {
     // auditLog: one row per user action rather than per record.
     event: { create: vi.fn() },
     employee: { findUnique: vi.fn() },
+    payrollSetting: { findUnique: vi.fn(async () => null) },
   }
   return {
     default: {
+      payrollSetting: { findUnique: vi.fn(async () => null) },
       payrollRun: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
       // `aggregate` because submitting a run emails every Super Admin the
       // headcount and the BDT total, read after the transaction commits.
@@ -334,6 +336,27 @@ describe("processRun", () => {
         where: { id: { in: ["adj-1"] } },
         data: { payslipId: "payslip-emp-bdt" },
       })
+    })
+
+    it("leaves a waiting asset recovery alone when the company does not take assets from salary", async () => {
+      vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue(draftRun as never)
+      tx.payrollRun.update.mockResolvedValue(draftRun)
+      tx.payrollSetting.findUnique.mockResolvedValueOnce({ id: "payroll", deductLossOfPay: true, recoverAssetsFromSalary: false })
+
+      await processRun("run-1", "user-finance")
+
+      const where = tx.payrollAdjustment.findMany.mock.calls[0][0].where
+      expect(where.NOT).toEqual({ code: "ASSET_RECOVERY" })
+    })
+
+    it("still takes a waiting asset recovery when the switch is on", async () => {
+      vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue(draftRun as never)
+      tx.payrollRun.update.mockResolvedValue(draftRun)
+
+      await processRun("run-1", "user-finance")
+
+      const where = tx.payrollAdjustment.findMany.mock.calls[0][0].where
+      expect(where.NOT).toBeUndefined()
     })
 
     it("converts a BDT-entered adjustment into the USD payslip's currency before summing", async () => {

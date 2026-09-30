@@ -5,10 +5,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { ApiError } from "@/lib/api/client"
 import { listRecoveries, recoverFromPayroll, waiveRecovery } from "@/lib/api/assets"
+import { getPayrollSettings } from "@/lib/api/payroll"
 import type { AssetRecovery } from "@/lib/api/types"
 import { useSession } from "@/lib/auth/session-context"
 import { formatMoney } from "@/lib/money"
-import { PanelTable } from "@/components/dashboard/record-kit"
+import { PanelNotice, PanelTable } from "@/components/dashboard/record-kit"
 import type { TableCell } from "@/components/dashboard/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -40,6 +41,16 @@ export function RecoveriesTab({ onChanged }: { onChanged?: () => void }) {
     queryFn: () => listRecoveries(accessToken!),
     enabled: isAuthed,
   })
+
+  // Whether the company takes lost or damaged assets from salary. Some roles
+  // cannot read the setting, and then the button stays, because the server
+  // gives the real answer and says why when it refuses.
+  const settingsQuery = useQuery({
+    queryKey: ["payroll-settings"],
+    queryFn: () => getPayrollSettings(accessToken!),
+    enabled: isAuthed,
+  })
+  const salaryOff = settingsQuery.data?.recoverAssetsFromSalary === false
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["asset-recoveries"] })
@@ -97,15 +108,17 @@ export function RecoveriesTab({ onChanged }: { onChanged?: () => void }) {
         <div className="flex justify-end gap-1.5 whitespace-nowrap">
           {r.status === "PENDING" ? (
             <>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={collectMutation.isPending}
-                onClick={() => collectMutation.mutate(r.id)}
-              >
-                Recover from payroll
-              </Button>
+              {salaryOff ? null : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={collectMutation.isPending}
+                  onClick={() => collectMutation.mutate(r.id)}
+                >
+                  Recover from payroll
+                </Button>
+              )}
               <Button
                 type="button"
                 size="sm"
@@ -136,6 +149,13 @@ export function RecoveriesTab({ onChanged }: { onChanged?: () => void }) {
           Raise a recovery
         </Button>
       </div>
+
+      {salaryOff ? (
+        <PanelNotice>
+          Money for assets is not taken from salary. This is set in Settings, then Payroll. If the
+          employee does not need to pay, use Waive.
+        </PanelNotice>
+      ) : null}
 
       {error ? (
         <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-4 py-3 text-[12.5px] text-[#B03A3A]">

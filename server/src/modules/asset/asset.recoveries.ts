@@ -18,6 +18,7 @@ import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { dec, round2 } from "../payroll/payroll.money"
 import type { CreateRecoveryBody, UpdateRecoveryBody } from "./asset.recoveries.validators"
+import { loadPayrollSettings } from "../payroll/payroll.settings"
 
 const RECOVERY = "ASSET_RECOVERY"
 
@@ -287,6 +288,13 @@ export function pendingRecoveriesFor(
  */
 export function recoverFromPayroll(id: string, actor: AccessTokenPayload): Promise<AssetRecovery> {
   return prisma.$transaction(async (tx) => {
+    const { recoverAssetsFromSalary } = await loadPayrollSettings(tx)
+    if (!recoverAssetsFromSalary) {
+      throw new AppError(
+        409,
+        "Taking money from salary for assets is turned off. To turn it on, go to Settings, then Payroll. If the employee does not need to pay, use Waive."
+      )
+    }
     const recovery = await loadRecovery(tx, id)
     if (!recovery) throw new AppError(404, "Recovery not found")
     if (recovery.status === "WAIVED") {

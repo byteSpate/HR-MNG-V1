@@ -82,7 +82,12 @@ export function computePayslip(input: PayslipInput): PayslipResult {
   // The denominator is calendarDays, not workingDays: a monthly salary covers
   // the whole month including its Fridays, so a day of unpaid leave costs
   // 1/31 of a month, not 1/22.
-  const lopDays = dec(input.absent + input.onUnpaidLeave)
+  //
+  // A company that pays full salary whatever the attendance switches this off
+  // (`PayrollSetting.deductLossOfPay`). The absent and unpaid figures are still
+  // frozen into the breakdown below, so the payslip stays a true record.
+  const deductLossOfPay = input.deductLossOfPay ?? true
+  const lopDays = deductLossOfPay ? dec(input.absent + input.onUnpaidLeave) : dec(0)
   const calendarDays = dec(input.calendarDays)
   const payableDays = calendarDays.minus(lopDays)
 

@@ -21,6 +21,8 @@ import {
   getPayslipHandler,
   payslipPdfHandler,
   getRunHandler,
+  getSettingsHandler,
+  updateSettingsHandler,
   getRunPreflightHandler,
   listAdjustmentsHandler,
   listRatesHandler,
@@ -46,6 +48,10 @@ const STAFF_ROLES = [Role.EMPLOYEE, Role.REPORTING_MANAGER] as const
 router.get("/exchange-rates", requireAuth, listRatesHandler)
 router.post("/exchange-rates", requireAuth, requireRole(...FINANCE_ROLES), createRateHandler)
 router.patch("/exchange-rates/:id", requireAuth, requireRole(...FINANCE_ROLES), updateRateHandler)
+
+// Payroll rules. Finance and Super Admin switch them; HR may read.
+router.get("/settings", requireAuth, requireRole(...READ_ROLES), getSettingsHandler)
+router.patch("/settings", requireAuth, requireRole(...FINANCE_ROLES), updateSettingsHandler)
 
 // Finance owns structures, not HR: HR owns adjustments (Task 10), but a
 // salary structure is a treasury fact, not a benefit decision.
