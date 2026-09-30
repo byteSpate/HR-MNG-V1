@@ -30,6 +30,12 @@ describe("the company profile body", () => {
   it("keeps answers short and stops at 30 own questions at once", () => {
     expect(message({ answers: { internet: { answer: "x".repeat(301) } } })).toBe("Keep each answer under 300 characters")
     const many = Array.from({ length: 31 }, (_, i) => ({ question: `Q${i} here`, answer: "a" }))
-    expect(parse({ custom: { add: many } }).success).toBe(false)
+    expect(message({ custom: { add: many } })).toBe("Add up to 30 questions at a time")
+  })
+
+  it("says what to do when a question id is not an id", () => {
+    const sentence = "That question could not be found. Reload the page and try again."
+    expect(message({ custom: { remove: ["nope"] } })).toBe(sentence)
+    expect(message({ custom: { update: [{ id: "nope", question: "Who?", answer: "Me" }] } })).toBe(sentence)
   })
 })

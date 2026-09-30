@@ -50,15 +50,33 @@ describe("PATCH /api/sales/accounts/:id/profile", () => {
     expect(vi.mocked(updateAccountProfile).mock.calls[0][1]).toEqual({ answers: { staff: { answer: "5" } } })
   })
 
+  // The refusal is the sentence and nothing else. The shared error handler would
+  // prefix it with the field path, like "custom.add.0.question: Write the
+  // question", which is not easy English for the person reading it.
+  const refusal = (body: unknown) =>
+    request(app).patch(`/api/sales/accounts/${ID}/profile`).set("Authorization", token("SALES_USER")).send(body as object).expect(400)
+
   it("refuses a body that changes nothing, in words", async () => {
-    const res = await request(app).patch(`/api/sales/accounts/${ID}/profile`).set("Authorization", token("SALES_USER")).send({}).expect(400)
-    expect(JSON.stringify(res.body)).toMatch(/Nothing was changed/)
+    const res = await refusal({})
+    expect(res.body.error).toBe("Nothing was changed")
     expect(updateAccountProfile).not.toHaveBeenCalled()
   })
 
-  it("refuses an own question with no question, in words", async () => {
-    const res = await request(app).patch(`/api/sales/accounts/${ID}/profile`).set("Authorization", token("SALES_USER"))
-      .send({ custom: { add: [{ question: " ", answer: "x" }] } }).expect(400)
-    expect(JSON.stringify(res.body)).toMatch(/Write the question/)
+  it("refuses an own question with no question, with the sentence alone", async () => {
+    expect((await refusal({ custom: { add: [{ question: " ", answer: "x" }] } })).body.error).toBe("Write the question")
+    expect((await refusal({ custom: { add: [{ question: "Who?", answer: " " }] } })).body.error).toBe("Write the answer")
+  })
+
+  it("refuses a too long answer, with the sentence alone", async () => {
+    expect((await refusal({ answers: { internet: { answer: "x".repeat(301) } } })).body.error)
+      .toBe("Keep each answer under 300 characters")
+  })
+
+  it("refuses a question id that is not an id, and too many questions at once, in words", async () => {
+    expect((await refusal({ custom: { remove: ["nope"] } })).body.error)
+      .toBe("That question could not be found. Reload the page and try again.")
+    const many = Array.from({ length: 31 }, (_, i) => ({ question: `Q${i} here`, answer: "a" }))
+    expect((await refusal({ custom: { add: many } })).body.error).toBe("Add up to 30 questions at a time")
+    expect(updateAccountProfile).not.toHaveBeenCalled()
   })
 })

@@ -68,6 +68,11 @@ describe("reading the profile", () => {
     expect(profile.answered).toBe(0)
   })
 
+  it("says the account is not there when it is not", async () => {
+    vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(null as any)
+    await expect(getAccountProfile(ID, OWNER)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
   it("tells a viewer who cannot manage the account so", async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-9" } } as any)
     expect((await getAccountProfile(ID, OTHER)).canManage).toBe(false)
@@ -143,7 +148,51 @@ describe("saving answers", () => {
   })
 })
 
+describe("two saves at the same moment", () => {
+  const uniqueClash = () => Object.assign(new Error("Unique constraint failed"), { code: "P2002" })
+
+  it("answers 409 in words when someone saved the same new answer a moment before", async () => {
+    vi.mocked(prisma.salesAccountAnswer.create).mockRejectedValue(uniqueClash())
+    await expect(updateAccountProfile(ID, { answers: { staff: { answer: "10" } } }, OWNER))
+      .rejects.toMatchObject({
+        statusCode: 409,
+        message: "Someone just saved an answer to this question. Reload the page and try again.",
+      })
+  })
+
+  it("lets any other database failure through as it is", async () => {
+    vi.mocked(prisma.salesAccountAnswer.create).mockRejectedValue(new Error("connection lost"))
+    await expect(updateAccountProfile(ID, { answers: { staff: { answer: "10" } } }, OWNER))
+      .rejects.toThrow("connection lost")
+  })
+})
+
 describe("the account's own questions", () => {
+  it("writes nothing when an own question is saved as it already is", async () => {
+    vi.mocked(prisma.salesAccountAnswer.findMany).mockResolvedValue([customRow()] as any)
+    await updateAccountProfile(ID, { custom: { update: [{ id: "c-1", question: "Who is the CTO?", answer: "Mr Rahman" }] } }, OWNER)
+    expect(prisma.salesAccountAnswer.update).not.toHaveBeenCalled()
+    expect(prisma.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it("records the old and the new question when an own question is renamed", async () => {
+    vi.mocked(prisma.salesAccountAnswer.findMany).mockResolvedValue([customRow()] as any)
+    await updateAccountProfile(ID, { custom: { update: [{ id: "c-1", question: "Who is the IT head?", answer: "Mr Rahman" }] } }, OWNER)
+    expect(auditData()).toMatchObject({
+      before: { "Company profile: Who is the CTO?": "Mr Rahman" },
+      after: { "Company profile: Who is the IT head?": "Mr Rahman" },
+    })
+  })
+
+  it("records a removed own question in the History as cleared", async () => {
+    vi.mocked(prisma.salesAccountAnswer.findMany).mockResolvedValue([customRow()] as any)
+    await updateAccountProfile(ID, { custom: { remove: ["c-1"] } }, OWNER)
+    expect(auditData()).toMatchObject({
+      before: { "Company profile: Who is the CTO?": "Mr Rahman" },
+      after: { "Company profile: Who is the CTO?": null },
+    })
+  })
+
   it("adds one, without a question key, and puts its words in the History", async () => {
     await updateAccountProfile(ID, { custom: { add: [{ question: "Who is the CTO?", answer: "Mr Rahman" }] } }, OWNER)
     expect(prisma.salesAccountAnswer.create).toHaveBeenCalledWith({
