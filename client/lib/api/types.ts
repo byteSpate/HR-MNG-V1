@@ -2729,10 +2729,8 @@ export type OpportunityStatus = "ONGOING" | "WON" | "LOST" | "CANCELLED"
  * in the past tense — "Lost, at Negotiation".
  */
 export type OpportunityStage =
+  // Shared by both tracks. A Software Opportunity starts at REQUIREMENT_RECEIVED.
   | "REQUIREMENT_RECEIVED"
-  | "SOLUTION_DESIGN"
-  | "OEM_PRICING"
-  | "QUOTATION_SUBMITTED"
   | "NEGOTIATION"
   | "AWAITING_DECISION"
   // Software Development stages (spec 2026-09-28 §2.4). `lib/api/sales/stages.ts`
@@ -2742,6 +2740,13 @@ export type OpportunityStage =
   | "SRS_SENT"
   | "PROPOSAL_SUBMITTED"
   | "PROPOSAL_REVISION"
+  // Networking stages (spec 2026-09-30), in order.
+  | "ASSIGNED_QUALIFIED"
+  | "DISCOVERY_DESIGN"
+  | "TECHNICAL_VALIDATION"
+  | "COMMERCIAL_NEGOTIATION"
+  | "CUSTOMER_PROCUREMENT"
+  | "PO_RECEIVED"
 
 export interface OpportunityLineSummary {
   id: string

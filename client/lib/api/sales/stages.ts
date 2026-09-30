@@ -6,7 +6,8 @@ import type { OpportunityStage, SalesTrack } from "../types"
  * which stage fits which track — this copy only decides which to offer.
  */
 export const NETWORKING_STAGES: OpportunityStage[] = [
-  "REQUIREMENT_RECEIVED", "SOLUTION_DESIGN", "OEM_PRICING", "QUOTATION_SUBMITTED", "NEGOTIATION", "AWAITING_DECISION",
+  "ASSIGNED_QUALIFIED", "DISCOVERY_DESIGN", "TECHNICAL_VALIDATION",
+  "COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED",
 ]
 
 export const SOFTWARE_STAGES: OpportunityStage[] = [
