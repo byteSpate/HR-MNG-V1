@@ -120,7 +120,37 @@ test("calls a Software Opportunity's lines Modules, and a Networking one's Produ
   } as Partial<ProjectSummary>))
   assert.match(software(), />Modules delivered</)
   assert.match(software({ lines: [] }), /The Opportunity has no modules yet\./)
-  assert.match(software({ lines: [line({ id: "m1", done: { at: "x", byName: null } })] }), /1 of 1 modules done/)
+  assert.match(software({ lines: [line({ id: "m1", done: { at: "x", byName: null } })] }), /1 of 1 module done/)
   assert.match(html(summary()), />Products delivered</)
   assert.match(html(summary({ lines: [] })), /The Opportunity has no products yet\./)
+})
+
+test("says 'No finish date' once, without a second 'Finish date Not set' beside it", () => {
+  const none = html(summary({ dueOn: null, daysLeft: null } as Partial<ProjectSummary>))
+  assert.match(none, /No finish date/)
+  assert.doesNotMatch(none, /Finish date\s*(<!-- -->)?\s*Not set/)
+  assert.doesNotMatch(none, /Not set<\/span>/)
+  // With a date, the date is shown next to the days left, as before.
+  assert.match(html(summary()), /Finish date 05\/10\/2026/)
+})
+
+test("says 1 task and 1 product, not 1 tasks and 1 products", () => {
+  const one = html(summary({
+    progress: { done: 1, total: 1, percent: 100 },
+    openTaskCount: 1,
+    lines: [line({ id: "p1", done: null })],
+  } as Partial<ProjectSummary>))
+  assert.match(one, /1 of 1 task done \(100%\)/)
+  assert.match(one, />1 open task</)
+  assert.match(one, /0 of 1 product done/)
+  assert.doesNotMatch(one, /1 open tasks|1 of 1 tasks|1 of 1 products/)
+  // And the plural is still a plural.
+  const many = html(summary({
+    progress: { done: 1, total: 2, percent: 50 },
+    openTaskCount: 2,
+    lines: [line({ id: "p1", done: null }), line({ id: "p2", done: null })],
+  } as Partial<ProjectSummary>))
+  assert.match(many, /1 of 2 tasks done \(50%\)/)
+  assert.match(many, />2 open tasks</)
+  assert.match(many, /0 of 2 products done/)
 })
