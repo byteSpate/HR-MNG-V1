@@ -4,7 +4,7 @@ import { RiAlertLine } from "@remixicon/react"
 
 import type { ProjectSummary } from "@/lib/api/types"
 import {
-  dayText, daysLeftText, HEALTH_LABEL, HEALTH_TONE, linesDone, nextMilestone, quietText,
+  countText, dayText, daysLeftText, HEALTH_LABEL, HEALTH_TONE, linesDone, nextMilestone, quietText,
 } from "@/lib/project-overview"
 import { TONE } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
@@ -50,7 +50,9 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
   const quiet = quietText(project.quietDays)
   const next = nextMilestone(project.milestones)
   const { done, total } = linesDone(project.lines)
-  const noun = project.opportunity.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products"
+  const isSoftware = project.opportunity.track === "SOFTWARE_DEVELOPMENT"
+  const noun = isSoftware ? "Modules" : "Products"
+  const oneNoun = isSoftware ? "module" : "product"
   const log = project.latestLog
 
   return (
@@ -79,21 +81,22 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
             >
               {daysLeftText(project.daysLeft, project.status)}
             </span>
-            <span className={`text-[12px] ${TONE.muted}`}>Finish date {dayText(project.dueOn)}</span>
+            {/* With no date the days-left words already say "No finish date". */}
+            {project.dueOn ? <span className={`text-[12px] ${TONE.muted}`}>Finish date {dayText(project.dueOn)}</span> : null}
           </div>
           <div className="mt-3">
             {project.progress ? (
               <>
                 <Bar percent={project.progress.percent} label="Tasks done" />
                 <div className={`mt-1.5 text-[12.5px] ${TONE.muted}`}>
-                  {project.progress.done} of {project.progress.total} tasks done ({project.progress.percent}%)
+                  {project.progress.done} of {countText(project.progress.total, "task")} done ({project.progress.percent}%)
                 </div>
               </>
             ) : (
               <div className={`text-[12.5px] ${TONE.muted}`}>No tasks yet, so there is no progress to show.</div>
             )}
           </div>
-          <div className="mt-2 text-[12.5px]">{project.openTaskCount} open tasks</div>
+          <div className="mt-2 text-[12.5px]">{countText(project.openTaskCount, "open task")}</div>
         </Panel>
 
         <Panel>
@@ -155,7 +158,7 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
             <>
               <Bar percent={Math.round((done / total) * 100)} label={`${noun} delivered`} />
               <div className="mt-1.5 text-[12.5px]">
-                {done} of {total} {noun.toLowerCase()} done
+                {done} of {countText(total, oneNoun)} done
               </div>
             </>
           )}

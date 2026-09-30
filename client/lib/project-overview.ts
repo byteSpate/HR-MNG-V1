@@ -42,6 +42,23 @@ export function dayText(value: string | null): string {
   return `${day}/${month}/${year}`
 }
 
+/**
+ * The finish date shown under "7 days left", or null when there is none. With
+ * no date the line above already says "No finish date", so a second "Not set"
+ * under it would only repeat it.
+ */
+export function finishDateLine(dueOn: string | null): string | null {
+  return dueOn ? dayText(dueOn) : null
+}
+
+/**
+ * A count with its noun in step: "1 task", "0 tasks", "2 tasks". Easy English
+ * reads "1 tasks" as a mistake. Pass the plural when it is not just an s.
+ */
+export function countText(n: number, one: string, many: string = `${one}s`): string {
+  return `${n} ${n === 1 ? one : many}`
+}
+
 /** The earliest open milestone with a date, then open ones with no date in their order. Null when none is open. */
 export function nextMilestone<T extends { doneAt: string | null; dueOn: string | null; order: number }>(list: T[]): T | null {
   const open = list.filter((m) => m.doneAt === null)

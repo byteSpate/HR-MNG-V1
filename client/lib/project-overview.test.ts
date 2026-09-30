@@ -2,9 +2,27 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
-  dayText, daysLeftText, filterByHealth, linesDone, listEmptyState, nextMilestone,
+  countText, dayText, daysLeftText, filterByHealth, finishDateLine, linesDone, listEmptyState, nextMilestone,
   overviewScope, overviewStats, progressText, quietText,
 } from "./project-overview"
+
+test("puts the noun in step with the number: 1 task, 0 tasks, 2 tasks", () => {
+  assert.equal(countText(1, "task"), "1 task")
+  assert.equal(countText(0, "task"), "0 tasks")
+  assert.equal(countText(2, "task"), "2 tasks")
+  assert.equal(countText(1, "open task"), "1 open task")
+  assert.equal(countText(3, "open task"), "3 open tasks")
+  // A noun that does not just add an s can say its plural.
+  assert.equal(countText(1, "person", "people"), "1 person")
+  assert.equal(countText(2, "person", "people"), "2 people")
+})
+
+test("shows the finish date under the days left only when there is one", () => {
+  // "No finish date" already says it, so a second "Not set" under it is noise.
+  assert.equal(finishDateLine(null), null)
+  assert.equal(finishDateLine("2026-10-05"), "05/10/2026")
+  assert.equal(finishDateLine("2026-10-05T00:00:00.000Z"), "05/10/2026")
+})
 
 test("says days left in easy words, late ones as late", () => {
   assert.equal(daysLeftText(7, "IN_PROGRESS"), "7 days left")
