@@ -21,9 +21,12 @@ import {
   listSalesAccounts,
   listSalesEligibleEmployees,
   setVisitingCard,
+  updateAccountProfile,
 } from "@/lib/api/sales/accounts"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { customAdds, draftProblem, type CustomRow } from "@/lib/account-profile"
+import { CustomQnaEditor } from "@/components/sales/accounts/custom-qna-editor"
 import type { CreateSalesAccountBody, SalesAccountSummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import {
@@ -145,6 +148,8 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   // Held until the account is saved: the picture needs the new account's id.
   const [cardFile, setCardFile] = useState<File | null>(null)
+  // The account's own questions. Held until the account is saved, like the card.
+  const [qnaRows, setQnaRows] = useState<CustomRow[]>([])
 
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const canCreate = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
@@ -190,6 +195,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
     setAddress("")
     setAssigneeIds([])
     setCardFile(null)
+    setQnaRows([])
     setFormError(null)
   }
 
@@ -199,26 +205,47 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   }
 
   const createMutation = useMutation({
-    // Two calls, because a picture goes as a file and the account as JSON. The
-    // account comes first: if the card then fails, the account still exists and
-    // the person is told, in words, where to add the card instead. Never the
-    // other way round, which would upload a picture for an account that failed.
-    mutationFn: async ({ body, card }: { body: CreateSalesAccountBody; card: File | null }) => {
+    // Three calls, because a picture goes as a file and the account and its
+    // questions as JSON. The account comes first: if the card or the
+    // questions then fail, the account still exists and the person is told, in
+    // words, where to add them instead. Never the other way round, which would
+    // save extras for an account that failed.
+    mutationFn: async ({
+      body,
+      card,
+      qna,
+    }: {
+      body: CreateSalesAccountBody
+      card: File | null
+      qna: ReturnType<typeof customAdds>
+    }) => {
       const created = await createSalesAccount(accessToken!, body)
-      if (!card) return { created, cardProblem: null as string | null }
-      try {
-        await setVisitingCard(accessToken!, created.id, card)
-        return { created, cardProblem: null as string | null }
-      } catch (err) {
-        return { created, cardProblem: toMessage(err) }
+      const problems: string[] = []
+      if (card) {
+        try {
+          await setVisitingCard(accessToken!, created.id, card)
+        } catch (err) {
+          problems.push(`The visiting card did not upload. ${toMessage(err)}`)
+        }
       }
+      if (qna) {
+        try {
+          await updateAccountProfile(accessToken!, created.id, qna)
+        } catch (err) {
+          problems.push(`Your own questions were not saved. ${toMessage(err)}`)
+        }
+      }
+      return { created, problems }
     },
-    onSuccess: ({ created, cardProblem }) => {
+    onSuccess: ({ created, problems }) => {
       setCreateOpen(false)
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts"] })
       queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
-      if (cardProblem) {
-        toast.warning(`${created.name} was created, but the visiting card did not upload. ${cardProblem} Open the account and add the card there.`, { duration: 9000 })
+      if (problems.length > 0) {
+        toast.warning(
+          `${created.name} was created, but something was not saved. ${problems.join(" ")} Open the account and add it there.`,
+          { duration: 9000 },
+        )
       }
     },
     onError: (err) => {
@@ -238,6 +265,12 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
       return
     }
 
+    const rowProblem = draftProblem({ custom: qnaRows })
+    if (rowProblem) {
+      setFormError(rowProblem)
+      return
+    }
+
     createMutation.mutate({
       body: {
         name: name.trim(),
@@ -248,6 +281,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
         assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
       },
       card: cardFile,
+      qna: customAdds(qnaRows),
     })
   }
 
@@ -415,6 +449,19 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                 help="A photo or scan of the customer's visiting card. You can also add or change it later on the account page."
               >
                 <VisitingCardPicker file={cardFile} onChange={setCardFile} disabled={createMutation.isPending} />
+              </Field>
+
+              <Field
+                label="Your own questions"
+                hint="Optional."
+                help="Add a question and its answer about this company, like who the CTO is. The ready-made questions are on the account page."
+              >
+                <CustomQnaEditor
+                  rows={qnaRows}
+                  onChange={setQnaRows}
+                  idPrefix="sa-create-qna"
+                  disabled={createMutation.isPending}
+                />
               </Field>
 
               {employees.length > 0 ? (
