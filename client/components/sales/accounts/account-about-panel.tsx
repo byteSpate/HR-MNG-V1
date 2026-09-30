@@ -15,7 +15,6 @@ import type { SalesAccountSummary } from "@/lib/api/types"
 import { TONE } from "@/components/dashboard/record-kit"
 import { ACCOUNT_STATUS_LABEL } from "@/components/sales/shared/sales-shared"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
-import { VisitingCardPanel } from "@/components/sales/accounts/visiting-card-panel"
 import { CompanyProfilePanel } from "@/components/sales/accounts/company-profile-panel"
 
 /**
@@ -40,9 +39,8 @@ export function AccountAboutPanel({ account }: { account: SalesAccountSummary })
 
   return (
     <div className="grid gap-4">
-      {/* The facts on the left, the card beside them from `lg` up. On a narrow
-          screen the card sits under the facts, before the Company profile. */}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+      {/* The visiting card is not here. It holds the contact details of the
+          person the team met, so it lives on the Contacts tab. */}
       <Panel>
       <PanelHeading title="About" />
       <dl className="grid grid-cols-1 gap-x-6 gap-y-3.5 text-[13px] sm:grid-cols-2">
@@ -59,8 +57,6 @@ export function AccountAboutPanel({ account }: { account: SalesAccountSummary })
         ))}
       </dl>
       </Panel>
-      <VisitingCardPanel account={account} />
-      </div>
 
       <CompanyProfilePanel accountId={account.id} />
     </div>

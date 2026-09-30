@@ -9,10 +9,28 @@ import type {
   ExchangeRateInput,
   PayrollAdjustment,
   PayrollRun,
+  PayrollSettings,
   Payslip,
   SalaryStructure,
   SalaryStructureInput,
 } from "./types"
+
+// ── settings ──────────────────────────────────────────────────────────────
+
+export function getPayrollSettings(accessToken: string): Promise<PayrollSettings> {
+  return apiFetch<PayrollSettings>("/api/payroll/settings", { accessToken })
+}
+
+export function updatePayrollSettings(
+  accessToken: string,
+  input: Partial<PayrollSettings>
+): Promise<PayrollSettings> {
+  return apiFetch<PayrollSettings>("/api/payroll/settings", {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(input),
+  })
+}
 
 // ── exchange rates ────────────────────────────────────────────────────────
 

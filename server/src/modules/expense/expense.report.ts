@@ -57,6 +57,17 @@ export interface ExpenseReportRow {
   receipts: number
   /** The payslip that reimbursed it, when one has. */
   paidOn: string | null
+  /** The day the claim was sent, which can be long after `expenseDate`. */
+  submittedOn: string
+  /**
+   * The rate frozen when the claim was approved, and the amount it gives in
+   * BDT. Both null until then, and for a BDT claim there is nothing to convert.
+   */
+  fxRateToBdt: string | null
+  amountBdt: string | null
+  /** When somebody approved or rejected it, and what they wrote. */
+  reviewedOn: string | null
+  reviewNote: string | null
 }
 
 export interface ExpenseReport {
@@ -184,6 +195,16 @@ export async function getExpenseReport(
       travelTo: claim.travelTo,
       receipts: claim._count.attachments,
       paidOn: claim.payslip?.payslipNo ?? null,
+      submittedOn: claim.createdAt.toISOString().slice(0, 10),
+      // A BDT claim has nothing to convert. A foreign one has a rate only
+      // once it is approved, so a pending claim shows none rather than a guess.
+      fxRateToBdt: currency !== "BDT" && claim.fxRateToBdt ? claim.fxRateToBdt.toFixed(6) : null,
+      amountBdt:
+        currency !== "BDT" && claim.fxRateToBdt
+          ? claim.amount.times(claim.fxRateToBdt).toFixed(2)
+          : null,
+      reviewedOn: claim.reviewedAt ? claim.reviewedAt.toISOString().slice(0, 10) : null,
+      reviewNote: claim.reviewNote ?? null,
     }
   })
 
@@ -232,6 +253,11 @@ const HEADERS = [
   "Status",
   "Receipts",
   "ReimbursedOn",
+  "SentOn",
+  "RateToBdt",
+  "AmountBdt",
+  "ReviewedOn",
+  "ReviewNote",
 ] as const
 
 export function reportToCsv(report: ExpenseReport): string {
@@ -252,6 +278,11 @@ export function reportToCsv(report: ExpenseReport): string {
       r.status,
       String(r.receipts),
       r.paidOn ?? "",
+      r.submittedOn,
+      r.fxRateToBdt ?? "",
+      r.amountBdt ?? "",
+      r.reviewedOn ?? "",
+      r.reviewNote ?? "",
     ])
   )
 }

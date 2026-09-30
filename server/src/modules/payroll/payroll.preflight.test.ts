@@ -4,6 +4,7 @@ vi.mock("../../config/prisma", () => ({
   default: {
     employee: { findMany: vi.fn() },
     exchangeRate: { findMany: vi.fn() },
+    payrollSetting: { findUnique: vi.fn(async () => null) },
   },
 }))
 
@@ -132,6 +133,15 @@ describe("blocker 2 — unapproved attendance", () => {
 
   it("clears once nobody has pending approval", async () => {
     vi.mocked(getMonthlySummary).mockResolvedValue([summaryFor({ pendingApproval: 0 })])
+    const report = await preflight(7, 2026)
+    expect(report.blockers.map((b) => b.code)).not.toContain("UNAPPROVED_ATTENDANCE")
+  })
+})
+
+describe("blocker 2 when loss of pay is switched off", () => {
+  it("does not block on unapproved attendance, because it cannot change any payslip", async () => {
+    vi.mocked(prisma.payrollSetting.findUnique).mockResolvedValueOnce({ deductLossOfPay: false } as never)
+    vi.mocked(getMonthlySummary).mockResolvedValue([summaryFor({ pendingApproval: 4 })])
     const report = await preflight(7, 2026)
     expect(report.blockers.map((b) => b.code)).not.toContain("UNAPPROVED_ATTENDANCE")
   })
