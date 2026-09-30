@@ -98,7 +98,9 @@ function CardImage({
 }
 
 /**
- * The "Visiting card" panel on an account's About tab.
+ * The "Visiting card" panel on an account's Contacts tab. The card holds the
+ * contact details of the person the team met, so it sits with the contacts. It
+ * belongs to the account and is not tied to any one contact person.
  *
  * Everyone who can open the account sees the card. The people who can edit the
  * account (its owner, its collaborators and a Sales Admin, the same rule as the

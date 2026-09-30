@@ -218,7 +218,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts"] })
       queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
       if (cardProblem) {
-        toast.warning(`${created.name} was created, but the visiting card did not upload. ${cardProblem} Open the account and add the card there.`, { duration: 9000 })
+        toast.warning(`${created.name} was created, but the visiting card did not upload. ${cardProblem} Open the account, go to its Contacts tab and add the card there.`, { duration: 9000 })
       }
     },
     onError: (err) => {
@@ -412,7 +412,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
               <Field
                 label="Visiting card"
                 hint="Optional."
-                help="A photo or scan of the customer's visiting card. You can also add or change it later on the account page."
+                help="A photo or scan of the customer's visiting card. You can also add or change it later on the account's Contacts tab."
               >
                 <VisitingCardPicker file={cardFile} onChange={setCardFile} disabled={createMutation.isPending} />
               </Field>
