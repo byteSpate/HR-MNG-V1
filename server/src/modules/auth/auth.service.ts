@@ -3,7 +3,7 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { Role, type EmploymentStatus, type SalesRole } from "../../generated/prisma/client"
 import { effectiveSalesRole } from "../sales/sales.eligibility"
-import { generateOpaqueToken, hashPassword, hashToken, signAccessToken, toPublicUser, verifyPassword } from "./auth.utils"
+import { generateOpaqueToken, hashPassword, hashToken, refreshLifetimeMs, signAccessToken, toPublicUser, verifyPassword } from "./auth.utils"
 import { sendPasswordResetEmail } from "./mailer"
 import { sendPasswordChangedEmail } from "../notification/notification.mailer"
 import type { PublicUser } from "./auth.types"
@@ -27,11 +27,7 @@ type UserRow = {
 const STAFF_ROLES: Role[] = [Role.EMPLOYEE, Role.REPORTING_MANAGER]
 
 function refreshExpiryDate(): Date {
-  const match = /^(\d+)([smhd])$/.exec(env.JWT_REFRESH_EXPIRY)
-  const amount = match ? Number(match[1]) : 7
-  const unit = match ? match[2] : "d"
-  const msPerUnit = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[unit] ?? 86_400_000
-  return new Date(Date.now() + amount * msPerUnit)
+  return new Date(Date.now() + refreshLifetimeMs())
 }
 
 /**

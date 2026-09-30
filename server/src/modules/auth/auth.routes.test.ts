@@ -145,3 +145,38 @@ describe("POST /api/auth/change-password", () => {
     expect(res.headers["set-cookie"]?.[0]).toContain("refreshToken=new-refresh")
   })
 })
+
+describe("the refresh cookie lives as long as the refresh token", () => {
+  // A cookie with no lifetime is a session cookie: the browser drops it when it
+  // closes, and the person is signed out although the server would still accept
+  // the token for days.
+  const cookieOf = (res: request.Response) => String(res.headers["set-cookie"]?.[0] ?? "")
+
+  it("carries a Max-Age and an Expires on sign-in", async () => {
+    vi.mocked(authService.loginAdmin).mockResolvedValue({ accessToken: "a", refreshToken: "r", user: publicUser })
+    const res = await request(app).post("/api/auth/login").send({ email: "a@b.com", password: "secret123" })
+    expect(cookieOf(res)).toMatch(/Max-Age=604800/)
+    expect(cookieOf(res)).toMatch(/Expires=/)
+  })
+
+  it("is renewed with the same lifetime on every refresh, so it slides while the person keeps coming back", async () => {
+    vi.mocked(authService.refresh).mockResolvedValue({ accessToken: "a", refreshToken: "r2", user: publicUser })
+    const res = await request(app).post("/api/auth/refresh").set("Cookie", "refreshToken=old")
+    expect(cookieOf(res)).toMatch(/Max-Age=604800/)
+  })
+
+  it("stays HttpOnly and SameSite=Lax", async () => {
+    vi.mocked(authService.loginAdmin).mockResolvedValue({ accessToken: "a", refreshToken: "r", user: publicUser })
+    const res = await request(app).post("/api/auth/login").send({ email: "a@b.com", password: "secret123" })
+    expect(cookieOf(res)).toMatch(/HttpOnly/)
+    expect(cookieOf(res)).toMatch(/SameSite=Lax/)
+  })
+
+  it("is cleared on sign-out by expiring it, not by a new long-lived one", async () => {
+    vi.mocked(authService.logout).mockResolvedValue(undefined)
+    const res = await request(app).post("/api/auth/logout").set("Cookie", "refreshToken=some-token")
+    expect(cookieOf(res)).toMatch(/refreshToken=;/)
+    expect(cookieOf(res)).toMatch(/Expires=Thu, 01 Jan 1970/)
+    expect(cookieOf(res)).not.toMatch(/Max-Age=604800/)
+  })
+})
