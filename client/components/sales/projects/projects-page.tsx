@@ -17,7 +17,8 @@ import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { ProjectListRow, SalesTrack } from "@/lib/api/types"
 import {
-  dayText, daysLeftText, HEALTH_LABEL, HEALTH_TONE, overviewStats, quietText, type ProjectHealth,
+  dayText, daysLeftText, filterByHealth, HEALTH_LABEL, HEALTH_TONE, listEmptyState,
+  overviewScope, overviewStats, quietText, type ProjectHealth,
 } from "@/lib/project-overview"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, TONE } from "@/components/dashboard/record-kit"
@@ -123,14 +124,15 @@ export function ProjectsPage() {
   })
 
   const isFiltered = status !== "" || track !== "" || health !== ""
+  const empty = listEmptyState(isFiltered)
 
   // Counted from the rows on the table, so a tile always agrees with it. The
   // server sends at most 200, and the tiles say so at that point.
   const loaded = useMemo(() => query.data ?? [], [query.data])
-  const projects = useMemo(() => (health ? loaded.filter((p) => p.health === health) : loaded), [loaded, health])
+  const projects = useMemo(() => filterByHealth(loaded, health), [loaded, health])
   const stats = useMemo<SalesStat[]>(() => {
     const c = overviewStats(projects)
-    const scope = loaded.length >= 200 ? "In the first 200 loaded" : "On this list"
+    const scope = overviewScope(loaded.length)
     return [
       { label: "Active", value: String(c.active), sub: `Work is moving. ${scope}.`, icon: RiPlayCircleLine },
       { label: "Late", value: String(c.late), sub: "Past a date they owed", icon: RiAlarmWarningLine },
@@ -201,13 +203,9 @@ export function ProjectsPage() {
         isLoading={query.isPending}
         isError={query.isError}
         onRetry={() => query.refetch()}
-        emptyTitle={isFiltered ? "No Projects match these filters" : "No Projects yet"}
-        emptyBody={
-          isFiltered
-            ? "Try a different filter, or All."
-            : "A Project starts from a Won Opportunity, on its Project tab."
-        }
-        emptyAction={isFiltered ? "Clear the filter" : undefined}
+        emptyTitle={empty.title}
+        emptyBody={empty.body}
+        emptyAction={empty.action ?? undefined}
         onEmptyAction={() => {
           setStatus("")
           setTrack("")

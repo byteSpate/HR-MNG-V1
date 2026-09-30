@@ -59,6 +59,38 @@ export function linesDone(lines: Array<{ done: unknown }>): { done: number; tota
   return { done: lines.filter((l) => l.done !== null).length, total: lines.length }
 }
 
+/** The most rows the server ever sends for a Projects list. */
+export const PROJECTS_ROW_CAP = 200
+
+/**
+ * What the count tiles are counting. Once the list is at the server's 200-row
+ * cap the tiles say so, rather than presenting a count as the whole picture.
+ */
+export function overviewScope(loaded: number): string {
+  return loaded >= PROJECTS_ROW_CAP ? "In the first 200 loaded" : "On this list"
+}
+
+/**
+ * The empty table's own words. A filter that matched nothing says so and
+ * offers a way out; an empty workspace does not, because there is nothing to
+ * clear.
+ */
+export function listEmptyState(isFiltered: boolean): { title: string; body: string; action: string | null } {
+  return isFiltered
+    ? { title: "No Projects match these filters", body: "Try a different filter, or All.", action: "Clear the filter" }
+    : { title: "No Projects yet", body: "A Project starts from a Won Opportunity, on its Project tab.", action: null }
+}
+
+/**
+ * The Health filter, worked out on the rows already loaded, because health is
+ * worked out per Project from its tasks and is not a column the server can
+ * filter on. A Project with no health (finished, cancelled, not started) never
+ * matches: it is not "On track", it is unsaid.
+ */
+export function filterByHealth<T extends { health: string | null }>(list: T[], health: string): T[] {
+  return health ? list.filter((p) => p.health === health) : list
+}
+
 /**
  * The five count tiles on the Projects page. Counted from the rows on the
  * page, so a tile always agrees with the table. "Due this week" is 0 to 7 days

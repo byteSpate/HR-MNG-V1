@@ -1,7 +1,10 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { dayText, daysLeftText, linesDone, nextMilestone, overviewStats, quietText } from "./project-overview"
+import {
+  dayText, daysLeftText, filterByHealth, linesDone, listEmptyState, nextMilestone,
+  overviewScope, overviewStats, quietText,
+} from "./project-overview"
 
 test("says days left in easy words, late ones as late", () => {
   assert.equal(daysLeftText(7, "IN_PROGRESS"), "7 days left")
@@ -62,4 +65,42 @@ test("counts Projects for the five tiles", () => {
 
 test("counts nothing for an empty list", () => {
   assert.deepEqual(overviewStats([]), { total: 0, active: 0, late: 0, atRisk: 0, blocked: 0, dueThisWeek: 0 })
+})
+
+test("says the tiles count the whole list only until the 200 row cap (Review Focus 5)", () => {
+  assert.equal(overviewScope(0), "On this list")
+  assert.equal(overviewScope(199), "On this list")
+  assert.equal(overviewScope(200), "In the first 200 loaded")
+  assert.equal(overviewScope(431), "In the first 200 loaded")
+})
+
+test("offers a way out when a filter matched nothing, and not when there is no Project at all (Review Focus 5)", () => {
+  assert.deepEqual(listEmptyState(true), {
+    title: "No Projects match these filters",
+    body: "Try a different filter, or All.",
+    action: "Clear the filter",
+  })
+  assert.deepEqual(listEmptyState(false), {
+    title: "No Projects yet",
+    body: "A Project starts from a Won Opportunity, on its Project tab.",
+    action: null,
+  })
+})
+
+test("filters the loaded rows by health, so a health with no Project gives an empty table (Review Focus 5)", () => {
+  const rows = [
+    { id: "a", health: "LATE" as const, status: "IN_PROGRESS", daysLeft: -1 },
+    { id: "b", health: "ON_TRACK" as const, status: "IN_PROGRESS", daysLeft: 20 },
+    { id: "c", health: null, status: "COMPLETED", daysLeft: null },
+  ]
+  assert.deepEqual(filterByHealth(rows, "").map((r) => r.id), ["a", "b", "c"])
+  assert.deepEqual(filterByHealth(rows, "LATE").map((r) => r.id), ["a"])
+  // A health nobody has: an empty table, not the whole list.
+  assert.deepEqual(filterByHealth(rows, "AT_RISK"), [])
+  // And the tiles follow the filter, so they read zero rather than the whole list.
+  assert.deepEqual(overviewStats(filterByHealth(rows, "AT_RISK")), {
+    total: 0, active: 0, late: 0, atRisk: 0, blocked: 0, dueThisWeek: 0,
+  })
+  // A Project with no health is not "On track": it never matches a health filter.
+  assert.deepEqual(filterByHealth(rows, "ON_TRACK").map((r) => r.id), ["b"])
 })
