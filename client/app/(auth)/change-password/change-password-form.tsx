@@ -7,7 +7,7 @@ import { RiKey2Line, RiLockLine, RiShieldKeyholeLine } from "@remixicon/react"
 import { changePassword as apiChangePassword } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
-import { ROLE_ROUTES } from "@/lib/auth/role-routes"
+import { nextFromSearch, postLoginPath } from "@/lib/auth/return-to"
 import { PasswordInput } from "@/components/ui/password-input"
 import { cn } from "@/lib/utils"
 
@@ -55,7 +55,8 @@ export function ChangePasswordForm() {
     try {
       const result = await apiChangePassword(accessToken, currentPassword, newPassword)
       setSession(result.accessToken, result.user)
-      router.push(ROLE_ROUTES[result.user.role])
+      // The page they were heading to before this screen, if their role may open it.
+      router.push(postLoginPath(result.user, nextFromSearch(window.location.search)))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
     } finally {

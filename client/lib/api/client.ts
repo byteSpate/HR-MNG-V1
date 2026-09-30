@@ -1,3 +1,5 @@
+import { renewSession } from "@/lib/auth/token-refresh"
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -35,6 +37,34 @@ function toApiError(status: number, body: unknown): ApiError {
   )
 }
 
+/**
+ * Sends a request, and if the server says the access token has expired, gets a
+ * new one with the refresh cookie and sends it once more.
+ *
+ * The access token lives only in memory and is short-lived, so it expires
+ * while a page is open. Without this every request after that failed with a
+ * 401 until the person reloaded the page. It is tried once: a request refused
+ * for a real reason must not loop, and a call that carries no token (a wrong
+ * password) has nothing to renew. If the session cannot be renewed the first
+ * answer is returned untouched, and the session provider hears about it and
+ * sends the person to sign in.
+ */
+async function requestWithRenewal(
+  path: string,
+  rest: RequestInit,
+  accessToken: string | undefined,
+  headersFor: (token: string | undefined) => HeadersInit
+): Promise<Response> {
+  const send = (token: string | undefined) =>
+    fetch(`${resolveBase(path)}${path}`, { ...rest, credentials: "include", headers: headersFor(token) })
+
+  const first = await send(accessToken)
+  if (first.status !== 401 || !accessToken) return first
+
+  const renewed = await renewSession()
+  return renewed.ok ? send(renewed.accessToken) : first
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit & { accessToken?: string } = {}
@@ -46,15 +76,11 @@ export async function apiFetch<T>(
   // the server can't parse, since the boundary would be missing.
   const isFormData = typeof FormData !== "undefined" && rest.body instanceof FormData
 
-  const res = await fetch(`${resolveBase(path)}${path}`, {
-    ...rest,
-    credentials: "include",
-    headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-    },
-  })
+  const res = await requestWithRenewal(path, rest, accessToken, (token) => ({
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  }))
 
   const body = await res.json().catch(() => ({}))
 
@@ -75,14 +101,10 @@ export async function apiFetchBlob(
 ): Promise<{ blob: Blob; headers: Headers }> {
   const { accessToken, headers, ...rest } = options
 
-  const res = await fetch(`${resolveBase(path)}${path}`, {
-    ...rest,
-    credentials: "include",
-    headers: {
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-    },
-  })
+  const res = await requestWithRenewal(path, rest, accessToken, (token) => ({
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  }))
 
   if (!res.ok) {
     // An error response is still JSON, even on a route that normally returns

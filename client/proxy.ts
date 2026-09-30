@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { loginPathFor } from "@/lib/auth/return-to"
+
 // /sales is a role-agnostic route group (entered by salesRole, not by Role),
 // but the cookie-presence check below does not care — it only needs a prefix
 // to guard.
@@ -13,8 +15,10 @@ export function proxy(request: NextRequest) {
 
   const hasRefreshCookie = request.cookies.has("refreshToken")
   if (!hasRefreshCookie) {
-    const loginUrl = new URL("/login", request.url)
-    return NextResponse.redirect(loginUrl)
+    // Remember the page that was asked for, so signing in can bring the person
+    // to it instead of to their dashboard. Only a path on this site is kept.
+    const { pathname, search } = request.nextUrl
+    return NextResponse.redirect(new URL(loginPathFor(pathname, search), request.url))
   }
 
   return NextResponse.next()

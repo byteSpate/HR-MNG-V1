@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { navGroups } from "@/components/sales/shared/nav-config"
 import { ROLE_ROUTES } from "@/lib/auth/role-routes"
+import { loginPathFor } from "@/lib/auth/return-to"
 import { useSession } from "@/lib/auth/session-context"
 import { getSalesDashboard } from "@/lib/api/sales/dashboard"
 import { salesKeys } from "@/lib/api/sales/keys"
@@ -36,6 +37,7 @@ import { salesKeys } from "@/lib/api/sales/keys"
 export function SalesShell({ children }: { children: React.ReactNode }) {
   const { accessToken, user, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
   const canEnter = !!user && (user.role === "SUPER_ADMIN" || !!user.salesRole)
 
   // Two ways to be in the wrong place, needing different destinations. The
@@ -62,8 +64,8 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (wrongRole && user) router.replace(ROLE_ROUTES[user.role])
-    else if (signedOut) router.replace("/login")
-  }, [wrongRole, signedOut, user, router])
+    else if (signedOut) router.replace(loginPathFor(pathname, window.location.search))
+  }, [wrongRole, signedOut, user, router, pathname])
 
   if (wrongRole || signedOut) {
     return null

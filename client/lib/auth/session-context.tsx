@@ -2,8 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 
-import { logout as apiLogout, refreshSession } from "@/lib/api/auth"
+import { logout as apiLogout } from "@/lib/api/auth"
 import type { PublicUser } from "@/lib/api/types"
+import { onSessionRenewed, renewSession } from "@/lib/auth/token-refresh"
 
 type SessionStatus = "loading" | "authenticated" | "unauthenticated"
 
@@ -24,19 +25,34 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
-    refreshSession()
-      .then((res) => {
-        if (cancelled) return
-        setAccessToken(res.accessToken)
-        setUser(res.user)
+
+    // Every renewal that settles the question, wherever it started: the one
+    // below when the page opens, or one an API call made when its token had
+    // expired. A new session replaces the token in memory. "Signed out" means
+    // the refresh cookie is spent or gone, so the session ends here and the
+    // guards send the person to sign in.
+    const stop = onSessionRenewed((result) => {
+      if (cancelled) return
+      if (result.ok) {
+        setAccessToken(result.accessToken)
+        setUser(result.user)
         setStatus("authenticated")
-      })
-      .catch(() => {
-        if (cancelled) return
+      } else {
+        setAccessToken(null)
+        setUser(null)
         setStatus("unauthenticated")
-      })
+      }
+    })
+
+    // Shares one renewal with any other caller, so a page that mounts twice
+    // (React does this in development) does not spend the cookie twice.
+    renewSession().then((result) => {
+      if (!cancelled && !result.ok) setStatus("unauthenticated")
+    })
+
     return () => {
       cancelled = true
+      stop()
     }
   }, [])
 
