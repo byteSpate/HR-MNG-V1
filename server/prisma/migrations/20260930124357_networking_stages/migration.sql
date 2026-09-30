@@ -19,7 +19,9 @@ ALTER TABLE "Opportunity" ALTER COLUMN "stage" TYPE "OpportunityStage_new" USING
     ELSE "stage"::text
   END
 )::"OpportunityStage_new";
-ALTER TABLE "Opportunity" ALTER COLUMN "stage" SET DEFAULT 'REQUIREMENT_RECEIVED';
+-- The default is not put back. The first stage depends on the track, so one
+-- default would be wrong for one of them. Every Opportunity is created by
+-- createOpportunity or the Hand-over, and both name their stage.
 
 ALTER TABLE "OpportunityDocumentLink" ALTER COLUMN "stage" TYPE "OpportunityStage_new" USING (
   CASE "stage"::text

@@ -2856,8 +2856,12 @@ model Opportunity {
   /// quarter's achievement is counted on.
   closedAt     DateTime?
 
-  stage          OpportunityStage @default(REQUIREMENT_RECEIVED)
-  /// Stamped on every stage change, so "stuck in OEM Pricing for 40 days" is
+  /// No default on purpose. The first stage depends on the track (Networking
+  /// starts at ASSIGNED_QUALIFIED, Software at REQUIREMENT_RECEIVED), so a
+  /// single default would be wrong for one of them. `firstStageFor` in
+  /// sales.stages.ts is the one place that says which.
+  stage          OpportunityStage
+  /// Stamped on every stage change, so "stuck in Technical Validation for 40 days" is
   /// one indexed comparison rather than a scan of the audit log.
   stageChangedAt DateTime         @default(now())
 
