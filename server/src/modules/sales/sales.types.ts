@@ -525,6 +525,14 @@ export interface ProjectSummary {
   people: Array<{ employeeId: string; fullName: string; open: number; late: number }>
   /** Null when there is nothing honest to say: finished, cancelled, or not yet started. */
   health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  /** Days to the finish date, negative once it has passed. Null with no date or a finished Project. */
+  daysLeft: number | null
+  /** Whole days of silence on a Project in progress that has gone quiet, else null. */
+  quietDays: number | null
+  /** The newest of: a Daily Log line, a task change, a milestone or product tick, a change to the Project. */
+  lastUpdateAt: string
+  /** The Daily Log line written most recently, or null. `text` is null on a day marked as no work. */
+  latestLog: { date: string; byName: string | null; text: string | null; noWork: boolean } | null
   openTaskCount: number
   lines: ProjectLineSummary[]
   canManage: boolean
@@ -564,6 +572,18 @@ export interface ProjectListRow {
   dueOn: string | null
   milestonesDone: number
   milestonesTotal: number
+  /** On track, At risk or Late. Null when there is nothing honest to say (finished, cancelled, not started). */
+  health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  /** Null, never 0, when no task counts. */
+  progressPercent: number | null
+  openTasks: number
+  /** Open tasks whose due date has passed. */
+  lateTasks: number
+  /** Days to the finish date, negative once it has passed. Null with no date or a finished Project. */
+  daysLeft: number | null
+  /** Whole days of silence on a Project in progress that has gone quiet, else null. */
+  quietDays: number | null
+  lastUpdateAt: string
 }
 
 // ── Company profile (spec 2026-09-30) ──────────────────────────────────────
