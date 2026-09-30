@@ -564,4 +564,16 @@ export interface ProjectListRow {
   dueOn: string | null
   milestonesDone: number
   milestonesTotal: number
+  /** On track, At risk or Late. Null when there is nothing honest to say (finished, cancelled, not started). */
+  health: "ON_TRACK" | "AT_RISK" | "LATE" | null
+  /** Null, never 0, when no task counts. */
+  progressPercent: number | null
+  openTasks: number
+  /** Open tasks whose due date has passed. */
+  lateTasks: number
+  /** Days to the finish date, negative once it has passed. Null with no date or a finished Project. */
+  daysLeft: number | null
+  /** Whole days of silence on a Project in progress that has gone quiet, else null. */
+  quietDays: number | null
+  lastUpdateAt: string
 }

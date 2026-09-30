@@ -5,6 +5,9 @@ import { writeAudit } from "../../../utils/audit"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
 import { dealCostLineWhere } from "../../dealMoney/dealMoney.cost"
+import { officeDateOf } from "../../attendance/attendance.time"
+import { healthOf, progressOf } from "./project.numbers"
+import { daysLeftOf, lastUpdateOf, quietDaysOf } from "./project.overview"
 import { isFinance } from "../../receivables/receivables.access"
 import { dec, ZERO } from "../../payroll/payroll.money"
 import { accountScopeFor, employeeIdFor, isSalesAdmin, OPPORTUNITY_NOT_VISIBLE } from "../sales.access"
@@ -126,22 +129,45 @@ export async function listProjects(query: ListProjectQuery, actor: AccessTokenPa
       ...(query.track ? { opportunity: { track: query.track } } : {}),
     },
     select: {
-      id: true, serial: true, name: true, status: true, dueOn: true,
+      id: true, serial: true, name: true, status: true, dueOn: true, updatedAt: true,
       salesAccount: { select: { name: true } },
       opportunity: { select: { serial: true, track: true } },
       manager: { select: { fullName: true } },
       milestones: { select: { doneAt: true } },
+      // Enough to work out health, progress, open and late tasks, and the last update.
+      tasks: { select: { status: true, dueOn: true, updatedAt: true } },
+      lineTicks: { select: { doneAt: true } },
+      dailyLogs: { orderBy: { updatedAt: "desc" }, take: 1, select: { updatedAt: true } },
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 200,
   })
-  return rows.map((r) => ({
-    id: r.id, serial: r.serial, name: r.name, salesAccountName: r.salesAccount.name,
-    opportunitySerial: r.opportunity.serial, track: r.opportunity.track, managerName: r.manager.fullName, status: r.status,
-    dueOn: r.dueOn ? r.dueOn.toISOString().slice(0, 10) : null,
-    milestonesDone: r.milestones.filter((m) => m.doneAt !== null).length,
-    milestonesTotal: r.milestones.length,
-  }))
+  const now = new Date()
+  const today = officeDateOf(now)
+  return rows.map((r) => {
+    const pending = r.tasks.filter((t) => t.status === "PENDING")
+    const lastUpdate = lastUpdateOf({
+      projectUpdatedAt: r.updatedAt,
+      logs: r.dailyLogs.map((l) => l.updatedAt),
+      tasks: r.tasks.map((t) => t.updatedAt),
+      milestonesDoneAt: r.milestones.map((m) => m.doneAt),
+      lineTicks: r.lineTicks.map((t) => t.doneAt),
+    })
+    return {
+      id: r.id, serial: r.serial, name: r.name, salesAccountName: r.salesAccount.name,
+      opportunitySerial: r.opportunity.serial, track: r.opportunity.track, managerName: r.manager.fullName, status: r.status,
+      dueOn: r.dueOn ? r.dueOn.toISOString().slice(0, 10) : null,
+      milestonesDone: r.milestones.filter((m) => m.doneAt !== null).length,
+      milestonesTotal: r.milestones.length,
+      health: healthOf(r, r.tasks, today),
+      progressPercent: progressOf(r.tasks)?.percent ?? null,
+      openTasks: pending.length,
+      lateTasks: pending.filter((t) => t.dueOn.getTime() < today.getTime()).length,
+      daysLeft: daysLeftOf(r.dueOn, r.status, today),
+      quietDays: quietDaysOf(r.status, lastUpdate, now),
+      lastUpdateAt: lastUpdate.toISOString(),
+    }
+  })
 }
 
 const toDay = (v: string | null | undefined) => (v ? new Date(`${v}T00:00:00.000Z`) : null)

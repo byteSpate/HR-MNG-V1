@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("../../../config/prisma", () => ({
   default: {
@@ -228,19 +228,64 @@ describe("listProjects", () => {
     expect(where).not.toHaveProperty("opportunity")
   })
 
-  it("counts done and total milestones per row", async () => {
-    vi.mocked(prisma.project.findMany).mockResolvedValue([
-      {
-        id: "prj-1", serial: "BS-PRJ-00001", name: "Core refresh", status: "IN_PROGRESS", dueOn: new Date("2026-10-05T00:00:00.000Z"),
-        salesAccount: { name: "Rising Group" }, opportunity: { serial: "BS-OPP-00001" }, manager: { fullName: "Rahim" },
-        milestones: [{ doneAt: new Date("2026-09-30T00:00:00.000Z") }, { doneAt: null }],
-      },
-    ] as any)
-    const rows = await listProjects({}, USER)
-    expect(rows[0]).toEqual({
-      id: "prj-1", serial: "BS-PRJ-00001", name: "Core refresh",
-      salesAccountName: "Rising Group", opportunitySerial: "BS-OPP-00001", managerName: "Rahim",
-      status: "IN_PROGRESS", dueOn: "2026-10-05", milestonesDone: 1, milestonesTotal: 2,
+  describe("the row an admin reads", () => {
+    beforeEach(() => vi.setSystemTime(NOW))
+    afterEach(() => vi.useRealTimers())
+
+    const listRow = (o: Record<string, unknown> = {}) => ({
+      id: "prj-1", serial: "BS-PRJ-00001", name: "Core refresh", status: "IN_PROGRESS",
+      dueOn: new Date("2026-10-05T00:00:00.000Z"), updatedAt: new Date("2026-09-27T10:00:00.000Z"),
+      salesAccount: { name: "Rising Group" }, opportunity: { serial: "BS-OPP-00001", track: "NETWORKING" },
+      manager: { fullName: "Rahim" }, milestones: [], tasks: [], lineTicks: [], dailyLogs: [], ...o,
+    })
+    const one = async (o: Record<string, unknown> = {}) => {
+      vi.mocked(prisma.project.findMany).mockResolvedValue([listRow(o)] as any)
+      return (await listProjects({}, USER))[0]
+    }
+    const task = (status: string, dueOn: string) => ({
+      status, dueOn: new Date(`${dueOn}T00:00:00.000Z`), updatedAt: new Date("2026-09-27T10:00:00.000Z"),
+    })
+
+    it("counts done and total milestones per row", async () => {
+      const row = await one({
+        milestones: [{ doneAt: new Date("2026-09-26T00:00:00.000Z") }, { doneAt: null }],
+      })
+      expect(row).toMatchObject({
+        id: "prj-1", serial: "BS-PRJ-00001", name: "Core refresh",
+        salesAccountName: "Rising Group", opportunitySerial: "BS-OPP-00001", managerName: "Rahim",
+        status: "IN_PROGRESS", dueOn: "2026-10-05", milestonesDone: 1, milestonesTotal: 2,
+      })
+    })
+
+    it("works out health, progress and open and late tasks from the Project's tasks", async () => {
+      const row = await one({
+        tasks: [task("PENDING", "2026-09-20"), task("DONE", "2026-09-10"), task("CANCELLED", "2026-09-10")],
+      })
+      // A cancelled task was never part of the job, so 1 of 2 is done.
+      expect(row).toMatchObject({ health: "LATE", progressPercent: 50, openTasks: 1, lateTasks: 1 })
+    })
+
+    it("shows no progress rather than 0% when no task counts, and no health for a finished Project (Review Focus 1)", async () => {
+      expect(await one()).toMatchObject({ progressPercent: null, health: "ON_TRACK", openTasks: 0, lateTasks: 0 })
+      expect(await one({ status: "COMPLETED", tasks: [task("CANCELLED", "2026-09-10")] }))
+        .toMatchObject({ progressPercent: null, health: null })
+    })
+
+    it("counts the days to the finish date, and goes negative when it has passed", async () => {
+      expect((await one()).daysLeft).toBe(7)
+      expect((await one({ dueOn: new Date("2026-09-25T00:00:00.000Z") })).daysLeft).toBe(-3)
+      expect((await one({ dueOn: null })).daysLeft).toBeNull()
+      expect((await one({ status: "COMPLETED" })).daysLeft).toBeNull()
+    })
+
+    it("marks a Project in progress that has been silent for 7 days, and only that one (Review Focus 2)", async () => {
+      const silent = { updatedAt: new Date("2026-09-19T10:00:00.000Z") }
+      expect(await one(silent)).toMatchObject({ quietDays: 9, lastUpdateAt: "2026-09-19T10:00:00.000Z" })
+      // A Daily Log line, a task change or a product tick since then is an update.
+      expect((await one({ ...silent, dailyLogs: [{ updatedAt: new Date("2026-09-27T09:00:00.000Z") }] })).quietDays).toBeNull()
+      expect((await one({ ...silent, tasks: [task("PENDING", "2026-10-01")] })).quietDays).toBeNull()
+      expect((await one({ ...silent, lineTicks: [{ doneAt: new Date("2026-09-27T09:00:00.000Z") }] })).quietDays).toBeNull()
+      expect((await one({ ...silent, status: "BLOCKED" })).quietDays).toBeNull()
     })
   })
 })
