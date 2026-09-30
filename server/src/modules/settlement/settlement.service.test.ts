@@ -19,6 +19,7 @@ vi.mock("../../config/prisma", () => {
       expenseClaim: { findMany: vi.fn() },
       exchangeRate: { findMany: vi.fn() },
       payrollRun: { findUnique: vi.fn() },
+      payrollSetting: { findUnique: vi.fn(async () => null) },
       $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
       __tx: tx,
     },

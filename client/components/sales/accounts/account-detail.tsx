@@ -33,6 +33,7 @@ import { RecordTabs } from "@/components/sales/shared/record-tabs"
 import { CommentPanel } from "@/components/sales/shared/comment-panel"
 import { ContactsPanel } from "@/components/sales/accounts/contacts-panel"
 import { AccountAboutPanel } from "@/components/sales/accounts/account-about-panel"
+import { VisitingCardPanel } from "@/components/sales/accounts/visiting-card-panel"
 import { AccountOpportunitiesPanel } from "@/components/sales/accounts/account-opportunities-panel"
 import { AccountProjectsPanel } from "@/components/sales/accounts/account-projects-panel"
 import { AccountHistoryPanel } from "@/components/sales/accounts/account-history-panel"
@@ -211,7 +212,20 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
                 />
               ),
             },
-            { value: "contacts", icon: RiContactsLine, label: "Contacts", content: <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
+            {
+              value: "contacts",
+              icon: RiContactsLine,
+              label: "Contacts",
+              // The visiting card is the contact details of the person the team
+              // met, so it sits with the contacts. It belongs to the account, not
+              // to one contact person: there is no link between the two.
+              content: (
+                <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+                  <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
+                  <VisitingCardPanel account={accountQuery.data} />
+                </div>
+              ),
+            },
             { value: "opportunities", icon: RiFlashlightLine, label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
             { value: "projects", icon: RiFolder3Line, label: "Projects", content: <AccountProjectsPanel accountId={accountId} /> },
             {

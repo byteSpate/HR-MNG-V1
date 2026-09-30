@@ -225,14 +225,14 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
         try {
           await setVisitingCard(accessToken!, created.id, card)
         } catch (err) {
-          problems.push(`The visiting card did not upload. ${toMessage(err)}`)
+          problems.push(`The visiting card did not upload. ${toMessage(err)} Add it on the account's Contacts tab.`)
         }
       }
       if (qna) {
         try {
           await updateAccountProfile(accessToken!, created.id, qna)
         } catch (err) {
-          problems.push(`Your own questions were not saved. ${toMessage(err)}`)
+          problems.push(`Your own questions were not saved. ${toMessage(err)} Add them with Edit profile on the account's About tab.`)
         }
       }
       return { created, problems }
@@ -242,8 +242,10 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
       queryClient.invalidateQueries({ queryKey: ["sales", "accounts"] })
       queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
       if (problems.length > 0) {
+        // Each problem already says where to fix it, because the card and the
+        // own questions live on different tabs.
         toast.warning(
-          `${created.name} was created, but something was not saved. ${problems.join(" ")} Open the account and add it there.`,
+          `${created.name} was created, but something was not saved. ${problems.join(" ")}`,
           { duration: 9000 },
         )
       }
@@ -446,7 +448,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
               <Field
                 label="Visiting card"
                 hint="Optional."
-                help="A photo or scan of the customer's visiting card. You can also add or change it later on the account page."
+                help="A photo or scan of the customer's visiting card. You can also add or change it later on the account's Contacts tab."
               >
                 <VisitingCardPicker file={cardFile} onChange={setCardFile} disabled={createMutation.isPending} />
               </Field>
