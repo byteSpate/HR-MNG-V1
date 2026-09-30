@@ -49,6 +49,13 @@ test("counts the products ticked done", () => {
   assert.deepEqual(linesDone([]), { done: 0, total: 0 })
 })
 
+test("counts a line with no done at all as not done, never as ticked", () => {
+  // The type says `done: unknown`, so a missing key is a legal value. Reading
+  // it as done would show a Project as fully delivered that delivered nothing.
+  assert.deepEqual(linesDone([{ done: undefined }]), { done: 0, total: 1 })
+  assert.deepEqual(linesDone([{ done: { at: "x" } }, { done: undefined }]), { done: 1, total: 2 })
+})
+
 test("counts Projects for the five tiles", () => {
   const stats = overviewStats([
     { status: "IN_PROGRESS", health: "ON_TRACK", daysLeft: 30 },

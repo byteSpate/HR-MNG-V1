@@ -54,9 +54,9 @@ export function nextMilestone<T extends { doneAt: string | null; dueOn: string |
   })[0]
 }
 
-/** How many of the products (or modules) are ticked done. */
+/** How many of the products (or modules) are ticked done. A line with no `done` at all is not ticked. */
 export function linesDone(lines: Array<{ done: unknown }>): { done: number; total: number } {
-  return { done: lines.filter((l) => l.done !== null).length, total: lines.length }
+  return { done: lines.filter((l) => l.done != null).length, total: lines.length }
 }
 
 /** The most rows the server ever sends for a Projects list. */
