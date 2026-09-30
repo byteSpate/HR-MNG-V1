@@ -3,6 +3,7 @@
 import {
   RiBookOpenLine,
   RiBox3Line,
+  RiDashboardLine,
   RiInformationLine,
   RiPulseLine,
   RiTaskLine,
@@ -17,6 +18,7 @@ import type { ProjectSummary } from "@/lib/api/types"
 import { TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
+import { ProjectOverviewTab } from "@/components/sales/projects/project-overview-tab"
 import { ProjectDetailsTab } from "@/components/sales/projects/project-details-tab"
 import { ProjectProductsTab } from "@/components/sales/projects/project-products-tab"
 import { ProjectTasksTab } from "@/components/sales/projects/project-tasks-tab"
@@ -25,13 +27,14 @@ import { ProjectStatusTab } from "@/components/sales/projects/project-status-tab
 import { PROJECT_STATUS_LABEL, PROJECT_STATUS_TONE } from "@/components/sales/projects/project-shared"
 import { Skeleton } from "@/components/ui/skeleton"
 
-type ProjectTab = "details" | "products" | "status" | "tasks" | "daily-log"
+type ProjectTab = "overview" | "details" | "products" | "status" | "tasks" | "daily-log"
 
 /**
- * The Project page (spec 2026-09-28 §1.7, §1.9): a header card, then Details,
- * Products and Status. Every write on this page returns the whole
- * `ProjectSummary`, so the open Project is set from the response rather than
- * refetched; the lists and the Opportunity's page still need invalidating.
+ * The Project page (spec 2026-09-28 §1.7, §1.9, and 2026-09-30): a header
+ * card, then Overview, Details, Products and Status. Every write on this page
+ * returns the whole `ProjectSummary`, so the open Project is set from the
+ * response rather than refetched; the lists and the Opportunity's page still
+ * need invalidating.
  */
 export function ProjectDetail({ projectId, initialTab }: { projectId: string; initialTab: string | null }) {
   const { accessToken, status: sessionStatus } = useSession()
@@ -105,6 +108,7 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
           <RecordTabs<ProjectTab>
             initialTab={initialTab}
             tabs={[
+              { value: "overview", icon: RiDashboardLine, label: "Overview", content: <ProjectOverviewTab project={project} /> },
               { value: "details", icon: RiInformationLine, label: "Details", content: <ProjectDetailsTab project={project} onSaved={onSaved} /> },
               { value: "products", icon: RiBox3Line, label: project.opportunity.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <ProjectProductsTab project={project} onSaved={onSaved} /> },
               { value: "status", icon: RiPulseLine, label: "Status", content: <ProjectStatusTab project={project} onSaved={onSaved} /> },

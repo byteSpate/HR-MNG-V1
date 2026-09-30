@@ -5,6 +5,7 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import type { ProjectSummary } from "../sales.types"
 import { canManageProject, peopleOf, type ProjectRow } from "./project.access"
 import { healthOf, peopleNumbers, progressOf } from "./project.numbers"
+import { daysLeftOf, lastUpdateOf, quietDaysOf } from "./project.overview"
 
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
 const moneyOrNull = (v: MoneyInput | null | undefined) => (v == null ? null : toMoneyString(dec(v)))
@@ -33,6 +34,15 @@ export function presentProject(
     { employeeId: row.manager.id, fullName: row.manager.fullName },
     ...row.team.map((m) => ({ employeeId: m.employeeId, fullName: m.employee.fullName })),
   ].filter((p, i, all) => all.findIndex((x) => x.employeeId === p.employeeId) === i)
+  const lastUpdate = lastUpdateOf({
+    projectUpdatedAt: row.updatedAt,
+    logs: row.dailyLogs.map((l) => l.updatedAt),
+    tasks: row.tasks.map((t) => t.updatedAt),
+    milestonesDoneAt: row.milestones.map((m) => m.doneAt),
+    // Only ticks made on this Project: a line can be ticked on another one.
+    lineTicks: row.opportunity.lines.flatMap((l) => l.projectTicks.filter((t) => t.projectId === row.id).map((t) => t.doneAt)),
+  })
+  const log = row.dailyLogs[0]
   return {
     id: row.id, serial: row.serial, name: row.name,
     opportunity: { id: row.opportunity.id, serial: row.opportunity.serial, name: row.opportunity.name, track: row.opportunity.track },
@@ -54,6 +64,12 @@ export function presentProject(
     progress: progressOf(row.tasks),
     people: peopleNumbers(row.tasks, everyone, today),
     health: healthOf(row, row.tasks, today),
+    daysLeft: daysLeftOf(row.dueOn, row.status, today),
+    quietDays: quietDaysOf(row.status, lastUpdate, new Date()),
+    lastUpdateAt: lastUpdate.toISOString(),
+    latestLog: log
+      ? { date: log.date.toISOString().slice(0, 10), byName: log.weeklyReport.employee.fullName, text: log.text, noWork: log.noWork }
+      : null,
     openTaskCount: row.tasks.filter((t) => t.status === "PENDING").length,
     lines: row.opportunity.lines.map((l) => {
       const tick = l.projectTicks.find((t) => t.projectId === row.id)
