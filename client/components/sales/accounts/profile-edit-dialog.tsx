@@ -150,7 +150,12 @@ function ProfileForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">
+      {/* The dialog itself stops at 85svh and scrolls past that. This list is capped
+          at that height minus the title, the footer, the error line and the
+          padding (about 14.6rem, so 16rem to be safe). Capped at a plain 60vh it
+          was taller than the room left, and a phone showed two scrollbars, one
+          for the dialog and one for this list. */}
+      <div className="max-h-[calc(85svh-16rem)] min-h-40 space-y-6 overflow-y-auto pr-1">
         {profile.groups.map((group) => (
           <section key={group.key} className="space-y-4">
             <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>{group.title}</h3>
