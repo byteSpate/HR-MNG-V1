@@ -15,10 +15,6 @@ export function loginStaff(employeeId: string, password: string): Promise<LoginR
   })
 }
 
-export function refreshSession(): Promise<LoginResponse> {
-  return apiFetch<LoginResponse>("/api/auth/refresh", { method: "POST" })
-}
-
 export function logout(): Promise<void> {
   return apiFetch<void>("/api/auth/logout", { method: "POST" })
 }

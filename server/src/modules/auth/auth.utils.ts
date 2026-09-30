@@ -25,6 +25,22 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
   return jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload
 }
 
+/**
+ * How long a refresh token lives, in milliseconds, from a setting like "7d".
+ *
+ * One place, used for the token's own expiry in the database and for the
+ * browser cookie that carries it. Two separate readings of the same setting
+ * once disagreed: the database kept the token for seven days while the cookie
+ * had no lifetime at all and was dropped when the browser closed.
+ */
+export function refreshLifetimeMs(setting: string = env.JWT_REFRESH_EXPIRY): number {
+  const match = /^(\d+)([smhd])$/.exec(setting)
+  const amount = match ? Number(match[1]) : 7
+  const unit = match ? match[2] : "d"
+  const msPerUnit = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[unit] ?? 86_400_000
+  return amount * msPerUnit
+}
+
 export function generateOpaqueToken(): string {
   return randomBytes(40).toString("hex")
 }

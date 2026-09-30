@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { loginStaff } from "@/lib/api/auth"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
-import { ROLE_ROUTES } from "@/lib/auth/role-routes"
+import { nextFromSearch, postLoginPath } from "@/lib/auth/return-to"
 import { RiIdCardLine, RiLockLine } from "@remixicon/react"
 
 import { cn } from "@/lib/utils"
@@ -31,7 +31,10 @@ export function StaffLoginForm() {
       // arrive pasted with stray whitespace, which the server matches exactly.
       const { accessToken, user } = await loginStaff(employeeId.trim(), password)
       setSession(accessToken, user)
-      router.push(user.mustChangePassword ? "/change-password" : ROLE_ROUTES[user.role])
+      // The page they first asked for, if their role may open it; otherwise
+      // their own dashboard. A temporary password is replaced first, and the
+      // remembered page is carried through that screen.
+      router.push(postLoginPath(user, nextFromSearch(window.location.search)))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
     } finally {

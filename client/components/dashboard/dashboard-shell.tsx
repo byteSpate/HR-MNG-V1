@@ -1,6 +1,12 @@
 "use client"
 
+import { useEffect } from "react"
+import { usePathname, useRouter } from "next/navigation"
+
 import { cn } from "@/lib/utils"
+import { ROLE_ROUTES } from "@/lib/auth/role-routes"
+import { guardDecision, roleMayOpen } from "@/lib/auth/return-to"
+import { useSession } from "@/lib/auth/session-context"
 import { Header } from "@/components/dashboard/header"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
@@ -46,6 +52,27 @@ export function DashboardShell({
   // derivable rather than another prop each layout has to remember to pass —
   // true for all five role dashboards, not for the Sales Hub above.
   const profileHref = profileHrefOverride ?? `${rootHref}/profile`
+
+  // The five role areas guard themselves. `proxy.ts` only sees that a cookie
+  // exists, so a spent cookie and a wrong role are caught here. The Sales Hub is
+  // not one of them: it is entered by sales role, and its own shell decides.
+  const { user, status } = useSession()
+  const router = useRouter()
+  const pathname = usePathname()
+  const isRoleArea = Object.values(ROLE_ROUTES).includes(rootHref)
+  const blocked =
+    isRoleArea &&
+    (status === "unauthenticated" || (status === "authenticated" && !!user && !roleMayOpen(user, rootHref)))
+
+  useEffect(() => {
+    if (!isRoleArea) return
+    const decision = guardDecision({ status, user, area: rootHref, pathname, search: window.location.search })
+    if (decision.action === "go") router.replace(decision.to)
+  }, [isRoleArea, status, user, rootHref, pathname, router])
+
+  // Nothing is drawn while the person is being sent elsewhere, so an employee
+  // never sees an admin page's frame flash up on the way out.
+  if (blocked) return null
 
   return (
     // The primitive's default width is 16rem; ours is 236px. It sets the
