@@ -2593,6 +2593,7 @@ model SalesAccount {
   opportunities  Opportunity[]
   meetings       SalesMeeting[]
   tasks          SalesTask[]
+  answers        SalesAccountAnswer[]
   weeklyNotes    WeeklyAccountNote[]
   /// The delivery work on this account's Won Opportunities (ADR 0005).
   projects       Project[]
@@ -2620,6 +2621,31 @@ model SalesAccountAssignment {
 
   @@unique([salesAccountId, employeeId])
   @@index([employeeId])
+}
+
+/// One answer on an account's Company profile (spec 2026-09-30). A ready-made
+/// question has a `questionKey`; the wording lives in
+/// account.profile.questions.ts, so it is never stored twice. An account's own
+/// question has `customQuestion` instead. Exactly one of the two is set.
+model SalesAccountAnswer {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  questionKey    String?
+  customQuestion String?
+  /// YES_NO: "YES" or "NO". NUMBER: digits. CHOICE: one of the options. TEXT: the text.
+  answer         String
+  /// A Yes/No follow-up such as "Where are they?". Kept only when the answer is YES.
+  detail         String?
+  /// The user id that wrote it last.
+  updatedBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  /// Postgres allows many NULLs in a unique index, so an account can hold many
+  /// of its own questions while each ready-made key appears once.
+  @@unique([salesAccountId, questionKey])
+  @@index([salesAccountId])
 }
 
 enum SalesContactStatus {

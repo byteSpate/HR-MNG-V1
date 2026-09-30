@@ -11,6 +11,8 @@ import {
   listSalesEligibleEmployees,
 } from "./account.service"
 import { removeVisitingCard, setVisitingCard } from "./account.card"
+import { getAccountProfile, updateAccountProfile } from "./account.profile"
+import { updateAccountProfileSchema } from "./account.profile.validators"
 import { addContact, listContacts, setContactStatus, setPrimaryContact, updateContact } from "./contact.service"
 import { getAccountTimeline, logCommunication } from "./communication.service"
 import {
@@ -53,6 +55,31 @@ export async function getSalesAccountHandler(
 ) {
   try {
     return res.status(200).json(await getSalesAccount(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getAccountProfileHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await getAccountProfile(req.params.id, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function updateAccountProfileHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const body = updateAccountProfileSchema.parse(req.body)
+    return res.status(200).json(await updateAccountProfile(req.params.id, body, req.user!))
   } catch (err) {
     return next(err)
   }
