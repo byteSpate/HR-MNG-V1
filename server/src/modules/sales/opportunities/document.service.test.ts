@@ -20,7 +20,7 @@ const ADMIN = { sub: "user-3", role: "EMPLOYEE", salesRole: "SALES_ADMIN" } as a
 const NOW = new Date("2026-09-28T10:00:00.000Z")
 const link = (o: Record<string, unknown> = {}) => ({
   id: "doc-1", opportunityId: "opp-1", name: "SRS v1", url: "https://drive.google.com/x",
-  stage: "SOLUTION_DESIGN", createdBy: "user-1", createdAt: NOW, ...o,
+  stage: "DISCOVERY_DESIGN", createdBy: "user-1", createdAt: NOW, ...o,
 })
 
 beforeEach(() => {
@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
   vi.mocked(prisma.user.findMany).mockResolvedValue([{ id: "user-1", displayName: null, email: "a@x", employee: { fullName: "Rahim" } }] as any)
-  vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ id: "opp-1", salesAccountId: "acc-1", ownerEmployeeId: "emp-1", stage: "SOLUTION_DESIGN" } as any)
+  vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ id: "opp-1", salesAccountId: "acc-1", ownerEmployeeId: "emp-1", stage: "DISCOVERY_DESIGN" } as any)
   vi.mocked(prisma.opportunityDocumentLink.create).mockImplementation((async (args: any) => link(args.data)) as any)
 })
 
@@ -48,7 +48,7 @@ describe("document links", () => {
   it("defaults the stage to the Opportunity's current stage", async () => {
     await addDocumentLink("opp-1", { name: "SRS v1", url: "https://drive.google.com/x" }, USER)
     expect(prisma.opportunityDocumentLink.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ stage: "SOLUTION_DESIGN", createdBy: "user-1" }),
+      data: expect.objectContaining({ stage: "DISCOVERY_DESIGN", createdBy: "user-1" }),
     }))
     expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
   })
@@ -68,7 +68,7 @@ describe("document links", () => {
   it("lists a link with its author's name and no remove for someone else", async () => {
     vi.mocked(prisma.opportunityDocumentLink.findMany).mockResolvedValue([link()] as any)
     const rows = await listDocumentLinks("opp-1", OTHER)
-    expect(rows[0]).toMatchObject({ id: "doc-1", stage: "SOLUTION_DESIGN", createdByName: "Rahim", canRemove: false })
+    expect(rows[0]).toMatchObject({ id: "doc-1", stage: "DISCOVERY_DESIGN", createdByName: "Rahim", canRemove: false })
   })
 
   it("lets a Sales Admin remove anyone else's link", async () => {

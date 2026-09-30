@@ -64,7 +64,7 @@ const DEAL = {
   offeredOn: day("2026-09-05"),
   amount: "100.00",
   status: "ONGOING",
-  stage: "QUOTATION_SUBMITTED",
+  stage: "COMMERCIAL_NEGOTIATION",
   expectedCloseDate: day("2026-10-15"),
   lostToPartner: null,
   lostToAmount: null,

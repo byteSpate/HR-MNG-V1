@@ -9,6 +9,7 @@ import {
   createSalesAccountHandler,
   getAccountHistoryHandler,
   getAccountMarginHandler,
+  getAccountProfileHandler,
   getAccountTimelineHandler,
   getSalesAccountHandler,
   listContactsHandler,
@@ -19,6 +20,7 @@ import {
   setVisitingCardHandler,
   setContactStatusHandler,
   setPrimaryContactHandler,
+  updateAccountProfileHandler,
   updateContactHandler,
   updateSalesAccountHandler,
 } from "./account.controller"
@@ -40,6 +42,12 @@ router.patch("/accounts/:id", requireAuth, requireSales(), updateSalesAccountHan
 // gate as editing the account applies inside the service.
 router.put("/accounts/:id/visiting-card", requireAuth, requireSales(), cardUpload, setVisitingCardHandler)
 router.delete("/accounts/:id/visiting-card", requireAuth, requireSales(), removeVisitingCardHandler)
+
+// The Company profile (spec 2026-09-30). Anyone who can see the account can
+// read it. Changing it has the same write gate as editing the account, applied
+// inside the service.
+router.get("/accounts/:id/profile", requireAuth, requireSales(), getAccountProfileHandler)
+router.patch("/accounts/:id/profile", requireAuth, requireSales(), updateAccountProfileHandler)
 
 // Who the owner/collaborator pickers on the create form may offer — Sales
 // Admin only, same guard as creating the account itself.

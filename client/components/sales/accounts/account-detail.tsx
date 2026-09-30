@@ -16,6 +16,7 @@ import {
   RiHistoryLine,
   RiInformationLine,
   RiMapPinLine,
+  RiMessage2Line,
   RiTaskLine,
 } from "@remixicon/react"
 
@@ -29,8 +30,10 @@ import { Button } from "@/components/ui/button"
 import { AccountEditDialog } from "@/components/sales/accounts/account-edit-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
+import { CommentPanel } from "@/components/sales/shared/comment-panel"
 import { ContactsPanel } from "@/components/sales/accounts/contacts-panel"
 import { AccountAboutPanel } from "@/components/sales/accounts/account-about-panel"
+import { VisitingCardPanel } from "@/components/sales/accounts/visiting-card-panel"
 import { AccountOpportunitiesPanel } from "@/components/sales/accounts/account-opportunities-panel"
 import { AccountProjectsPanel } from "@/components/sales/accounts/account-projects-panel"
 import { AccountHistoryPanel } from "@/components/sales/accounts/account-history-panel"
@@ -189,8 +192,40 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
         <RecordTabs
           initialTab={initialTab}
           tabs={[
-            { value: "about", icon: RiInformationLine, label: "About", content: <AccountAboutPanel account={accountQuery.data} isSalesAdmin={isSalesAdmin} /> },
-            { value: "contacts", icon: RiContactsLine, label: "Contacts", content: <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
+            { value: "about", icon: RiInformationLine, label: "About", content: <AccountAboutPanel account={accountQuery.data} /> },
+            {
+              value: "remarks",
+              icon: RiMessage2Line,
+              label: "Remarks",
+              // "Remarks" here and "Comments" on an Opportunity, from one
+              // component. That is the business's own vocabulary and the two
+              // labels must not be made consistent with each other.
+              content: (
+                <CommentPanel
+                  entity="SALES_ACCOUNT"
+                  entityId={accountQuery.data.id}
+                  label="Remarks"
+                  // Customer feedback is offered on an Opportunity only: it is
+                  // always about a specific Opportunity.
+                  kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
+                  canWrite={accountQuery.data.canManage}
+                />
+              ),
+            },
+            {
+              value: "contacts",
+              icon: RiContactsLine,
+              label: "Contacts",
+              // The visiting card is the contact details of the person the team
+              // met, so it sits with the contacts. It belongs to the account, not
+              // to one contact person: there is no link between the two.
+              content: (
+                <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+                  <ContactsPanel accountId={accountId} canManage={accountQuery.data.canManage} />
+                  <VisitingCardPanel account={accountQuery.data} />
+                </div>
+              ),
+            },
             { value: "opportunities", icon: RiFlashlightLine, label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
             { value: "projects", icon: RiFolder3Line, label: "Projects", content: <AccountProjectsPanel accountId={accountId} /> },
             {

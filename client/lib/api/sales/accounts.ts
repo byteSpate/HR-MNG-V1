@@ -1,6 +1,7 @@
 import { apiFetch } from "../client"
 import type {
   AccountHistory,
+  AccountProfile,
   CreateSalesAccountBody,
   CreateSalesContactBody,
   LogCommunicationBody,
@@ -12,6 +13,7 @@ import type {
   SalesAccountMargin,
   UpdateSalesAccountBody,
   UpdateSalesContactBody,
+  UpdateAccountProfileBody,
   TimelineItem,
 } from "../types"
 
@@ -162,5 +164,23 @@ export function removeVisitingCard(accessToken: string, id: string): Promise<{ v
   return apiFetch<{ visitingCardUrl: null }>(`/api/sales/accounts/${id}/visiting-card`, {
     method: "DELETE",
     accessToken,
+  })
+}
+
+/** The Company profile: the ready-made questions with their answers, and the account's own. */
+export function getAccountProfile(accessToken: string, id: string): Promise<AccountProfile> {
+  return apiFetch<AccountProfile>(`/api/sales/accounts/${id}/profile`, { accessToken })
+}
+
+/** Saves only what changed and returns the whole profile. */
+export function updateAccountProfile(
+  accessToken: string,
+  id: string,
+  body: UpdateAccountProfileBody
+): Promise<AccountProfile> {
+  return apiFetch<AccountProfile>(`/api/sales/accounts/${id}/profile`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
   })
 }

@@ -2609,6 +2609,7 @@ model SalesAccount {
   opportunities  Opportunity[]
   meetings       SalesMeeting[]
   tasks          SalesTask[]
+  answers        SalesAccountAnswer[]
   weeklyNotes    WeeklyAccountNote[]
   /// The delivery work on this account's Won Opportunities (ADR 0005).
   projects       Project[]
@@ -2636,6 +2637,31 @@ model SalesAccountAssignment {
 
   @@unique([salesAccountId, employeeId])
   @@index([employeeId])
+}
+
+/// One answer on an account's Company profile (spec 2026-09-30). A ready-made
+/// question has a `questionKey`; the wording lives in
+/// account.profile.questions.ts, so it is never stored twice. An account's own
+/// question has `customQuestion` instead. Exactly one of the two is set.
+model SalesAccountAnswer {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  questionKey    String?
+  customQuestion String?
+  /// YES_NO: "YES" or "NO". NUMBER: digits. CHOICE: one of the options. TEXT: the text.
+  answer         String
+  /// A Yes/No follow-up such as "Where are they?". Kept only when the answer is YES.
+  detail         String?
+  /// The user id that wrote it last.
+  updatedBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  /// Postgres allows many NULLs in a unique index, so an account can hold many
+  /// of its own questions while each ready-made key appears once.
+  @@unique([salesAccountId, questionKey])
+  @@index([salesAccountId])
 }
 
 enum SalesContactStatus {
@@ -2757,14 +2783,10 @@ enum OpportunityStatus {
 /// buckets, and a configurable list means last quarter's chart silently
 /// rewrites itself when somebody edits it.
 enum OpportunityStage {
+  // ── Shared by both tracks. A Software Opportunity starts at
+  // REQUIREMENT_RECEIVED. A Networking Opportunity starts at ASSIGNED_QUALIFIED.
   /// Waiting on us to start. They have said what they need; nothing worked out yet.
   REQUIREMENT_RECEIVED
-  /// Waiting on us. Sizing, topology, the HLD if one is being written.
-  SOLUTION_DESIGN
-  /// Waiting on the OEM. Price, availability, special bid. We cannot quote yet.
-  OEM_PRICING
-  /// Waiting on the customer. They have our number.
-  QUOTATION_SUBMITTED
   /// Both sides. They came back; commercial back-and-forth.
   NEGOTIATION
   /// Waiting on the customer, with nothing left for us to do but chase.
@@ -2783,6 +2805,20 @@ enum OpportunityStage {
   PROPOSAL_SUBMITTED
   /// Waiting on us. The customer asked for changes to the Proposal.
   PROPOSAL_REVISION
+  // ── Networking stages (spec 2026-09-30). In this order. Stage 4 onward joins
+  // the funnel and stamps the offer date. Won, Lost and Cancelled stay a status.
+  /// Waiting on us. The Opportunity is assigned and checked to be real.
+  ASSIGNED_QUALIFIED
+  /// Waiting on us. Finding out the need and designing the solution.
+  DISCOVERY_DESIGN
+  /// Waiting on the customer or the OEM. Checking the design works.
+  TECHNICAL_VALIDATION
+  /// Both sides. The offer is made, and the price is talked over.
+  COMMERCIAL_NEGOTIATION
+  /// Waiting on the customer. Their approval and buying steps.
+  CUSTOMER_PROCUREMENT
+  /// Nothing left to chase. The purchase order has arrived.
+  PO_RECEIVED
 }
 
 model Opportunity {
@@ -2836,8 +2872,12 @@ model Opportunity {
   /// quarter's achievement is counted on.
   closedAt     DateTime?
 
-  stage          OpportunityStage @default(REQUIREMENT_RECEIVED)
-  /// Stamped on every stage change, so "stuck in OEM Pricing for 40 days" is
+  /// No default on purpose. The first stage depends on the track (Networking
+  /// starts at ASSIGNED_QUALIFIED, Software at REQUIREMENT_RECEIVED), so a
+  /// single default would be wrong for one of them. `firstStageFor` in
+  /// sales.stages.ts is the one place that says which.
+  stage          OpportunityStage
+  /// Stamped on every stage change, so "stuck in Technical Validation for 40 days" is
   /// one indexed comparison rather than a scan of the audit log.
   stageChangedAt DateTime         @default(now())
 
@@ -2860,7 +2900,7 @@ model Opportunity {
   useCase String?
 
   /// The date we quoted, date-only at UTC midnight. Stamped when `stage`
-  /// first reaches QUOTATION_SUBMITTED, and editable afterwards, because the
+  /// first reaches COMMERCIAL_NEGOTIATION, and editable afterwards, because the
   /// real offer date is often earlier than the day somebody updated the
   /// system.
   ///

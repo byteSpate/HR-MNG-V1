@@ -21,7 +21,7 @@ import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.pr
 import { presentChanges, resolveNames } from "../accounts/history.present"
 import { createTaskIn } from "../tasks/task.service"
 import { stampOfferedOn } from "../funnel/funnel.edit"
-import { stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
+import { firstStageFor, stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
 import { ensureCustomerForAccount } from "../../customer/customer.link"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
@@ -172,7 +172,7 @@ export async function createOpportunity(body: CreateOpportunityBody, actor: Acce
         amount: body.amount === undefined ? null : dec(body.amount),
         expectedCloseDate: day(body.expectedCloseDate),
         oemAccountManager: body.oemAccountManager ?? null,
-        ownerEmployeeId: owner.id, stage: "REQUIREMENT_RECEIVED", status: "ONGOING",
+        ownerEmployeeId: owner.id, stage: firstStageFor(body.track), status: "ONGOING",
         stageChangedAt: now, lastActivityAt: now, createdBy: actor.sub,
         ...(body.meetingId ? { meetingId: body.meetingId } : {}),
       },
@@ -338,10 +338,11 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
       // Once it is in the funnel its offer date stays, and the stage goes back.
       if (current.offeredOn) throw new AppError(409, TRACK_IN_FUNNEL)
       if (current.lines.length > 0) throw new AppError(409, TRACK_LOCKED)
-      data.stage = "REQUIREMENT_RECEIVED"
+      const first = firstStageFor(body.track)
+      data.stage = first
       data.stageChangedAt = new Date()
       before.stage = current.stage
-      after.stage = "REQUIREMENT_RECEIVED"
+      after.stage = first
     }
     stage("track", body.track, current.track)
     if (body.amount !== undefined) stage("amount", body.amount === null ? null : dec(body.amount), current.amount)
@@ -372,8 +373,9 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
     }
     if (current.stage === body.stage) return presentOpportunity(current)
     const now = new Date()
-    // Reaching Quotation submitted is the moment a deal joins the funnel, and
-    // the moment its offer date is known (revision §27.2, §27.4). Only ever
+    // Reaching stage 4 (Commercial Proposal & Negotiation) or, for Software,
+    // Proposal submitted is the moment a deal joins the funnel, and the
+    // moment its offer date is known (revision §27.2, §27.4). Only ever
     // fills a blank: a deal that drops back a stage and comes forward again
     // keeps the date it was really quoted on, and a date somebody has
     // corrected by hand is never overwritten.

@@ -30,19 +30,24 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STAGE_LABEL: Record<string, string> = {
-  SOLUTION_DESIGN: "Solution design",
   REQUIREMENT_RECEIVED: "Requirement received",
-  OEM_PRICING: "OEM pricing",
-  QUOTATION_SUBMITTED: "Quotation submitted",
+  // The team's own funnel sheet calls Negotiation "Quotation Revision", and
+  // that is deliberate, so it stays.
   NEGOTIATION: "Quotation Revision",
   AWAITING_DECISION: "Awaiting decision",
-  // Software Development stages (spec §2.4). The team's own funnel sheet calls
-  // Negotiation "Quotation Revision", and that is deliberate, so it stays.
+  // Software Development stages (spec §2.4).
   REQUIREMENT_GATHERING: "Requirement gathering",
   BRD_SENT: "BRD sent",
   SRS_SENT: "SRS sent",
   PROPOSAL_SUBMITTED: "Proposal submitted",
   PROPOSAL_REVISION: "Proposal revision",
+  // Networking stages (spec 2026-09-30).
+  ASSIGNED_QUALIFIED: "Opportunity Assigned & Qualified",
+  DISCOVERY_DESIGN: "Discovery & Solution Design",
+  TECHNICAL_VALIDATION: "Technical Validation & Approval",
+  COMMERCIAL_NEGOTIATION: "Commercial Proposal & Negotiation",
+  CUSTOMER_PROCUREMENT: "Customer Approval & Procurement",
+  PO_RECEIVED: "PO Received / Closed Won",
 }
 
 const STATUS_TONE: Record<string, string> = {

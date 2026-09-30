@@ -43,7 +43,7 @@ const opportunity = (overrides: Record<string, unknown> = {}) => ({
   meetingId: null, track: "NETWORKING", name: "Core refresh",
   softwareNeeded: true, oemAccountManager: null, amount: null, currency: "BDT",
   expectedCloseDate: null, status: "ONGOING", statusReason: null, closedAt: null,
-  stage: "OEM_PRICING", stageChangedAt: NOW, offeredOn: null,
+  stage: "TECHNICAL_VALIDATION", stageChangedAt: NOW, offeredOn: null,
   nextStep: null, nextStepDueOn: null, ownerEmployeeId: OWNER.id,
   wonByEmployeeId: null, lastActivityAt: NOW, createdBy: USER.sub,
   createdAt: NOW, updatedAt: NOW, owner: OWNER, salesAccount: ACCOUNT, lines: [], project: null,

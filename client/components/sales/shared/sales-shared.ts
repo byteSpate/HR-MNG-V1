@@ -104,10 +104,7 @@ export function channelForMeta(meta: string | null): SalesChannel {
 
 /** Each stage is named for who the deal is waiting on. */
 export const STAGE_LABEL: Record<OpportunityStage, string> = {
-  SOLUTION_DESIGN: "Solution design",
   REQUIREMENT_RECEIVED: "Requirement received",
-  OEM_PRICING: "OEM pricing",
-  QUOTATION_SUBMITTED: "Quotation submitted",
   NEGOTIATION: "Quotation Revision",
   AWAITING_DECISION: "Awaiting decision",
   // Software Development stages (spec §2.4). The same words the server uses,
@@ -117,14 +114,18 @@ export const STAGE_LABEL: Record<OpportunityStage, string> = {
   SRS_SENT: "SRS sent",
   PROPOSAL_SUBMITTED: "Proposal submitted",
   PROPOSAL_REVISION: "Proposal revision",
+  // Networking stages (spec 2026-09-30).
+  ASSIGNED_QUALIFIED: "Opportunity Assigned & Qualified",
+  DISCOVERY_DESIGN: "Discovery & Solution Design",
+  TECHNICAL_VALIDATION: "Technical Validation & Approval",
+  COMMERCIAL_NEGOTIATION: "Commercial Proposal & Negotiation",
+  CUSTOMER_PROCUREMENT: "Customer Approval & Procurement",
+  PO_RECEIVED: "PO Received / Closed Won",
 }
 
 /** Who we are waiting on, which is what makes a stage worth acting on. */
 export const STAGE_WAITING_ON: Record<OpportunityStage, string> = {
-  SOLUTION_DESIGN: "Waiting on us",
   REQUIREMENT_RECEIVED: "Waiting on us to start",
-  OEM_PRICING: "Waiting on the OEM",
-  QUOTATION_SUBMITTED: "Waiting on the customer",
   NEGOTIATION: "Both sides",
   AWAITING_DECISION: "Waiting on the customer",
   REQUIREMENT_GATHERING: "Waiting on us",
@@ -132,6 +133,12 @@ export const STAGE_WAITING_ON: Record<OpportunityStage, string> = {
   SRS_SENT: "Waiting on the customer",
   PROPOSAL_SUBMITTED: "Waiting on the customer",
   PROPOSAL_REVISION: "Waiting on us",
+  ASSIGNED_QUALIFIED: "Waiting on us",
+  DISCOVERY_DESIGN: "Waiting on us",
+  TECHNICAL_VALIDATION: "Waiting on the customer or the OEM",
+  COMMERCIAL_NEGOTIATION: "Both sides",
+  CUSTOMER_PROCUREMENT: "Waiting on the customer",
+  PO_RECEIVED: "PO received. Nothing left to chase.",
 }
 
 export const OPPORTUNITY_STATUS_LABEL: Record<OpportunityStatus, string> = {
@@ -152,7 +159,7 @@ export const OPPORTUNITY_STATUS_TONE: Record<OpportunityStatus, Tone> = {
  * How a stage reads once the deal is closed.
  *
  * Past tense, and the stage is kept rather than cleared: "Lost, at
- * Negotiation" and "Lost, at OEM pricing" are different businesses, and the
+ * Negotiation" and "Lost, at stage 4" are different businesses, and the
  * second is usually a pricing problem somebody can fix. Clearing the field
  * would have thrown that away permanently.
  */
