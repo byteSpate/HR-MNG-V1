@@ -7,6 +7,10 @@ const answerValue = z.object({
 
 const question = z.string().trim().min(1, "Write the question").max(200, "Keep each question under 200 characters")
 const ownAnswer = z.string().trim().min(1, "Write the answer").max(500, "Keep each own answer under 500 characters")
+// An id that is not an id means the page is out of date, so it says to reload
+// rather than "Invalid UUID".
+const questionId = z.string().uuid("That question could not be found. Reload the page and try again.")
+const TOO_MANY = "Add up to 30 questions at a time"
 
 /**
  * Changing the Company profile. Only what changed is sent: `answers` maps a
@@ -20,9 +24,9 @@ export const updateAccountProfileSchema = z
     answers: z.record(z.string().max(60), answerValue.nullable()).optional(),
     custom: z
       .object({
-        add: z.array(z.object({ question, answer: ownAnswer })).max(30).optional(),
-        update: z.array(z.object({ id: z.string().uuid(), question, answer: ownAnswer })).max(30).optional(),
-        remove: z.array(z.string().uuid()).max(30).optional(),
+        add: z.array(z.object({ question, answer: ownAnswer })).max(30, TOO_MANY).optional(),
+        update: z.array(z.object({ id: questionId, question, answer: ownAnswer })).max(30, TOO_MANY).optional(),
+        remove: z.array(questionId).max(30, TOO_MANY).optional(),
       })
       .optional(),
   })

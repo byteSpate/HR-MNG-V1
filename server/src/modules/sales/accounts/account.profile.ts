@@ -14,6 +14,7 @@ export const MAX_CUSTOM_QUESTIONS = 30
 const CANNOT_CHANGE =
   "You can view this Sales Account, but only its owner, collaborators, or a Sales Admin can change its company profile"
 const NOT_ON_ACCOUNT = "That question is not on this account."
+const SAVED_MEANWHILE = "Someone just saved an answer to this question. Reload the page and try again."
 
 type AnswerRow = {
   id: string
@@ -112,6 +113,27 @@ export async function updateAccountProfile(
   body: UpdateAccountProfileBody,
   actor: AccessTokenPayload,
 ): Promise<AccountProfile> {
+  try {
+    await writeProfile(accountId, body, actor)
+  } catch (err) {
+    // The database allows one answer per question per account. Two saves of
+    // the same new answer at the same moment (a double click, or two people)
+    // both pass the check above and both insert; the loser lands here. Say what
+    // happened instead of "Internal server error". Nothing was half saved: the
+    // whole write is one transaction.
+    if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
+      throw new AppError(409, SAVED_MEANWHILE)
+    }
+    throw err
+  }
+  return getAccountProfile(accountId, actor)
+}
+
+async function writeProfile(
+  accountId: string,
+  body: UpdateAccountProfileBody,
+  actor: AccessTokenPayload,
+): Promise<void> {
   const employeeId = await employeeIdFor(actor)
 
   await prisma.$transaction(async (tx) => {
@@ -194,6 +216,4 @@ export async function updateAccountProfile(
       })
     }
   })
-
-  return getAccountProfile(accountId, actor)
 }

@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express"
 
+import { AppError } from "../../../middleware/errorHandler"
+
 import {
   createSalesAccount,
   updateSalesAccount,
@@ -78,8 +80,12 @@ export async function updateAccountProfileHandler(
   next: NextFunction
 ) {
   try {
-    const body = updateAccountProfileSchema.parse(req.body)
-    return res.status(200).json(await updateAccountProfile(req.params.id, body, req.user!))
+    // The refusal is the sentence alone. The shared error handler prefixes a
+    // Zod failure with its field path ("custom.add.0.question: ..."), which is
+    // not easy English for the person who reads it on this form.
+    const parsed = updateAccountProfileSchema.safeParse(req.body)
+    if (!parsed.success) throw new AppError(400, parsed.error.issues[0]?.message ?? "Check the answers and try again.")
+    return res.status(200).json(await updateAccountProfile(req.params.id, parsed.data, req.user!))
   } catch (err) {
     return next(err)
   }
