@@ -3713,3 +3713,50 @@ export interface DocumentLinkSummary {
   createdAt: string
   canRemove: boolean
 }
+
+// ── Company profile (spec 2026-09-30) ──────────────────────────────────────
+export type ProfileQuestionType = "YES_NO" | "TEXT" | "NUMBER" | "CHOICE"
+
+export interface ProfileQuestionView {
+  key: string
+  text: string
+  type: ProfileQuestionType
+  detailLabel: string | null
+  options: string[] | null
+  answer: string | null
+  detail: string | null
+  answeredByName: string | null
+  answeredAt: string | null
+}
+
+export interface ProfileGroupView {
+  key: string
+  title: string
+  questions: ProfileQuestionView[]
+}
+
+export interface CustomAnswerView {
+  id: string
+  question: string
+  answer: string
+  answeredByName: string | null
+  answeredAt: string
+}
+
+export interface AccountProfile {
+  groups: ProfileGroupView[]
+  custom: CustomAnswerView[]
+  answered: number
+  total: number
+  canManage: boolean
+}
+
+/** Only what changed. A null answer clears it. */
+export interface UpdateAccountProfileBody {
+  answers?: Record<string, { answer: string; detail?: string } | null>
+  custom?: {
+    add?: Array<{ question: string; answer: string }>
+    update?: Array<{ id: string; question: string; answer: string }>
+    remove?: string[]
+  }
+}
