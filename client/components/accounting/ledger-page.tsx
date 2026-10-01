@@ -183,7 +183,7 @@ function LedgerPageInner({ mode }: { mode: Mode }) {
                     <TableCell className="tabular-nums">{formatLedgerDate(r.date)}</TableCell>
                     <TableCell className="tabular-nums">
                       {/* Drill-down: every ledger figure reaches its journal. */}
-                      <Link href={`../journals/${r.journalId}`} className="hover:underline">
+                      <Link href={`journals/${r.journalId}`} className="hover:underline">
                         {r.journalNo}
                       </Link>
                     </TableCell>

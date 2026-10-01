@@ -44,7 +44,6 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
 
   const isFinance = !!user && FINANCE_ROLES.includes(user.role)
   const isSuperAdmin = user?.role === "SUPER_ADMIN"
-  const userId = user?.id
 
   const runQuery = useQuery({
     queryKey: ["payroll-run", runId],
@@ -173,7 +172,6 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
   const canApprove = isSuperAdmin && run.status === "SUBMITTED"
   const canDisburse = isFinance && run.status === "APPROVED"
   const canEmail = isFinance && (run.status === "APPROVED" || run.status === "DISBURSED")
-  const approvedOwnSubmission = canApprove && run.submittedBy === userId
 
   const rows: TableCell[][] = payslips.map((p) => [
     { text: p.employee?.fullName ?? "—", sub: p.employee?.employeeCode, weight: 600 },
@@ -224,7 +222,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
             <>
               <Button
                 onClick={() => approveMutation.mutate()}
-                disabled={anyPending || approvedOwnSubmission}
+                disabled={anyPending}
               >
                 Approve
               </Button>
@@ -240,14 +238,6 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
           ) : null}
         </div>
       </div>
-
-      {/* The separation-of-duties rule as visible text, not a failed request
-          the user has to interpret. */}
-      {approvedOwnSubmission ? (
-        <div className="rounded-md border border-[#F5E3C0] bg-[#FDF9F0] px-5 py-3.5 text-[12.5px] text-[#7A5B23]">
-          You submitted this run, so you cannot also approve it. Another Super Admin must review it.
-        </div>
-      ) : null}
 
       {run.rejectionNote ? (
         <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">

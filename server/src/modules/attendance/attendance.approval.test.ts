@@ -207,6 +207,11 @@ describe("who may decide — the approver rule", () => {
       statusCode: 403,
     })
   })
+
+  it("lets a Super Admin decide their own record, because nobody sits above them", async () => {
+    vi.mocked(prisma.employee.findUnique).mockResolvedValue({ id: "emp-1" } as never)
+    await expect(assertCanDecide(actor("SUPER_ADMIN"), record(null, "emp-1"))).resolves.toBeUndefined()
+  })
 })
 
 describe("approve and reject", () => {

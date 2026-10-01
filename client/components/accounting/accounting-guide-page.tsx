@@ -372,8 +372,8 @@ const MODULES: ModuleEntry[] = [
     trigger: (
       <>
         Smart Technologies bills ৳8,00,000 of firewalls bought for a Won Opportunity, plus 15% VAT.
-        Finance enters the bill against the Opportunity; a Super Admin other than the person who
-        entered it approves it, and only then does it post:
+        Finance enters the bill against the Opportunity; a Super Admin approves it, and only then
+        does it post:
       </>
     ),
     lines: [
@@ -398,8 +398,8 @@ const MODULES: ModuleEntry[] = [
         An Opportunity for firewalls is marked Won, with a supplier already picked on every product line.
         On the Opportunity&apos;s own Money section: the sales person records the customer&apos;s PO,
         Finance adds the supplier bill for ৳8,00,000 plus 15% VAT and a Super Admin approves it.
-        Finance then creates the invoice for ৳10,00,000 plus 15% VAT, and a different Super Admin
-        approves it:
+        Finance then creates the invoice for ৳10,00,000 plus 15% VAT, and a Super Admin approves
+        it:
       </>
     ),
     lines: [
@@ -433,8 +433,9 @@ const MODULES: ModuleEntry[] = [
     ],
     note: (
       <>
-        Typed by one person, dated the day the bank took it, with the statement attached, and
-        approved by someone else before it posts. Nobody approves their own entry.
+        Typed by Finance or a Super Admin, dated the day the bank took it, with the statement
+        attached, and approved by a Super Admin before it posts. A Super Admin may approve an
+        entry they typed themselves.
       </>
     ),
     also: "Journals",

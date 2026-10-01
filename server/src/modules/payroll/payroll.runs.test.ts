@@ -521,13 +521,14 @@ describe("submitRun", () => {
 })
 
 describe("approveRun", () => {
-  it("403s when the approver is the submitter", async () => {
+  it("lets a Super Admin approve a run they submitted themselves", async () => {
     vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue({
       id: "run-1",
       status: "SUBMITTED",
-      submittedBy: "finance-1",
+      submittedBy: "admin-1",
     } as never)
-    await expect(approveRun("run-1", "finance-1")).rejects.toMatchObject({ statusCode: 403 })
+    tx.payrollRun.update.mockResolvedValue({ id: "run-1", status: "APPROVED" })
+    await expect(approveRun("run-1", "admin-1")).resolves.toMatchObject({ status: "APPROVED" })
   })
 
   it("409s a run that is not SUBMITTED", async () => {

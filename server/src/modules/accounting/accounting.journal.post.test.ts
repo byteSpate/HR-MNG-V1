@@ -111,14 +111,35 @@ describe("approveJournal", () => {
     )
   })
 
-  it("403s when the approver is the creator — creator must not be approver", async () => {
+  it("lets a Super Admin approve a journal they created themselves", async () => {
     tx.journal.findUnique.mockResolvedValue({ ...pending, createdBy: "user-admin" })
 
-    await expect(approveJournal("j-1", admin)).rejects.toMatchObject({
-      statusCode: 403,
-      message: expect.stringMatching(/created/i),
-    })
+    await expect(approveJournal("j-1", admin)).resolves.toBeDefined()
 
+    expect(tx.journal.update).toHaveBeenCalled()
+  })
+
+  it("lets a Super Admin post a draft straight away, recording them as the submitter too", async () => {
+    tx.journal.findUnique.mockResolvedValue({ ...pending, status: "DRAFT" })
+
+    await expect(approveJournal("j-1", admin)).resolves.toBeDefined()
+
+    expect(tx.journal.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "POSTED",
+          approvedBy: "user-admin",
+          submittedBy: "user-admin",
+          submittedAt: expect.any(Date),
+        }),
+      })
+    )
+  })
+
+  it("still refuses a draft from anyone who is not a Super Admin", async () => {
+    tx.journal.findUnique.mockResolvedValue({ ...pending, status: "DRAFT" })
+
+    await expect(approveJournal("j-1", finance)).rejects.toMatchObject({ statusCode: 409 })
     expect(tx.journal.update).not.toHaveBeenCalled()
   })
 
@@ -128,8 +149,8 @@ describe("approveJournal", () => {
     await expect(approveJournal("j-1", otherAdmin)).resolves.toBeDefined()
   })
 
-  it("409s when the journal is not PENDING_APPROVAL", async () => {
-    tx.journal.findUnique.mockResolvedValue({ ...pending, status: "DRAFT" })
+  it("409s when the journal is already posted", async () => {
+    tx.journal.findUnique.mockResolvedValue({ ...pending, status: "POSTED" })
 
     await expect(approveJournal("j-1", admin)).rejects.toMatchObject({ statusCode: 409 })
   })
