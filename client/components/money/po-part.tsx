@@ -6,7 +6,7 @@ import { RiAddLine } from "@remixicon/react"
 
 import { cancelCustomerPo } from "@/lib/api/customerPo"
 import { useSession } from "@/lib/auth/session-context"
-import type { CustomerPo, CustomerPoStatus } from "@/lib/api/types"
+import type { CustomerPo, CustomerPoStatus, SalesTrack } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { CustomerPoDialog } from "@/components/money/customer-po-dialog"
 import { vatLabel } from "@/components/money/vat-choice"
@@ -53,10 +53,12 @@ function canChange(po: CustomerPo): boolean {
  */
 export function PoPart({
   opportunityId,
+  track,
   pos,
   invalidate,
 }: {
   opportunityId: string
+  track: SalesTrack
   pos: CustomerPo[]
   /** Runs after any write below lands, so the Money section and the wider
    *  app (Deals list, Waiting-for-approval queue) pick up the change. */
@@ -172,6 +174,7 @@ export function PoPart({
           open
           onOpenChange={(open) => !open && setRecording(false)}
           opportunityId={opportunityId}
+          track={track}
           onSaved={() => {
             setRecording(false)
             invalidate()
@@ -184,6 +187,7 @@ export function PoPart({
           open
           onOpenChange={(open) => !open && setEditing(null)}
           opportunityId={opportunityId}
+          track={track}
           po={editing}
           onSaved={() => {
             setEditing(null)

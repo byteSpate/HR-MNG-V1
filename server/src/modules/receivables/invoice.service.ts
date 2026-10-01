@@ -22,7 +22,7 @@ const PO_FOR_INVOICING = {
 
 export const INVOICE_INCLUDE = {
   customer: { select: { id: true, legalName: true } },
-  po: { select: { id: true, serial: true, customerPoNumber: true, opportunity: { select: { id: true, serial: true, name: true } } } },
+  po: { select: { id: true, serial: true, customerPoNumber: true, invoiceTo: true, opportunity: { select: { id: true, serial: true, name: true } } } },
   lines: { include: { poLine: { select: { kind: true } }, vatCode: true } },
 } satisfies Prisma.InvoiceInclude
 

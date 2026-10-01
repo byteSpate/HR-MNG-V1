@@ -50,7 +50,7 @@ async function nextPoSerial(tx: Prisma.TransactionClient): Promise<string> {
 
 export interface PrefillLine {
   description: string
-  kind: "GOODS"
+  kind: "GOODS" | "SERVICE"
   quantity: string
   unitPrice: string | null
 }
@@ -61,7 +61,23 @@ export interface PrefillLine {
  *  line total nobody actually split per unit would be invented, not read. */
 export async function prefillPoLines(opportunityId: string, actor: AccessTokenPayload): Promise<{ lines: PrefillLine[] }> {
   await assertDealAccess(prisma, actor, opportunityId)
-  const products = await prisma.opportunityLine.findMany({ where: { opportunityId }, orderBy: { order: "asc" } })
+  const [deal, products] = await Promise.all([
+    prisma.opportunity.findUnique({ where: { id: opportunityId }, select: { track: true } }),
+    prisma.opportunityLine.findMany({ where: { opportunityId }, orderBy: { order: "asc" } }),
+  ])
+  // A Software Opportunity's lines are Modules: a name, what it covers and one
+  // price. Each becomes one Service line of quantity 1 at that price. A module
+  // with no price yet is left blank, never worked out.
+  if (deal?.track === "SOFTWARE_DEVELOPMENT") {
+    return {
+      lines: products.map((p) => ({
+        description: p.product,
+        kind: "SERVICE" as const,
+        quantity: "1",
+        unitPrice: p.lineValue ? new Prisma.Decimal(p.lineValue).toFixed(2) : null,
+      })),
+    }
+  }
   return {
     lines: products.map((p) => ({
       description: [p.product, p.oemBrand, p.model].filter(Boolean).join(" "),

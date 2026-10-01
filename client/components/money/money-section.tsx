@@ -150,7 +150,7 @@ export function MoneySection({
   return (
     <div className="space-y-5">
       <MoneyNumbers numbers={data.numbers} canSeeCost={data.canSeeCost} hasDrafts={hasAnyDraft(data)} />
-      <PoPart opportunityId={opportunityId} pos={data.pos} invalidate={invalidate} />
+      <PoPart opportunityId={opportunityId} track={data.deal.track} pos={data.pos} invalidate={invalidate} />
       <InvoicedPart
         invoices={data.invoices}
         pos={data.pos}
@@ -175,6 +175,7 @@ export function MoneySection({
           bills={data.bills!}
           supplierPayments={data.supplierPayments!}
           productLines={data.productLines}
+          track={data.deal.track}
           canEdit={data.canEdit}
           invalidate={invalidate}
           highlight={highlight}

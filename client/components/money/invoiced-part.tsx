@@ -280,6 +280,11 @@ export function InvoicedPart({
                     <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
                       {formatDate(inv.date)} · due {formatDate(inv.dueDate)}
                     </div>
+                    {inv.po.invoiceTo ? (
+                      <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                        Company name on the invoice: <span className="font-semibold">{inv.po.invoiceTo}</span>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <span className="mr-2 text-[13px] font-bold">{formatMoney(total.toFixed(2), "BDT")}</span>
