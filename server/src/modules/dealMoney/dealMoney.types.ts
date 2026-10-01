@@ -1,4 +1,4 @@
-import type { Prisma } from "../../generated/prisma/client"
+import type { Prisma, SalesTrack } from "../../generated/prisma/client"
 import { PO_INCLUDE } from "../receivables/customerPo.service"
 import { INVOICE_INCLUDE } from "../receivables/invoice.service"
 import { RECEIPT_INCLUDE } from "../receivables/receipt.service"
@@ -73,6 +73,8 @@ export interface DealMoneyRecorded {
     id: string
     serial: string
     name: string
+    /** Which department the Opportunity belongs to. The Money screens read it. */
+    track: SalesTrack
     customer: { id: string; legalName: string; billingAddress: string | null; paymentDays: number } | null
   }
   canSeeCost: boolean
@@ -105,7 +107,7 @@ export interface DealMoneyNotRecorded {
   notRecordedReason: MoneyNotRecordedReason
   /** `SALES_GO_LIVE`, YYYY-MM-DD, for the sentence the client shows. */
   goLiveDate: string
-  deal: { id: string; serial: string; name: string }
+  deal: { id: string; serial: string; name: string; track: SalesTrack }
 }
 
 export type DealMoney = DealMoneyRecorded | DealMoneyNotRecorded
