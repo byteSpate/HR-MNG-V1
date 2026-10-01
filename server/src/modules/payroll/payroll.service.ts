@@ -757,18 +757,14 @@ export async function submitRun(id: string, actorUserId: string) {
 }
 
 /**
- * The approver's user id must differ from `submittedBy` — the same rule as
- * settlement's calculator/approver split. A one-person deployment holding
- * both roles cannot approve its own run; that is the control working, not a
- * bug.
+ * Super Admin only (the route gates it). A Super Admin may approve a run they
+ * submitted themselves: nobody sits above that role, and a one-person
+ * deployment could not pay anyone otherwise.
  */
 export async function approveRun(id: string, actorUserId: string) {
   const run = await prisma.payrollRun.findUnique({ where: { id } })
   if (!run) throw new AppError(404, "Payroll run not found")
   requireStatus(run, "SUBMITTED", "approve")
-  if (run.submittedBy === actorUserId) {
-    throw new AppError(403, "You submitted this run and cannot also approve it")
-  }
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.payrollRun.update({

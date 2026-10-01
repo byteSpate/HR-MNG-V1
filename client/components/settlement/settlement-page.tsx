@@ -41,7 +41,6 @@ export function SettlementPage() {
   const isAdmin = !!user && PAYROLL_ADMIN_ROLES.includes(user.role)
   const isFinance = !!user && FINANCE_ROLES.includes(user.role)
   const isSuperAdmin = user?.role === "SUPER_ADMIN"
-  const userId = user?.id
 
   const settlementsQuery = useQuery({
     queryKey: ["settlements"],
@@ -161,7 +160,6 @@ export function SettlementPage() {
           settlement={selected}
           onClose={() => setSelected(null)}
           canApprove={isSuperAdmin && selected.status === "DRAFT"}
-          calculatedOwn={selected.calculatedBy === userId}
           canPay={isFinance && selected.status === "APPROVED"}
           canOverride={isFinance && selected.status === "DRAFT"}
           pending={approveMutation.isPending || payMutation.isPending || rejectMutation.isPending}

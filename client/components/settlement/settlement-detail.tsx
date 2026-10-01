@@ -43,7 +43,6 @@ export function SettlementDetail({
   settlement,
   onClose,
   canApprove,
-  calculatedOwn,
   canPay,
   canOverride,
   pending,
@@ -56,7 +55,6 @@ export function SettlementDetail({
   settlement: Settlement
   onClose: () => void
   canApprove: boolean
-  calculatedOwn: boolean
   canPay: boolean
   canOverride: boolean
   pending: boolean
@@ -89,8 +87,6 @@ export function SettlementDetail({
     },
     onError,
   })
-
-  const blockedAsCalculator = canApprove && calculatedOwn
 
   return (
     <div className="space-y-5 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
@@ -202,13 +198,6 @@ export function SettlementDetail({
         </div>
       ) : null}
 
-      {/* The rule stated plainly, rather than as a failed request. */}
-      {blockedAsCalculator ? (
-        <div className="rounded-md border border-[#F5E3C0] bg-[#FDF9F0] px-4 py-3 text-[12.5px] text-[#7A5B23]">
-          You calculated this settlement, so you cannot also approve it.
-        </div>
-      ) : null}
-
       <div className="flex flex-wrap gap-2">
         {canOverride ? (
           <Button variant="outline" onClick={() => setOverriding((v) => !v)}>
@@ -217,7 +206,7 @@ export function SettlementDetail({
         ) : null}
         {canApprove ? (
           <>
-            <Button onClick={onApprove} disabled={pending || blockedAsCalculator}>
+            <Button onClick={onApprove} disabled={pending}>
               Approve
             </Button>
             <Button variant="outline" onClick={onReject} disabled={pending}>

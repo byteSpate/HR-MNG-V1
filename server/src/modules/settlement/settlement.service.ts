@@ -339,15 +339,12 @@ export async function listSettlements() {
   })
 }
 
-/** Super Admin only, and never the person who calculated it. */
+/** Super Admin only. A Super Admin may approve a settlement they calculated. */
 export async function approveSettlement(id: string, actorUserId: string) {
   const settlement = await prisma.settlement.findUnique({ where: { id } })
   if (!settlement) throw new AppError(404, "Settlement not found")
   if (settlement.status !== "DRAFT") {
     throw new AppError(409, `This settlement is already ${settlement.status.toLowerCase()}`)
-  }
-  if (settlement.calculatedBy === actorUserId) {
-    throw new AppError(403, "You calculated this settlement and cannot also approve it")
   }
 
   return prisma.$transaction(async (tx) => {

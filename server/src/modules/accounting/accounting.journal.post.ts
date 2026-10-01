@@ -44,16 +44,17 @@ export async function postApprovedJournal(
   })
   if (!journal) throw new AppError(404, "Journal not found")
 
-  if (journal.status !== "PENDING_APPROVAL") {
+  // A Super Admin may post a draft straight away, with no submit step first:
+  // nobody sits above that role, so there is no one to send it to. Every other
+  // role still needs the journal to be submitted.
+  const postingDraft = journal.status === "DRAFT" && actor.role === "SUPER_ADMIN"
+  if (journal.status !== "PENDING_APPROVAL" && !postingDraft) {
     throw new AppError(409, `${journal.journalNo} is not awaiting approval`)
   }
 
-  // Decision 11. The check is on the user, not the role: a Super Admin who
-  // wrote the entry still needs a second pair of eyes, which is the whole
-  // point of the control.
-  if (journal.createdBy === actor.sub) {
-    throw new AppError(403, `You created ${journal.journalNo}; someone else must approve it`)
-  }
+  // A Super Admin may also approve a journal they created themselves, for the
+  // same reason. Finance cannot reach this function at all (the route requires
+  // Super Admin), so no other role is affected.
 
   // Re-checked at approval rather than trusted from submit — a period can
   // close, and a draft can be edited, between the two.
@@ -77,6 +78,9 @@ export async function postApprovedJournal(
       approvedAt: now,
       postedAt: now,
       rejectionNote: null,
+      // Posted straight from a draft: record that the same person sent it in,
+      // so the register never shows a posted journal with no submitter.
+      ...(postingDraft ? { submittedBy: actor.sub, submittedAt: now } : {}),
     },
   })
 
@@ -87,7 +91,7 @@ export async function postApprovedJournal(
     entityId: journalId,
     action: "APPROVE",
     changedBy: actor.sub,
-    before: { status: "PENDING_APPROVAL" },
+    before: { status: journal.status },
     after: { status: "POSTED" },
   })
   await writeAudit(tx, {

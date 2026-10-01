@@ -217,13 +217,13 @@ describe("calculateSettlement", () => {
 })
 
 describe("approveSettlement", () => {
-  it("403s when the approver calculated it", async () => {
+  it("lets a Super Admin approve a settlement they calculated themselves", async () => {
     vi.mocked(prisma.settlement.findUnique).mockResolvedValue({
       id: "stl-1",
       status: "DRAFT",
-      calculatedBy: "fin-1",
+      calculatedBy: "admin-1",
     } as never)
-    await expect(approveSettlement("stl-1", "fin-1")).rejects.toMatchObject({ statusCode: 403 })
+    await expect(approveSettlement("stl-1", "admin-1")).resolves.toMatchObject({ status: "APPROVED" })
   })
 
   it("succeeds for a different approver", async () => {

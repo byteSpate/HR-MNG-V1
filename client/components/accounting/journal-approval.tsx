@@ -39,8 +39,6 @@ export function useApprovalState(journal: Journal | null) {
   return {
     /** Show the actions at all. Hidden, not disabled, for a Finance Officer. */
     show: Boolean(pending && canApprove(user?.role)),
-    /** Decision 11: the approver must not be the creator. */
-    isOwn: Boolean(journal && journal.createdBy === user?.id),
   }
 }
 
@@ -58,7 +56,7 @@ export function JournalApprovalActions({
 }) {
   const { accessToken } = useSession()
   const queryClient = useQueryClient()
-  const { show, isOwn } = useApprovalState(journal)
+  const { show } = useApprovalState(journal)
 
   const [rejectOpen, setRejectOpen] = useState(false)
   const [note, setNote] = useState("")
@@ -93,7 +91,7 @@ export function JournalApprovalActions({
       </Button>
       <Button
         onClick={() => approve.mutate()}
-        disabled={approve.isPending || isOwn || Boolean(blocked)}
+        disabled={approve.isPending || Boolean(blocked)}
       >
         <RiCheckLine className="size-4" />
         {approve.isPending ? "Posting…" : "Approve and post"}
@@ -134,17 +132,9 @@ export function JournalApprovalActions({
  * never sends the request that would return it.
  */
 export function ApprovalNotice({ journal, dirty }: { journal: Journal; dirty?: boolean }) {
-  const { show, isOwn } = useApprovalState(journal)
+  const { show } = useApprovalState(journal)
   if (!show) return null
 
-  if (isOwn) {
-    return (
-      <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
-        You created this journal, so someone else must approve it. This is the one control the
-        whole ledger rests on, and it has no exception.
-      </p>
-    )
-  }
   if (dirty) {
     return (
       <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">

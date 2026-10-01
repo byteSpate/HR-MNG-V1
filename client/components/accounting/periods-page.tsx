@@ -110,7 +110,7 @@ export function PeriodsPage() {
     onSuccess: (journal) => {
       refresh()
       toast.success(`${journal.journalNo} drafted — review it, then have it approved`)
-      router.push(`../journals/${journal.id}`)
+      router.push(`journals/${journal.id}`)
     },
     onError: fail("Could not draft the year-end journal"),
   })
