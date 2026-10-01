@@ -362,7 +362,10 @@ function runConflict(month: number, year: number): AppError {
 }
 
 export async function listRuns() {
-  const runs = await prisma.payrollRun.findMany({ orderBy: [{ year: "desc" }, { month: "desc" }] })
+  const runs = await prisma.payrollRun.findMany({
+    where: { deletedAt: null },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+  })
   const totals = await prisma.payslip.groupBy({
     by: ["payrollRunId"],
     _sum: { grossPayBdt: true, totalDeductionsBdt: true, netPayBdt: true, netPayableBdt: true },
@@ -393,14 +396,30 @@ export async function getRun(id: string) {
       },
     },
   })
-  if (!run) throw new AppError(404, "Payroll run not found")
-  return { ...run, preflight: await preflight(run.month, run.year) }
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
+  // Names for the people left out, so the screen can list them and offer to
+  // add them back without a second request.
+  const excludedEmployees = run.excludedEmployeeIds.length
+    ? await prisma.employee.findMany({
+        where: { id: { in: run.excludedEmployeeIds } },
+        select: { id: true, fullName: true, employeeCode: true },
+        orderBy: { fullName: "asc" },
+      })
+    : []
+  return {
+    ...run,
+    excludedEmployees,
+    preflight: await preflight(run.month, run.year, run.excludedEmployeeIds),
+  }
 }
 
 export async function getRunPreflight(id: string) {
-  const run = await prisma.payrollRun.findUnique({ where: { id }, select: { month: true, year: true } })
-  if (!run) throw new AppError(404, "Payroll run not found")
-  const base = await preflight(run.month, run.year)
+  const run = await prisma.payrollRun.findUnique({
+    where: { id },
+    select: { month: true, year: true, deletedAt: true, excludedEmployeeIds: true },
+  })
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
+  const base = await preflight(run.month, run.year, run.excludedEmployeeIds)
   const [accrual, payment] = await Promise.all([
     periodStatusFor(prisma, monthWindow(run.year, run.month).endDate),
     periodStatusFor(prisma, toLedgerDate(new Date())),
@@ -421,7 +440,12 @@ export async function createRun(actorUserId: string, body: CreateRunBody) {
   try {
     return await prisma.$transaction(async (tx) => {
       const run = await tx.payrollRun.create({
-        data: { month: body.month, year: body.year, notes: body.notes },
+        data: {
+          month: body.month,
+          year: body.year,
+          notes: body.notes,
+          activeKey: monthLabel(body.month, body.year),
+        },
       })
       await writeAudit(tx, {
         entity: "PAYROLL_RUN",
@@ -481,10 +505,13 @@ function convertBetween(amount: Money, from: Currency, to: Currency, usdToBdt: M
  * half-processed run existing; restricting it to DRAFT is what stops an
  * approved run being rewritten under the approver.
  */
-export async function processRun(id: string, actorUserId: string) {
+export async function processRun(id: string, actorUserId: string, excludedEmployeeIds?: string[]) {
   const run = await prisma.payrollRun.findUnique({ where: { id } })
-  if (!run) throw new AppError(404, "Payroll run not found")
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
   requireStatus(run, "DRAFT", "process")
+  // The people Finance left out. Sent with this request when they changed the
+  // choice; otherwise the earlier choice stays.
+  const leftOut = [...new Set(excludedEmployeeIds ?? run.excludedEmployeeIds ?? [])]
 
   return prisma.$transaction(async (tx) => {
     // First, so a run that cannot legally be paid is never partially
@@ -492,12 +519,14 @@ export async function processRun(id: string, actorUserId: string) {
     // read-then-write pattern `assertMonthNotLocked` already uses elsewhere
     // in this codebase — because these are sanity reads with nothing to roll
     // back if they pass; only the writes below need the transaction.
-    await assertProcessable(run.month, run.year)
+    await assertProcessable(run.month, run.year, leftOut)
 
-    const roster = (await loadPayrollRoster(run.month, run.year)).filter(
-      (e): e is typeof e & { salaryStructure: NonNullable<(typeof e)["salaryStructure"]> } =>
-        e.salaryStructure !== null
-    )
+    const roster = (await loadPayrollRoster(run.month, run.year))
+      .filter((e) => !leftOut.includes(e.id))
+      .filter(
+        (e): e is typeof e & { salaryStructure: NonNullable<(typeof e)["salaryStructure"]> } =>
+          e.salaryStructure !== null
+      )
     const rosterIds = roster.map((e) => e.id)
     const { to: monthEnd } = monthRange(run.year, run.month)
 
@@ -668,14 +697,23 @@ export async function processRun(id: string, actorUserId: string) {
 
     const updated = await tx.payrollRun.update({
       where: { id },
-      data: { fxRateToBdt: usdRate, processedBy: actorUserId, processedAt: new Date() },
+      data: {
+        fxRateToBdt: usdRate,
+        processedBy: actorUserId,
+        processedAt: new Date(),
+        excludedEmployeeIds: leftOut,
+      },
     })
     await writeAudit(tx, {
       entity: "PAYROLL_RUN",
       entityId: id,
       action: "PROCESS",
       changedBy: actorUserId,
-      after: { payslipCount: roster.length, fxRateToBdt: usdRate?.toFixed(6) ?? null },
+      after: {
+        payslipCount: roster.length,
+        fxRateToBdt: usdRate?.toFixed(6) ?? null,
+        leftOut: leftOut.length,
+      },
     })
     await emitEvent(
       tx,
@@ -695,9 +733,55 @@ export async function processRun(id: string, actorUserId: string) {
   })
 }
 
+/**
+ * Soft delete, for a DRAFT run only. The row stays as a record and frees its
+ * month, so Finance can open a new run for it. The payslips go, which gives
+ * back every adjustment and expense claim they were holding (both links are
+ * ON DELETE SET NULL), so the next run can use them. What the run held is
+ * written to the audit log first.
+ */
+export async function deleteRun(id: string, actorUserId: string) {
+  const run = await prisma.payrollRun.findUnique({ where: { id } })
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
+  if (run.status !== "DRAFT") {
+    throw new AppError(
+      409,
+      `Only a draft run can be deleted. This run is ${run.status.toLowerCase()}.`
+    )
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const totals = await tx.payslip.aggregate({
+      where: { payrollRunId: id },
+      _count: { _all: true },
+      _sum: { netPayableBdt: true },
+    })
+    await tx.payslip.deleteMany({ where: { payrollRunId: id } })
+    const deleted = await tx.payrollRun.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedBy: actorUserId, activeKey: null },
+    })
+    await writeAudit(tx, {
+      entity: "PAYROLL_RUN",
+      entityId: id,
+      action: "DELETE",
+      changedBy: actorUserId,
+      before: {
+        month: run.month,
+        year: run.year,
+        status: run.status,
+        payslipCount: totals._count._all,
+        totalNetPayableBdt: toMoneyString(totals._sum.netPayableBdt ?? dec(0)),
+        leftOut: run.excludedEmployeeIds.length,
+      },
+    })
+    return deleted
+  })
+}
+
 export async function submitRun(id: string, actorUserId: string) {
   const run = await prisma.payrollRun.findUnique({ where: { id } })
-  if (!run) throw new AppError(404, "Payroll run not found")
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
   requireStatus(run, "DRAFT", "submit")
   if (!run.processedAt) {
     throw new AppError(409, "This run has not been processed yet — process it before submitting")
@@ -763,7 +847,7 @@ export async function submitRun(id: string, actorUserId: string) {
  */
 export async function approveRun(id: string, actorUserId: string) {
   const run = await prisma.payrollRun.findUnique({ where: { id } })
-  if (!run) throw new AppError(404, "Payroll run not found")
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
   requireStatus(run, "SUBMITTED", "approve")
 
   return prisma.$transaction(async (tx) => {
@@ -819,7 +903,7 @@ export async function approveRun(id: string, actorUserId: string) {
  */
 export async function rejectRun(id: string, actorUserId: string, body: RejectRunBody) {
   const run = await prisma.payrollRun.findUnique({ where: { id } })
-  if (!run) throw new AppError(404, "Payroll run not found")
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
   requireStatus(run, "SUBMITTED", "reject")
 
   return prisma.$transaction(async (tx) => {
@@ -852,7 +936,7 @@ export async function rejectRun(id: string, actorUserId: string, body: RejectRun
 /** Terminal — there is no un-disburse. */
 export async function disburseRun(id: string, actorUserId: string) {
   const run = await prisma.payrollRun.findUnique({ where: { id } })
-  if (!run) throw new AppError(404, "Payroll run not found")
+  if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
   requireStatus(run, "APPROVED", "disburse")
 
   // Reported, not posted — there is no ledger for an FX gain or loss to go

@@ -9,6 +9,8 @@ vi.mock("./payroll.service", () => ({
   createSalaryStructure: vi.fn(),
   updateSalaryStructure: vi.fn(),
   deleteSalaryStructure: vi.fn(),
+  deleteRun: vi.fn(),
+  processRun: vi.fn(),
 }))
 
 vi.mock("./payroll.settings", () => ({
@@ -240,5 +242,39 @@ describe("/api/payroll/settings", () => {
       .set("Authorization", auth("SUPER_ADMIN"))
       .send({ deductLossOfPay: "no" })
     expect(res.status).toBe(400)
+  })
+})
+
+describe("DELETE /api/payroll/runs/:id", () => {
+  it.each<TestRole>(["EMPLOYEE", "REPORTING_MANAGER", "HR_ADMIN"])("403s for %s", async (role) => {
+    const res = await request(app).delete("/api/payroll/runs/run-1").set("Authorization", auth(role))
+    expect(res.status).toBe(403)
+    expect(service.deleteRun).not.toHaveBeenCalled()
+  })
+
+  it.each<TestRole>(["FINANCE_OFFICER", "SUPER_ADMIN"])("204s for %s", async (role) => {
+    vi.mocked(service.deleteRun).mockResolvedValue({} as never)
+    const res = await request(app).delete("/api/payroll/runs/run-1").set("Authorization", auth(role))
+    expect(res.status).toBe(204)
+    expect(service.deleteRun).toHaveBeenCalledWith("run-1", "actor-1")
+  })
+})
+
+describe("POST /api/payroll/runs/:id/process", () => {
+  it("passes the people left out to the service", async () => {
+    vi.mocked(service.processRun).mockResolvedValue({} as never)
+    const res = await request(app)
+      .post("/api/payroll/runs/run-1/process")
+      .set("Authorization", auth("FINANCE_OFFICER"))
+      .send({ excludedEmployeeIds: ["emp-2"] })
+    expect(res.status).toBe(200)
+    expect(service.processRun).toHaveBeenCalledWith("run-1", "actor-1", ["emp-2"])
+  })
+
+  it("works with no body, as before", async () => {
+    vi.mocked(service.processRun).mockResolvedValue({} as never)
+    const res = await request(app).post("/api/payroll/runs/run-1/process").set("Authorization", auth("FINANCE_OFFICER"))
+    expect(res.status).toBe(200)
+    expect(service.processRun).toHaveBeenCalledWith("run-1", "actor-1", undefined)
   })
 })

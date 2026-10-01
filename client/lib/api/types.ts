@@ -874,6 +874,8 @@ export interface WorkIdentity {
   email: string
   phone: string | null
   avatarUrl: string | null
+  /** Present for HR and Super Admin only. */
+  role?: Role
 }
 
 export interface PersonalIdentity {
@@ -1968,7 +1970,7 @@ export interface Invoice {
   status: ReceivableDocStatus
   createdBy: string
   customer: { id: string; legalName: string }
-  po: { id: string; serial: string; customerPoNumber: string; opportunity: { id: string; serial: string; name: string } }
+  po: { id: string; serial: string; customerPoNumber: string; invoiceTo?: string | null; opportunity: { id: string; serial: string; name: string } }
   lines: InvoiceLine[]
 }
 
@@ -2169,6 +2171,8 @@ export interface DealMoneyRecorded {
     id: string
     serial: string
     name: string
+    /** Which department the Opportunity belongs to. */
+    track: SalesTrack
     customer: { id: string; legalName: string; billingAddress: string | null; paymentDays: number } | null
   }
   canSeeCost: boolean
@@ -2194,7 +2198,7 @@ export interface DealMoneyNotRecorded {
   notRecordedReason: "NOT_WON" | "WON_BEFORE_GO_LIVE"
   /** `SALES_GO_LIVE`, YYYY-MM-DD. */
   goLiveDate: string
-  deal: { id: string; serial: string; name: string }
+  deal: { id: string; serial: string; name: string; track: SalesTrack }
 }
 
 /** The deal Money section's one payload, shown on both the deal page's

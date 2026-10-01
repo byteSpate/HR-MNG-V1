@@ -92,6 +92,18 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+describe("who a run pays", () => {
+  it("leaves out anyone whose login has been deactivated", async () => {
+    await preflight(7, 2026)
+    const where = vi.mocked(prisma.employee.findMany).mock.calls[0][0]!.where as {
+      user: { isActive: boolean }
+      employmentStatus: { in: string[] }
+    }
+    expect(where.user).toEqual({ isActive: true })
+    expect(where.employmentStatus.in).toEqual(["ACTIVE", "ON_LEAVE"])
+  })
+})
+
 describe("a clean month", () => {
   it("reports ok: true with an empty blocker list", async () => {
     const report = await preflight(7, 2026)

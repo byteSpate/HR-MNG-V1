@@ -735,9 +735,23 @@ model PayrollRun {
   payslips  Payslip[]
   createdAt DateTime  @default(now())
 
-  // The most important line in this file. Two runs for July means paying
-  // July twice — not a data-quality problem, a double payment.
-  @@unique([month, year])
+  // Soft delete, for a DRAFT run only. The row is kept so there is a record,
+  // and a new run may be opened for the same month.
+  deletedAt DateTime?
+  deletedBy String?
+
+  // "2026-07" while the run is live, null once it is deleted. The most
+  // important guard in this file: two live runs for July means paying July
+  // twice. A plain unique on (month, year) would also block a new run after a
+  // delete, and Postgres allows many nulls in a unique column, so this does
+  // both jobs.
+  activeKey String? @unique
+
+  // Employees left out of this run. Chosen after the first process and applied
+  // when the run is processed again, so they are paid in no part of it.
+  excludedEmployeeIds String[] @default([])
+
+  @@index([month, year])
 }
 
 enum PayrollStatus {
