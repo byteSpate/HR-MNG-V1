@@ -27,7 +27,7 @@ export async function currentPayrollCard(href: string): Promise<DashboardStat> {
   const year = today.getUTCFullYear()
 
   const run = await prisma.payrollRun.findUnique({
-    where: { month_year: { month, year } },
+    where: { activeKey: `${year}-${String(month).padStart(2, "0")}` },
     select: { status: true, payslips: { select: { netPayableBdt: true } } },
   })
 

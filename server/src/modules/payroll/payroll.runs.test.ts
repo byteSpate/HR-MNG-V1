@@ -5,7 +5,12 @@ vi.mock("../../config/prisma", () => {
     payrollRun: { create: vi.fn(), update: vi.fn() },
     // `findMany` because approving a run emits one payslip.published per
     // employee, read from inside the same transaction.
-    payslip: { deleteMany: vi.fn(), create: vi.fn(), findMany: vi.fn(async () => []) },
+    payslip: {
+      deleteMany: vi.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(async () => []),
+      aggregate: vi.fn(async () => ({ _count: { _all: 0 }, _sum: { netPayableBdt: null } })),
+    },
     payrollAdjustment: { findMany: vi.fn(), updateMany: vi.fn() },
     expenseClaim: { findMany: vi.fn(), updateMany: vi.fn() },
     assetRecovery: { findMany: vi.fn(async () => []), updateMany: vi.fn() },
@@ -62,6 +67,7 @@ import type { MonthlyAttendanceSummary } from "../attendance/attendance.types"
 import {
   approveRun,
   createRun,
+  deleteRun,
   disburseRun,
   processRun,
   rejectRun,
@@ -198,11 +204,58 @@ describe("createRun", () => {
     )
   })
 
-  it("409s on the (month, year) unique — a duplicate run is a double payment", async () => {
+  it("gives a live run its month as the key, so only one live run can exist per month", async () => {
+    tx.payrollRun.create.mockResolvedValue({ id: "run-1", month: 7, year: 2026 })
+    await createRun("user-finance", { month: 7, year: 2026 })
+    expect(tx.payrollRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ month: 7, year: 2026, activeKey: "2026-07" }),
+    })
+  })
+
+  it("409s on the live-month unique — a duplicate run is a double payment", async () => {
     tx.payrollRun.create.mockRejectedValue(Object.assign(new Error("Unique constraint"), { code: "P2002" }))
     await expect(createRun("user-finance", { month: 7, year: 2026 })).rejects.toMatchObject({
       statusCode: 409,
     })
+  })
+})
+
+describe("deleteRun", () => {
+  const draftRun = { id: "run-1", month: 7, year: 2026, status: "DRAFT", deletedAt: null, excludedEmployeeIds: [] }
+
+  it("soft-deletes a draft: gives back its payslips, frees the month, records who", async () => {
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue(draftRun as never)
+    tx.payrollRun.update.mockResolvedValue({ ...draftRun, deletedAt: new Date() })
+
+    await deleteRun("run-1", "user-finance")
+
+    expect(tx.payslip.deleteMany).toHaveBeenCalledWith({ where: { payrollRunId: "run-1" } })
+    expect(tx.payrollRun.update).toHaveBeenCalledWith({
+      where: { id: "run-1" },
+      data: { deletedAt: expect.any(Date), deletedBy: "user-finance", activeKey: null },
+    })
+    expect(tx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ entity: "PAYROLL_RUN", action: "DELETE", changedBy: "user-finance" }),
+      })
+    )
+  })
+
+  it.each(["SUBMITTED", "APPROVED", "DISBURSED"])("refuses a %s run", async (status) => {
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue({ ...draftRun, status } as never)
+    await expect(deleteRun("run-1", "user-finance")).rejects.toMatchObject({ statusCode: 409 })
+    expect(tx.payrollRun.update).not.toHaveBeenCalled()
+  })
+
+  it("404s a run that is already deleted", async () => {
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue({ ...draftRun, deletedAt: new Date() } as never)
+    await expect(deleteRun("run-1", "user-finance")).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it("will not process, or otherwise act on, a deleted run", async () => {
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue({ ...draftRun, deletedAt: new Date() } as never)
+    await expect(processRun("run-1", "user-finance")).rejects.toMatchObject({ statusCode: 404 })
+    await expect(submitRun("run-1", "user-finance")).rejects.toMatchObject({ statusCode: 404 })
   })
 })
 
@@ -245,6 +298,46 @@ describe("processRun", () => {
     await processRun("run-1", "user-finance")
     expect(callOrder).toEqual(["delete", "create"])
     expect(tx.payslip.deleteMany).toHaveBeenCalledWith({ where: { payrollRunId: "run-1" } })
+  })
+
+  it("leaves out the people Finance chose, and remembers the choice on the run", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      employeeRow(),
+      employeeRow({ id: "emp-2", fullName: "Second Employee", employeeCode: "BS-EMP-002" }),
+    ] as never)
+    vi.mocked(getMonthlySummary).mockResolvedValue([
+      summaryFor(),
+      summaryFor({ employee: { id: "emp-2", fullName: "Second Employee", employeeCode: "BS-EMP-002", designation: "Engineer" } }),
+    ])
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue(draftRun as never)
+    tx.payrollRun.update.mockResolvedValue(draftRun)
+
+    await processRun("run-1", "user-finance", ["emp-2"])
+
+    expect(tx.payslip.create).toHaveBeenCalledTimes(1)
+    expect(tx.payslip.create.mock.calls[0][0].data.employeeId).toBe("emp-bdt")
+    expect(tx.payrollRun.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ excludedEmployeeIds: ["emp-2"] }),
+      })
+    )
+  })
+
+  it("keeps the earlier choice when none is sent", async () => {
+    vi.mocked(prisma.employee.findMany).mockResolvedValue([
+      employeeRow(),
+      employeeRow({ id: "emp-2", fullName: "Second Employee", employeeCode: "BS-EMP-002" }),
+    ] as never)
+    vi.mocked(getMonthlySummary).mockResolvedValue([
+      summaryFor(),
+      summaryFor({ employee: { id: "emp-2", fullName: "Second Employee", employeeCode: "BS-EMP-002", designation: "Engineer" } }),
+    ])
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue({ ...draftRun, excludedEmployeeIds: ["emp-2"] } as never)
+    tx.payrollRun.update.mockResolvedValue(draftRun)
+
+    await processRun("run-1", "user-finance")
+
+    expect(tx.payslip.create).toHaveBeenCalledTimes(1)
   })
 
   it("creates exactly one payslip per roster employee, no more", async () => {

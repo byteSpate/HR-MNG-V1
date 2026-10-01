@@ -273,15 +273,15 @@ export function EmployeesPage() {
   // Reporting managers come from the employee list already loaded — no second
   // endpoint for a subset of rows we have.
   //
-  // Only active staff: offering someone who has left produces a manager the
-  // new hire reports to on paper and nowhere in practice. This cannot narrow
-  // further to people who actually hold the REPORTING_MANAGER role, because
-  // EmployeeView carries no role — the server makes that check on submit and
-  // rejects with a named 400, so the worst case here is a rejected choice
-  // rather than a bad record.
+  // Only active staff who hold the REPORTING_MANAGER role. Offering someone who
+  // has left produces a manager the new hire reports to on paper and nowhere in
+  // practice, and the server refuses any other role on submit anyway. HR and
+  // Super Admin see each person's role in the list, which is who this form is for.
   const managers = useMemo(
     () =>
-      (employeesQuery.data ?? []).filter((e) => e.employment?.employmentStatus === "ACTIVE"),
+      (employeesQuery.data ?? []).filter(
+        (e) => e.employment?.employmentStatus === "ACTIVE" && e.work.role === "REPORTING_MANAGER"
+      ),
     [employeesQuery.data]
   )
 
@@ -573,7 +573,7 @@ export function EmployeesPage() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Reporting manager" hint="Optional. Leave unset if they report to nobody in the system.">
+              <Field label="Reporting manager" hint="Optional. Only people with the Reporting Manager role are listed.">
                 <Select value={reportingManagerId} onValueChange={(v) => setReportingManagerId(v ?? "")}>
                   <SelectTrigger className="w-full">
                     <SelectValue>

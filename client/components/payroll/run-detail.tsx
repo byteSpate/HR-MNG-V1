@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { RiLoader4Line } from "@remixicon/react"
 
 import { ApiError } from "@/lib/api/client"
 import {
   approvePayrollRun,
+  deletePayrollRun,
   disbursePayrollRun,
   downloadBankFile,
   emailPayslips,
@@ -24,6 +26,8 @@ import { MiniStat } from "@/components/dashboard/page-header"
 import { Tag } from "@/components/dashboard/tag"
 import type { TableCell } from "@/components/dashboard/types"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ConfirmDialog } from "@/components/dashboard/record-kit"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DecisionDialog } from "@/components/leave/decision-dialog"
 import { PreflightPanel } from "@/components/payroll/preflight-panel"
@@ -41,6 +45,10 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
   const [blockers, setBlockers] = useState<PreflightBlocker[] | null>(null)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [emailStarted, setEmailStarted] = useState(false)
+  // The people unticked on this screen and not yet applied. Null means the run's
+  // saved choice, so nothing changes until Finance presses Reprocess.
+  const [leftOut, setLeftOut] = useState<string[] | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const isFinance = !!user && FINANCE_ROLES.includes(user.role)
   const isSuperAdmin = user?.role === "SUPER_ADMIN"
@@ -94,9 +102,26 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
   // No optimistic mutations anywhere here. Telling Finance a run was approved
   // when the request failed is not recoverable by a refetch.
   const processMutation = useMutation({
-    mutationFn: () => processPayrollRun(accessToken!, runId),
-    onSuccess,
+    mutationFn: () => processPayrollRun(accessToken!, runId, leftOut ?? undefined),
+    onSuccess: () => {
+      setLeftOut(null)
+      onSuccess()
+    },
     onError: handleError,
+  })
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePayrollRun(accessToken!, runId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll-runs"] })
+      queryClient.invalidateQueries({ queryKey: ["expenses"] })
+      queryClient.invalidateQueries({ queryKey: ["payroll-adjustments"] })
+      setDeleteOpen(false)
+      onBack()
+    },
+    onError: (err) => {
+      setDeleteOpen(false)
+      handleError(err)
+    },
   })
   const submitMutation = useMutation({
     mutationFn: () => submitPayrollRun(accessToken!, runId),
@@ -163,7 +188,8 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
     submitMutation.isPending ||
     approveMutation.isPending ||
     disburseMutation.isPending ||
-    rejectMutation.isPending
+    rejectMutation.isPending ||
+    deleteMutation.isPending
 
   // Only the actions this role and status permit are rendered at all; the
   // rest are absent rather than disabled and mysterious.
@@ -173,7 +199,35 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
   const canDisburse = isFinance && run.status === "APPROVED"
   const canEmail = isFinance && (run.status === "APPROVED" || run.status === "DISBURSED")
 
+  // Choosing who is paid. Only on a processed draft: there is nothing to
+  // choose from before the first process, and after submit the run is fixed.
+  const canPick = canProcess && !!run.processedAt
+  const currentLeftOut = leftOut ?? run.excludedEmployeeIds ?? []
+  const toggle = (employeeId: string, include: boolean) =>
+    setLeftOut(
+      include
+        ? currentLeftOut.filter((id) => id !== employeeId)
+        : [...new Set([...currentLeftOut, employeeId])]
+    )
+  const selectionChanged =
+    leftOut !== null &&
+    [...leftOut].sort().join("|") !== [...(run.excludedEmployeeIds ?? [])].sort().join("|")
+
   const rows: TableCell[][] = payslips.map((p) => [
+    ...(canPick
+      ? [
+          {
+            node: (
+              <Checkbox
+                aria-label={`Pay ${p.employee?.fullName ?? "this employee"} in this run`}
+                checked={!currentLeftOut.includes(p.employeeId)}
+                onCheckedChange={(checked) => toggle(p.employeeId, checked === true)}
+                disabled={anyPending}
+              />
+            ),
+          } satisfies TableCell,
+        ]
+      : []),
     { text: p.employee?.fullName ?? "—", sub: p.employee?.employeeCode, weight: 600 },
     { text: formatMoney(p.grossPay, p.currency) },
     { text: `−${formatMoney(p.totalDeductions, p.currency)}` },
@@ -210,12 +264,33 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
         <div className="flex flex-wrap gap-2">
           {canProcess ? (
             <Button onClick={() => processMutation.mutate()} disabled={anyPending}>
-              {run.processedAt ? "Reprocess" : "Process"}
+              {processMutation.isPending ? (
+                <>
+                  <RiLoader4Line className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
+                  {run.processedAt ? "Reprocessing…" : "Processing…"}
+                </>
+              ) : run.processedAt ? (
+                "Reprocess"
+              ) : (
+                "Process"
+              )}
+            </Button>
+          ) : null}
+          {canProcess ? (
+            <Button variant="outline" onClick={() => setDeleteOpen(true)} disabled={anyPending}>
+              Delete run
             </Button>
           ) : null}
           {canSubmit ? (
             <Button onClick={() => submitMutation.mutate()} disabled={anyPending}>
-              Submit for approval
+              {submitMutation.isPending ? (
+                <>
+                  <RiLoader4Line className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
+                  Sending…
+                </>
+              ) : (
+                "Submit for approval"
+              )}
             </Button>
           ) : null}
           {canApprove ? (
@@ -224,7 +299,14 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
                 onClick={() => approveMutation.mutate()}
                 disabled={anyPending}
               >
-                Approve
+                {approveMutation.isPending ? (
+                  <>
+                    <RiLoader4Line className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
+                    Approving…
+                  </>
+                ) : (
+                  "Approve"
+                )}
               </Button>
               <Button variant="outline" onClick={() => setRejectOpen(true)} disabled={anyPending}>
                 Reject
@@ -233,11 +315,34 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
           ) : null}
           {canDisburse ? (
             <Button onClick={() => disburseMutation.mutate()} disabled={anyPending}>
-              Disburse
+              {disburseMutation.isPending ? (
+                <>
+                  <RiLoader4Line className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
+                  Disbursing…
+                </>
+              ) : (
+                "Disburse"
+              )}
             </Button>
           ) : null}
         </div>
       </div>
+
+      {processMutation.isPending ? (
+        <div role="status" className="rounded-md border border-[#E4E9EF] bg-white px-5 py-3.5 text-[12.5px] text-[#5F6B7C]">
+          Working out every payslip. This can take a minute. Please wait.
+        </div>
+      ) : null}
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete this run?"
+        body="The run and its payslips are removed. Expense claims and bonus items they held are freed. You can open a new run for this month. A record of the delete is kept."
+        confirmLabel="Delete run"
+        pending={deleteMutation.isPending}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={() => deleteMutation.mutate()}
+      />
 
       {run.rejectionNote ? (
         <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
@@ -290,11 +395,47 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
 
           <DataTable
             title="Payslips"
-            cols="1.4fr 1fr 1fr 1fr 0.6fr"
-            headers={["Employee", "Gross", "Deductions", "Net payable", "LOP"]}
+            cols={canPick ? "0.4fr 1.4fr 1fr 1fr 1fr 0.6fr" : "1.4fr 1fr 1fr 1fr 0.6fr"}
+            headers={
+              canPick
+                ? ["Pay", "Employee", "Gross", "Deductions", "Net payable", "LOP"]
+                : ["Employee", "Gross", "Deductions", "Net payable", "LOP"]
+            }
             rows={rows}
             action={`${payslips.length} employee${payslips.length === 1 ? "" : "s"}`}
           />
+
+          {canPick ? (
+            <div className="space-y-3 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+              <div className="text-[13.5px] font-bold">Who is paid in this run</div>
+              <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+                Untick a person to leave them out of this run. Then press Reprocess. Nobody is left
+                out until you do. Their expense claims wait for the next run. Bonus and deduction
+                items for this month are not used.
+              </p>
+              {(run.excludedEmployees ?? []).length > 0 ? (
+                <ul className="space-y-1.5">
+                  {(run.excludedEmployees ?? []).map((person) => (
+                    <li key={person.id} className="flex items-center gap-2.5 text-[13px]">
+                      <Checkbox
+                        aria-label={`Pay ${person.fullName} in this run`}
+                        checked={!currentLeftOut.includes(person.id)}
+                        onCheckedChange={(checked) => toggle(person.id, checked === true)}
+                        disabled={anyPending}
+                      />
+                      <span className="font-semibold">{person.fullName}</span>
+                      <span className="text-[#5F6B7C]">{person.employeeCode} · left out</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {selectionChanged ? (
+                <p className="text-[12.5px] font-semibold text-[#8A5E0C]">
+                  You changed who is paid. Press Reprocess to use the change.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </>
       ) : null}
 

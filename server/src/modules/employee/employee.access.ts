@@ -114,7 +114,7 @@ export const EMPLOYEE_INCLUDE = {
   reportingManager: { select: { id: true, fullName: true } },
   shift: { select: { id: true, name: true } },
   salaryStructure: { select: { id: true, name: true, currency: true } },
-  user: { select: { email: true, isActive: true, salesRole: true } },
+  user: { select: { email: true, isActive: true, salesRole: true, role: true } },
 } satisfies Prisma.EmployeeInclude
 
 export type EmployeeWithRelations = Prisma.EmployeeGetPayload<{
@@ -161,6 +161,10 @@ export function projectEmployee(
     },
     editableFields: [...writableFieldsFor(tier)],
   }
+
+  // The login role, only for HR and Super Admin. The new-employee form uses it
+  // to offer only reporting managers; nobody else needs to see a colleague's role.
+  if (tier === "FULL") view.work.role = employee.user.role
 
   const canSeePersonal = tier === "SELF" || tier === "FULL"
   const canSeeEmployment = tier !== "COLLEAGUE"

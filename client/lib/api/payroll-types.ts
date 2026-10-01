@@ -178,6 +178,9 @@ export interface PayrollRun {
   netPayBdt?: string
   netPayableBdt?: string
   payslips?: Payslip[]
+  /** People left out of this run, chosen before it is submitted. */
+  excludedEmployeeIds?: string[]
+  excludedEmployees?: { id: string; fullName: string; employeeCode: string }[]
   preflight?: PreflightReport
   accounting?: { accrual: AccountingPeriodCheck; payment: AccountingPeriodCheck }
 }

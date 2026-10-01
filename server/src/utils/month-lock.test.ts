@@ -73,7 +73,7 @@ describe("assertMonthNotLocked", () => {
     runAt(null)
     await assertMonthNotLocked(parseDateOnly("2026-01-31"))
     expect(prisma.payrollRun.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { month_year: { month: 1, year: 2026 } } })
+      expect.objectContaining({ where: { activeKey: "2026-01" } })
     )
   })
 
@@ -82,7 +82,7 @@ describe("assertMonthNotLocked", () => {
     runAt(null)
     await assertMonthNotLocked(parseDateOnly("2026-12-01"))
     expect(prisma.payrollRun.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { month_year: { month: 12, year: 2026 } } })
+      expect.objectContaining({ where: { activeKey: "2026-12" } })
     )
   })
 })
