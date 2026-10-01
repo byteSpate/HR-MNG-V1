@@ -196,8 +196,14 @@ export function ReceiptDialog({
             )}
             <p className={`text-right text-[12.5px] ${TONE.muted}`}>
               Settles {formatMoney(allocatedTotal.toFixed(2), "BDT")} of {formatMoney(settledTotal.toFixed(2), "BDT")} (cash plus tax withheld).
-              {!matches ? " These must match. Money before an invoice cannot be recorded." : ""}
             </p>
+            {!matches && settledTotal > 0 ? (
+              <p role="status" className="text-right text-[12.5px] font-semibold text-[#8A5E0C]">
+                {settledTotal > allocatedTotal
+                  ? `${formatMoney((settledTotal - allocatedTotal).toFixed(2), "BDT")} is not matched to an invoice. Raise the amount settled, lower the amount received, or add the tax the customer kept. Money that is not for an invoice cannot be saved.`
+                  : `${formatMoney((allocatedTotal - settledTotal).toFixed(2), "BDT")} more is settled than was received. Lower the amount settled, or raise the amount received.`}
+              </p>
+            ) : null}
           </section>
 
           {error ? <FormError>{error}</FormError> : null}
