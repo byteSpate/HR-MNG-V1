@@ -5,6 +5,7 @@ vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     idCounter: { upsert: vi.fn() },
+    opportunity: { findUnique: vi.fn(async () => ({ track: "NETWORKING" })) },
     opportunityLine: { findMany: vi.fn() },
     customerPo: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
     customerPoLine: { deleteMany: vi.fn() },
@@ -70,6 +71,24 @@ describe("prefillPoLines", () => {
       lines: [
         { description: "Firewall Fortinet FG-100F", kind: "GOODS", quantity: "10", unitPrice: "80000.00" },
         { description: "Installation", kind: "GOODS", quantity: "1", unitPrice: null },
+      ],
+    })
+  })
+})
+
+describe("prefillPoLines for a Software Opportunity", () => {
+  it("turns each module into one Service line of quantity 1 at the module's price", async () => {
+    arrangeDeal()
+    vi.mocked(prisma.opportunity.findUnique).mockResolvedValueOnce({ track: "SOFTWARE_DEVELOPMENT" } as any)
+    vi.mocked(prisma.opportunityLine.findMany).mockResolvedValue([
+      { product: "HR module", oemBrand: null, model: null, quantity: null, unitValue: null, lineValue: d("250000") },
+      { product: "Payroll module", oemBrand: null, model: null, quantity: null, unitValue: null, lineValue: null },
+    ] as any)
+
+    await expect(prefillPoLines("opp-1", FINANCE)).resolves.toEqual({
+      lines: [
+        { description: "HR module", kind: "SERVICE", quantity: "1", unitPrice: "250000.00" },
+        { description: "Payroll module", kind: "SERVICE", quantity: "1", unitPrice: null },
       ],
     })
   })

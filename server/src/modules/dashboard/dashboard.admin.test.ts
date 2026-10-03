@@ -161,7 +161,7 @@ describe("this month's payroll", () => {
   it("asks for the current office month", async () => {
     await buildAdminDashboard(actor)
     expect(prisma.payrollRun.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { month_year: { month: 8, year: 2026 } } })
+      expect.objectContaining({ where: { activeKey: "2026-08" } })
     )
   })
 })

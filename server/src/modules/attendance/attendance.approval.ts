@@ -110,11 +110,14 @@ export async function assertCanDecide(
 
   // Never decide your own record, even if the data somehow allowed it — a
   // self-referential reportingManagerId is one data-entry slip away.
+  //
+  // A Super Admin is the one exception: nobody sits above that role, so their
+  // own record would otherwise wait for ever.
   const self = await prisma.employee.findUnique({
     where: { userId: actor.sub },
     select: { id: true },
   })
-  if (self && self.id === record.employeeId) {
+  if (self && self.id === record.employeeId && actor.role !== "SUPER_ADMIN") {
     throw new AppError(403, "You cannot approve your own attendance")
   }
 

@@ -56,7 +56,8 @@ export async function assertMonthNotLocked(date: Date): Promise<void> {
   const year = date.getUTCFullYear()
 
   const run = await prisma.payrollRun.findUnique({
-    where: { month_year: { month, year } },
+    // The live run for the month; a deleted run has no key.
+    where: { activeKey: `${year}-${String(month).padStart(2, "0")}` },
     select: { status: true },
   })
 

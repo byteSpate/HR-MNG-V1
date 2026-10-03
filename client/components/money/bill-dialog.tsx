@@ -8,7 +8,8 @@ import { createSupplierBill, updateSupplierBill, type SupplierBillInput, type Su
 import { listSuppliers } from "@/lib/api/supplier"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
-import type { DealMoneyProductLine, DealMoneySupplierBill, SupplierBill, VatMethod } from "@/lib/api/types"
+import type { DealMoneyProductLine, DealMoneySupplierBill, SalesTrack, SupplierBill, VatMethod } from "@/lib/api/types"
+import { MONEY_PROFILE } from "@/components/money/track-profile"
 import { formatMoney } from "@/lib/money"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
@@ -37,9 +38,9 @@ interface LineDraft {
   vatRatePercent: string
 }
 
-function blankLine(firstVatCodeId: string): LineDraft {
+function blankLine(firstVatCodeId: string, kind: "GOODS" | "SERVICE" = "GOODS"): LineDraft {
   return {
-    description: "", kind: "GOODS", amount: "",
+    description: "", kind, amount: "",
     vatCodeId: firstVatCodeId, vatMethod: "CODE", vatRatePercent: "",
   }
 }
@@ -48,9 +49,14 @@ function blankLine(firstVatCodeId: string): LineDraft {
  *  and model. Finance types the real amount; nothing is guessed from the
  *  product line, which carries no price. One blank line when there is no
  *  match, same as the dialog this replaced defaulted to. */
-function seedLines(supplierId: string, productLines: DealMoneyProductLine[], firstVatCodeId: string): LineDraft[] {
+function seedLines(
+  supplierId: string,
+  productLines: DealMoneyProductLine[],
+  firstVatCodeId: string,
+  blankKind: "GOODS" | "SERVICE"
+): LineDraft[] {
   const matching = productLines.filter((pl) => pl.supplier?.id === supplierId)
-  if (matching.length === 0) return [blankLine(firstVatCodeId)]
+  if (matching.length === 0) return [blankLine(firstVatCodeId, blankKind)]
   return matching.map((pl) => ({
     description: [pl.product, pl.model].filter(Boolean).join(" "),
     kind: "GOODS",
@@ -83,6 +89,7 @@ export function BillDialog({
   onOpenChange,
   opportunityId,
   productLines,
+  track,
   bill,
   onSaved,
 }: {
@@ -92,6 +99,8 @@ export function BillDialog({
   /** This deal's product lines, for seeding a new bill's lines and offering
    *  suppliers first. Unused to edit. */
   productLines: DealMoneyProductLine[]
+  /** The department of the Opportunity. A Software bill starts as a Service line. */
+  track: SalesTrack
   bill?: DealMoneySupplierBill
   onSaved: (bill: SupplierBill) => void
 }) {
@@ -144,7 +153,7 @@ export function BillDialog({
     const supplier = (suppliers.data ?? []).find((s) => s.id === id)
     setSupplierId(id)
     if (supplier) setDueDate(addDays(date, supplier.paymentDays))
-    setLines(seedLines(id, productLines, codes[0]?.id ?? ""))
+    setLines(seedLines(id, productLines, codes[0]?.id ?? "", MONEY_PROFILE[track].firstLineKind))
   }
 
   const update = (i: number, patch: Partial<LineDraft>) =>
@@ -345,7 +354,7 @@ export function BillDialog({
               </div>
             ))}
 
-            <Button type="button" variant="outline" size="sm" onClick={() => setLines((all) => [...all, blankLine(codes[0]?.id ?? "")])}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setLines((all) => [...all, blankLine(codes[0]?.id ?? "", MONEY_PROFILE[track].firstLineKind)])}>
               <RiAddLine className="size-4" aria-hidden /> Add line
             </Button>
           </section>

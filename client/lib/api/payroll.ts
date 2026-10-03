@@ -132,7 +132,26 @@ export function createPayrollRun(
 const runAction = (action: string) => (accessToken: string, id: string) =>
   apiFetch<PayrollRun>(`/api/payroll/runs/${id}/${action}`, { method: "POST", accessToken })
 
-export const processPayrollRun = runAction("process")
+/**
+ * `excludedEmployeeIds` is the full list of people to leave out of this run.
+ * Leave it out to keep the choice already saved on the run.
+ */
+export function processPayrollRun(
+  accessToken: string,
+  id: string,
+  excludedEmployeeIds?: string[]
+): Promise<PayrollRun> {
+  return apiFetch<PayrollRun>(`/api/payroll/runs/${id}/process`, {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(excludedEmployeeIds ? { excludedEmployeeIds } : {}),
+  })
+}
+
+/** A draft run only. The server keeps a record and frees the month. */
+export function deletePayrollRun(accessToken: string, id: string): Promise<unknown> {
+  return apiFetch<unknown>(`/api/payroll/runs/${id}`, { method: "DELETE", accessToken })
+}
 export const submitPayrollRun = runAction("submit")
 export const approvePayrollRun = runAction("approve")
 export const disbursePayrollRun = runAction("disburse")

@@ -35,7 +35,7 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
       moneyAllowed: false,
       notRecordedReason,
       goLiveDate: env.SALES_GO_LIVE,
-      deal: { id: deal.id, serial: deal.serial, name: deal.name },
+      deal: { id: deal.id, serial: deal.serial, name: deal.name, track: deal.track },
     }
   }
 
@@ -121,6 +121,7 @@ export async function getDealMoney(opportunityId: string, actor: AccessTokenPayl
       id: deal.id,
       serial: deal.serial,
       name: deal.name,
+      track: deal.track,
       customer: customer
         ? { id: customer.id, legalName: customer.legalName, billingAddress: customer.billingAddress, paymentDays: customer.paymentDays }
         : null,

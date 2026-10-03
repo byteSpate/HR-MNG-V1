@@ -7,7 +7,8 @@ import { RiAddLine, RiDeleteBinLine } from "@remixicon/react"
 import { createCustomerPo, prefillPoLines, updateCustomerPo, type CustomerPoInput } from "@/lib/api/customerPo"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
-import type { CustomerPo, SaleLineKind, VatCode, VatMethod } from "@/lib/api/types"
+import type { CustomerPo, SaleLineKind, SalesTrack, VatCode, VatMethod } from "@/lib/api/types"
+import { MONEY_PROFILE } from "@/components/money/track-profile"
 import { formatMoney } from "@/lib/money"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
@@ -31,9 +32,9 @@ interface LineDraft {
   vatRatePercent: string
 }
 
-function blankLine(vatCodes: VatCode[]): LineDraft {
+function blankLine(vatCodes: VatCode[], kind: SaleLineKind): LineDraft {
   return {
-    description: "", kind: "GOODS", quantity: "1", unitPrice: "",
+    description: "", kind, quantity: "1", unitPrice: "",
     vatCodeId: vatCodes[0]?.id ?? "", vatMethod: "CODE", vatRatePercent: "",
   }
 }
@@ -64,17 +65,21 @@ export function CustomerPoDialog({
   open,
   onOpenChange,
   opportunityId,
+  track,
   po,
   onSaved,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   opportunityId: string
+  /** The department of the Opportunity. It sets what the box starts with. */
+  track: SalesTrack
   po?: CustomerPo
   onSaved: (po: CustomerPo) => void
 }) {
   const { accessToken } = useSession()
   const [error, setError] = useState<string | null>(null)
+  const profile = MONEY_PROFILE[track]
 
   const vatCodes = useQuery({
     queryKey: ["vat-codes"],
@@ -92,7 +97,7 @@ export function CustomerPoDialog({
           description: l.description, kind: l.kind, quantity: l.quantity, unitPrice: l.unitPrice, vatCodeId: l.vatCodeId,
           vatMethod: l.vatMethod, vatRatePercent: l.vatMethod === "MANUAL" ? (l.vatRatePercent ?? "") : "",
         }))
-      : [blankLine([])]
+      : [blankLine([], profile.firstLineKind)]
   )
 
   const update = (i: number, patch: Partial<LineDraft>) =>
@@ -160,22 +165,21 @@ export function CustomerPoDialog({
             <Field label="PO date" htmlFor="po-date">
               <Input id="po-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
-            <Field label="Invoice to" htmlFor="po-invoice-to" hint="Only when the customer wants a different company name on the invoice">
+            <Field label="Company name on the invoice" htmlFor="po-invoice-to" hint="Fill this only when the customer wants a different company name on the invoice. Leave it empty to use the customer's own name.">
               <Input id="po-invoice-to" value={invoiceTo} onChange={(e) => setInvoiceTo(e.target.value)} placeholder="Optional" />
             </Field>
           </div>
 
-          <p className={`text-[12px] ${TONE.muted}`}>
-            This PO is counted as delivered when it is invoiced. There is no separate delivery tracking.
-          </p>
+          <p className={`text-[12px] ${TONE.muted}`}>{profile.deliveryNote}</p>
 
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines</h3>
               <Button type="button" variant="outline" size="sm" disabled={copyFromDeal.isPending} onClick={() => copyFromDeal.mutate()}>
-                {copyFromDeal.isPending ? "Copying…" : "Copy products from the Opportunity"}
+                {copyFromDeal.isPending ? "Copying…" : profile.copyLabel}
               </Button>
             </div>
+            {profile.linesHint ? <p className={`text-[12px] ${TONE.muted}`}>{profile.linesHint}</p> : null}
 
             {lines.map((line, i) => (
               <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
@@ -184,7 +188,7 @@ export function CustomerPoDialog({
                     aria-label={`Line ${i + 1} description`}
                     value={line.description}
                     onChange={(e) => update(i, { description: e.target.value })}
-                    placeholder="Fortinet FortiGate 100F"
+                    placeholder={profile.lineExample}
                   />
                 </div>
                 <select
@@ -193,8 +197,11 @@ export function CustomerPoDialog({
                   value={line.kind}
                   onChange={(e) => update(i, { kind: e.target.value as SaleLineKind })}
                 >
-                  <option value="GOODS">Goods</option>
-                  <option value="SERVICE">Service</option>
+                  {profile.kindOrder.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {kind === "GOODS" ? "Goods" : "Service"}
+                    </option>
+                  ))}
                 </select>
                 <Input
                   aria-label={`Line ${i + 1} quantity`}
@@ -236,7 +243,7 @@ export function CustomerPoDialog({
               </div>
             ))}
 
-            <Button type="button" variant="outline" size="sm" onClick={() => setLines((all) => [...all, blankLine(codes)])}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setLines((all) => [...all, blankLine(codes, profile.firstLineKind)])}>
               <RiAddLine className="size-4" aria-hidden /> Add line
             </Button>
 
