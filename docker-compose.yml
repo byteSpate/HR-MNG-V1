@@ -1,0 +1,27 @@
+services:
+  server:
+    build: ./server
+    # All server settings, DATABASE_URL included, come from server/.env.
+    # That file is not in git. Copy it by hand to each device.
+    env_file: ./server/.env
+    environment:
+      # Set here so it wins over server/.env. Needed only when the browser
+      # opens the app from a different address than localhost.
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
+    ports:
+      - "4000:4000"
+    volumes:
+      # PAYSLIP_STORAGE_DIR=./storage/payslips resolves to /app/storage here.
+      - storage:/app/storage
+
+  client:
+    # The browser address (NEXT_PUBLIC_API_URL) is read from client/.env at
+    # build time. That file is not in git. Copy it by hand to each device.
+    build: ./client
+    depends_on:
+      - server
+    ports:
+      - "3000:3000"
+
+volumes:
+  storage:
