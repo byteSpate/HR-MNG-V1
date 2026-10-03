@@ -1,0 +1,10 @@
+node_modules
+dist
+storage
+src/generated
+.env
+.env.*
+.claude
+.playwright-mcp
+*.log
+*.tsbuildinfo
