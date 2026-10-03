@@ -1,0 +1,7 @@
+node_modules
+.next
+# client/.env is kept on purpose: it holds the browser address and no secrets.
+.env.*
+cloudflared.deb
+*.log
+*.tsbuildinfo
