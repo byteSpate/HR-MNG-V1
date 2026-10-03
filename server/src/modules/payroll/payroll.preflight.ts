@@ -75,9 +75,11 @@ export interface PayrollRosterMember {
 }
 
 /**
- * The population a payroll run pays: on the books (`ACTIVE`/`ON_LEAVE`) and
- * employed at least one day of the month. `RESIGNED`/`TERMINATED` are
- * excluded by the status filter — their money is the settlement's (Task 14).
+ * The population a payroll run pays: on the books (`ACTIVE`/`ON_LEAVE`), with a
+ * login that has not been deactivated, and employed at least one day of the
+ * month. `RESIGNED`/`TERMINATED` are excluded by the status filter — their
+ * money is the settlement's (Task 14). A deactivated account is the
+ * "soft delete" of a person, so it is left out of a run too.
  *
  * Deliberately **not** filtered to employees who already have a salary
  * structure — blocker 3 exists to find the ones who don't. `processRun`
@@ -92,6 +94,7 @@ export async function loadPayrollRoster(
   return prisma.employee.findMany({
     where: {
       employmentStatus: { in: ["ACTIVE", "ON_LEAVE"] },
+      user: { isActive: true },
       joiningDate: { lte: to },
     },
     select: {
@@ -124,8 +127,17 @@ export function toComponentInputs(
   }))
 }
 
-export async function preflight(month: number, year: number): Promise<PreflightReport> {
+/**
+ * @param excludedEmployeeIds People Finance left out of this run. They are
+ *   not checked, because nothing is paid to them in it.
+ */
+export async function preflight(
+  month: number,
+  year: number,
+  excludedEmployeeIds: string[] = []
+): Promise<PreflightReport> {
   const blockers: PreflightBlocker[] = []
+  const leftOut = new Set(excludedEmployeeIds)
   const { to: monthEnd } = monthRange(year, month)
 
   // Blocker 1 — the month must be over in office-local time. A run over a
@@ -138,8 +150,10 @@ export async function preflight(month: number, year: number): Promise<PreflightR
     })
   }
 
-  const summaries = await getMonthlySummary(SYSTEM_ACTOR, month, year)
-  const roster = await loadPayrollRoster(month, year)
+  const summaries = (await getMonthlySummary(SYSTEM_ACTOR, month, year)).filter(
+    (s) => !leftOut.has(s.employee.id)
+  )
+  const roster = (await loadPayrollRoster(month, year)).filter((e) => !leftOut.has(e.id))
   const { deductLossOfPay } = await loadPayrollSettings(prisma)
 
   // Blocker 2 — no unapproved attendance. Listed by name: a gate that says
@@ -263,8 +277,12 @@ export async function preflight(month: number, year: number): Promise<PreflightR
   return { month, year, ok: blockers.length === 0, blockers }
 }
 
-export async function assertProcessable(month: number, year: number): Promise<void> {
-  const report = await preflight(month, year)
+export async function assertProcessable(
+  month: number,
+  year: number,
+  excludedEmployeeIds: string[] = []
+): Promise<void> {
+  const report = await preflight(month, year, excludedEmployeeIds)
   if (!report.ok) {
     throw new AppError(409, "Payroll cannot be processed for this month", { blockers: report.blockers })
   }

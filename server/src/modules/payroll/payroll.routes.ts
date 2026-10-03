@@ -14,6 +14,7 @@ import {
   createRunHandler,
   createStructureHandler,
   deleteAdjustmentHandler,
+  deleteRunHandler,
   deleteStructureHandler,
   disburseRunHandler,
   getEmployeePayslipsHandler,
@@ -81,6 +82,8 @@ router.get("/runs/:id", requireAuth, requireRole(...READ_ROLES), getRunHandler)
 router.get("/runs/:id/preflight", requireAuth, requireRole(...READ_ROLES), getRunPreflightHandler)
 router.post("/runs", requireAuth, requireRole(...FINANCE_ROLES), createRunHandler)
 router.post("/runs/:id/process", requireAuth, requireRole(...FINANCE_ROLES), processRunHandler)
+// A draft run only; the service refuses any other status. Finance and Super Admin.
+router.delete("/runs/:id", requireAuth, requireRole(...FINANCE_ROLES), deleteRunHandler)
 router.post("/runs/:id/submit", requireAuth, requireRole(...FINANCE_ROLES), submitRunHandler)
 router.post("/runs/:id/approve", requireAuth, requireRole(Role.SUPER_ADMIN), approveRunHandler)
 router.post("/runs/:id/reject", requireAuth, requireRole(Role.SUPER_ADMIN), rejectRunHandler)

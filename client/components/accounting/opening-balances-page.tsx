@@ -11,6 +11,7 @@ import {
   listFinancialYears,
   listJournals,
   submitJournal,
+  approveJournal,
   updateJournal,
 } from "@/lib/api/accounting"
 import { ApiError } from "@/lib/api/client"
@@ -87,8 +88,10 @@ function AmountGrid({
   postable: Account[]
   isEditable: boolean
 }) {
-  const { accessToken } = useSession()
+  const { accessToken, user } = useSession()
   const queryClient = useQueryClient()
+  // A Super Admin has no one to send it to, so they post it in one step.
+  const canPostNow = user?.role === "SUPER_ADMIN"
 
   const rows = useMemo(() => rowsFor(postable, journal), [postable, journal])
   const [amounts, setAmounts] = useState<Amounts>(() => toAmounts(rows, journal))
@@ -139,6 +142,18 @@ function AmountGrid({
     onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not submit"),
   })
 
+  const post = useMutation({
+    mutationFn: async () => {
+      const saved = await save.mutateAsync()
+      return approveJournal(accessToken!, saved.id)
+    },
+    onSuccess: (posted) => {
+      queryClient.invalidateQueries({ queryKey: ["accounting"] })
+      toast.success(`${posted.journalNo} posted`)
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not post"),
+  })
+
   const setAmount = (accountId: string, column: "debit" | "credit", raw: string) => {
     const value = raw.replace(/[^\d.]/g, "")
     setAmounts((prev) => ({
@@ -159,7 +174,7 @@ function AmountGrid({
         {journal && (
           <div className="pb-2">
             <Badge variant="secondary">{JOURNAL_STATUS_LABEL[journal.status]}</Badge>{" "}
-            <Link href={`../journals/${journal.id}`} className="text-sm underline">
+            <Link href={`journals/${journal.id}`} className="text-sm underline">
               {journal.journalNo}
             </Link>
           </div>
@@ -168,9 +183,15 @@ function AmountGrid({
           <Button variant="outline" onClick={() => save.mutate()} disabled={!isEditable || save.isPending}>
             Save draft
           </Button>
-          <Button onClick={() => submit.mutate()} disabled={!isEditable || !isBalanced || submit.isPending}>
-            Submit for approval
-          </Button>
+          {canPostNow ? (
+            <Button onClick={() => post.mutate()} disabled={!isEditable || !isBalanced || post.isPending}>
+              {post.isPending ? "Posting…" : "Post opening balances"}
+            </Button>
+          ) : (
+            <Button onClick={() => submit.mutate()} disabled={!isEditable || !isBalanced || submit.isPending}>
+              Submit for approval
+            </Button>
+          )}
         </div>
       </div>
 

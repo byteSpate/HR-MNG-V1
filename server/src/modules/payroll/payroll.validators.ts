@@ -83,6 +83,12 @@ export const createRunBody = z.object({
 })
 export type CreateRunBody = z.infer<typeof createRunBody>
 
+/** Optional. People left out of the run, sent when Finance processes it again. */
+export const processRunBody = z
+  .object({ excludedEmployeeIds: z.array(z.string().min(1)).max(5000).optional() })
+  .default({})
+export type ProcessRunBody = z.infer<typeof processRunBody>
+
 /** Reused for a run rejection. A note is required — "why did this come back?" must always have an answer. */
 export const rejectRunBody = z.object({
   note: z.string().min(1, "A note is required").max(1000),

@@ -173,10 +173,17 @@ const row = {
   lastWorkingDay: null,
   exitReason: null,
   exitNote: null,
-  user: { email: "rita@demo.com", isActive: true, salesRole: null },
+  user: { email: "rita@demo.com", isActive: true, salesRole: null, role: "REPORTING_MANAGER" },
 } as any
 
 describe("projectEmployee", () => {
+  it("shows the login role to HR and Super Admin only", () => {
+    expect(projectEmployee(row, "FULL").work.role).toBe("REPORTING_MANAGER")
+    for (const tier of ["COLLEAGUE", "MANAGER", "SELF", "FINANCE"] as const) {
+      expect(projectEmployee(row, tier).work.role).toBeUndefined()
+    }
+  })
+
   it("gives COLLEAGUE work identity and NOTHING else", () => {
     const view = projectEmployee(row, "COLLEAGUE")
     // Asserted key by key. A test that only checks the allowed keys are

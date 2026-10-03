@@ -148,6 +148,34 @@ describe("buildEquity", () => {
     expect(closing.total).toBe("910000.00")
   })
 
+  it("carries a loss booked earlier in the year into the opening Retained Earnings, so it ties to the balance sheet", async () => {
+    // October: 10,00,000 of capital, a 1,20,000 salary expense booked before the
+    // period and not yet closed, and 11,800 of profit inside the period.
+    mockCalls({ cap: "1000000.00", sal: "120000.00" }, { rev: "11800.00" })
+
+    const result = await buildEquity(range)
+    const opening = result.rows.find((r) => r.kind === "OPENING")!
+    const closing = result.rows.find((r) => r.kind === "CLOSING")!
+
+    expect(opening.values.retained).toBe("-120000.00")
+    expect(opening.total).toBe("880000.00")
+    expect(closing.values.retained).toBe("-108200.00")
+    // Equal to the balance sheet: capital plus all profit since the books began.
+    expect(closing.total).toBe("891800.00")
+  })
+
+  it("adds nothing to the opening when the earlier year was already closed", async () => {
+    // A closed year leaves its income and expense accounts at zero, and the
+    // result is already in Retained Earnings.
+    mockCalls({ cap: "1000000.00", retained: "-100000.00" }, { sal: "40000.00" })
+
+    const result = await buildEquity(range)
+    const opening = result.rows.find((r) => r.kind === "OPENING")!
+
+    expect(opening.values.retained).toBe("-100000.00")
+    expect(opening.total).toBe("900000.00")
+  })
+
   it("puts the profit only in the Retained Earnings column", async () => {
     const result = await buildEquity(range)
     const profit = result.rows.find((r) => r.kind === "PROFIT")!

@@ -21,6 +21,7 @@ import type {
   EmploymentStatus,
   EmploymentType,
   ExitReason,
+  Role,
   SalesRole,
 } from "../../generated/prisma/client"
 import type { DocumentItem } from "./employee.media"
@@ -33,6 +34,8 @@ export interface WorkIdentity {
   email: string
   phone: string | null
   avatarUrl: string | null
+  /** Present for HR and Super Admin only. */
+  role?: Role
 }
 
 /**

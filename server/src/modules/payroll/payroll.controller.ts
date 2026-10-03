@@ -20,6 +20,7 @@ import {
   listExchangeRates,
   listRuns,
   listSalaryStructures,
+  deleteRun,
   processRun,
   rejectRun,
   submitRun,
@@ -35,6 +36,7 @@ import {
   createRunBody,
   exchangeRateBody,
   exchangeRateUpdateBody,
+  processRunBody,
   rejectRunBody,
   salaryStructureBody,
   salaryStructureUpdateBody,
@@ -147,7 +149,19 @@ export async function createRunHandler(req: Request, res: Response, next: NextFu
 
 export async function processRunHandler(req: RequestWithId, res: Response, next: NextFunction) {
   try {
-    return res.status(200).json(await processRun(req.params.id, req.user!.sub))
+    const body = processRunBody.parse(req.body ?? {})
+    return res
+      .status(200)
+      .json(await processRun(req.params.id, req.user!.sub, body.excludedEmployeeIds))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function deleteRunHandler(req: RequestWithId, res: Response, next: NextFunction) {
+  try {
+    await deleteRun(req.params.id, req.user!.sub)
+    return res.status(204).send()
   } catch (err) {
     return next(err)
   }

@@ -889,7 +889,7 @@ describe("leave decisions", () => {
       }) as any
     )
     vi.mocked(prisma.payrollRun.findUnique).mockImplementation((async (args: any) =>
-      args.where.month_year.month === 8 ? { status: "DISBURSED" } : null) as any)
+      args.where.activeKey === "2026-08" ? { status: "DISBURSED" } : null) as any)
     await expect(approveLeaveRequest("req-1", "hr-1")).rejects.toMatchObject({ statusCode: 409 })
     expect(prisma.leaveRequest.update).not.toHaveBeenCalled()
   })

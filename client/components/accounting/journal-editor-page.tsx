@@ -12,6 +12,7 @@ import {
   getJournal,
   listAccountsFlat,
   submitJournal,
+  approveJournal,
   updateJournal,
 } from "@/lib/api/accounting"
 import { ApiError } from "@/lib/api/client"
@@ -37,6 +38,7 @@ import {
   type DraftLine,
 } from "@/components/accounting/journal-lines-editor"
 import {
+  canApprove,
   JOURNAL_STATUS_LABEL,
   JOURNAL_TYPE_LABEL,
   toDateInput,
@@ -78,7 +80,9 @@ function JournalForm({
   journal: Journal | null
   onSaved: (id: string) => void
 }) {
-  const { accessToken } = useSession()
+  const { accessToken, user } = useSession()
+  // A Super Admin has no one to send a journal to, so they post it in one step.
+  const canPostNow = canApprove(user?.role)
   const queryClient = useQueryClient()
 
   const [date, setDate] = useState(() =>
@@ -145,6 +149,25 @@ function JournalForm({
       toast.error(err instanceof ApiError ? err.message : "Could not submit the journal"),
   })
 
+  const post = useMutation({
+    mutationFn: async () => {
+      // Save first, then post what was saved. Posting reads the saved journal,
+      // so a stale draft would post something that is not on screen.
+      const payload = { date, narration, reference: reference || null, lines: toApiLines(lines) }
+      const saved = journal
+        ? await updateJournal(accessToken!, journal.id, payload)
+        : await createJournal(accessToken!, payload)
+      return approveJournal(accessToken!, saved.id)
+    },
+    onSuccess: (posted) => {
+      queryClient.invalidateQueries({ queryKey: ["accounting"] })
+      toast.success(`${posted.journalNo} posted`)
+      onSaved(posted.id)
+    },
+    onError: (err) =>
+      toast.error(err instanceof ApiError ? err.message : "Could not post the journal"),
+  })
+
   const discard = useMutation({
     mutationFn: () => deleteJournal(accessToken!, journal!.id),
     onSuccess: () => {
@@ -190,7 +213,15 @@ function JournalForm({
             server refuses, so the button is absent rather than offered and
             then rejected.
           */}
-          {isDraft && (
+          {isDraft && canPostNow && (
+            <Button
+              onClick={() => post.mutate()}
+              disabled={Boolean(problem) || post.isPending || !narration.trim()}
+            >
+              {post.isPending ? "Posting…" : "Post journal"}
+            </Button>
+          )}
+          {isDraft && !canPostNow && (
             <Button
               onClick={() => submit.mutate()}
               disabled={Boolean(problem) || submit.isPending || !narration.trim()}

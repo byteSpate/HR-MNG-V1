@@ -57,12 +57,23 @@ export function JournalAttachments({
   })
 
   const open = async (id: string) => {
+    // The window is opened on the click itself. A window opened after the wait
+    // for the signed address is what a pop-up blocker stops, and then nothing
+    // happens on screen.
+    const win = window.open("", "_blank")
     try {
       // The URL is signed per request and expires in minutes, so it is
       // fetched at click time rather than rendered into the page.
       const { url } = await getAttachmentUrl(accessToken!, id)
-      window.open(url, "_blank", "noopener")
+      if (win) {
+        win.location.href = url
+      } else {
+        // The browser stopped the new window. Open the file in this tab instead.
+        toast.message("Opening the file in this tab")
+        window.location.assign(url)
+      }
     } catch (err) {
+      win?.close()
       toast.error(err instanceof ApiError ? err.message : "Could not open the file")
     }
   }

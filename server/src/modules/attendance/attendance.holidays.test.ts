@@ -91,10 +91,10 @@ describe("holiday writes respect the payroll month lock", () => {
     vi.mocked(prisma.holiday.update).mockResolvedValue(row({ date: parseDateOnly("2026-08-20") }))
     await updateHoliday("hol-1", { date: "2026-08-20" })
     expect(prisma.payrollRun.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { month_year: { month: 7, year: 2026 } } })
+      expect.objectContaining({ where: { activeKey: "2026-07" } })
     )
     expect(prisma.payrollRun.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { month_year: { month: 8, year: 2026 } } })
+      expect.objectContaining({ where: { activeKey: "2026-08" } })
     )
   })
 })

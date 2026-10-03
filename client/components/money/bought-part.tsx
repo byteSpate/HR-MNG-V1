@@ -9,7 +9,7 @@ import { approveSupplierCreditNote } from "@/lib/api/supplierCreditNote"
 import { reverseSupplierPayment } from "@/lib/api/supplierPayment"
 import { sendBackApproval } from "@/lib/api/dealMoney"
 import { useSession } from "@/lib/auth/session-context"
-import type { DealMoneyProductLine, DealMoneySupplierBill, SupplierCreditNote, SupplierPayment } from "@/lib/api/types"
+import type { DealMoneyProductLine, DealMoneySupplierBill, SalesTrack, SupplierCreditNote, SupplierPayment } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { cn } from "@/lib/utils"
 import type { MoneyHighlight } from "@/components/money/money-section"
@@ -78,6 +78,7 @@ export function BoughtPart({
   bills,
   supplierPayments,
   productLines,
+  track,
   canEdit,
   invalidate,
   highlight,
@@ -86,6 +87,7 @@ export function BoughtPart({
   bills: DealMoneySupplierBill[]
   supplierPayments: SupplierPayment[]
   productLines: DealMoneyProductLine[]
+  track: SalesTrack
   canEdit: boolean
   invalidate: () => void
   highlight?: MoneyHighlight | null
@@ -414,6 +416,7 @@ export function BoughtPart({
           onOpenChange={(open) => !open && setAddingBill(false)}
           opportunityId={opportunityId}
           productLines={productLines}
+          track={track}
           onSaved={() => {
             setAddingBill(false)
             invalidate()
@@ -427,6 +430,7 @@ export function BoughtPart({
           onOpenChange={(open) => !open && setEditingBill(null)}
           opportunityId={opportunityId}
           productLines={productLines}
+          track={track}
           bill={editingBill}
           onSaved={() => {
             setEditingBill(null)
