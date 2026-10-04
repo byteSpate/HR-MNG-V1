@@ -6,6 +6,21 @@
  * machinery three times guarantees the three drift.
  */
 
+/** What kind of value a column holds. Drives the guide and the example file. */
+export type ColumnType =
+  | "text"
+  | "integer"
+  | "decimal"
+  | "date"
+  | "boolean"
+  | "email"
+  | "choice"
+  | "time"
+  | "list"
+
+/** The most rows one import file may hold. Keeps one transaction short. */
+export const MAX_IMPORT_ROWS = 2000
+
 /** One declared column in an import file. */
 export interface ColumnSpec {
   /** Header name, matched case-insensitively on the trimmed cell text. */
@@ -17,6 +32,15 @@ export interface ColumnSpec {
    * that contradicts itself.
    */
   uniqueInFile?: boolean
+  /** Shown in the guide. Defaults to "text". */
+  type?: ColumnType
+  /** One plain sentence about what to write in this column. */
+  description?: string
+  /** A value that would pass the check. Shown in the guide. */
+  example?: string
+  /** For `choice` columns: every value the file may use. */
+  allowed?: string[]
+  maxLength?: number
 }
 
 /** One problem with one cell. `column` is null for whole-row problems. */

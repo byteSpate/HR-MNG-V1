@@ -100,6 +100,10 @@ export type AuditEntity =
   // Reference data editable from Settings (Task 15): a rate change is
   // audited the same way DEPARTMENT or SHIFT already are.
   | "VAT_CODE"
+  // A person took a list out of the system as a file. One row per export.
+  | "DATA_EXPORT"
+  // The holiday calendar, written by the bulk import.
+  | "HOLIDAY"
 
 export type AuditAction =
   | "CREATE"
@@ -131,6 +135,8 @@ export type AuditAction =
   | "LOCK"
   // Meeting minutes downloaded for sending: the copy that went out is kept.
   | "SEND"
+  // A list was downloaded as Excel, CSV or PDF.
+  | "EXPORT"
 
 export interface AuditEntry {
   entity: AuditEntity

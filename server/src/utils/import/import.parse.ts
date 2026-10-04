@@ -20,7 +20,12 @@ import type { ParsedRow } from "./import.types"
 
 function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return ""
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  if (value instanceof Date) {
+    // Excel stores a time of day such as 09:00 as a date in 1899. Read as a
+    // date it gave "1899-12-30", so a typed shift time failed its check.
+    if (value.getUTCFullYear() < 1900) return value.toISOString().slice(11, 16)
+    return value.toISOString().slice(0, 10)
+  }
   if (typeof value === "object") {
     // exceljs boxes formulas as { result }, rich text as { richText: [...] },
     // and hyperlinks as { text }. Reading `.toString()` on these yields
