@@ -192,7 +192,7 @@ const STYLES = `
   body {
     margin: 0;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 7.5pt; line-height: 1.35; color: #1F2937;
+    font-size: 7.5pt; line-height: 1.35; color: #17191C;
     background: #FFFFFF; -webkit-print-color-adjust: exact;
   }
   ${BRAND_HEADER_CSS}
@@ -203,7 +203,7 @@ const STYLES = `
   }
   .figv { display: block; font-size: 10.5pt; font-weight: 700; line-height: 1.1; }
   .figl {
-    display: block; margin-top: 1px; font-size: 6.5pt; color: #55627A;
+    display: block; margin-top: 1px; font-size: 6.5pt; color: #17191C;
     text-transform: uppercase; letter-spacing: 0.05em;
   }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -223,9 +223,9 @@ const STYLES = `
   tr { page-break-inside: avoid; }
   tbody tr:nth-child(even) td { background: #FBFCFD; }
   .nm { font-weight: 600; color: #17191C; }
-  .ds { font-size: 6.5pt; color: #6B7688; margin-top: 1px; }
-  .empty { color: #55627A; font-style: italic; padding: 16px 0; }
-  .note { font-size: 6.8pt; color: #8A94A2; margin-top: 14px; }
+  .ds { font-size: 6.5pt; color: #17191C; margin-top: 1px; }
+  .empty { color: #17191C; font-style: italic; padding: 16px 0; }
+  .note { font-size: 6.8pt; color: #17191C; margin-top: 14px; }
 `
 
 export function renderExpenseReportHtml(
@@ -281,7 +281,7 @@ export function reportFooterHtml(
 ): string {
   const who = companyAddress ? `${companyName}, ${companyAddress}` : companyName
   const caption = `${who} · expenses ${report.from} to ${report.to}`
-  return `<div style="width:100%;font-size:7pt;color:#55627A;padding:0 10mm;display:flex;align-items:center;justify-content:space-between;">
+  return `<div style="width:100%;font-size:7pt;color:#17191C;padding:0 10mm;display:flex;align-items:center;justify-content:space-between;">
   <div style="display:flex;align-items:center;gap:10px;">
     ${seal ? `<img src="${seal}" style="height:52px;width:auto;">` : ""}
     <span>${escapeHtml(caption)}</span>
