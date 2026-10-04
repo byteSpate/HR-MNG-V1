@@ -56,8 +56,10 @@ describe("renderExportHtml", () => {
     expect(html).toContain("&lt;b&gt;Star&lt;/b&gt; &amp; Co")
   })
 
-  it("right-aligns numbers", () => {
+  it("right-aligns numbers, and the heading above them", () => {
     expect(html).toMatch(/<td class="num">30<\/td>/)
+    expect(html).toMatch(/<th class="num">Days to pay<\/th>/)
+    expect(html).toMatch(/<th>Supplier<\/th>/)
   })
 
   it("says so when there are no rows", () => {
