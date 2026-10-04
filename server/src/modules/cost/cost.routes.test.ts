@@ -23,6 +23,9 @@ vi.mock("./cost.summary", () => ({
 vi.mock("./cost.import", () => ({
   previewCostImport: vi.fn(async () => ({ rows: [], issues: [], summary: {} })),
   commitCostImport: vi.fn(async () => ({ costCount: 0, paidCount: 0 })),
+  // The routes file now reads the column list and the example rows at load time.
+  COST_IMPORT_COLUMNS: [],
+  costImportSampleRows: vi.fn(() => []),
 }))
 
 vi.mock("./cost.media", () => ({

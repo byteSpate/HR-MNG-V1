@@ -48,6 +48,9 @@ import {
   uploadAssignmentAttachmentHandler,
   waiveRecoveryHandler,
 } from "./asset.controller"
+import { exportAssetsHandler } from "./asset.export"
+import { ASSET_IMPORT_COLUMNS, assetImportSampleRows } from "./asset.import"
+import { guideHandler, templateHandler } from "../../utils/import/import.http"
 
 const router = Router()
 
@@ -171,6 +174,17 @@ router.post(
 
 router.get("/attachments/:id/url", requireAuth, getAttachmentUrlHandler)
 router.delete("/attachments/:id", requireAuth, requireRole(...HR_ROLES), deleteAttachmentHandler)
+
+// File export, and the guide and example for the import above. The literal
+// paths sit above `/:id`.
+router.get("/export", requireAuth, requireRole(...HR_ROLES), exportAssetsHandler)
+router.get("/import/guide", requireAuth, requireRole(...HR_ROLES), guideHandler(ASSET_IMPORT_COLUMNS))
+router.get(
+  "/import/template",
+  requireAuth,
+  requireRole(...HR_ROLES),
+  templateHandler({ columns: ASSET_IMPORT_COLUMNS, sampleRows: assetImportSampleRows, baseName: "assets" })
+)
 
 router.get("/", requireAuth, listAssetsHandler)
 router.post("/", requireAuth, requireRole(...HR_ROLES), createAssetHandler)

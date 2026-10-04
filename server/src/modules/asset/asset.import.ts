@@ -24,27 +24,97 @@ import { runCommit, runPreview } from "../../utils/import/import.run"
 import type { ColumnSpec, ImportPreview, RowIssue } from "../../utils/import/import.types"
 import type { ImportSpec } from "../../utils/import/import.run"
 import type { ParsedRow } from "../../utils/import/import.types"
+import type { SampleRow } from "../../utils/import/import.template"
 import { nextAssetTag } from "./asset.service"
 import { assetImportedEvent } from "./asset.events"
 
 export const ASSET_IMPORT_COLUMNS: ColumnSpec[] = [
-  { header: "assetTag", required: false, uniqueInFile: true },
-  { header: "categoryCode", required: true },
-  { header: "name", required: true },
-  { header: "serialNumber", required: false, uniqueInFile: true },
-  { header: "model", required: false },
-  { header: "purchaseDate", required: false },
-  { header: "purchaseCost", required: false },
-  { header: "currency", required: false },
-  { header: "vendor", required: false },
-  { header: "warrantyExpiry", required: false },
-  { header: "departmentName", required: false },
-  { header: "location", required: false },
-  { header: "notes", required: false },
-  { header: "assignedToEmployeeCode", required: false },
-  { header: "assignedAt", required: false },
-  { header: "conditionOut", required: false },
+  {
+    header: "assetTag",
+    required: false,
+    uniqueInFile: true,
+    type: "text",
+    description: "The asset tag, like BS-AST-0042. Leave it blank and the system makes one. It must not already be in use.",
+    example: "BS-AST-0101",
+  },
+  {
+    header: "categoryCode",
+    required: true,
+    type: "text",
+    description: "The code of an asset category, like LAPTOP. The category must already exist in Asset categories.",
+    example: "LAPTOP",
+  },
+  { header: "name", required: true, type: "text", description: "What the asset is called.", example: "Dell Latitude 5440" },
+  {
+    header: "serialNumber",
+    required: false,
+    uniqueInFile: true,
+    type: "text",
+    description:
+      "The maker's serial number. It is required for categories that track serial numbers. It must be different for every asset.",
+    example: "SN-0001",
+  },
+  { header: "model", required: false, type: "text", description: "The model name.", example: "Latitude 5440" },
+  { header: "purchaseDate", required: false, type: "date", description: "The day it was bought, written YYYY-MM-DD.", example: "2026-01-15" },
+  {
+    header: "purchaseCost",
+    required: false,
+    type: "decimal",
+    description: "The price paid, as a number with no currency sign, like 95000 or 95000.50.",
+    example: "95000",
+  },
+  { header: "currency", required: false, type: "choice", allowed: ["BDT", "USD"], description: "The currency of the price. Leave blank for BDT.", example: "BDT" },
+  { header: "vendor", required: false, type: "text", description: "The company it was bought from.", example: "Star Tech Ltd" },
+  { header: "warrantyExpiry", required: false, type: "date", description: "The last day of the warranty, written YYYY-MM-DD.", example: "2029-01-14" },
+  {
+    header: "departmentName",
+    required: false,
+    type: "text",
+    description: "The department that has the asset. If the name is not in the system yet, the system adds that department.",
+    example: "Finance",
+  },
+  { header: "location", required: false, type: "text", description: "Where the asset is kept.", example: "Head office" },
+  { header: "notes", required: false, type: "text", description: "Any other note.", example: "" },
+  {
+    header: "assignedToEmployeeCode",
+    required: false,
+    type: "text",
+    description:
+      "The employee code of the person who holds the asset now. Fill assignedAt too. The employee must be active.",
+    example: "E-001",
+  },
+  {
+    header: "assignedAt",
+    required: false,
+    type: "date",
+    description: "The day that person got the asset, written YYYY-MM-DD. It cannot be in the future.",
+    example: "2026-02-01",
+  },
+  {
+    header: "conditionOut",
+    required: false,
+    type: "choice",
+    allowed: ["NEW", "GOOD", "FAIR", "DAMAGED"],
+    description: "The condition of the asset when it was handed over.",
+    example: "GOOD",
+  },
 ]
+
+/** Two rows that pass the importer's own checks when the categories LAPTOP and CHAIR and the department Finance exist. */
+export function assetImportSampleRows(_today: Date): SampleRow[] {
+  return [
+    {
+      assetTag: "", categoryCode: "LAPTOP", name: "Dell Latitude 5440", serialNumber: "SN-0001", model: "Latitude 5440",
+      purchaseDate: "2026-01-15", purchaseCost: "95000", currency: "BDT", vendor: "Star Tech Ltd", warrantyExpiry: "2029-01-14",
+      departmentName: "Finance", location: "Head office", notes: "", assignedToEmployeeCode: "", assignedAt: "", conditionOut: "",
+    },
+    {
+      assetTag: "", categoryCode: "CHAIR", name: "Office chair", serialNumber: "", model: "",
+      purchaseDate: "2026-02-10", purchaseCost: "12000", currency: "BDT", vendor: "", warrantyExpiry: "",
+      departmentName: "Finance", location: "Head office", notes: "", assignedToEmployeeCode: "", assignedAt: "", conditionOut: "",
+    },
+  ]
+}
 
 const CONDITIONS = ["NEW", "GOOD", "FAIR", "DAMAGED"] as const
 const CURRENCIES = ["BDT", "USD"] as const
