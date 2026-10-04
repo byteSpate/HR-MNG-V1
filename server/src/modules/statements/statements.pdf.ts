@@ -18,6 +18,8 @@ import type { Browser } from "puppeteer"
 
 import { env } from "../../config/env"
 import { AppError } from "../../middleware/errorHandler"
+import { brandAsset } from "../../utils/pdf"
+import { BRAND_DOC_CSS, brandDocHeaderHtml } from "../../utils/pdf.brand"
 import { loadChart } from "./statements.balances"
 import { buildPnl } from "./statements.pnl"
 import { buildPosition } from "./statements.position"
@@ -237,7 +239,8 @@ export function renderStatementsHtml(
   template: string,
   set: StatementSet,
   generatedAt: Date,
-  companyName: string
+  companyName: string,
+  logo: string | null = null
 ): string {
   const generated = longDate(generatedAt)
   const content = [
@@ -262,7 +265,16 @@ export function renderStatementsHtml(
   const footer =
     `<div class="statements-footer">Generated ${escape(generated)} · ${escape(set.pnl.period.label)}</div>`
 
+  const header = brandDocHeaderHtml({
+    logo,
+    company: companyName,
+    title: "Financial statements",
+    lines: [companyName, set.pnl.period.label],
+  })
+
   return template
+    .replace("{{BRAND_CSS}}", () => BRAND_DOC_CSS)
+    .replace("{{BRAND_HEADER}}", () => header)
     .replace(/{{COMPANY_NAME}}/g, escape(companyName))
     .replace(/{{PERIOD}}/g, escape(set.pnl.period.label))
     .replace(/{{GENERATED}}/g, escape(generated))
@@ -311,7 +323,8 @@ export async function renderStatementsPdf(range: DateRange): Promise<Buffer> {
     template,
     { pnl, position, equity, cash, notes, annexure },
     new Date(),
-    env.COMPANY_NAME
+    env.COMPANY_NAME,
+    await brandAsset("logo")
   )
 
   const page = await (await browser()).newPage()

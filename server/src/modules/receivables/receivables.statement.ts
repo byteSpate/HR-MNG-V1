@@ -3,6 +3,7 @@ import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
 import { env } from "../../config/env"
 import { escapeHtml, brandAsset, renderPdf } from "../../utils/pdf"
+import { BRAND_DOC_CSS, brandDocHeaderHtml } from "../../utils/pdf.brand"
 import { formatBdt } from "../accounting/accounting.utils"
 
 const ZERO = new Prisma.Decimal(0)
@@ -127,11 +128,8 @@ export function buildCustomerStatementHtml(s: CustomerStatement, company: { name
     <title>Statement</title>
     <style>
       body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #18181b; margin: 0; padding: 16px; }
-      .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-      .header img { max-height: 40px; }
-      .company { font-weight: 600; }
+      ${BRAND_DOC_CSS}
       .muted { color: #71717a; }
-      .period { text-align: center; color: #71717a; margin: 4px 0 20px; }
       table { width: 100%; border-collapse: collapse; }
       th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: #52525b; border-bottom: 1px solid #e4e4e7; padding: 6px 4px; }
       td { padding: 6px 4px; border-bottom: 1px solid #f4f4f5; }
@@ -139,17 +137,16 @@ export function buildCustomerStatementHtml(s: CustomerStatement, company: { name
       td.empty { text-align: center; color: #a1a1aa; padding: 20px 0; }
       tfoot td { font-weight: 600; border-top: 2px solid #18181b; border-bottom: none; }
     </style>
-    <div class="header">
-      <div>
-        <div class="company">${escapeHtml(company.name)}</div>
-        <div class="muted">${escapeHtml(company.address)}</div>
-      </div>
-      ${company.logo ? `<img src="${escapeHtml(company.logo)}" alt="">` : ""}
-    </div>
+    ${brandDocHeaderHtml({
+      logo: company.logo,
+      company: company.name,
+      title: "Customer statement",
+      lines: [`${longDate(s.from)} to ${longDate(s.to)}`, [company.name, company.address].filter(Boolean).join(", ")],
+    })}
     <h2>${escapeHtml(s.customer.legalName)}</h2>
     ${s.customer.billingAddress ? `<div class="muted">${escapeHtml(s.customer.billingAddress)}</div>` : ""}
     ${s.customer.bin ? `<div class="muted">BIN: ${escapeHtml(s.customer.bin)}</div>` : ""}
-    <p class="period">${escapeHtml(longDate(s.from))} to ${escapeHtml(longDate(s.to))}</p>
+    <div style="height: 12px"></div>
     <table>
       <thead>
         <tr><th>Date</th><th>Type</th><th>Reference</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Balance</th></tr>
