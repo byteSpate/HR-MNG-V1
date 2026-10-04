@@ -19,6 +19,8 @@ import {
   updateDepartment,
 } from "@/lib/api/departments"
 import type { Department } from "@/lib/api/types"
+import { countText } from "@/components/import-export/import-dialog"
+import { HR_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import {
   ConfirmDeleteDialog,
   DialogActions,
@@ -82,6 +84,25 @@ export function DepartmentsPanel({ accessToken }: { accessToken: string }) {
       sub="Every employee belongs to one. A department in use cannot be deleted."
       actionLabel="Add department"
       onAction={add}
+      extra={
+        <ImportExportTools
+          basePath="/api/departments"
+          fileName="departments"
+          roles={HR_ROLES}
+          onError={setError}
+          exportDisabled={isLoading || isError}
+          importer={{
+            title: "Import departments",
+            noun: "department",
+            previewColumns: [
+              { header: "Name", cell: (row) => String(row.name ?? "") },
+              { header: "Cost type", cell: (row) => String(row.costNature ?? "") },
+            ],
+            summaryText: (summary) => `${countText(summary.departments ?? 0, "department")} will be added.`,
+            onImported: () => queryClient.invalidateQueries({ queryKey: ["departments"] }),
+          }}
+        />
+      }
       error={error}
       onDismissError={() => setError(null)}
     >

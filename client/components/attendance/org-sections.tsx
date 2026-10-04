@@ -51,6 +51,8 @@ import type { TableCell } from "@/components/dashboard/types"
 import { TimeAmendmentDialog } from "@/components/attendance/time-amendment-dialog"
 import { SectionHeading } from "@/components/attendance/attendance-ui"
 import { AttendanceReports } from "@/components/attendance/report-panel"
+import { countText } from "@/components/import-export/import-dialog"
+import { HR_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import {
   APPROVAL_LABEL,
   HOLIDAY_TYPE_LABEL,
@@ -790,15 +792,36 @@ function HolidayPanel({
           title={`Holiday calendar, ${year}`}
           sub="Lunar dates move and the gazette gets amended, so this is yours to keep current."
         />
-        <Button
-          onClick={() => {
-            setError(null)
-            setAdding(true)
-          }}
-          className="mb-3.5 h-auto shrink-0 rounded-md bg-[#17191C] px-4 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-        >
-          Add holiday
-        </Button>
+        <div className="mb-3.5 flex flex-wrap items-start gap-2">
+          <ImportExportTools
+            basePath="/api/attendance/holidays"
+            fileName={`holidays-${year}`}
+            roles={HR_ROLES}
+            onError={setError}
+            exportParams={{ year }}
+            importer={{
+              title: "Import holidays",
+              noun: "holiday",
+              previewColumns: [
+                { header: "Name", cell: (row) => String(row.name ?? "") },
+                { header: "Date", cell: (row) => String(row.date ?? "") },
+                { header: "Type", cell: (row) => String(row.type ?? "") },
+              ],
+              summaryText: (summary) =>
+                `${countText(summary.holidays ?? 0, "holiday")} will be added. Holidays change how attendance is counted for those days.`,
+              onImported: refresh,
+            }}
+          />
+          <Button
+            onClick={() => {
+              setError(null)
+              setAdding(true)
+            }}
+            className="h-auto shrink-0 rounded-md bg-[#17191C] px-4 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+          >
+            Add holiday
+          </Button>
+        </div>
       </div>
 
       {/* The consequence of a backdated edit is invisible on this screen and
