@@ -55,6 +55,10 @@ export type DispatchKind =
   // 16:00 on the deadline day, to anyone whose weekly report is still a draft
   // (revision §26.3). One per person per week.
   | "SALES_WEEKLY_REMINDER"
+  // To every Super Admin: yesterday's report at 00:10, and last month's on the
+  // 1st at 08:00. One per person per day or month, keyed by `entityId`.
+  | "ATTENDANCE_REPORT_DAILY"
+  | "ATTENDANCE_REPORT_MONTHLY"
 
 export interface MailAttachment {
   filename: string

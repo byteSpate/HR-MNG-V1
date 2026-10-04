@@ -8,6 +8,10 @@ import cron from "node-cron"
 import { env } from "../config/env"
 import { runAutoCloseOpenDays } from "./attendance-autoclose.job"
 import { runApprovalsDigest, runMissingCheckOutNudge } from "./attendance-digest.job"
+import {
+  runDailyAttendanceReportEmail,
+  runMonthlyAttendanceReportEmail,
+} from "./attendance-report-email.job"
 import { runSalesDailyEmail } from "./sales-daily-email.job"
 import { runWeeklyReportReminder } from "./sales-weekly-reminder.job"
 
@@ -39,6 +43,17 @@ export function startJobs(): void {
   })
 
   cron.schedule("30 9 * * *", () => guard("missing check-out nudge", runMissingCheckOutNudge), {
+    timezone: env.APP_TIMEZONE,
+  })
+
+  // 00:10, five minutes after the auto check-out above, so yesterday is
+  // closed before it is counted. Yesterday's report, to every Super Admin.
+  cron.schedule("10 0 * * *", () => guard("daily attendance report", () => runDailyAttendanceReportEmail()), {
+    timezone: env.APP_TIMEZONE,
+  })
+
+  // 08:00 on the 1st: last month's report, to every Super Admin.
+  cron.schedule("0 8 1 * *", () => guard("monthly attendance report", () => runMonthlyAttendanceReportEmail()), {
     timezone: env.APP_TIMEZONE,
   })
 

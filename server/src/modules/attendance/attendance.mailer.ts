@@ -5,8 +5,9 @@
 // Both use `notify` rather than `sendMail`: these run from cron, and a mail
 // server refusing a digest must not throw out of a scheduled job. The failure
 // is still visible — it leaves an EmailDispatch row with `error` set.
-import { notify } from "../../utils/mailer"
+import { notify, type MailAttachment } from "../../utils/mailer"
 import { renderEmail, serialFor } from "../../templates/email"
+import type { AttendanceReport } from "./attendance.report"
 import type { ExceptionCode } from "./attendance.types"
 
 const EXCEPTION_LABELS: Record<ExceptionCode, string> = {
@@ -93,6 +94,84 @@ export async function sendMissingCheckOutNudge(
         note: "Do it while you still remember what time you left.",
       },
       footer: "You are receiving this because your attendance record for yesterday is incomplete.",
+    }),
+  })
+}
+
+export interface ReportEmailInput {
+  to: string
+  frequency: "daily" | "monthly"
+  /** `2026-10-03` or `2026-09`. The dispatch row's `entityId`, which is how
+   *  the job knows this person already has the email. */
+  periodKey: string
+  report: AttendanceReport
+  link: string
+  attachments: MailAttachment[]
+}
+
+/** `3 October 2026`, or `September 2026` for a month. */
+function periodLabel(iso: string, frequency: "daily" | "monthly"): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
+    ...(frequency === "daily" ? { day: "numeric" } : {}),
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+}
+
+/**
+ * The daily and monthly attendance report, to a Super Admin.
+ *
+ * The body holds the totals so the email is useful without opening anything.
+ * The PDF and the CSV hold the people. The numbers all come off the same
+ * report the Reports page shows.
+ */
+export async function sendAttendanceReportEmail(input: ReportEmailInput): Promise<void> {
+  const { report, frequency } = input
+  const daily = frequency === "daily"
+  const label = periodLabel(report.from, frequency)
+  const subject = `Attendance report for ${label}`
+
+  const hasPdf = input.attachments.some((a) => a.filename.endsWith(".pdf"))
+  const files = hasPdf ? "a PDF and a CSV file" : "a CSV file"
+  const intro = `Here is the attendance report for ${label}. The full list is attached as ${files}.`
+
+  const t = report.totals
+  const facts = [
+    { label: "People counted", value: String(report.headcount) },
+    { label: daily ? "Present" : "Days present", value: String(t.present) },
+    { label: daily ? "Absent" : "Days absent", value: String(t.absent) },
+    { label: daily ? "On leave" : "Days on leave", value: String(t.onLeave) },
+    { label: "Late arrivals", value: String(t.late) },
+    { label: "No check-out", value: String(t.missingCheckOut) },
+    { label: "Waiting for approval", value: String(t.pendingApproval) },
+  ]
+
+  const when = daily ? "every day at 12:10 am" : "on the 1st of each month at 8:00 am"
+  const footer = `You got this email because you are a Super Admin. It is sent ${when}.`
+  const kind = daily ? "ATTENDANCE_REPORT_DAILY" : "ATTENDANCE_REPORT_MONTHLY"
+
+  await notify({
+    to: input.to,
+    kind,
+    subject,
+    entity: "ATTENDANCE_REPORT",
+    entityId: input.periodKey,
+    attachments: input.attachments,
+    text: `${intro}\n\n${facts.map((f) => `${f.label}: ${f.value}`).join("\n")}\n\nOpen attendance: ${input.link}\n\n${footer}`,
+    html: renderEmail({
+      serial: serialFor(kind, input.periodKey),
+      subject,
+      preheader: `${t.present} present, ${t.absent} absent, ${t.late} late.`,
+      stamp: { label: daily ? "Daily report" : "Monthly report", tone: "issued" },
+      intro,
+      facts,
+      action: {
+        label: "Open attendance",
+        href: input.link,
+        note: "See each person, day by day.",
+      },
+      footer,
     }),
   })
 }
