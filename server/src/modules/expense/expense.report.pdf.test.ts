@@ -66,7 +66,7 @@ describe("the expense report document", () => {
     const out = html(report([row()]))
     expect(out).toContain('<div class="stripe"></div>')
     expect(out.indexOf('class="stripe"')).toBeLessThan(out.indexOf("<header>"))
-    expect(out).toContain("#1B3A82")
+    expect(out).not.toContain("#1B3A82")
   })
 
   it("sets the table text at 7.5pt, the sub line at 6.5pt and the tile numbers at 10.5pt", () => {
@@ -74,6 +74,16 @@ describe("the expense report document", () => {
     expect(out).toMatch(/body \{[^}]*font-size: 7\.5pt/)
     expect(out).toMatch(/\.ds \{ font-size: 6\.5pt/)
     expect(out).toMatch(/\.figv \{[^}]*font-size: 10\.5pt/)
+  })
+
+  it("prints all text in black, with the table heading white on black", () => {
+    const out = html(report([row()]))
+    expect(out).toMatch(/body \{[^}]*color: #17191C/)
+    for (const selector of ["\\.figl", "\\.ds", "\\.empty", "\\.note"]) {
+      expect(out).toMatch(new RegExp(`${selector} \\{[^}]*color: #17191C`))
+    }
+    expect(out).toContain("background: #17191C; color: #FFFFFF")
+    for (const grey of ["#55627A", "#6B7688", "#8A94A2", "#1F2937"]) expect(out).not.toContain(grey)
   })
 
   it("shows the BDT value and the frozen rate for an approved USD claim", () => {

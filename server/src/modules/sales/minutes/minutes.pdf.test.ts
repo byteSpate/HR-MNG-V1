@@ -68,6 +68,12 @@ describe("the brand header", () => {
     expect(html).not.toContain('class="subtitle"')
   })
 
+  it("is black and white: table headings are white on black", () => {
+    const html = renderMinutesHtml(doc(), OPTIONS)
+    expect(html).toMatch(/th \{[^}]*background: #17191C; color: #FFFFFF/)
+    expect(html).not.toContain("#F2F2F2")
+  })
+
   it("still prints the labelled facts under the panel", () => {
     const html = renderMinutesHtml(doc(), OPTIONS)
     expect(html.indexOf("bd-panel")).toBeLessThan(html.indexOf('<div class="facts">'))

@@ -72,6 +72,18 @@ describe("renderExportHtml", () => {
     expect(html).toMatch(/h1 \{[^}]*font-size: 14pt/)
   })
 
+  it("is black and white: black heading row, white pill with a black edge, black text", () => {
+    expect(html).toMatch(/th \{[^}]*background: #17191C; color: #FFFFFF/)
+    expect(html).toMatch(/\.pill \{[^}]*background: #FFFFFF; color: #17191C; border: 1px solid #17191C/)
+    expect(html).toMatch(/body \{[^}]*color: #17191C/)
+    expect(html).toMatch(/\.panel-sub \{[^}]*color: #17191C/)
+    expect(html).toMatch(/\.meta \{[^}]*color: #17191C/)
+    expect(html).toMatch(/td\.empty \{[^}]*color: #17191C/)
+    expect(exportFooterHtml(true)).toContain("color:#17191C")
+    expect(html).not.toContain("#16233F")
+    expect(html).not.toContain("#4F5B73")
+  })
+
   describe("the same look as the emails", () => {
     it("starts with the red, blue and green stripe", () => {
       expect(html).toMatch(/class="stripe"/)
@@ -88,11 +100,13 @@ describe("renderExportHtml", () => {
       )
     })
 
-    it("shows the title in a navy panel with the mint bar, and the notes under it", () => {
+    it("shows the title on white in black, with a black bar, and the notes under it", () => {
       expect(html).toMatch(/<div class="panel">[\s\S]*<h1>Suppliers<\/h1>[\s\S]*<div class="mint"><\/div>/)
-      expect(html).toContain("#1B3A82")
-      expect(html).toContain("#142C66")
-      expect(html).toContain("#7AE3C8")
+      expect(html).toMatch(/\.panel \{[^}]*background: #FFFFFF/)
+      expect(html).toMatch(/\.mint \{[^}]*background: #17191C/)
+      for (const colour of ["#1B3A82", "#142C66", "#7AE3C8", "#C9D6F5", "#E1E9FB"]) {
+        expect(html).not.toContain(colour)
+      }
       expect(html).toMatch(/<p class="panel-sub">Active only<\/p>/)
     })
 
