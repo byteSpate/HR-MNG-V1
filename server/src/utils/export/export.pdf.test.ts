@@ -81,6 +81,9 @@ describe("renderExportHtml", () => {
     expect(html).toMatch(/td\.empty \{[^}]*color: #17191C/)
     expect(exportFooterHtml(true)).toContain("color:#17191C")
     expect(html).not.toContain("#16233F")
+    // Row stripes and lines are neutral grey, with no blue in them.
+    expect(html).not.toContain("#F4F6FB")
+    expect(html).not.toContain("#E3E7EF")
     expect(html).not.toContain("#4F5B73")
   })
 
