@@ -19,7 +19,7 @@ export const BRAND_HEADER_CSS = `
   .tagline { margin-top: 5px; font-size: 9pt; font-weight: 600; color: #4F5B73; letter-spacing: 0.01em; }
   .meta { text-align: left; padding: 14px 14px 16px; background: #1B3A82; background-image: linear-gradient(135deg, #1B3A82 0%, #142C66 100%); }
   .meta::after { content: ""; display: block; width: 40px; height: 3px; border-radius: 2px; background: #7AE3C8; margin-top: 10px; }
-  .metatitle { margin-bottom: 4px; font-size: 14pt; font-weight: 700; color: #FFFFFF; }
+  .metatitle { margin-bottom: 4px; font-size: 11.5pt; font-weight: 700; color: #FFFFFF; }
   .v { font-size: 8.5pt; font-weight: 600; color: #C9D6F5; }
   .v + .v { margin-top: 2px; }
   .vmuted { font-weight: 500; }
