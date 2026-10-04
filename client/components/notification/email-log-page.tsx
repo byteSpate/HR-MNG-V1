@@ -45,6 +45,8 @@ const KIND_OPTIONS = [
   { value: "SETTLEMENT_STATEMENT", label: "Settlement statement" },
   { value: "ATTENDANCE_DIGEST", label: "Attendance digest" },
   { value: "MISSING_CHECKOUT", label: "Missing check-out" },
+  { value: "ATTENDANCE_REPORT_DAILY", label: "Daily attendance report" },
+  { value: "ATTENDANCE_REPORT_MONTHLY", label: "Monthly attendance report" },
 ]
 
 const KIND_LABELS: Record<string, string> = Object.fromEntries(

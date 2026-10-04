@@ -18,6 +18,8 @@ import type { Browser } from "puppeteer"
 
 import { env } from "../../config/env"
 import { AppError } from "../../middleware/errorHandler"
+import { brandAsset } from "../../utils/pdf"
+import { BRAND_DOC_CSS, brandDocHeaderHtml } from "../../utils/pdf.brand"
 import { loadChart } from "./statements.balances"
 import { buildPnl } from "./statements.pnl"
 import { buildPosition } from "./statements.position"
@@ -237,7 +239,8 @@ export function renderStatementsHtml(
   template: string,
   set: StatementSet,
   generatedAt: Date,
-  companyName: string
+  companyName: string,
+  logo: string | null = null
 ): string {
   const generated = longDate(generatedAt)
   const content = [
@@ -262,7 +265,16 @@ export function renderStatementsHtml(
   const footer =
     `<div class="statements-footer">Generated ${escape(generated)} · ${escape(set.pnl.period.label)}</div>`
 
+  const header = brandDocHeaderHtml({
+    logo,
+    company: companyName,
+    title: "Financial statements",
+    lines: [companyName, set.pnl.period.label],
+  })
+
   return template
+    .replace("{{BRAND_CSS}}", () => BRAND_DOC_CSS)
+    .replace("{{BRAND_HEADER}}", () => header)
     .replace(/{{COMPANY_NAME}}/g, escape(companyName))
     .replace(/{{PERIOD}}/g, escape(set.pnl.period.label))
     .replace(/{{GENERATED}}/g, escape(generated))
@@ -311,7 +323,8 @@ export async function renderStatementsPdf(range: DateRange): Promise<Buffer> {
     template,
     { pnl, position, equity, cash, notes, annexure },
     new Date(),
-    env.COMPANY_NAME
+    env.COMPANY_NAME,
+    await brandAsset("logo")
   )
 
   const page = await (await browser()).newPage()
@@ -322,8 +335,8 @@ export async function renderStatementsPdf(range: DateRange): Promise<Buffer> {
         format: "A4",
         printBackground: true,
         displayHeaderFooter: true,
-        headerTemplate: `<div style="font-size:7px;width:100%;text-align:center;color:#666;padding:0 15mm">${escape(env.COMPANY_NAME)}</div>`,
-        footerTemplate: `<div style="font-size:7px;width:100%;padding:0 15mm;color:#666;display:flex;justify-content:space-between"><span>Generated ${escape(longDate(new Date()))} · ${escape(pnl.period.label)}</span><span class="pageNumber"></span></div>`,
+        headerTemplate: `<div style="font-size:7px;width:100%;text-align:center;color:#17191C;padding:0 15mm">${escape(env.COMPANY_NAME)}</div>`,
+        footerTemplate: `<div style="font-size:7px;width:100%;padding:0 15mm;color:#17191C;display:flex;justify-content:space-between"><span>Generated ${escape(longDate(new Date()))} · ${escape(pnl.period.label)}</span><span class="pageNumber"></span></div>`,
         margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
       })
     )

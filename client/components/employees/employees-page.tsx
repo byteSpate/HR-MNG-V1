@@ -27,6 +27,7 @@ import type {
 } from "@/lib/api/types"
 import { ALL, FilterBar, FilterSelect } from "@/components/dashboard/filter-bar"
 import { MiniStat, PageHeader } from "@/components/dashboard/page-header"
+import { HR_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import { DialogActions, Field, FormError, PanelTable, RowActions } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import { Button } from "@/components/ui/button"
@@ -428,6 +429,14 @@ export function EmployeesPage() {
         sub="Everyone on the payroll, and who is missing what"
         cta="Add employee"
         onCta={handleOpenCreate}
+        aside={
+          <ImportExportTools
+            basePath="/api/employees"
+            fileName="employees"
+            roles={HR_ROLES}
+            exportDisabled={employeesQuery.isPending || employeesQuery.isError}
+          />
+        }
       />
 
       {/* Never rendered from an empty list that only looks empty. Computed

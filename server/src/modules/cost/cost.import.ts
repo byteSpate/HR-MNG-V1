@@ -25,22 +25,65 @@ import { writeAudit } from "../../utils/audit"
 import { runCommit, runPreview } from "../../utils/import/import.run"
 import type { ImportSpec } from "../../utils/import/import.run"
 import type { ColumnSpec, ImportPreview, ParsedRow, RowIssue } from "../../utils/import/import.types"
+import type { SampleRow } from "../../utils/import/import.template"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { dec } from "../payroll/payroll.money"
 
 export const COST_IMPORT_COLUMNS: ColumnSpec[] = [
-  { header: "categoryCode", required: true },
-  { header: "label", required: true },
-  { header: "payee", required: true },
-  { header: "periodMonth", required: true },
-  { header: "periodYear", required: true },
-  { header: "amount", required: true },
-  { header: "currency", required: false },
-  { header: "dueDate", required: false },
-  { header: "paidAt", required: false },
-  { header: "paymentRef", required: false },
-  { header: "notes", required: false },
+  {
+    header: "categoryCode",
+    required: true,
+    type: "text",
+    description: "The code of a cost category, like RENT. The category must already exist in Cost categories.",
+    example: "RENT",
+  },
+  { header: "label", required: true, type: "text", description: "What the bill is for.", example: "Office rent, October" },
+  { header: "payee", required: true, type: "text", description: "Who we pay.", example: "Dhanmondi Properties" },
+  {
+    header: "periodMonth",
+    required: true,
+    type: "integer",
+    description: "The month the bill is for, as a number from 1 to 12. This is the month it covers, not the month it was paid.",
+    example: "10",
+  },
+  {
+    header: "periodYear",
+    required: true,
+    type: "integer",
+    description: "The year the bill is for, like 2026. It cannot be more than one year ahead.",
+    example: "2026",
+  },
+  { header: "amount", required: true, type: "decimal", description: "The amount, as a number with no currency sign, like 150000 or 150000.50.", example: "150000" },
+  { header: "currency", required: false, type: "choice", allowed: ["BDT", "USD"], description: "The currency of the amount. Leave blank for BDT.", example: "BDT" },
+  { header: "dueDate", required: false, type: "date", description: "The day the bill must be paid by, written YYYY-MM-DD.", example: "2026-10-05" },
+  {
+    header: "paidAt",
+    required: false,
+    type: "date",
+    description:
+      "The day it was paid, written YYYY-MM-DD. If you fill this in, the bill is added as Paid. If you leave it blank, the bill is added as Pending.",
+    example: "2026-10-04",
+  },
+  { header: "paymentRef", required: false, type: "text", description: "A cheque number or transfer reference.", example: "CHQ-0001" },
+  { header: "notes", required: false, type: "text", description: "Any other note.", example: "" },
 ]
+
+/** Two rows for this month and year: one already paid, one still pending. */
+export function costImportSampleRows(today: Date): SampleRow[] {
+  const month = String(today.getUTCMonth() + 1)
+  const year = String(today.getUTCFullYear())
+  const day = today.toISOString().slice(0, 10)
+  return [
+    {
+      categoryCode: "RENT", label: "Office rent", payee: "Dhanmondi Properties", periodMonth: month, periodYear: year,
+      amount: "150000", currency: "BDT", dueDate: day, paidAt: day, paymentRef: "CHQ-0001", notes: "",
+    },
+    {
+      categoryCode: "ELECTRICITY", label: "Electricity bill", payee: "DESCO", periodMonth: month, periodYear: year,
+      amount: "18500.50", currency: "BDT", dueDate: day, paidAt: "", paymentRef: "", notes: "",
+    },
+  ]
+}
 
 const CURRENCIES = ["BDT", "USD"] as const
 type ImportCurrency = (typeof CURRENCIES)[number]

@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/money"
 import { ALL, FilterBar, FilterSelect } from "@/components/dashboard/filter-bar"
 import { MiniStat, PageHeader } from "@/components/dashboard/page-header"
 import { PanelAlert, PanelTable } from "@/components/dashboard/record-kit"
+import { FINANCE_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import type { TableCell } from "@/components/dashboard/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -613,7 +614,27 @@ export function CostPage() {
         kicker="Workspace"
         title="Expenses"
         sub="What the company itself spends — rent, utilities, salaries, office and entertainment — one bill per category each month"
-        aside={<MonthStepper period={period} onShift={(d) => setPeriod((p) => shiftPeriod(p, d))} />}
+        aside={
+          <div className="flex flex-wrap items-start gap-3">
+            <ImportExportTools
+              basePath="/api/costs"
+              fileName="operating-costs"
+              roles={FINANCE_ROLES}
+              exportParams={{
+                year: period.year,
+                month: period.month,
+                categoryId: billCategory === ALL ? undefined : billCategory,
+              }}
+              exportDisabled={billsQuery.isPending || billsQuery.isError}
+              exportNote={
+                billSearch.trim() !== "" || billOverdueOnly
+                  ? "The file does not use your text search or the overdue switch."
+                  : undefined
+              }
+            />
+            <MonthStepper period={period} onShift={(d) => setPeriod((p) => shiftPeriod(p, d))} />
+          </div>
+        }
         cta={canManage ? "Record a bill" : undefined}
         onCta={openCreate}
       />

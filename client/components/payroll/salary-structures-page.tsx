@@ -30,6 +30,10 @@ import type {
 } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { PageHeader } from "@/components/dashboard/page-header"
+import {
+  FINANCE_ROLES as EXPORT_ROLES,
+  ImportExportTools,
+} from "@/components/import-export/import-export-tools"
 import { PanelAlert } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
 import { cn } from "@/lib/utils"
@@ -479,6 +483,15 @@ export function SalaryStructuresPage() {
         kicker="Configuration"
         title="Salary structures"
         sub="The pay bands every payslip is computed from"
+        aside={
+          <ImportExportTools
+            basePath="/api/payroll/salary-structures"
+            fileName="salary-structures"
+            roles={EXPORT_ROLES}
+            onError={setError}
+            exportDisabled={structuresQuery.isPending || structuresQuery.isError}
+          />
+        }
       />
 
       {error ? (

@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <style>
+      {{BRAND_CSS}}
       /* Page margins live in page.pdf() so the running header and footer have
          room; setting them here as well double-counts them. */
       body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-             font-size: 10px; color: #18181b; margin: 0; }
+             font-size: 10px; color: #17191C; margin: 0; }
       h1 { text-align: center; font-size: 17px; margin: 0; }
       .period { text-align: center; color: #71717a; margin: 4px 0 20px; }
 
@@ -18,11 +19,11 @@
       table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
       th, td { padding: 3px 4px; text-align: right; border-bottom: 1px solid #e4e4e7;
                font-variant-numeric: tabular-nums; }
-      th { border-bottom: 1px solid #a1a1aa; font-weight: 600;
-           font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: #52525b; }
+      th { background: #17191C; font-weight: 600;
+           font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: #FFFFFF; }
       th.l, td.l { text-align: left; }
       /* The last row of every table is its total. */
-      tbody tr:last-child td { font-weight: 600; border-top: 1px solid #a1a1aa; }
+      tbody tr:last-child td { font-weight: 600; border-top: 1px solid #17191C; }
 
       /* Nine columns do not fit at the body size. */
       table.annexure { font-size: 8px; }
@@ -35,13 +36,12 @@
          on every page. This copy closes the document for anything rendering
          the HTML directly. */
       .statements-footer { margin-top: 24px; padding-top: 10px; font-size: 9px;
-                           text-align: center; color: #a1a1aa;
+                           text-align: center; color: #17191C;
                            border-top: 1px solid #e4e4e7; }
     </style>
   </head>
   <body>
-    <h1>{{COMPANY_NAME}}</h1>
-    <div class="period">Financial statements for {{PERIOD}}</div>
+    {{BRAND_HEADER}}
     {{CONTENT}}
   </body>
 </html>

@@ -10,6 +10,7 @@ import type { AssetImportCommitResult, AssetImportIssue, AssetImportPreview } fr
 import { DataTable } from "@/components/dashboard/data-table"
 import type { TableCell } from "@/components/dashboard/types"
 import { ImportPreviewEmpty, issuesCell, previewRowNumbers } from "@/components/import/import-preview"
+import { ImportGuide } from "@/components/import-export/import-guide"
 import { Button } from "@/components/ui/button"
 import { DOCUMENT_MAX_BYTES, FileUpload } from "@/components/ui/file-upload"
 
@@ -155,6 +156,8 @@ export function ImportWizard({ onImported }: { onImported: () => void }) {
   return (
     <div className="space-y-4">
       {step === "upload" ? (
+        <div className="space-y-4">
+        <ImportGuide basePath="/api/assets" />
         <div className="rounded-md border border-dashed p-8 text-center">
           <p className="mb-3 text-sm text-muted-foreground">
             Upload an Excel (.xlsx) or CSV file of the asset register to import. Nothing is written
@@ -168,6 +171,7 @@ export function ImportWizard({ onImported }: { onImported: () => void }) {
               onSelect={(f) => previewMutation.mutateAsync(f).then(() => undefined)}
             />
           </div>
+        </div>
         </div>
       ) : null}
 

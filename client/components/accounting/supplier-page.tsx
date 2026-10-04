@@ -13,6 +13,8 @@ import {
 import { useSession } from "@/lib/auth/session-context"
 import type { Supplier } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { countText } from "@/components/import-export/import-dialog"
+import { FINANCE_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import {
   ConfirmDialog,
   DialogActions,
@@ -161,6 +163,28 @@ export function SupplierPage() {
         sub="Every company we buy from, and what we owe them."
         cta="New supplier"
         onCta={add}
+        aside={
+          <ImportExportTools
+            basePath="/api/suppliers"
+            fileName="suppliers"
+            roles={FINANCE_ROLES}
+            onError={setError}
+            exportDisabled={suppliers.isPending || suppliers.isError}
+            importer={{
+              title: "Import suppliers",
+              noun: "supplier",
+              previewColumns: [
+                { header: "Name", cell: (row) => String(row.name ?? "") },
+                { header: "Contact", cell: (row) => String(row.contactName ?? "") },
+                { header: "BIN", cell: (row) => String(row.bin ?? "") },
+                { header: "Payment days", cell: (row) => String(row.paymentDays ?? 30) },
+                { header: "Active", cell: (row) => (row.isActive ? "Yes" : "No") },
+              ],
+              summaryText: (summary) => `${countText(summary.suppliers ?? 0, "supplier")} will be added.`,
+              onImported: () => queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+            }}
+          />
+        }
       />
 
       {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}

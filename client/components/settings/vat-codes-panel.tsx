@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { createVatCode, listVatCodes, updateVatCode, type CreateVatCodeInput } from "@/lib/api/vatCode"
 import type { VatCode } from "@/lib/api/types"
+import { countText } from "@/components/import-export/import-dialog"
+import { FINANCE_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import {
   CheckboxField,
   DialogActions,
@@ -88,6 +90,27 @@ export function VatCodesPanel({ accessToken }: { accessToken: string }) {
       sub="The VAT rates used on invoice and supplier bill lines."
       actionLabel="New VAT code"
       onAction={add}
+      extra={
+        <ImportExportTools
+          basePath="/api/vat-codes"
+          fileName="vat-codes"
+          roles={FINANCE_ROLES}
+          onError={setError}
+          exportDisabled={isLoading || isError}
+          importer={{
+            title: "Import VAT codes",
+            noun: "VAT code",
+            previewColumns: [
+              { header: "Code", cell: (row) => String(row.code ?? "") },
+              { header: "Name", cell: (row) => String(row.name ?? "") },
+              { header: "Rate (%)", cell: (row) => String(row.ratePercent ?? "") },
+              { header: "Active", cell: (row) => (row.isActive ? "Yes" : "No") },
+            ],
+            summaryText: (summary) => `${countText(summary.vatCodes ?? 0, "VAT code")} will be added.`,
+            onImported: () => queryClient.invalidateQueries({ queryKey: ["vat-codes"] }),
+          }}
+        />
+      }
       error={error}
       onDismissError={() => setError(null)}
     >

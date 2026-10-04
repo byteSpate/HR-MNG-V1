@@ -35,6 +35,7 @@ import type { Asset, AssetAssignment, AssetRepair, AssetRequest } from "@/lib/ap
 import { formatMoney } from "@/lib/money"
 import { ALL, FilterBar, FilterSelect } from "@/components/dashboard/filter-bar"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { HR_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import { PanelAlert, PanelTable } from "@/components/dashboard/record-kit"
 import type { TableCell } from "@/components/dashboard/types"
 import { Badge } from "@/components/ui/badge"
@@ -1103,6 +1104,16 @@ export function AssetPage() {
             </TabsContent>
 
             <TabsContent value="register" className="space-y-3 pt-3">
+              <div className="flex justify-end">
+                <ImportExportTools
+                  basePath="/api/assets"
+                  fileName="assets"
+                  roles={HR_ROLES}
+                  onError={setError}
+                  exportParams={{ ...filters }}
+                  exportDisabled={registerQuery.isPending || registerQuery.isError}
+                />
+              </div>
               <RegisterFilters
                 filters={filters}
                 onChange={setFilters}

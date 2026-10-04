@@ -1,17 +1,19 @@
 /**
  * Meeting minutes as the PDF the customer receives (revision §25.10 to §25.19).
  *
- * Every choice copies the four documents the team wrote in Word in August
- * 2026: a centred title, a list of bold labels for the header, attendees
- * grouped by side, numbered sections, a Prepared by block, and no logo and no
- * seal, because none of the four has either.
+ * The body copies the four documents the team wrote in Word in August 2026: a
+ * list of bold labels for the header, attendees grouped by side, numbered
+ * sections and a Prepared by block. The very top is the company's brand header
+ * (stripe, logo, navy panel with the title), added on the owner's request on
+ * 2026-10-04; the four Word documents had a plain centred title and no logo.
  *
  * The same split as every renderer here: `renderMinutesHtml` is pure and is
  * what the tests read, and `renderMinutesPdf` only drives the browser.
  */
 
 import { env } from "../../../config/env"
-import { escapeHtml, renderPdf } from "../../../utils/pdf"
+import { brandAsset, escapeHtml, renderPdf } from "../../../utils/pdf"
+import { BRAND_DOC_CSS, brandDocHeaderHtml } from "../../../utils/pdf.brand"
 import {
   RICH_ALIGNMENTS,
   RICH_HIGHLIGHTS,
@@ -48,6 +50,8 @@ export interface MinutesRenderOptions {
   draft: boolean
   companyName: string
   timeZone: string
+  /** A data URI for the logo in the header. Without it the company name is printed. */
+  logo?: string | null
 }
 
 /**
@@ -310,12 +314,11 @@ function preparedBy(doc: MinutesDocument, companyName: string): string {
 const STYLES = `
   * { box-sizing: border-box; }
   body {
-    margin: 0; color: #111; background: #fff;
+    margin: 0; color: #17191C; background: #fff;
     font-family: "Times New Roman", Tinos, "Liberation Serif", "DejaVu Serif", serif;
     font-size: 11pt; line-height: 1.4; -webkit-print-color-adjust: exact;
   }
-  h1 { margin: 0; text-align: center; font-size: 16pt; font-weight: 700; }
-  .subtitle { margin: 3px 0 12px; text-align: center; font-size: 11.5pt; }
+  ${BRAND_DOC_CSS}
   .facts div { margin: 2px 0; }
   h2 { margin: 14px 0 5px; font-size: 12.5pt; font-weight: 700; page-break-after: avoid; }
   h3 { margin: 9px 0 3px; font-size: 11pt; font-weight: 700; page-break-after: avoid; }
@@ -326,7 +329,7 @@ const STYLES = `
   li { margin: 1px 0; }
   table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
   th, td { border: 0.75pt solid #444; padding: 4px 6px; text-align: left; vertical-align: top; }
-  th { font-weight: 700; background: #F2F2F2; }
+  th { font-weight: 700; background: #17191C; color: #FFFFFF; }
   table.actions td:first-child, table.actions th:first-child { text-align: center; }
   h4 { margin: 8px 0 3px; font-size: 10.5pt; font-weight: 700; page-break-after: avoid; }
   li > p { margin: 0; }
@@ -362,8 +365,7 @@ export function renderMinutesHtml(doc: MinutesDocument, options: MinutesRenderOp
 <html><head><meta charset="utf-8"><title>${text(title)}</title><style>${STYLES}</style></head>
 <body>
   ${options.draft ? '<div class="draft">DRAFT</div>' : ""}
-  <h1>${text(title)}</h1>
-  <p class="subtitle">${text(doc.meetingTitle)}</p>
+  ${brandDocHeaderHtml({ logo: options.logo ?? null, company: options.companyName, title, lines: [doc.meetingTitle] })}
   <div class="facts">${headerFacts(doc, options)}</div>
   ${attendeeBlock(doc, options.companyName)}
   ${sections}
@@ -372,12 +374,17 @@ export function renderMinutesHtml(doc: MinutesDocument, options: MinutesRenderOp
 }
 
 export async function renderMinutesPdf(doc: MinutesDocument, draft: boolean): Promise<Buffer> {
-  const html = renderMinutesHtml(doc, { draft, companyName: env.COMPANY_NAME, timeZone: env.APP_TIMEZONE })
+  const html = renderMinutesHtml(doc, {
+    draft,
+    companyName: env.COMPANY_NAME,
+    timeZone: env.APP_TIMEZONE,
+    logo: await brandAsset("logo"),
+  })
   return renderPdf(html, {
     displayHeaderFooter: true,
     headerTemplate: "<span></span>",
     footerTemplate:
-      '<div style="width:100%;font-size:8pt;color:#666;padding:0 18mm;text-align:right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
+      '<div style="width:100%;font-size:8pt;color:#17191C;padding:0 18mm;text-align:right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
     margin: { top: "16mm", bottom: "18mm", left: "18mm", right: "18mm" },
   })
 }
