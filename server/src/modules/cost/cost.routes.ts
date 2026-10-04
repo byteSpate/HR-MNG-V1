@@ -24,6 +24,9 @@ import {
   updateCostHandler,
   uploadReceiptHandler,
 } from "./cost.controller"
+import { exportCostsHandler } from "./cost.export"
+import { COST_IMPORT_COLUMNS, costImportSampleRows } from "./cost.import"
+import { guideHandler, templateHandler } from "../../utils/import/import.http"
 
 const router = Router()
 
@@ -67,6 +70,17 @@ router.post(
 
 router.get("/receipts/:id/url", requireAuth, requireRole(...READ_ROLES), getReceiptUrlHandler)
 router.delete("/receipts/:id", requireAuth, requireRole(...WRITE_ROLES), deleteReceiptHandler)
+
+// File export, and the guide and example for the import above. The literal
+// paths sit above `/:id`. Export follows the write roles, like the import.
+router.get("/export", requireAuth, requireRole(...WRITE_ROLES), exportCostsHandler)
+router.get("/import/guide", requireAuth, requireRole(...WRITE_ROLES), guideHandler(COST_IMPORT_COLUMNS))
+router.get(
+  "/import/template",
+  requireAuth,
+  requireRole(...WRITE_ROLES),
+  templateHandler({ columns: COST_IMPORT_COLUMNS, sampleRows: costImportSampleRows, baseName: "operating-costs" })
+)
 
 router.get("/", requireAuth, requireRole(...READ_ROLES), listCostsHandler)
 router.post("/", requireAuth, requireRole(...WRITE_ROLES), createCostHandler)
