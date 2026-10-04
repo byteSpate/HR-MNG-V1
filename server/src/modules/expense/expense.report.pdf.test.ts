@@ -69,6 +69,13 @@ describe("the expense report document", () => {
     expect(out).toContain("#1B3A82")
   })
 
+  it("sets the table text at 7.5pt, the sub line at 6.5pt and the tile numbers at 10.5pt", () => {
+    const out = html(report([row()]))
+    expect(out).toMatch(/body \{[^}]*font-size: 7\.5pt/)
+    expect(out).toMatch(/\.ds \{ font-size: 6\.5pt/)
+    expect(out).toMatch(/\.figv \{[^}]*font-size: 10\.5pt/)
+  })
+
   it("shows the BDT value and the frozen rate for an approved USD claim", () => {
     const out = html(report([row({ currency: "USD", amount: "80.00", fxRateToBdt: "122.500000", amountBdt: "9800.00" })]))
     expect(out).toContain("80.00 USD")

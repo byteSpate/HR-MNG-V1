@@ -224,6 +224,14 @@ describe("renderAttendanceReportHtml", () => {
     expect(out).toContain("#1B3A82")
   })
 
+  it("sets the table text at 7.5pt, the job title at 6.5pt and the tile numbers at 10.5pt", () => {
+    const out = html(report())
+
+    expect(out).toMatch(/body \{[^}]*font-size: 7\.5pt/)
+    expect(out).toMatch(/\.ds \{ font-size: 6\.5pt/)
+    expect(out).toMatch(/\.figv \{[^}]*font-size: 10\.5pt/)
+  })
+
   // 09:30 UTC is 15:30 in Dhaka. A header stamped in UTC beside a table of
   // office-local check-in times invites the reader to read both on one clock
   // when they are six hours apart.
