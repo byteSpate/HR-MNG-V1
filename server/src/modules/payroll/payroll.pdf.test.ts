@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import path from "node:path"
+
 import { describe, expect, it } from "vitest"
 
 import { renderPayslipHtml } from "./payroll.pdf"
@@ -70,6 +73,26 @@ function payslip(over: Record<string, unknown> = {}) {
 }
 
 describe("renderPayslipHtml", () => {
+  it("opens with the brand header: stripe, logo, and a navy panel titled Payslip with the period", () => {
+    const html = renderPayslipHtml(
+      "<style>{{BRAND_CSS}}</style>{{BRAND_HEADER}}",
+      payslip() as never,
+      "data:image/png;base64,LOGO"
+    )
+    expect(html).toContain('<div class="bd-stripe"></div>')
+    expect(html).toContain('src="data:image/png;base64,LOGO"')
+    expect(html).toContain('<h1 class="bd-title">Payslip</h1>')
+    expect(html).toMatch(/<p class="bd-sub">[A-Z][a-z]+ \d{4}<\/p>/)
+    expect(html).toContain(".bd-panel")
+    expect(html).not.toMatch(/\{\{\w+\}\}/)
+  })
+
+  it("the real payslip template has a place for the brand header and its style", () => {
+    const file = readFileSync(path.join(__dirname, "../../templates/payslip.html"), "utf8")
+    expect(file).toContain("{{BRAND_CSS}}")
+    expect(file).toContain("{{BRAND_HEADER}}")
+  })
+
   it("substitutes every placeholder — none are left unreplaced", () => {
     const html = renderPayslipHtml(TEMPLATE, payslip() as never)
     expect(html).not.toMatch(/\{\{\w+\}\}/)
