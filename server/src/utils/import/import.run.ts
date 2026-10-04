@@ -15,7 +15,7 @@
 
 import { AppError } from "../../middleware/errorHandler"
 import { parseSheet } from "./import.parse"
-import type { ColumnSpec, ImportPreview, ParsedRow, RowIssue } from "./import.types"
+import { MAX_IMPORT_ROWS, type ColumnSpec, type ImportPreview, type ParsedRow, type RowIssue } from "./import.types"
 
 export interface ImportSpec<T> {
   columns: ColumnSpec[]
@@ -95,6 +95,12 @@ export async function runPreview<T>(
   spec: ImportSpec<T>
 ): Promise<ImportPreview<T>> {
   const parsed = await parseSheet(buffer, fileName)
+  if (parsed.length > MAX_IMPORT_ROWS) {
+    throw new AppError(
+      400,
+      `This file has too many rows. Split it into files of ${MAX_IMPORT_ROWS.toLocaleString("en-US")} rows or less.`
+    )
+  }
   const present = presentHeaders(parsed)
 
   const issues: RowIssue[] = [
@@ -139,5 +145,14 @@ export async function runCommit<T, R>(
       issues: preview.issues,
     })
   }
-  return write(preview.rows)
+  try {
+    return await write(preview.rows)
+  } catch (err) {
+    // Two people importing the same name at once: the preview said it was free,
+    // the database says it is not. Say what happened and what to do.
+    if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
+      throw new AppError(409, "Someone added one of these records while you were importing. Run the preview again.")
+    }
+    throw err
+  }
 }
