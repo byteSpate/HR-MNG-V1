@@ -152,6 +152,9 @@ export function ImportDialog({
     },
   })
 
+  // How many different rows have a problem. One row can have several.
+  const problemRows = new Set(issues.map((issue) => issue.rowNumber)).size
+
   return (
     <Dialog
       open
@@ -194,7 +197,11 @@ export function ImportDialog({
 
         {step === "preview" && preview ? (
           <div className="space-y-4">
-            <p className="text-[13px] font-semibold">{summaryText(preview.summary)}</p>
+            <p className="text-[13px] font-semibold">
+              {issues.length > 0
+                ? `${countText(problemRows, "row")} ${problemRows === 1 ? "has" : "have"} a problem, so nothing can be added yet.`
+                : summaryText(preview.summary)}
+            </p>
 
             <PreviewTable rows={preview.rows} issues={issues} columns={previewColumns} noun={noun} />
 
