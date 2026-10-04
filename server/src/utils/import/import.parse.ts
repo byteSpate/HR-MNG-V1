@@ -44,7 +44,11 @@ export async function parseSheet(buffer: Buffer, fileName: string): Promise<Pars
   if (fileName.toLowerCase().endsWith(".csv")) {
     // exceljs's csv reader wants a stream; a Buffer is not one.
     const { Readable } = await import("node:stream")
-    await wb.csv.read(Readable.from(buffer))
+    // `map` keeps every cell as the text that was typed. By default exceljs turns
+    // "0123456789" into 123456789, "+8801711000000" into 8801711000000, and
+    // "2026-12-16" into a local-time date that reads back a day early in a
+    // timezone ahead of UTC. A BIN, a phone number and a date must survive.
+    await wb.csv.read(Readable.from(buffer), { map: (value: unknown) => value })
   } else {
     // exceljs's bundled .d.ts shadows `Buffer` with a bare `extends
     // ArrayBuffer` interface local to that module, which newer @types/node's
