@@ -1,7 +1,11 @@
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+
 import nodemailer, { type Transporter } from "nodemailer"
 
 import { env } from "../config/env"
 import prisma from "../config/prisma"
+import { LOGO_CID } from "../templates/email"
 
 /**
  * The one place mail leaves this server.
@@ -55,6 +59,58 @@ export type DispatchKind =
 export interface MailAttachment {
   filename: string
   content: Buffer
+  /** Set for an image the html shows inline, as `cid:<this value>`. */
+  cid?: string
+  contentType?: string
+  contentDisposition?: "inline" | "attachment"
+}
+
+let logoBytes: Buffer | null | undefined
+
+/**
+ * The logo, read once. Same two candidate paths as `brandAsset` in
+ * `pdf.ts`: `src/templates` is copied beside `dist` by the build, so both
+ * layouts find it. A missing file gives `null`, not a throw: the email still
+ * goes out and shows the company name where the logo would be.
+ */
+async function readLogo(): Promise<Buffer | null> {
+  if (logoBytes !== undefined) return logoBytes
+  const candidates = [
+    path.join(__dirname, "../templates/brand/logo.png"),
+    path.join(process.cwd(), "src/templates/brand/logo.png"),
+  ]
+  for (const candidate of candidates) {
+    try {
+      logoBytes = await readFile(candidate)
+      return logoBytes
+    } catch {
+      // try the next candidate
+    }
+  }
+  console.error("[email] brand/logo.png not found; emails will show the company name instead")
+  logoBytes = null
+  return null
+}
+
+/**
+ * Gmail strips `data:` images, so the logo travels as an inline attachment
+ * that the html names by content id. Added here, in the one place mail leaves,
+ * so no caller has to remember it.
+ */
+async function withLogo(d: Dispatch): Promise<MailAttachment[] | undefined> {
+  if (!d.html.includes(`cid:${LOGO_CID}`)) return d.attachments
+  const content = await readLogo()
+  if (!content) return d.attachments
+  return [
+    ...(d.attachments ?? []),
+    {
+      filename: "logo.png",
+      content,
+      cid: LOGO_CID,
+      contentType: "image/png",
+      contentDisposition: "inline",
+    },
+  ]
 }
 
 export interface Dispatch {
@@ -162,7 +218,7 @@ export async function sendMail(d: Dispatch): Promise<void> {
         subject: d.subject,
         text: d.text,
         html: d.html,
-        attachments: d.attachments,
+        attachments: await withLogo(d),
       })
     }
     await prisma.emailDispatch.update({ where: { id: row.id }, data: { sentAt: new Date() } })
