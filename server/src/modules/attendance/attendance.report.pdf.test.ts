@@ -216,6 +216,14 @@ describe("renderAttendanceReportHtml", () => {
     expect(out).not.toContain('class="company"')
   })
 
+  it("opens with the red, blue and green stripe, above the header", () => {
+    const out = html(report())
+
+    expect(out).toContain('<div class="stripe"></div>')
+    expect(out.indexOf('class="stripe"')).toBeLessThan(out.indexOf("<header>"))
+    expect(out).toContain("#1B3A82")
+  })
+
   // 09:30 UTC is 15:30 in Dhaka. A header stamped in UTC beside a table of
   // office-local check-in times invites the reader to read both on one clock
   // when they are six hours apart.

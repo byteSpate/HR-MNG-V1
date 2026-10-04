@@ -62,6 +62,13 @@ describe("the expense report document", () => {
     }
   })
 
+  it("opens with the red, blue and green stripe, above the header", () => {
+    const out = html(report([row()]))
+    expect(out).toContain('<div class="stripe"></div>')
+    expect(out.indexOf('class="stripe"')).toBeLessThan(out.indexOf("<header>"))
+    expect(out).toContain("#1B3A82")
+  })
+
   it("shows the BDT value and the frozen rate for an approved USD claim", () => {
     const out = html(report([row({ currency: "USD", amount: "80.00", fxRateToBdt: "122.500000", amountBdt: "9800.00" })]))
     expect(out).toContain("80.00 USD")
