@@ -65,6 +65,37 @@ describe("renderExportHtml", () => {
   it("says so when there are no rows", () => {
     expect(renderExportHtml({ ...spec, rows: [] }, ctx)).toContain("There are no rows to show.")
   })
+
+  describe("the same look as the emails", () => {
+    it("starts with the red, blue and green stripe", () => {
+      expect(html).toMatch(/class="stripe"/)
+      expect(html).toContain("#E23B2E")
+      expect(html).toContain("#3B63B8")
+      expect(html).toContain("#3FAE5A")
+    })
+
+    it("puts the logo on a white strip, with the row count in a pill", () => {
+      expect(html).toMatch(/<div class="brandbar">[\s\S]*<img class="logo" src="data:image\/png;base64,AAAA"/)
+      expect(html).toMatch(/<span class="pill">1 row<\/span>/)
+      expect(renderExportHtml({ ...spec, rows: [["a", 1, "b"], ["c", 2, "d"]] }, ctx)).toMatch(
+        /<span class="pill">2 rows<\/span>/
+      )
+    })
+
+    it("shows the title in a navy panel with the mint bar, and the notes under it", () => {
+      expect(html).toMatch(/<div class="panel">[\s\S]*<h1>Suppliers<\/h1>[\s\S]*<div class="mint"><\/div>/)
+      expect(html).toContain("#1B3A82")
+      expect(html).toContain("#142C66")
+      expect(html).toContain("#7AE3C8")
+      expect(html).toMatch(/<p class="panel-sub">Active only<\/p>/)
+    })
+
+    it("prints the company name when there is no logo", () => {
+      const plain = renderExportHtml(spec, { ...ctx, logo: null })
+      expect(plain).toMatch(/<span class="wordmark">byteSpate<\/span>/)
+      expect(plain).not.toContain("<img")
+    })
+  })
 })
 
 describe("exportFooterHtml", () => {
