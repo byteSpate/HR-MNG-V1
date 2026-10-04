@@ -115,6 +115,14 @@ describe("renderStatementsHtml", () => {
     expect(html).not.toMatch(/\{\{\w+\}\}/)
   })
 
+  it("the real statements template is black and white: black heading rows, black text", () => {
+    const file = readFileSync(path.join(__dirname, "../../templates/statements.html"), "utf8")
+    expect(file).toMatch(/th \{[^}]*background: #17191C/)
+    expect(file).toMatch(/th \{[^}]*color: #FFFFFF/)
+    expect(file).toMatch(/\.statements-footer \{[^}]*color: #17191C/)
+    for (const grey of ["#52525b", "#a1a1aa"]) expect(file).not.toContain(grey)
+  })
+
   it("the real statements template has a place for the brand header and its style", () => {
     const file = readFileSync(path.join(__dirname, "../../templates/statements.html"), "utf8")
     expect(file).toContain("{{BRAND_CSS}}")

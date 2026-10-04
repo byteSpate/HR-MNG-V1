@@ -98,6 +98,14 @@ describe("buildCustomerStatementHtml", () => {
     expect(html).toContain('<p class="bd-sub">Byte Spate, Dhaka</p>')
   })
 
+  it("is black and white: black heading row, black text", () => {
+    const html = buildCustomerStatementHtml(S, { name: "Byte Spate", address: "", logo: null })
+    expect(html).toMatch(/th \{[^}]*background: #17191C; color: #FFFFFF/)
+    expect(html).toMatch(/\.muted \{ color: #17191C/)
+    expect(html).toMatch(/td\.empty \{[^}]*color: #17191C/)
+    for (const grey of ["#52525b", "#71717a", "#a1a1aa"]) expect(html).not.toContain(grey)
+  })
+
   it("escapes the customer's name", () => {
     expect(buildCustomerStatementHtml(S, { name: "Byte Spate", address: "", logo: null })).toContain("Bengal &lt;Group&gt;")
   })

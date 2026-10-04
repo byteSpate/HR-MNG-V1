@@ -5,7 +5,7 @@ import { BRAND_DOC_CSS, BRAND_HEADER_CSS, BRAND_STRIPE_HTML, brandDocHeaderHtml 
 describe("brandDocHeaderHtml", () => {
   const base = { logo: "data:image/png;base64,AAAA", company: "byteSpate", title: "Payslip" }
 
-  it("builds the stripe, the logo strip and the navy panel with the title", () => {
+  it("builds the stripe, the logo strip and the title panel", () => {
     const out = brandDocHeaderHtml({ ...base, lines: ["October 2026"], stamp: "4 October 2026" })
 
     expect(out).toContain('<div class="bd-stripe"></div>')
@@ -41,7 +41,7 @@ describe("brandDocHeaderHtml", () => {
 
 describe("BRAND_DOC_CSS", () => {
   it("uses the brochure colours and a prefix that cannot clash with a document's own rules", () => {
-    for (const colour of ["#E23B2E", "#3B63B8", "#3FAE5A", "#1B3A82", "#142C66", "#7AE3C8"]) {
+    for (const colour of ["#E23B2E", "#3B63B8", "#3FAE5A"]) {
       expect(BRAND_DOC_CSS).toContain(colour)
     }
     expect(BRAND_DOC_CSS).toMatch(/\.bd-title \{[^}]*font-size: 14pt/)
@@ -63,14 +63,31 @@ describe("the report header look", () => {
     expect(BRAND_HEADER_CSS).toContain("#3FAE5A")
   })
 
-  it("puts the logo on white and the title in a navy panel with the mint bar", () => {
+  it("puts the logo and the title on white, with a black rule and a black bar", () => {
     expect(BRAND_HEADER_CSS).toMatch(/header > div:first-child \{[^}]*background: #FFFFFF/)
-    expect(BRAND_HEADER_CSS).toMatch(/\.meta \{[^}]*#1B3A82[^}]*#142C66/)
-    expect(BRAND_HEADER_CSS).toMatch(/\.meta::after \{[^}]*#7AE3C8/)
+    expect(BRAND_HEADER_CSS).toMatch(/\.meta \{[^}]*background: #FFFFFF/)
+    expect(BRAND_HEADER_CSS).toMatch(/\.meta \{[^}]*border-bottom: 1\.5pt solid #17191C/)
+    expect(BRAND_HEADER_CSS).toMatch(/\.meta::after \{[^}]*background: #17191C/)
   })
 
-  it("keeps the panel text readable: white title, light blue lines", () => {
-    expect(BRAND_HEADER_CSS).toMatch(/\.metatitle \{[^}]*color: #FFFFFF/)
-    expect(BRAND_HEADER_CSS).toMatch(/\.v \{[^}]*color: #C9D6F5/)
+  it("has no blue and no mint anywhere but the stripe", () => {
+    for (const css of [BRAND_HEADER_CSS, BRAND_DOC_CSS]) {
+      for (const colour of ["#1B3A82", "#142C66", "#7AE3C8", "#C9D6F5", "#E1E9FB", "#4F5B73"]) {
+        expect(css).not.toContain(colour)
+      }
+    }
+  })
+
+  it("prints the document title and the sub lines in black on white", () => {
+    expect(BRAND_DOC_CSS).toMatch(/\.bd-panel \{[^}]*background: #FFFFFF/)
+    expect(BRAND_DOC_CSS).toMatch(/\.bd-title \{[^}]*color: #17191C/)
+    expect(BRAND_DOC_CSS).toMatch(/\.bd-sub \{[^}]*color: #17191C/)
+    expect(BRAND_DOC_CSS).toMatch(/\.bd-stamp \{[^}]*color: #17191C/)
+    expect(BRAND_DOC_CSS).toMatch(/\.bd-mint \{[^}]*background: #17191C/)
+  })
+
+  it("prints the title and the lines in black", () => {
+    expect(BRAND_HEADER_CSS).toMatch(/\.metatitle \{[^}]*color: #17191C/)
+    expect(BRAND_HEADER_CSS).toMatch(/\.v \{[^}]*color: #17191C/)
   })
 })

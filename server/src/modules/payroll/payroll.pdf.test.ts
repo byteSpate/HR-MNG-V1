@@ -93,6 +93,14 @@ describe("renderPayslipHtml", () => {
     expect(file).toContain("{{BRAND_HEADER}}")
   })
 
+  it("the real payslip template is black and white: black heading rows, black text", () => {
+    const file = readFileSync(path.join(__dirname, "../../templates/payslip.html"), "utf8")
+    expect(file).toMatch(/th \{[^}]*background: #17191C; color: #FFFFFF/)
+    expect(file).toMatch(/\.label \{[^}]*color: #17191C/)
+    expect(file).toMatch(/footer \{[^}]*color: #17191C/)
+    for (const grey of ["#71717a", "#a1a1aa"]) expect(file).not.toContain(grey)
+  })
+
   it("substitutes every placeholder — none are left unreplaced", () => {
     const html = renderPayslipHtml(TEMPLATE, payslip() as never)
     expect(html).not.toMatch(/\{\{\w+\}\}/)
