@@ -23,6 +23,17 @@ describe("parseSheet", () => {
     expect(rows).toEqual([{ rowNumber: 2, values: { name: "Finance", costnature: "DIRECT" } }])
   })
 
+  it("keeps every CSV cell as the text that was typed: plus signs, leading zeros and dates", async () => {
+    // exceljs turns numeric-looking text into numbers and date-looking text into
+    // local-time dates, which lost the "+" of a phone number, the zeros of a BIN,
+    // and moved 2026-12-16 back a day in a timezone ahead of UTC.
+    const csv = "name,phone,bin,date,start\r\nA,+8801711000000,0123456789,2026-12-16,09:00\r\n"
+    const rows = await parseSheet(Buffer.from(csv, "utf8"), "x.csv")
+    expect(rows[0].values).toEqual({
+      name: "A", phone: "+8801711000000", bin: "0123456789", date: "2026-12-16", start: "09:00",
+    })
+  })
+
   it("reads an Excel time cell back as HH:MM, not as a date in 1899", async () => {
     const buffer = await xlsxWith([["name", "startTime"], ["Morning", new Date(Date.UTC(1899, 11, 30, 9, 5))]])
     const rows = await parseSheet(buffer, "x.xlsx")
