@@ -71,6 +71,36 @@ describe("sendMail", () => {
     })
   })
 
+  it("attaches the logo inline when the html points at its content id", async () => {
+    await sendMail({ ...dispatch, html: '<img src="cid:brand-logo" alt="x" />' })
+
+    const sent = sendMailMock.mock.calls[0][0]
+    expect(sent.attachments).toHaveLength(1)
+    expect(sent.attachments[0]).toMatchObject({
+      filename: "logo.png",
+      cid: "brand-logo",
+      contentType: "image/png",
+      contentDisposition: "inline",
+    })
+    expect(Buffer.isBuffer(sent.attachments[0].content)).toBe(true)
+    expect(sent.attachments[0].content.length).toBeGreaterThan(1000)
+  })
+
+  it("keeps the caller's own attachments beside the logo", async () => {
+    const report = { filename: "report.pdf", content: Buffer.from("pdf") }
+    await sendMail({ ...dispatch, html: '<img src="cid:brand-logo" />', attachments: [report] })
+
+    const sent = sendMailMock.mock.calls[0][0]
+    expect(sent.attachments).toHaveLength(2)
+    expect(sent.attachments[0]).toBe(report)
+  })
+
+  it("adds no attachment when the html does not use the logo", async () => {
+    await sendMail(dispatch)
+
+    expect(sendMailMock.mock.calls[0][0].attachments).toBeUndefined()
+  })
+
   it("records the error and rethrows when the transport refuses", async () => {
     sendMailMock.mockRejectedValue(new Error("550 mailbox unavailable"))
 

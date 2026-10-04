@@ -1,26 +1,23 @@
 /**
- * The one visual world every email this system sends shares: the Advice Form.
+ * The one visual world every email this system sends shares: the brochure.
  *
- * THESIS: an email from the employer is an official record, not a marketing
- * notification — serial number, subject line, facts in ruled rows, and a
- * state stamp; it refuses the SaaS logo-header-plus-button arrangement.
- * OWN-WORLD: white paper card on a quiet desk, hairline ink rules, one ink
- * (#1c2430), one state color confined to the stamp (green approved, red
- * declined, amber action), tabular numerals, letterspaced-caps wordmark.
- * STORY: "this is official; here is the state, the facts, the number, and
- * the one thing to do if anything."
- * FIRST VIEWPORT: ruled masthead (wordmark left, serial right), double rule,
- * bold Subject: line, stamp overlapping the rule.
- * FORM: grounded candidate 7 of 7 (prescription pad → official directive
- * form), seed key 36d1a78b, mode operate.
- * FINISH: unreviewed and undocumented is unfinished; this build ends with
- * the finish review, the verdict, and DESIGN.md.
+ * THESIS: an email from byteSpate looks like the cover of the byteSpate
+ * brochure. A thin red, blue and green stripe, the logo on white, then a deep
+ * navy panel that carries the subject. It refuses the old "paper on a desk"
+ * form with its rotated stamp.
+ * OWN-WORLD: stripe red #E23B2E / blue #3B63B8 / green #3FAE5A, navy #1B3A82
+ * panel with white type and a mint #7AE3C8 accent, white body card, ink
+ * #16233F, hairline rows. State is a small tinted pill, never a large colour.
+ * STORY: "this is from byteSpate, here is what happened, here are the facts,
+ * here is the one thing to do."
  *
  * Email-client reality this file obeys: table layout at 600px, inline light
  * styles with a `<style>` dark-mode override (`prefers-color-scheme`), no
- * webfonts, no images, every dynamic string escaped. The stamp's rotation
- * degrades to a straight box where transforms are ignored — the double
- * border and ink carry it either way.
+ * webfonts, every dynamic string escaped. The logo is a PNG sent as an inline
+ * attachment and referenced by content id: Gmail strips `data:` images, so the
+ * mailer attaches `brand/logo.png` whenever an email carries `cid:LOGO_CID`.
+ * The logo strip stays white in dark clients, because the logo is drawn on
+ * white.
  */
 
 import { env } from "../config/env"
@@ -53,9 +50,10 @@ export interface EmailAction {
 export interface EmailParts {
   /** Hidden preheader text — the inbox list's second line. */
   preheader?: string
-  /** Reference number, top-right of the masthead. Traceable or dated. */
+  /** Reference number, shown in the footer. Traceable or dated. */
   serial: string
   subject: string
+  /** The state of the email, shown as a pill beside the logo. */
   stamp: Stamp
   /** Lead paragraph — greeting or one-sentence statement of what happened. */
   intro?: string
@@ -66,22 +64,39 @@ export interface EmailParts {
   action?: EmailAction
   /** Security or correction note inside the card, above the signature. */
   notice?: string
-  /** Why the reader got this. Small, muted, under the signature. */
+  /** Why the reader got this. Small, muted, in the footer. */
   footer: string
 }
 
-const INK = "#1c2430"
-const MUTED = "#5b6470"
-const HAIR = "#d9d6cd"
-const DESK = "#eceae4"
-const PAPER = "#ffffff"
+/** The content id the mailer attaches `brand/logo.png` under. */
+export const LOGO_CID = "brand-logo"
 
-const TONE_INK: Record<StampTone, string> = {
-  approved: "#1a7f4b",
-  declined: "#b3261e",
-  action: "#9a6b00",
-  notice: "#b3261e",
-  issued: INK,
+export interface RenderOptions {
+  /** Replaces `cid:` for a browser preview, where nothing is attached. */
+  logoSrc?: string
+}
+
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+
+const NAVY = "#1B3A82"
+const NAVY_DEEP = "#142C66"
+const MINT = "#7AE3C8"
+const INK = "#16233F"
+const MUTED = "#4F5B73"
+const HAIR = "#E3E7EF"
+const PAGE = "#EEF1F7"
+const PAPER = "#FFFFFF"
+const WASH = "#F4F6FB"
+
+const STRIPE = ["#E23B2E", "#3B63B8", "#3FAE5A"] as const
+
+/** Pill colours. Light fills with dark text, so they read on the white strip. */
+const PILL: Record<StampTone, { bg: string; ink: string }> = {
+  approved: { bg: "#DDF5E6", ink: "#14663B" },
+  declined: { bg: "#FDE4E1", ink: "#9B1C14" },
+  action: { bg: "#FFEFC7", ink: "#7A5200" },
+  notice: { bg: "#FDE4E1", ink: "#9B1C14" },
+  issued: { bg: "#E1E9FB", ink: NAVY },
 }
 
 /** Escape a value for safe interpolation into HTML text or an attribute. */
@@ -102,6 +117,8 @@ const KIND_CODES: Record<string, string> = {
   EMAIL_CHANGED: "EM",
   EMAIL_CHANGE_WARNING: "EW",
   ATTENDANCE_DIGEST: "AT",
+  ATTENDANCE_REPORT_DAILY: "AD",
+  ATTENDANCE_REPORT_MONTHLY: "AM",
   MISSING_CHECKOUT: "MC",
   PAYSLIP: "PS",
   LEAVE_REQUESTED: "LV",
@@ -115,7 +132,7 @@ const KIND_CODES: Record<string, string> = {
 }
 
 /**
- * The masthead reference: `PC-LV-3F2A81B4` when the email is about a record
+ * The reference number: `PC-LV-3F2A81B4` when the email is about a record
  * (traceable back through the dispatch log), `PC-LV-20260824` when it is
  * about a person or an event with no entity of its own.
  */
@@ -127,80 +144,84 @@ export function serialFor(kind: string, entityId?: string): string {
   return `PC-${code}-${suffix}`
 }
 
-function stampHtml(stamp: Stamp): string {
-  const ink = TONE_INK[stamp.tone]
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0;"><tr><td class="stamp stamp-${stamp.tone}" style="border:3px double ${ink};padding:6px 14px;transform:rotate(-2deg);border-radius:2px;">
-        <span style="display:inline-block;white-space:nowrap;font-size:12px;font-weight:700;letter-spacing:0.14em;color:${ink};">${esc(stamp.label)}</span>
-      </td></tr></table>`
+function stripeHtml(): string {
+  const cells = STRIPE.map(
+    (colour) =>
+      `<td width="33.33%" height="6" bgcolor="${colour}" style="height:6px;line-height:6px;font-size:0;background:${colour};">&nbsp;</td>`
+  ).join("")
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>`
+}
+
+function pillHtml(stamp: Stamp): string {
+  const { bg, ink } = PILL[stamp.tone]
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="right"><tr><td bgcolor="${bg}" style="background:${bg};border-radius:999px;padding:5px 13px;font-family:${FONT};font-size:12px;font-weight:700;line-height:16px;color:${ink};white-space:nowrap;">${esc(stamp.label)}</td></tr></table>`
 }
 
 function factsHtml(facts: FactRow[]): string {
   const rows = facts
     .map(
       (f) => `<tr>
-          <td class="muted" style="padding:9px 0;border-bottom:1px solid ${HAIR};font-size:14px;color:${MUTED};width:42%;">${esc(f.label)}</td>
-          <td class="ink" style="padding:9px 0;border-bottom:1px solid ${HAIR};font-size:14px;font-weight:600;color:${INK};text-align:right;font-variant-numeric:tabular-nums;">${esc(f.value)}</td>
+          <td class="muted hair" style="padding:11px 0;border-bottom:1px solid ${HAIR};font-size:14px;line-height:1.45;color:${MUTED};width:42%;">${esc(f.label)}</td>
+          <td class="ink hair" style="padding:11px 0;border-bottom:1px solid ${HAIR};font-size:14px;line-height:1.45;font-weight:700;color:${INK};text-align:right;font-variant-numeric:tabular-nums;">${esc(f.value)}</td>
         </tr>`
     )
     .join("\n")
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0 0 0;">${rows}</table>`
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0 0;">${rows}</table>`
 }
 
 function moneyHtml(money: MoneyTable): string {
   const rows = money.rows
     .map(
       (r) => `<tr>
-          <td class="muted" style="padding:8px 0;border-bottom:1px solid ${HAIR};font-size:14px;color:${MUTED};">${esc(r.label)}</td>
-          <td class="ink" style="padding:8px 0;border-bottom:1px solid ${HAIR};font-size:14px;color:${INK};text-align:right;font-variant-numeric:tabular-nums;">${esc(r.value)}</td>
+          <td class="muted hair" style="padding:10px 0;border-bottom:1px solid ${HAIR};font-size:14px;color:${MUTED};">${esc(r.label)}</td>
+          <td class="ink hair" style="padding:10px 0;border-bottom:1px solid ${HAIR};font-size:14px;color:${INK};text-align:right;font-variant-numeric:tabular-nums;">${esc(r.value)}</td>
         </tr>`
     )
     .join("\n")
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0 0 0;">${rows}
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0 0;">${rows}
         <tr>
-          <td class="ink" style="padding:12px 0 0 0;border-top:2px solid ${INK};font-size:14px;font-weight:700;color:${INK};">${esc(money.netLabel)}</td>
-          <td class="ink" style="padding:12px 0 0 0;border-top:2px solid ${INK};font-size:16px;font-weight:700;color:${INK};text-align:right;font-variant-numeric:tabular-nums;">${esc(money.netValue)}</td>
+          <td class="ink net" style="padding:14px 0 0 0;border-top:2px solid ${NAVY};font-size:14px;font-weight:700;color:${INK};">${esc(money.netLabel)}</td>
+          <td class="ink net" style="padding:14px 0 0 0;border-top:2px solid ${NAVY};font-size:18px;font-weight:700;color:${NAVY};text-align:right;font-variant-numeric:tabular-nums;">${esc(money.netValue)}</td>
         </tr>
       </table>`
 }
 
 function actionHtml(action: EmailAction): string {
   const note = action.note
-    ? `<p class="muted" style="margin:10px 0 0 0;font-size:13px;line-height:1.5;color:${MUTED};">${esc(action.note)}</p>`
+    ? `<p class="muted" style="margin:12px 0 0 0;font-size:13px;line-height:1.5;color:${MUTED};">${esc(action.note)}</p>`
     : ""
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0 0;border:1px solid ${HAIR};border-radius:6px;">
-      <tr><td style="padding:18px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-          <td class="btn" bgcolor="${INK}" style="border-radius:6px;">
-            <a href="${esc(action.href)}" style="display:inline-block;padding:11px 22px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">${esc(action.label)}</a>
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:26px 0 0 0;"><tr>
+          <td class="btn" bgcolor="${NAVY}" style="background:${NAVY};border-radius:6px;">
+            <a href="${esc(action.href)}" style="display:inline-block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:700;line-height:1.2;color:#FFFFFF;text-decoration:none;">${esc(action.label)}</a>
           </td>
-        </tr></table>
-        ${note}
-      </td></tr>
-    </table>`
+        </tr></table>${note}`
 }
 
 /**
  * Render the full document. The returned string is the email's `html` —
  * nothing else should hand-build markup for a send.
  */
-export function renderEmail(parts: EmailParts): string {
+export function renderEmail(parts: EmailParts, options: RenderOptions = {}): string {
+  const logoSrc = options.logoSrc ?? `cid:${LOGO_CID}`
+  const company = env.COMPANY_NAME
+
   const preheader = parts.preheader
     ? `<span style="display:none;max-height:0;overflow:hidden;">${esc(parts.preheader)}</span>`
     : ""
 
   const intro = parts.intro
-    ? `<p class="ink" style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:${INK};">${esc(parts.intro)}</p>`
+    ? `<p class="ink" style="margin:0;font-size:16px;line-height:1.6;color:${INK};">${esc(parts.intro)}</p>`
     : ""
 
   const prose = (parts.prose ?? [])
     .map(
       (p) =>
-        `<p class="ink" style="margin:14px 0 12px 0;font-size:14px;line-height:1.6;color:${INK};">${esc(p)}</p>`
+        `<p class="ink" style="margin:16px 0 0 0;font-size:15px;line-height:1.6;color:${INK};">${esc(p)}</p>`
     )
     .join("\n")
 
   const notice = parts.notice
-    ? `<div class="muted" style="margin:20px 0 0 0;padding-top:2px;"><span style="display:block;width:28px;border-top:2px solid ${MUTED};margin-bottom:8px;font-size:0;">&nbsp;</span><p style="margin:0;font-size:13px;line-height:1.55;color:${MUTED};">${esc(parts.notice)}</p></div>`
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0 0;"><tr><td class="wash muted" bgcolor="${WASH}" style="background:${WASH};border-radius:6px;padding:13px 16px;font-size:13px;line-height:1.55;color:${MUTED};">${esc(parts.notice)}</td></tr></table>`
     : ""
 
   const action = parts.action ? actionHtml(parts.action) : ""
@@ -214,55 +235,45 @@ export function renderEmail(parts: EmailParts): string {
   <meta name="supported-color-schemes" content="light dark" />
   <title>${esc(parts.subject)}</title>
   <style>
+    @media only screen and (max-width: 620px) {
+      .pad { padding-left: 20px !important; padding-right: 20px !important; }
+      .subject { font-size: 22px !important; }
+    }
     @media (prefers-color-scheme: dark) {
-      .desk { background: #14161a !important; }
-      .bodybg { background: #14161a !important; }
-      .card { background: #1d2026 !important; }
-      .ink  { color: #e8e6df !important; }
-      .muted{ color: #9aa0aa !important; }
-      .hair { border-color: #3a3f47 !important; }
-      .footstrip { background: #1a1d22 !important; }
-      .stamp-approved { border-color: #4cc38a !important; }
-      .stamp-approved span { color: #4cc38a !important; }
-      .stamp-declined, .stamp-notice { border-color: #ff8a80 !important; }
-      .stamp-declined span, .stamp-notice span { color: #ff8a80 !important; }
-      .stamp-action { border-color: #e5b567 !important; }
-      .stamp-action span { color: #e5b567 !important; }
-      .stamp-issued { border-color: #e8e6df !important; }
-      .stamp-issued span { color: #e8e6df !important; }
-      .btn td, td.btn { background: #e8e6df !important; }
-      .btn a { color: #1d2026 !important; }
+      .page, .pagebg { background: #0D1322 !important; }
+      .card { background: #172033 !important; }
+      .ink { color: #EAF0FF !important; }
+      .muted { color: #A9B6D0 !important; }
+      .hair { border-color: #2A3550 !important; }
+      .net { border-color: #7AE3C8 !important; color: #7AE3C8 !important; }
+      .wash { background: #1F2A44 !important; }
+      .foot { background: #121A2B !important; }
+      .btn, .btn td { background: ${MINT} !important; }
+      .btn a { color: ${NAVY_DEEP} !important; }
     }
   </style>
 </head>
-<body class="bodybg" style="margin:0;padding:0;background:${DESK};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<body class="pagebg" style="margin:0;padding:0;background:${PAGE};font-family:${FONT};">
 ${preheader}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="desk" bgcolor="${DESK}" style="background:${DESK};">
-  <tr><td align="center" style="padding:28px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="page" bgcolor="${PAGE}" style="background:${PAGE};">
+  <tr><td align="center" style="padding:24px 12px;font-family:${FONT};">
 
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="card" bgcolor="${PAPER}" style="width:600px;max-width:600px;background:${PAPER};border:1px solid ${HAIR};border-radius:4px;">
-      <tr><td style="padding:30px 36px 34px 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="card" bgcolor="${PAPER}" style="width:100%;max-width:600px;background:${PAPER};border-radius:8px;overflow:hidden;">
+      <tr><td style="font-size:0;line-height:0;">${stripeHtml()}</td></tr>
 
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td class="ink" style="padding-bottom:14px;border-bottom:3px double ${INK};font-size:13px;font-weight:700;letter-spacing:0.22em;color:${INK};">${esc(env.COMPANY_NAME.toUpperCase())}</td>
-            <td class="muted" style="padding-bottom:14px;border-bottom:3px double ${INK};font-size:12px;color:${MUTED};text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">Ref ${esc(parts.serial)}</td>
-          </tr>
-        </table>
+      <tr><td class="pad" bgcolor="#FFFFFF" style="padding:18px 32px;background:#FFFFFF;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td valign="middle"><img src="${esc(logoSrc)}" alt="${esc(company)}" width="150" height="35" style="display:block;border:0;width:150px;height:35px;" /></td>
+          <td valign="middle" align="right">${pillHtml(parts.stamp)}</td>
+        </tr></table>
+      </td></tr>
 
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding-top:18px;">
-              <p class="ink" style="margin:0;font-size:20px;font-weight:700;line-height:1.35;color:${INK};">Subject: ${esc(parts.subject)}</p>
-            </td>
-            <td align="right" valign="top" style="padding-top:14px;">
-              ${stampHtml(parts.stamp)}
-            </td>
-          </tr>
-        </table>
+      <tr><td class="pad" bgcolor="${NAVY}" style="padding:30px 32px 32px 32px;background:${NAVY};background-image:linear-gradient(135deg,${NAVY} 0%,${NAVY_DEEP} 100%);">
+        <h1 class="subject" style="margin:0;font-family:${FONT};font-size:26px;font-weight:700;line-height:1.3;letter-spacing:-0.01em;color:#FFFFFF;">${esc(parts.subject)}</h1>
+        <table role="presentation" width="40" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0 0;"><tr><td width="40" height="3" bgcolor="${MINT}" style="height:3px;line-height:3px;font-size:0;background:${MINT};border-radius:2px;">&nbsp;</td></tr></table>
+      </td></tr>
 
-        <div style="height:20px;line-height:20px;font-size:0;">&nbsp;</div>
-
+      <tr><td class="pad" style="padding:28px 32px 32px 32px;font-family:${FONT};">
         ${intro}
         ${parts.facts ? factsHtml(parts.facts) : ""}
         ${parts.money ? moneyHtml(parts.money) : ""}
@@ -270,12 +281,13 @@ ${preheader}
         ${action}
         ${notice}
 
-        <p class="ink" style="margin:26px 0 0 0;font-size:14px;color:${INK};">${esc(env.COMPANY_NAME)}</p>
-        <p class="muted" style="margin:4px 0 0 0;font-size:12px;color:${MUTED};">HR &amp; payroll</p>
-
+        <p class="ink" style="margin:30px 0 0 0;font-size:14px;font-weight:700;color:${INK};">${esc(company)}</p>
+        <p class="muted" style="margin:3px 0 0 0;font-size:13px;color:${MUTED};">HR &amp; payroll</p>
       </td></tr>
-      <tr><td class="hair footstrip" style="padding:14px 36px;border-top:1px solid ${HAIR};background:#faf9f6;">
-        <p class="muted" style="margin:0;font-size:12px;line-height:1.5;color:${MUTED};">${esc(parts.footer)}</p>
+
+      <tr><td class="pad foot hair" bgcolor="${WASH}" style="padding:18px 32px;background:${WASH};border-top:1px solid ${HAIR};">
+        <p class="muted" style="margin:0;font-size:12px;line-height:1.55;color:${MUTED};">${esc(parts.footer)}</p>
+        <p class="muted" style="margin:8px 0 0 0;font-size:12px;line-height:1.4;color:${MUTED};font-variant-numeric:tabular-nums;">Ref ${esc(parts.serial)}</p>
       </td></tr>
     </table>
 

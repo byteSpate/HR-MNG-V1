@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createShift, deleteShift, listShifts, updateShift } from "@/lib/api/shifts"
 import type { Shift, ShiftImpact, ShiftInput } from "@/lib/api/types"
+import { countText } from "@/components/import-export/import-dialog"
+import { HR_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import {
   ConfirmDeleteDialog,
   DialogActions,
@@ -97,6 +99,32 @@ export function ShiftsPanel({ accessToken }: { accessToken: string }) {
       sub="Working hours and weekly off days. Employees without an explicit shift fall back to General."
       actionLabel="Add shift"
       onAction={add}
+      extra={
+        <ImportExportTools
+          basePath="/api/attendance/shifts"
+          fileName="shifts"
+          roles={HR_ROLES}
+          onError={setError}
+          exportDisabled={isLoading || isError}
+          importer={{
+            title: "Import shifts",
+            noun: "shift",
+            previewColumns: [
+              { header: "Name", cell: (row) => String(row.name ?? "") },
+              { header: "Start", cell: (row) => String(row.startTime ?? "") },
+              { header: "End", cell: (row) => String(row.endTime ?? "") },
+              { header: "Break (min)", cell: (row) => String(row.breakMinutes ?? "") },
+              { header: "Grace (min)", cell: (row) => String(row.graceMinutes ?? "") },
+              {
+                header: "Weekly off",
+                cell: (row) => (Array.isArray(row.weeklyOffDays) ? row.weeklyOffDays.join(";") : ""),
+              },
+            ],
+            summaryText: (summary) => `${countText(summary.shifts ?? 0, "shift")} will be added.`,
+            onImported: () => queryClient.invalidateQueries({ queryKey: ["shifts"] }),
+          }}
+        />
+      }
       error={error}
       onDismissError={() => setError(null)}
     >

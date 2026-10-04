@@ -7,6 +7,7 @@ import { createCustomer, listCustomers, updateCustomer } from "@/lib/api/custome
 import { useSession } from "@/lib/auth/session-context"
 import type { Customer } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
+import { FINANCE_ROLES, ImportExportTools } from "@/components/import-export/import-export-tools"
 import {
   DialogActions,
   Field,
@@ -100,6 +101,15 @@ export function CustomerPage() {
         sub="Every company we invoice, and what they owe."
         cta="New customer"
         onCta={add}
+        aside={
+          <ImportExportTools
+            basePath="/api/customers"
+            fileName="customers"
+            roles={FINANCE_ROLES}
+            onError={setError}
+            exportDisabled={customers.isPending || customers.isError}
+          />
+        }
       />
 
       {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}

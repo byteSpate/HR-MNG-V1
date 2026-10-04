@@ -16,6 +16,10 @@ import {
   reactivateSupplierHandler,
   updateSupplierHandler,
 } from "./supplier.controller"
+import { exportSuppliersHandler } from "./supplier.export"
+import { commitSupplierImport, previewSupplierImport, SUPPLIER_IMPORT_COLUMNS, supplierImportSampleRows } from "./supplier.import"
+import { commitHandler, guideHandler, previewHandler, templateHandler } from "../../utils/import/import.http"
+import { spreadsheetUpload } from "../media/media.upload"
 
 const router = Router()
 
@@ -31,6 +35,18 @@ function requireFinanceOrSales(req: Request, _res: Response, next: NextFunction)
   }
   return next(new AppError(403, "You do not have permission to perform this action"))
 }
+
+// File import and export. The literal paths sit above `/:id`.
+router.get("/export", requireAuth, requireRole(...WRITE_ROLES), exportSuppliersHandler)
+router.get("/import/guide", requireAuth, requireRole(...WRITE_ROLES), guideHandler(SUPPLIER_IMPORT_COLUMNS))
+router.get(
+  "/import/template",
+  requireAuth,
+  requireRole(...WRITE_ROLES),
+  templateHandler({ columns: SUPPLIER_IMPORT_COLUMNS, sampleRows: supplierImportSampleRows, baseName: "suppliers" })
+)
+router.post("/import/preview", requireAuth, requireRole(...WRITE_ROLES), spreadsheetUpload, previewHandler(previewSupplierImport))
+router.post("/import/commit", requireAuth, requireRole(...WRITE_ROLES), spreadsheetUpload, commitHandler(commitSupplierImport))
 
 router.get("/", requireAuth, listSuppliersHandler)
 router.post("/quick", requireAuth, requireFinanceOrSales, quickAddSupplierHandler)

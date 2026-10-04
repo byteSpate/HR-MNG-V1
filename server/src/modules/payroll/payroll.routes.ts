@@ -35,6 +35,7 @@ import {
   updateRateHandler,
   updateStructureHandler,
 } from "./payroll.controller"
+import { exportSalaryStructuresHandler } from "./payroll.structure.export"
 
 const router = Router()
 
@@ -53,6 +54,9 @@ router.patch("/exchange-rates/:id", requireAuth, requireRole(...FINANCE_ROLES), 
 // Payroll rules. Finance and Super Admin switch them; HR may read.
 router.get("/settings", requireAuth, requireRole(...READ_ROLES), getSettingsHandler)
 router.patch("/settings", requireAuth, requireRole(...FINANCE_ROLES), updateSettingsHandler)
+
+// File export. Finance and Super Admin only (the roles that may write structures).
+router.get("/salary-structures/export", requireAuth, requireRole(...FINANCE_ROLES), exportSalaryStructuresHandler)
 
 // Finance owns structures, not HR: HR owns adjustments (Task 10), but a
 // salary structure is a treasury fact, not a benefit decision.

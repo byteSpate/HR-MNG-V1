@@ -29,6 +29,11 @@ import {
   rejectAttendanceHandler,
   updateHolidayHandler,
 } from "./attendance.controller"
+import { commitHolidayImport, HOLIDAY_IMPORT_COLUMNS, holidayImportSampleRows, previewHolidayImport } from "./attendance.holidays.import"
+import { exportHolidaysHandler, exportShiftsHandler } from "./attendance.reference.export"
+import { commitShiftImport, previewShiftImport, SHIFT_IMPORT_COLUMNS, shiftImportSampleRows } from "./attendance.shifts.import"
+import { commitHandler, guideHandler, previewHandler, templateHandler } from "../../utils/import/import.http"
+import { spreadsheetUpload } from "../media/media.upload"
 
 const router = Router()
 
@@ -98,12 +103,48 @@ router.patch("/:id", requireAuth, requireRole(...HR_ROLES), correctAttendanceHan
 // `PATCH /shifts/:id`, because `/:id` matches a single path segment and
 // `/shifts/abc` has two — the holiday routes below rely on the same property.
 // Do not move these above the `/:id` group; that is what would break them.
+// File import and export for shifts.
+router.get("/shifts/export", requireAuth, requireRole(...HR_ROLES), exportShiftsHandler)
+router.get("/shifts/import/guide", requireAuth, requireRole(...HR_ROLES), guideHandler(SHIFT_IMPORT_COLUMNS))
+router.get(
+  "/shifts/import/template",
+  requireAuth,
+  requireRole(...HR_ROLES),
+  templateHandler({ columns: SHIFT_IMPORT_COLUMNS, sampleRows: shiftImportSampleRows, baseName: "shifts" })
+)
+router.post("/shifts/import/preview", requireAuth, requireRole(...HR_ROLES), spreadsheetUpload, previewHandler(previewShiftImport))
+router.post("/shifts/import/commit", requireAuth, requireRole(...HR_ROLES), spreadsheetUpload, commitHandler(commitShiftImport))
+
 router.get("/shifts", requireAuth, requireRole(...HR_ROLES), listShiftsHandler)
 router.post("/shifts", requireAuth, requireRole(...HR_ROLES), createShiftHandler)
 router.patch("/shifts/:id", requireAuth, requireRole(...HR_ROLES), updateShiftHandler)
 router.delete("/shifts/:id", requireAuth, requireRole(...HR_ROLES), deleteShiftHandler)
 
 // Everyone reads the calendar; only HR writes it.
+// File import and export for holidays.
+router.get("/holidays/export", requireAuth, requireRole(...HR_ROLES), exportHolidaysHandler)
+router.get("/holidays/import/guide", requireAuth, requireRole(...HR_ROLES), guideHandler(HOLIDAY_IMPORT_COLUMNS))
+router.get(
+  "/holidays/import/template",
+  requireAuth,
+  requireRole(...HR_ROLES),
+  templateHandler({ columns: HOLIDAY_IMPORT_COLUMNS, sampleRows: holidayImportSampleRows, baseName: "holidays" })
+)
+router.post(
+  "/holidays/import/preview",
+  requireAuth,
+  requireRole(...HR_ROLES),
+  spreadsheetUpload,
+  previewHandler((buffer, fileName) => previewHolidayImport(buffer, fileName))
+)
+router.post(
+  "/holidays/import/commit",
+  requireAuth,
+  requireRole(...HR_ROLES),
+  spreadsheetUpload,
+  commitHandler((buffer, fileName, actor) => commitHolidayImport(buffer, fileName, actor))
+)
+
 router.get("/holidays", requireAuth, listHolidaysHandler)
 router.post("/holidays", requireAuth, requireRole(...HR_ROLES), createHolidayHandler)
 router.patch("/holidays/:id", requireAuth, requireRole(...HR_ROLES), updateHolidayHandler)

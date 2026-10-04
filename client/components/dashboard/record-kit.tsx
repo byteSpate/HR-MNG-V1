@@ -86,6 +86,7 @@ export function PanelFrame({
   sub,
   actionLabel,
   onAction,
+  extra,
   error,
   onDismissError,
   children,
@@ -94,6 +95,8 @@ export function PanelFrame({
   sub: string
   actionLabel: string
   onAction: () => void
+  /** Buttons that sit beside the main action, for example Export and Import. */
+  extra?: ReactNode
   error: string | null
   /** Omitted where the error is cleared by the next action anyway. */
   onDismissError?: () => void
@@ -106,13 +109,16 @@ export function PanelFrame({
           <h2 className="font-heading text-[16px] font-bold tracking-tight">{title}</h2>
           <p className={cn("mt-1 max-w-[64ch] text-[12.5px] leading-relaxed", TONE.muted)}>{sub}</p>
         </div>
-        <Button
-          onClick={onAction}
-          className="h-auto shrink-0 rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-        >
-          <RiAddLine className="size-4" aria-hidden />
-          {actionLabel}
-        </Button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {extra}
+          <Button
+            onClick={onAction}
+            className="h-auto shrink-0 rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+          >
+            <RiAddLine className="size-4" aria-hidden />
+            {actionLabel}
+          </Button>
+        </div>
       </header>
 
       {error ? <PanelAlert onDismiss={onDismissError}>{error}</PanelAlert> : null}

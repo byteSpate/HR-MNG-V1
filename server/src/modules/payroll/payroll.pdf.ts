@@ -19,6 +19,8 @@ import type { Browser } from "puppeteer"
 import { env } from "../../config/env"
 import prisma from "../../config/prisma"
 import { AppError } from "../../middleware/errorHandler"
+import { brandAsset } from "../../utils/pdf"
+import { BRAND_DOC_CSS, brandDocHeaderHtml } from "../../utils/pdf.brand"
 import type { PayslipBreakdown, PayslipLine } from "./payroll.types"
 import { getPdf, putPdf, storageKey } from "./payroll.storage"
 
@@ -114,7 +116,8 @@ export function renderPayslipHtml(
     breakdown: unknown
     employee: { fullName: string; employeeCode: string }
     payrollRun: { month: number; year: number }
-  }
+  },
+  logo: string | null = null
 ): string {
   const breakdown = payslip.breakdown as PayslipBreakdown
   const currency = payslip.currency
@@ -162,10 +165,18 @@ export function renderPayslipHtml(
            Net payable <strong>BDT ${payslip.netPayableBdt.toFixed(2)}</strong>,
            which is the figure the bank file pays.</div>`
 
+  const period = `${MONTHS[payslip.payrollRun.month - 1]} ${payslip.payrollRun.year}`
   const replacements: Record<string, string> = {
+    BRAND_CSS: BRAND_DOC_CSS,
+    BRAND_HEADER: brandDocHeaderHtml({
+      logo,
+      company: env.COMPANY_NAME,
+      title: "Payslip",
+      lines: [period, [env.COMPANY_NAME, env.COMPANY_ADDRESS].filter(Boolean).join(", ")],
+    }),
     COMPANY_NAME: escapeHtml(env.COMPANY_NAME),
     COMPANY_ADDRESS: escapeHtml(env.COMPANY_ADDRESS),
-    PERIOD: `${MONTHS[payslip.payrollRun.month - 1]} ${payslip.payrollRun.year}`,
+    PERIOD: period,
     EMPLOYEE_NAME: escapeHtml(payslip.employee.fullName),
     EMPLOYEE_CODE: escapeHtml(payslip.employee.employeeCode),
     PAYSLIP_NO: escapeHtml(payslip.payslipNo),
@@ -243,7 +254,7 @@ export async function getOrRenderPayslipPdf(payslipId: string): Promise<Buffer> 
   const cached = await getPdf(key)
   if (cached) return cached
 
-  const html = renderPayslipHtml(await loadTemplate(), payslip)
+  const html = renderPayslipHtml(await loadTemplate(), payslip, await brandAsset("logo"))
   const browser = await getBrowser()
   const page = await browser.newPage()
   try {

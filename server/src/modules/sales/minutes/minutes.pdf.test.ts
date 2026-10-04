@@ -57,6 +57,29 @@ const doc = (overrides: Partial<MinutesDocument> = {}): MinutesDocument => ({
 const positions = (html: string, parts: string[]) => parts.map((part) => html.indexOf(part))
 const inOrder = (values: number[]) => values.every((value, i) => value >= 0 && (i === 0 || value > values[i - 1]))
 
+describe("the brand header", () => {
+  it("opens with the stripe, the logo and a navy panel holding the title and the meeting title", () => {
+    const html = renderMinutesHtml(doc(), { ...OPTIONS, logo: "data:image/png;base64,LOGO" })
+
+    expect(html).toContain('<div class="bd-stripe"></div>')
+    expect(html).toContain('src="data:image/png;base64,LOGO"')
+    expect(html).toContain('<h1 class="bd-title">Meeting Minutes – ')
+    expect(html).toContain('<p class="bd-sub">')
+    expect(html).not.toContain('class="subtitle"')
+  })
+
+  it("is black and white: table headings are white on black", () => {
+    const html = renderMinutesHtml(doc(), OPTIONS)
+    expect(html).toMatch(/th \{[^}]*background: #17191C; color: #FFFFFF/)
+    expect(html).not.toContain("#F2F2F2")
+  })
+
+  it("still prints the labelled facts under the panel", () => {
+    const html = renderMinutesHtml(doc(), OPTIONS)
+    expect(html.indexOf("bd-panel")).toBeLessThan(html.indexOf('<div class="facts">'))
+  })
+})
+
 describe("the header", () => {
   it("prints the header lines of the real documents, in their order", () => {
     const html = renderMinutesHtml(doc(), OPTIONS)
