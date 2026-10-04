@@ -94,7 +94,7 @@ describe("buildCustomerStatementHtml", () => {
     expect(html).toContain('<div class="bd-stripe"></div>')
     expect(html).toContain('src="data:image/png;base64,LOGO"')
     expect(html).toContain('<h1 class="bd-title">Customer statement</h1>')
-    expect(html).toContain('<p class="bd-sub">1 September 2026 to 30 September 2026</p>')
+    expect(html).toContain('<p class="bd-sub">1 Sep 2026 to 30 Sep 2026</p>')
     expect(html).toContain('<p class="bd-sub">Byte Spate, Dhaka</p>')
   })
 

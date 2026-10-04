@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <style>
+      {{BRAND_CSS}}
       * { box-sizing: border-box; }
       body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
              font-size: 12px; color: #18181b; margin: 0; padding: 32px; }
@@ -30,16 +31,7 @@
     </style>
   </head>
   <body>
-    <div class="company row">
-      <div>
-        <h1>{{COMPANY_NAME}}</h1>
-        <span class="muted">{{COMPANY_ADDRESS}}</span>
-      </div>
-      <div style="text-align: right">
-        <h1>Payslip</h1>
-        <span class="muted">{{PERIOD}}</span>
-      </div>
-    </div>
+    {{BRAND_HEADER}}
 
     <div class="meta">
       <div><span class="label">Employee</span><span>{{EMPLOYEE_NAME}}</span></div>

@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <style>
+      {{BRAND_CSS}}
       /* Page margins live in page.pdf() so the running header and footer have
          room; setting them here as well double-counts them. */
       body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -40,8 +41,7 @@
     </style>
   </head>
   <body>
-    <h1>{{COMPANY_NAME}}</h1>
-    <div class="period">Financial statements for {{PERIOD}}</div>
+    {{BRAND_HEADER}}
     {{CONTENT}}
   </body>
 </html>
