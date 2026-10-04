@@ -28,6 +28,7 @@
 
 import { env } from "../../config/env"
 import { brandAsset, escapeHtml, renderPdf } from "../../utils/pdf"
+import { BRAND_HEADER_CSS, BRAND_STRIPE_HTML } from "../../utils/pdf.brand"
 import {
   clock,
   type AttendanceReport,
@@ -391,27 +392,11 @@ const STYLES = `
     background: #FFFFFF;
     -webkit-print-color-adjust: exact;
   }
-  /* Branding left, what-this-document-is right. */
-  header {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
-    border-bottom: 1.5pt solid #17191C; padding-bottom: 10px; margin-bottom: 14px;
-  }
-  .logo { height: 38px; width: auto; display: block; }
-  /* The fallback when the artwork is missing. The logo *is* the company name,
-     so printing both would say it twice. */
-  .company { font-size: 13pt; font-weight: 700; letter-spacing: 0.01em; }
-  .tagline {
-    margin-top: 5px; font-size: 9pt; font-weight: 600; color: #334155;
-    letter-spacing: 0.01em;
-  }
-  /* Values only, no labels. "Monthly — per employee", a date range and a
-     timestamp each say what they are; a Type/Date/Generated column beside them
-     was three words of furniture per line. */
-  .meta { text-align: right; }
-  .metatitle { margin-bottom: 4px; font-size: 11.5pt; font-weight: 700; }
-  .v { font-size: 8.5pt; font-weight: 600; }
-  .v + .v { margin-top: 2px; }
-  .vmuted { font-weight: 500; color: #55627A; }
+  /* The header look is shared with the expense report: see utils/pdf.brand.ts.
+     The logo block comes first, then the document facts in the navy panel.
+     Values only, no labels: "Monthly — per employee", a date range and a
+     timestamp each say what they are. */
+  ${BRAND_HEADER_CSS}
   .band { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .fig {
     /* A real flex basis, not zero. At zero the eight tiles all squeezed onto
@@ -492,6 +477,7 @@ export function renderAttendanceReportHtml(
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>Attendance report</title><style>${STYLES}</style></head>
 <body>
+  ${BRAND_STRIPE_HTML}
   <header>
     <div>
       ${
