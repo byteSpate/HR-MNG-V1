@@ -314,7 +314,7 @@ function preparedBy(doc: MinutesDocument, companyName: string): string {
 const STYLES = `
   * { box-sizing: border-box; }
   body {
-    margin: 0; color: #111; background: #fff;
+    margin: 0; color: #17191C; background: #fff;
     font-family: "Times New Roman", Tinos, "Liberation Serif", "DejaVu Serif", serif;
     font-size: 11pt; line-height: 1.4; -webkit-print-color-adjust: exact;
   }
@@ -329,7 +329,7 @@ const STYLES = `
   li { margin: 1px 0; }
   table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
   th, td { border: 0.75pt solid #444; padding: 4px 6px; text-align: left; vertical-align: top; }
-  th { font-weight: 700; background: #F2F2F2; }
+  th { font-weight: 700; background: #17191C; color: #FFFFFF; }
   table.actions td:first-child, table.actions th:first-child { text-align: center; }
   h4 { margin: 8px 0 3px; font-size: 10.5pt; font-weight: 700; page-break-after: avoid; }
   li > p { margin: 0; }
@@ -384,7 +384,7 @@ export async function renderMinutesPdf(doc: MinutesDocument, draft: boolean): Pr
     displayHeaderFooter: true,
     headerTemplate: "<span></span>",
     footerTemplate:
-      '<div style="width:100%;font-size:8pt;color:#666;padding:0 18mm;text-align:right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
+      '<div style="width:100%;font-size:8pt;color:#17191C;padding:0 18mm;text-align:right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
     margin: { top: "16mm", bottom: "18mm", left: "18mm", right: "18mm" },
   })
 }

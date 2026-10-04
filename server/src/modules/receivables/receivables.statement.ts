@@ -127,15 +127,15 @@ export function buildCustomerStatementHtml(s: CustomerStatement, company: { name
   return `
     <title>Statement</title>
     <style>
-      body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #18181b; margin: 0; padding: 16px; }
+      body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #17191C; margin: 0; padding: 16px; }
       ${BRAND_DOC_CSS}
-      .muted { color: #71717a; }
+      .muted { color: #17191C; }
       table { width: 100%; border-collapse: collapse; }
-      th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .03em; color: #52525b; border-bottom: 1px solid #e4e4e7; padding: 6px 4px; }
+      th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .03em; background: #17191C; color: #FFFFFF; padding: 6px 4px; }
       td { padding: 6px 4px; border-bottom: 1px solid #f4f4f5; }
       td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-      td.empty { text-align: center; color: #a1a1aa; padding: 20px 0; }
-      tfoot td { font-weight: 600; border-top: 2px solid #18181b; border-bottom: none; }
+      td.empty { text-align: center; color: #17191C; padding: 20px 0; }
+      tfoot td { font-weight: 600; border-top: 2px solid #17191C; border-bottom: none; }
     </style>
     ${brandDocHeaderHtml({
       logo: company.logo,

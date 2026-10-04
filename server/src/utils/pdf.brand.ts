@@ -1,7 +1,8 @@
 /**
- * The header look of the report PDFs, the same one the emails use: a thin red,
- * blue and green stripe, the logo on white, then a navy panel with the title
- * and a short mint bar. Colours come from `templates/email.ts`.
+ * The header look of the report PDFs: a thin red, blue and green stripe, the
+ * logo on white, then the title in black on white with a black rule. The
+ * stripe is the only colour. Black and white was the owner's choice on
+ * 2026-10-04; the emails keep their navy panel.
  *
  * Shared by the attendance and expense reports. Both keep the same header
  * markup (`<header>` with the logo block first and `.meta` second), so only
@@ -15,12 +16,12 @@ export const BRAND_HEADER_CSS = `
   header { display: block; margin-bottom: 14px; }
   header > div:first-child { background: #FFFFFF; padding: 10px 14px; }
   .logo { height: 38px; width: auto; display: block; }
-  .company { font-size: 13pt; font-weight: 700; letter-spacing: 0.01em; color: #1B3A82; }
-  .tagline { margin-top: 5px; font-size: 9pt; font-weight: 600; color: #4F5B73; letter-spacing: 0.01em; }
-  .meta { text-align: left; padding: 14px 14px 16px; background: #1B3A82; background-image: linear-gradient(135deg, #1B3A82 0%, #142C66 100%); }
-  .meta::after { content: ""; display: block; width: 40px; height: 3px; border-radius: 2px; background: #7AE3C8; margin-top: 10px; }
-  .metatitle { margin-bottom: 4px; font-size: 11.5pt; font-weight: 700; color: #FFFFFF; }
-  .v { font-size: 8.5pt; font-weight: 600; color: #C9D6F5; }
+  .company { font-size: 13pt; font-weight: 700; letter-spacing: 0.01em; color: #17191C; }
+  .tagline { margin-top: 5px; font-size: 9pt; font-weight: 600; color: #17191C; letter-spacing: 0.01em; }
+  .meta { text-align: left; padding: 12px 14px 14px; background: #FFFFFF; border-bottom: 1.5pt solid #17191C; }
+  .meta::after { content: ""; display: block; width: 40px; height: 3px; border-radius: 2px; background: #17191C; margin-top: 10px; }
+  .metatitle { margin-bottom: 4px; font-size: 11.5pt; font-weight: 700; color: #17191C; }
+  .v { font-size: 8.5pt; font-weight: 600; color: #17191C; }
   .v + .v { margin-top: 2px; }
   .vmuted { font-weight: 500; }
 `
@@ -67,10 +68,10 @@ export const BRAND_DOC_CSS = `
   .bd-stripe { height: 6px; background: linear-gradient(90deg, #E23B2E 33.3%, #3B63B8 33.3% 66.6%, #3FAE5A 66.6%); }
   .bd-bar { padding: 10px 14px; background: #FFFFFF; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   .bd-logo { height: 35px; width: auto; display: block; }
-  .bd-word { font-size: 14pt; font-weight: 700; color: #1B3A82; }
-  .bd-panel { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 14px; padding: 16px 14px 18px; background: #1B3A82; background-image: linear-gradient(135deg, #1B3A82 0%, #142C66 100%); color: #FFFFFF; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: left; }
-  .bd-title { margin: 0; font-size: 14pt; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: #FFFFFF; text-align: left; }
-  .bd-sub { margin: 4px 0 0; font-size: 9pt; font-weight: 400; color: #C9D6F5; text-align: left; }
-  .bd-mint { width: 40px; height: 3px; margin-top: 12px; border-radius: 2px; background: #7AE3C8; }
-  .bd-stamp { margin: 0; font-size: 9pt; color: #C9D6F5; text-align: right; white-space: nowrap; }
+  .bd-word { font-size: 14pt; font-weight: 700; color: #17191C; }
+  .bd-panel { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 14px; padding: 12px 14px 14px; background: #FFFFFF; border-bottom: 1.5pt solid #17191C; color: #17191C; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: left; }
+  .bd-title { margin: 0; font-size: 14pt; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: #17191C; text-align: left; }
+  .bd-sub { margin: 4px 0 0; font-size: 9pt; font-weight: 400; color: #17191C; text-align: left; }
+  .bd-mint { width: 40px; height: 3px; margin-top: 12px; border-radius: 2px; background: #17191C; }
+  .bd-stamp { margin: 0; font-size: 9pt; color: #17191C; text-align: right; white-space: nowrap; }
 `

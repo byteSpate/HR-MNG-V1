@@ -335,8 +335,8 @@ export async function renderStatementsPdf(range: DateRange): Promise<Buffer> {
         format: "A4",
         printBackground: true,
         displayHeaderFooter: true,
-        headerTemplate: `<div style="font-size:7px;width:100%;text-align:center;color:#666;padding:0 15mm">${escape(env.COMPANY_NAME)}</div>`,
-        footerTemplate: `<div style="font-size:7px;width:100%;padding:0 15mm;color:#666;display:flex;justify-content:space-between"><span>Generated ${escape(longDate(new Date()))} · ${escape(pnl.period.label)}</span><span class="pageNumber"></span></div>`,
+        headerTemplate: `<div style="font-size:7px;width:100%;text-align:center;color:#17191C;padding:0 15mm">${escape(env.COMPANY_NAME)}</div>`,
+        footerTemplate: `<div style="font-size:7px;width:100%;padding:0 15mm;color:#17191C;display:flex;justify-content:space-between"><span>Generated ${escape(longDate(new Date()))} · ${escape(pnl.period.label)}</span><span class="pageNumber"></span></div>`,
         margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
       })
     )
