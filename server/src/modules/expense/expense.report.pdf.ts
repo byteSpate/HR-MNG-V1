@@ -15,6 +15,7 @@
 
 import { env } from "../../config/env"
 import { brandAsset, escapeHtml, renderPdf } from "../../utils/pdf"
+import { BRAND_HEADER_CSS, BRAND_STRIPE_HTML } from "../../utils/pdf.brand"
 import type { ExpenseReport, ExpenseReportRow } from "./expense.report"
 
 const MONTHS = [
@@ -194,18 +195,7 @@ const STYLES = `
     font-size: 8pt; line-height: 1.35; color: #1F2937;
     background: #FFFFFF; -webkit-print-color-adjust: exact;
   }
-  header {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
-    border-bottom: 1.5pt solid #17191C; padding-bottom: 10px; margin-bottom: 14px;
-  }
-  .logo { height: 38px; width: auto; display: block; }
-  .company { font-size: 13pt; font-weight: 700; letter-spacing: 0.01em; }
-  .tagline { margin-top: 5px; font-size: 9pt; font-weight: 600; color: #334155; }
-  .meta { text-align: right; }
-  .metatitle { margin-bottom: 4px; font-size: 11.5pt; font-weight: 700; }
-  .v { font-size: 8.5pt; font-weight: 600; }
-  .v + .v { margin-top: 2px; }
-  .vmuted { font-weight: 500; color: #55627A; }
+  ${BRAND_HEADER_CSS}
   .band { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
   .fig {
     flex: 1 1 92px; border: 0.75pt solid #E4E9EF; border-radius: 3px;
@@ -258,6 +248,7 @@ export function renderExpenseReportHtml(
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>Expense report</title><style>${STYLES}</style></head>
 <body>
+  ${BRAND_STRIPE_HTML}
   <header>
     <div>
       ${
