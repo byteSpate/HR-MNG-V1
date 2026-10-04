@@ -795,7 +795,7 @@ function HolidayPanel({
         <div className="mb-3.5 flex flex-wrap items-start gap-2">
           <ImportExportTools
             basePath="/api/attendance/holidays"
-            fileName={`holidays-${year}`}
+            fileName={`holidays-for-year-${year}`}
             roles={HR_ROLES}
             onError={setError}
             exportParams={{ year }}
