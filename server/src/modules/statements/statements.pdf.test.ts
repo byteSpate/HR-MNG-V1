@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import path from "node:path"
+
 import { describe, expect, it } from "vitest"
 
 import { renderStatementsHtml, type StatementSet } from "./statements.pdf"
@@ -96,6 +99,28 @@ const render = (over: Partial<StatementSet> = {}) =>
   renderStatementsHtml(TEMPLATE, set(over), GENERATED, "BYTESPATE LIMITED")
 
 describe("renderStatementsHtml", () => {
+  it("opens with the brand header: stripe, logo, and a navy panel titled Financial statements with the period", () => {
+    const html = renderStatementsHtml(
+      "<style>{{BRAND_CSS}}</style>{{BRAND_HEADER}}{{CONTENT}}",
+      set(),
+      GENERATED,
+      "BYTESPATE LIMITED",
+      "data:image/png;base64,LOGO"
+    )
+    expect(html).toContain('<div class="bd-stripe"></div>')
+    expect(html).toContain('src="data:image/png;base64,LOGO"')
+    expect(html).toContain('<h1 class="bd-title">Financial statements</h1>')
+    expect(html).toContain('<p class="bd-sub">BYTESPATE LIMITED</p>')
+    expect(html).toContain(`<p class="bd-sub">${set().pnl.period.label}</p>`)
+    expect(html).not.toMatch(/\{\{\w+\}\}/)
+  })
+
+  it("the real statements template has a place for the brand header and its style", () => {
+    const file = readFileSync(path.join(__dirname, "../../templates/statements.html"), "utf8")
+    expect(file).toContain("{{BRAND_CSS}}")
+    expect(file).toContain("{{BRAND_HEADER}}")
+  })
+
   it("carries the company name and the period into the template", () => {
     const html = render()
     expect(html).toContain("BYTESPATE LIMITED")

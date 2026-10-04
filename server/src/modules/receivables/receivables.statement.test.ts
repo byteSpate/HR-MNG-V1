@@ -85,6 +85,19 @@ describe("buildCustomerStatementHtml", () => {
     openingBalance: "0.00", entries: [], closingBalance: "227000.00",
   }
 
+  it("opens with the brand header: stripe, logo, and a navy panel with the title, the period and the company", () => {
+    const html = buildCustomerStatementHtml(S, {
+      name: "Byte Spate",
+      address: "Dhaka",
+      logo: "data:image/png;base64,LOGO",
+    })
+    expect(html).toContain('<div class="bd-stripe"></div>')
+    expect(html).toContain('src="data:image/png;base64,LOGO"')
+    expect(html).toContain('<h1 class="bd-title">Customer statement</h1>')
+    expect(html).toContain('<p class="bd-sub">1 September 2026 to 30 September 2026</p>')
+    expect(html).toContain('<p class="bd-sub">Byte Spate, Dhaka</p>')
+  })
+
   it("escapes the customer's name", () => {
     expect(buildCustomerStatementHtml(S, { name: "Byte Spate", address: "", logo: null })).toContain("Bengal &lt;Group&gt;")
   })
