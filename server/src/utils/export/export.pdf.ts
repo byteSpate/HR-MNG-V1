@@ -45,7 +45,10 @@ export function renderExportHtml(spec: ExportSpec, ctx: PdfContext): string {
   const numeric = (column: ExportColumn) => column.type === "integer" || column.type === "decimal"
 
   const head = columns
-    .map((column) => `<th>${escapeHtml(column.pdfHeader ?? column.header)}</th>`)
+    .map((column) => {
+      const label = escapeHtml(column.pdfHeader ?? column.header)
+      return numeric(column) ? `<th class="num">${label}</th>` : `<th>${label}</th>`
+    })
     .join("")
 
   const body =
@@ -82,6 +85,7 @@ export function renderExportHtml(spec: ExportSpec, ctx: PdfContext): string {
   td { padding: 4px 6px; border-bottom: 1px solid #E3E7EF; vertical-align: top; }
   tr { page-break-inside: avoid; }
   tr:nth-child(even) td { background: #F4F6FB; }
+  th.num { text-align: right; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.empty { padding: 16px 6px; color: #4F5B73; }
 </style></head>
