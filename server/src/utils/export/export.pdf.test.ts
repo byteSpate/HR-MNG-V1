@@ -66,6 +66,12 @@ describe("renderExportHtml", () => {
     expect(renderExportHtml({ ...spec, rows: [] }, ctx)).toContain("There are no rows to show.")
   })
 
+  it("prints rows at 8pt, headings at 7.5pt and the title at 14pt", () => {
+    expect(html).toMatch(/body \{[^}]*font-size: 8pt/)
+    expect(html).toMatch(/th \{[^}]*font-size: 7\.5pt/)
+    expect(html).toMatch(/h1 \{[^}]*font-size: 14pt/)
+  })
+
   describe("the same look as the emails", () => {
     it("starts with the red, blue and green stripe", () => {
       expect(html).toMatch(/class="stripe"/)
