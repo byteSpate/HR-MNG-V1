@@ -89,9 +89,9 @@ export function renderExportHtml(spec: ExportSpec, ctx: PdfContext): string {
   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
   thead { display: table-header-group; }
   th { background: #17191C; color: #FFFFFF; text-align: left; padding: 5px 6px; font-size: 7.5pt; }
-  td { padding: 4px 6px; border-bottom: 1px solid #E3E7EF; vertical-align: top; }
+  td { padding: 4px 6px; border-bottom: 1px solid #E5E5E5; vertical-align: top; }
   tr { page-break-inside: avoid; }
-  tr:nth-child(even) td { background: #F4F6FB; }
+  tr:nth-child(even) td { background: #F5F5F5; }
   th.num { text-align: right; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.empty { padding: 16px 6px; color: #17191C; }
