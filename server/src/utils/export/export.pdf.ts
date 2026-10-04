@@ -75,20 +75,20 @@ export function renderExportHtml(spec: ExportSpec, ctx: PdfContext): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
 <style>
-  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #16233F; font-size: 9pt; margin: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #16233F; font-size: 8pt; margin: 0; }
   .stripe { height: 6px; background: linear-gradient(90deg, #E23B2E 33.3%, #3B63B8 33.3% 66.6%, #3FAE5A 66.6%); }
   .brandbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #FFFFFF; }
   .logo { height: 35px; width: auto; display: block; }
   .wordmark { font-size: 14pt; font-weight: 700; color: #1B3A82; }
   .pill { background: #E1E9FB; color: #1B3A82; border-radius: 999px; padding: 4px 12px; font-size: 8.5pt; font-weight: 700; white-space: nowrap; }
   .panel { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding: 16px 14px 18px; background: #1B3A82; background-image: linear-gradient(135deg, #1B3A82 0%, #142C66 100%); color: #FFFFFF; }
-  h1 { font-size: 17pt; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; margin: 0; }
+  h1 { font-size: 14pt; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; margin: 0; }
   .panel-sub { color: #C9D6F5; margin: 4px 0 0; font-size: 9.5pt; }
   .mint { width: 40px; height: 3px; border-radius: 2px; background: #7AE3C8; margin-top: 12px; }
   .meta { color: #C9D6F5; margin: 0; text-align: right; white-space: nowrap; }
   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
   thead { display: table-header-group; }
-  th { background: #1B3A82; color: #fff; text-align: left; padding: 5px 6px; font-size: 8.5pt; }
+  th { background: #1B3A82; color: #fff; text-align: left; padding: 5px 6px; font-size: 7.5pt; }
   td { padding: 4px 6px; border-bottom: 1px solid #E3E7EF; vertical-align: top; }
   tr { page-break-inside: avoid; }
   tr:nth-child(even) td { background: #F4F6FB; }

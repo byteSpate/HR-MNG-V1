@@ -383,7 +383,7 @@ const STYLES = `
   body {
     margin: 0;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 8pt;
+    font-size: 7.5pt;
     line-height: 1.35;
     color: #1F2937;
     /* Explicit, not inherited. Only the even rows carry a background, so
@@ -405,7 +405,7 @@ const STYLES = `
     flex: 1 1 92px; border: 0.75pt solid #E4E9EF;
     border-radius: 3px; padding: 6px 8px; background: #F8FAFC;
   }
-  .figv { display: block; font-size: 12pt; font-weight: 700; line-height: 1.1; }
+  .figv { display: block; font-size: 10.5pt; font-weight: 700; line-height: 1.1; }
   .figl {
     display: block; margin-top: 1px; font-size: 6.5pt; color: #55627A;
     text-transform: uppercase; letter-spacing: 0.05em;
@@ -437,7 +437,7 @@ const STYLES = `
   tr { page-break-inside: avoid; }
   tbody tr:nth-child(even) td { background: #FBFCFD; }
   .nm { font-weight: 600; color: #17191C; }
-  .ds { font-size: 6.8pt; color: #6B7688; margin-top: 1px; }
+  .ds { font-size: 6.5pt; color: #6B7688; margin-top: 1px; }
   .empty { color: #55627A; font-style: italic; padding: 16px 0; }
   .note { font-size: 6.8pt; color: #8A94A2; margin-top: 14px; }
 `
