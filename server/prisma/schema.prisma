@@ -57,6 +57,19 @@ enum SalesRole {
   SALES_USER
 }
 
+/// One Sales Hub Permission switch that an admin has changed. Only changed
+/// switches have a row. A missing row means "use the default" from the
+/// catalog in sales.permissions.ts, so a new switch can ship without a seed.
+model SalesPermission {
+  key       String   @id
+  enabled   Boolean
+  /// User.id of the Sales Admin who last changed it. A plain string, no
+  /// foreign key: the audit log keeps the history, and a removed user must
+  /// not block this table.
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
 // Additive beyond spec §5 — see "Deviations" section, item 1.
 model RefreshToken {
   id        String    @id @default(uuid())
