@@ -48,6 +48,7 @@ import {
 } from "@/lib/api/sales/weekly"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type { WeeklyAccountRow, WeeklyDay, WeeklyReportDetail, WeeklyTeamRow } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { CheckboxField, Field, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -122,6 +123,9 @@ const shiftWeek = (week: string, weeks: number) =>
 export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
   const { user, status: sessionStatus } = useSession()
   const isAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin can let Sales Users read every Weekly Report (`team.weekly`).
+  const { can: canDo, ready } = useSalesPermissions()
+  const canTeamWeekly = isAdmin || canDo("team.weekly")
 
   const title =
     tab === "all" ? "All Reports" : isAdmin ? "Weekly Report" : tab === "history" ? "Past Weeks" : "My Week"
@@ -142,6 +146,7 @@ export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
           <>
             <TabLink href="/sales/weekly" label="My Week" active={tab === "mine"} />
             <TabLink href="/sales/weekly/history" label="Past Weeks" active={tab === "history"} />
+            {canTeamWeekly ? <TabLink href="/sales/weekly/all" label="All Reports" active={tab === "all"} /> : null}
           </>
         )}
       </nav>
@@ -149,7 +154,13 @@ export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
       {sessionStatus === "loading" ? (
         <Skeleton className="h-48 w-full" />
       ) : tab === "all" ? (
-        <TeamReports />
+        canTeamWeekly ? (
+          <TeamReports />
+        ) : ready ? (
+          <PanelNotice>A Sales Admin has not allowed you to read every report. Ask a Sales Admin.</PanelNotice>
+        ) : (
+          <Skeleton className="h-48 w-full" />
+        )
       ) : isAdmin ? (
         <PanelNotice>
           Weekly reports are written by Sales Users, so you have none of your own. Open{" "}
@@ -246,6 +257,10 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: salesKeys.weeklyMine(weekKey) })
 
+  // A Sales Admin can switch submitting off for Sales Users. For looks only:
+  // the server refuses it either way.
+  const { can } = useSalesPermissions()
+
   const submit = useMutation({
     mutationFn: () => submitMyWeek(accessToken!, weekKey),
     onSuccess: ({ blob, fileName }) => {
@@ -332,7 +347,8 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
               <Button
                 type="button"
                 className={PRIMARY}
-                disabled={week.status === "NOT_STARTED" || submit.isPending}
+                disabled={week.status === "NOT_STARTED" || submit.isPending || !can("weekly.submit")}
+                title={can("weekly.submit") ? undefined : "A Sales Admin has turned this off for Sales Users."}
                 onClick={() => {
                   setError(null)
                   submit.mutate()

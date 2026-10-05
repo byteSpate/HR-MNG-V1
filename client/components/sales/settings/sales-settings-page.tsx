@@ -5,8 +5,9 @@
  *
  * The minutes template is its first section, open to Sales Users as well as
  * Sales Admins since 2026-09-15: the format changes often, and waiting for an
- * admin slowed people down. The server records who made each change. Later
- * hub settings join this page, each saying who may change it.
+ * admin slowed people down. The server records who made each change. The
+ * Permission switches join it as "Who can do what". Each section says who may
+ * change it.
  */
 
 import { useState } from "react"
@@ -27,6 +28,10 @@ import type { MinutesKind, MinutesTemplate, MinutesTemplateSection } from "@/lib
 import { PageHeader } from "@/components/dashboard/page-header"
 import { CheckboxField, FormError, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { MINUTES_KIND_LABEL, shortDay } from "@/components/sales/shared/sales-shared"
+import { SWITCHED_OFF_HINT } from "@/components/sales/shared/permission-state"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
+import { PermissionsPanel } from "./permissions-panel"
+import { RemovalRequestsPanel } from "./removal-requests-panel"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -46,9 +51,19 @@ export function SalesSettingsPage() {
       <PageHeader
         kicker="Sales"
         title="Sales Settings"
-        sub="How the Sales Hub works for everyone. Anyone in the hub can change these, and each change is recorded with who made it."
+        sub="How the Sales Hub works for everyone. Each part below says who can change it. Every change is recorded with who made it."
       />
-      {status === "loading" ? <PanelLoading /> : <MinutesTemplatePanel />}
+      {status === "loading" ? (
+        <PanelLoading />
+      ) : (
+        <div className="grid gap-4">
+          {/* First, because it is the one thing here that waits for a Sales
+              Admin. It renders nothing for a Sales User. */}
+          <RemovalRequestsPanel />
+          <MinutesTemplatePanel />
+          <PermissionsPanel />
+        </div>
+      )}
     </>
   )
 }
@@ -72,6 +87,10 @@ function PanelLoading() {
 
 function MinutesTemplatePanel() {
   const { accessToken, status } = useSession()
+  const { can } = useSalesPermissions()
+  // A Sales Admin can switch this off for Sales Users. The server refuses a
+  // save either way, so this only saves a wasted click.
+  const mayEdit = can("minutes.edit_template")
   const [saved, setSaved] = useState(false)
   const query = useQuery({
     queryKey: salesKeys.minutesTemplate(),
@@ -101,6 +120,10 @@ function MinutesTemplatePanel() {
 
   return (
     <div className="grid gap-3">
+      <p className={`text-[12.5px] ${TONE.muted}`}>
+        Who can change this: every Sales User, unless a Sales Admin turns it off in &quot;Who can do what&quot; below.
+      </p>
+      {!mayEdit ? <PanelAlert>{SWITCHED_OFF_HINT} Ask a Sales Admin to turn it on.</PanelAlert> : null}
       {saved ? (
         <PanelNotice onDismiss={() => setSaved(false)}>
           Saved. Minutes started from now on use this template. Minutes already started keep their sections.
@@ -112,11 +135,13 @@ function MinutesTemplatePanel() {
           {toMessage(query.error)}
         </PanelAlert>
       ) : null}
-      <TemplateEditor
-        template={query.data}
-        onSaved={() => setSaved(true)}
-        onEdit={() => setSaved(false)}
-      />
+      <fieldset disabled={!mayEdit} className="m-0 min-w-0 border-0 p-0">
+        <TemplateEditor
+          template={query.data}
+          onSaved={() => setSaved(true)}
+          onEdit={() => setSaved(false)}
+        />
+      </fieldset>
     </div>
   )
 }

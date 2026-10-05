@@ -22,6 +22,7 @@ import {
 import { listTasks } from "@/lib/api/sales/tasks"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type { ListTasksQuery, SalesTaskOrigin, SalesTaskStatus, SalesTaskSummary, TaskDueFilter } from "@/lib/api/types"
 import type { TableCell } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -70,6 +71,9 @@ export function TasksPage({
   const router = useRouter()
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin can switch creating Tasks off for Sales Users. For looks
+  // only: the server refuses it either way.
+  const { can } = useSalesPermissions()
 
   // Open tasks by default. A due filter from the overview already means
   // pending, so it starts on any status instead.
@@ -174,8 +178,8 @@ export function TasksPage({
         kicker="Sales"
         title="Tasks"
         sub="Follow-ups you set yourself, each on an account. Anything due or overdue is in your 00:01 email."
-        cta="New task"
-        onCta={() => setCreateOpen(true)}
+        cta={can("task.create") ? "New task" : undefined}
+        onCta={can("task.create") ? () => setCreateOpen(true) : undefined}
         ctaIcon={RiAddLine}
       />
 
@@ -266,9 +270,10 @@ export function TasksPage({
             ? "No task matches every filter at once. Widening one of them is usually enough."
             : "A task is one thing to do by a date, like calling back or sending a quote. Make one here, from an account, or from an Opportunity's next step."
         }
-        emptyAction={isFiltered ? "Clear filters" : "New task"}
+        emptyAction={isFiltered ? "Clear filters" : can("task.create") ? "New task" : undefined}
         emptyActionIcon={isFiltered ? <RiArrowRightLine className="size-4" aria-hidden /> : undefined}
-        onEmptyAction={isFiltered ? clearFilters : () => setCreateOpen(true)}
+        // With no "New task" action (the switch is off) this is never called.
+        onEmptyAction={isFiltered ? clearFilters : can("task.create") ? () => setCreateOpen(true) : () => {}}
       />
 
       <TaskFormDialog open={createOpen} onOpenChange={setCreateOpen} />

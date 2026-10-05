@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    // The service now asks the Permission switches. An empty table keeps every
+    // switch at its default, which is today's behaviour.
+    salesPermission: { findMany: vi.fn().mockResolvedValue([]) },
     salesTarget: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn() },
     opportunity: { findMany: vi.fn() },
     employee: { findUnique: vi.fn() },

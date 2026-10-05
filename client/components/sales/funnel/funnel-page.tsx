@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { RiArrowLeftLine, RiCheckLine } from "@remixicon/react"
 
 import { PageHeader } from "@/components/dashboard/page-header"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -62,6 +63,12 @@ export function FunnelPage() {
   const queryClient = useQueryClient()
   const isAuthed = status === "authenticated" && Boolean(accessToken)
   const isAdmin = user?.salesRole === "SALES_ADMIN" || user?.role === "SUPER_ADMIN"
+  // A Sales Admin can switch editing the Funnel off for Sales Users. For
+  // looks only: the server refuses an edit either way.
+  const { can } = useSalesPermissions()
+  // Reading the team and other people's grids. The Funnel Meeting, "mark
+  // walked" and Management Notes stay `isAdmin`: they have no switch.
+  const canTeam = isAdmin || can("team.funnel")
 
   /** Which person's grid is open. Null means the admin is on the team list. */
   const [openEmployeeId, setOpenEmployeeId] = useState<string | null>(null)
@@ -69,7 +76,7 @@ export function FunnelPage() {
   const [seen, setSeen] = useState<SeenAccounts>({ owner: null, names: {} })
 
   // An admin starts on the team list; everyone else on their own grid.
-  const showingTeam = isAdmin && openEmployeeId === null
+  const showingTeam = canTeam && openEmployeeId === null
 
   const gridOptions = useMemo<FunnelQueryOptions>(
     () => ({ ...filters, employeeId: openEmployeeId ?? undefined }),
@@ -94,7 +101,7 @@ export function FunnelPage() {
   const teamQuery = useQuery({
     queryKey: funnelKeys.team(),
     queryFn: () => getFunnelTeam(accessToken!),
-    enabled: isAuthed && isAdmin,
+    enabled: isAuthed && canTeam,
   })
 
   const meetingQuery = useQuery({
@@ -267,7 +274,11 @@ export function FunnelPage() {
             {/* Loading, broken and "no meeting open" are three different
                 screens. A dead meeting endpoint must not read as an empty
                 week, or it would offer to open a second meeting. */}
-            {meetingQuery.isError && meetingQuery.data === undefined ? (
+            {/* The Funnel Meeting has no switch: opening it, marking people
+                reviewed and handing out action items stay with Sales Admins.
+                A Sales User who may read the team (`team.funnel`) gets the
+                list alone, with no control that cannot work for them. */}
+            {!isAdmin ? null : meetingQuery.isError && meetingQuery.data === undefined ? (
               <div className="space-y-2 rounded-lg border border-[#E4E9EF] bg-white px-4 py-4">
                 <PanelAlert>{toMessage(meetingQuery.error)}</PanelAlert>
                 <Button variant="outline" size="sm" onClick={() => void meetingQuery.refetch()}>
@@ -319,12 +330,12 @@ export function FunnelPage() {
     <div className="space-y-4">
       <PageHeader
         kicker="Sales Hub"
-        title={isAdmin && grid ? `${grid.employeeName}'s funnel` : "Funnel"}
+        title={canTeam && grid ? `${grid.employeeName}'s funnel` : "Funnel"}
         sub="Every Opportunity quoted, newest first. One joins when its quotation goes out, and stays here afterwards."
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        {isAdmin ? (
+        {canTeam ? (
           <Button variant="outline" onClick={() => goTo(null)}>
             <RiArrowLeftLine className="size-4" aria-hidden />
             Back to the team
@@ -396,7 +407,7 @@ export function FunnelPage() {
           >
             <FunnelGridTable
               grid={grid}
-              editable
+              editable={can("funnel.edit_cell")}
               sort={filters.sort ?? "offeredOn"}
               direction={filters.direction ?? "desc"}
               onSort={onSort}

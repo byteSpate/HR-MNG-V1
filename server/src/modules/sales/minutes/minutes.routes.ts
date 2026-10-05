@@ -2,6 +2,7 @@ import { Router } from "express"
 
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import {
   answerRequirementHandler,
   deleteMinutesHandler,
@@ -34,14 +35,15 @@ router.delete("/minutes/:id", requireAuth, requireSales(), deleteMinutesHandler)
 // (§25.22): it keeps the copy, marks the minutes sent, and answers with that
 // same file. A kept copy downloads again, exactly as it went out.
 router.get("/minutes/:id/preview", requireAuth, requireSales(), previewMinutesHandler)
-router.post("/minutes/:id/send", requireAuth, requireSales(), sendMinutesHandler)
+router.post("/minutes/:id/send", requireAuth, requireSales(), requireSalesPermission("minutes.send"), sendMinutesHandler)
 router.get("/minutes/sends/:sendId/file", requireAuth, requireSales(), sentCopyHandler)
 
 // Sales Settings (revision §25.30). The minutes template is its first section,
 // open to everyone in the hub since 2026-09-15 (§25.20): the format changes
-// often, and waiting for an admin slowed people down. Later settings join it
-// under the same prefix, each with its own guard.
+// often, and waiting for an admin slowed people down. A Sales Admin can switch
+// saving it off for Sales Users (`minutes.edit_template`). Later settings join
+// it under the same prefix, each with its own guard.
 router.get("/settings/minutes-template", requireAuth, requireSales(), getMinutesTemplateHandler)
-router.put("/settings/minutes-template", requireAuth, requireSales(), saveMinutesTemplateHandler)
+router.put("/settings/minutes-template", requireAuth, requireSales(), requireSalesPermission("minutes.edit_template"), saveMinutesTemplateHandler)
 
 export default router

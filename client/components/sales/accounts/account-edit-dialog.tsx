@@ -104,8 +104,10 @@ function EditAccountForm({
   focusOwner: boolean;
   onDone: () => void;
 }) {
-  const { accessToken, status: sessionStatus } = useSession();
+  const { accessToken, user, status: sessionStatus } = useSession();
   const queryClient = useQueryClient();
+  const isAdmin =
+    !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN");
 
   const [name, setName] = useState(account.name);
   const [industry, setIndustry] = useState(account.industry ?? "");
@@ -126,9 +128,20 @@ function EditAccountForm({
   const eligibleQuery = useQuery({
     queryKey: ["sales", "eligible-employees"],
     queryFn: () => listSalesEligibleEmployees(accessToken!),
-    enabled: isAuthed,
+    // Only a Sales Admin may call this list. An Owner who is a Sales User can
+    // give the Sales Account only to one of its collaborators, which the
+    // account already carries.
+    enabled: isAuthed && isAdmin,
   });
-  const employees = eligibleQuery.data ?? [];
+  const employees = isAdmin
+    ? (eligibleQuery.data ?? [])
+    : account.assignees.map((a) => ({
+        id: a.id,
+        fullName: a.fullName,
+        designation: "Collaborator",
+      }));
+  const pending = isAdmin && eligibleQuery.isPending;
+  const failed = isAdmin && eligibleQuery.isError;
 
   const save = useMutation({
     mutationFn: (body: UpdateSalesAccountBody) =>
@@ -210,7 +223,7 @@ function EditAccountForm({
         </p>
       ) : null}
 
-      {eligibleQuery.isError ? (
+      {failed ? (
         <PanelAlert>
           <span className="flex flex-wrap items-center gap-2">
             <span>{toMessage(eligibleQuery.error)}</span>
@@ -226,13 +239,18 @@ function EditAccountForm({
         </PanelAlert>
       ) : null}
 
+      {account.canChangeOwner ? (
       <Field
         label="Owner"
         help="Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
         hint={
-          eligibleQuery.isPending
+          !isAdmin
+            ? employees.length === 0
+              ? "This Sales Account has no collaborators yet, so there is nobody to give it to. Ask a Sales Admin."
+              : "You can give this Sales Account only to one of its collaborators. To give it to someone else, ask a Sales Admin."
+            : pending
             ? "Loading the people who can own an account…"
-            : eligibleQuery.isError
+            : failed
               ? "This list could not be loaded, so the owner cannot be changed yet."
               : employees.length === 0
                 ? "No Sales User is available. Hub access is granted from an employee's record, and only Sales Users can own an account."
@@ -242,7 +260,7 @@ function EditAccountForm({
         <Select
           value={ownerEmployeeId}
           onValueChange={(v) => setOwnerEmployeeId(v ?? "")}
-          disabled={eligibleQuery.isPending || eligibleQuery.isError || employees.length === 0}
+          disabled={pending || failed || employees.length === 0}
         >
           <SelectTrigger className="w-full">
             <SelectValue>
@@ -266,6 +284,7 @@ function EditAccountForm({
           </SelectContent>
         </Select>
       </Field>
+      ) : null}
 
       <Field label="Name" htmlFor="sa-edit-name">
         <Input

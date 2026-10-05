@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query"
 
 import { setProjectTeam, updateProject } from "@/lib/api/sales/projects"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { getSalesAccount } from "@/lib/api/sales/accounts"
 import { useQuery } from "@tanstack/react-query"
 import type { ProjectSummary } from "@/lib/api/types"
@@ -52,6 +53,10 @@ function onDate(value: string | null): string {
  */
 export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummary; onSaved: (p: ProjectSummary) => void }) {
   const { accessToken } = useSession()
+  // A Sales Admin can switch editing a Project off for Sales Users. For looks
+  // only: the server refuses it either way.
+  const { can } = useSalesPermissions()
+  const mayEdit = project.canManage && can("project.edit")
   const [draft, setDraft] = useState<Draft>(() => draftOf(project))
   const [error, setError] = useState<string | null>(null)
   const [editingTeam, setEditingTeam] = useState(false)
@@ -100,7 +105,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
         <PanelHeading title="Plan" />
         {error ? <PanelAlert>{error}</PanelAlert> : null}
 
-        {project.canManage ? (
+        {mayEdit ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Name" htmlFor="prj-name">
               <Input id="prj-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
@@ -177,7 +182,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
         <PanelHeading
           title="Project Team"
           action={
-            project.canManage ? (
+            mayEdit ? (
               <Button type="button" variant="outline" onClick={() => setEditingTeam(true)} className="h-8 text-[12px] font-bold">
                 Edit team
               </Button>

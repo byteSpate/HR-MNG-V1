@@ -145,6 +145,11 @@ export interface SalesAccountSummary {
    * is a control that cannot do anything.
    */
   canLogActivity: boolean
+  /**
+   * Whether this caller may give the Sales Account to someone else: the
+   * Owner, or a Sales Admin. A collaborator may edit it but not do this.
+   */
+  canChangeOwner: boolean
   createdAt: string
 }
 

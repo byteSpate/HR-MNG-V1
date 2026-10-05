@@ -11,6 +11,7 @@ import { Router } from "express"
 import { SalesRole } from "../../../generated/prisma/client"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import {
   addManagementNoteHandler,
   completeMeetingHandler,
@@ -33,7 +34,9 @@ const router = Router()
 
 // Before "/", so "team" is never read as a query against the caller's own
 // funnel and quietly answered with the wrong thing.
-router.get("/team", requireAuth, requireSales(SalesRole.SALES_ADMIN), listFunnelTeamHandler)
+// A Sales Admin can switch this on for Sales Users (`team.funnel`). The Funnel
+// Meeting routes below stay Sales Admin only.
+router.get("/team", requireAuth, requireSales(), requireSalesPermission("team.funnel"), listFunnelTeamHandler)
 
 /**
  * One person's funnel. No employeeId means the caller's own; naming somebody
@@ -43,7 +46,7 @@ router.get("/team", requireAuth, requireSales(SalesRole.SALES_ADMIN), listFunnel
 router.get("/", requireAuth, requireSales(), getFunnelHandler)
 
 /** A cell, edited in place. Deal access decides this, not a sales role. */
-router.patch("/cell", requireAuth, requireSales(), editFunnelCellHandler)
+router.patch("/cell", requireAuth, requireSales(), requireSalesPermission("funnel.edit_cell"), editFunnelCellHandler)
 
 // ── the meeting ──
 

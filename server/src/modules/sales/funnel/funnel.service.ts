@@ -13,7 +13,8 @@ import { AppError } from "../../../middleware/errorHandler"
 import { dec, toMoneyString } from "../../payroll/payroll.money"
 import { officeDateOf } from "../../attendance/attendance.time"
 import type { AccessTokenPayload } from "../../auth/auth.types"
-import { commentKindScopeFor, employeeIdFor, isSalesAdmin } from "../sales.access"
+import { commentKindScopeFor, employeeIdFor } from "../sales.access"
+import { canDo } from "../sales.permissions"
 import { recentChangeSince, weekReviewedBy } from "./funnel.dates"
 import { composeFunnel } from "./funnel.rows"
 import type {
@@ -52,7 +53,7 @@ async function subjectOf(
     // theirs. Saying so is better than handing back somebody else's.
     throw new AppError(404, NO_SALES_PROFILE)
   }
-  if (wanted !== own && !isSalesAdmin(actor)) {
+  if (wanted !== own && !(await canDo(actor, "team.funnel"))) {
     throw new AppError(403, FUNNEL_NOT_YOURS)
   }
 
@@ -346,7 +347,7 @@ export async function listFunnelTeam(
   actor: AccessTokenPayload,
   now: Date = new Date()
 ): Promise<{ weekStart: string; rows: FunnelTeamRow[] }> {
-  if (!isSalesAdmin(actor)) throw new AppError(403, FUNNEL_NOT_YOURS)
+  if (!(await canDo(actor, "team.funnel"))) throw new AppError(403, FUNNEL_NOT_YOURS)
 
   // The office's Saturday, not the UTC one: between midnight and 06:00 in
   // Dhaka the UTC date is still Friday, which is the week before.
