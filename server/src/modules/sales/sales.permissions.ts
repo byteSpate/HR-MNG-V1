@@ -45,11 +45,13 @@ export const SALES_PERMISSIONS = [
   { key: "task.create", label: "Create a Task", group: "Tasks and Weekly Report", default: true, phase: 1 },
   { key: "weekly.submit", label: "Submit the Weekly Report", group: "Tasks and Weekly Report", default: true, phase: 1 },
   { key: "funnel.edit_cell", label: "Edit the Funnel", group: "Funnel", default: true, phase: 1 },
-  // Phase 2: admin-only powers an admin may choose to hand out. Off today.
-  { key: "target.set", label: "Set Targets", group: "Team and Targets", default: false, phase: 2 },
-  { key: "team.dashboard", label: "See the team Dashboard", group: "Team and Targets", default: false, phase: 2 },
-  { key: "team.funnel", label: "See the team Funnel", group: "Team and Targets", default: false, phase: 2 },
-  { key: "team.weekly", label: "See every Weekly Report", group: "Team and Targets", default: false, phase: 2 },
+  // The four admin-only powers a Sales Admin may hand to Sales Users. Off by
+  // default, as they are today. Enforced by `canDo` in the services and by
+  // `requireSalesPermission` on the routes.
+  { key: "target.set", label: "Set yearly Targets for other people (they also need \"See the team Dashboard\")", group: "Team and Targets", default: false, phase: 1 },
+  { key: "team.dashboard", label: "See the team Dashboard", group: "Team and Targets", default: false, phase: 1 },
+  { key: "team.funnel", label: "See the team Funnel", group: "Team and Targets", default: false, phase: 1 },
+  { key: "team.weekly", label: "See every Weekly Report", group: "Team and Targets", default: false, phase: 1 },
 ] as const satisfies readonly PermissionDef[]
 
 export type PermissionKey = (typeof SALES_PERMISSIONS)[number]["key"]

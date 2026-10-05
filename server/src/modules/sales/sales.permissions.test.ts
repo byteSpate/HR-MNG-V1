@@ -43,16 +43,12 @@ describe("the catalog", () => {
     expect(new Set(keys).size).toBe(keys.length)
   })
 
-  it("keeps today's behaviour by default: only account.create is off in Phase 1", () => {
-    const phase1 = SALES_PERMISSIONS.filter((p) => p.phase === 1)
-    expect(phase1).toHaveLength(16)
-    expect(phase1.filter((p) => !p.default).map((p) => p.key)).toEqual(["account.create"])
-  })
-
-  it("keeps every Phase 2 switch off, as it is today", () => {
-    const phase2 = SALES_PERMISSIONS.filter((p) => p.phase === 2)
-    expect(phase2.length).toBeGreaterThan(0)
-    expect(phase2.every((p) => p.default === false)).toBe(true)
+  it("keeps today's behaviour by default: only account.create and the four team powers are off", () => {
+    const off = SALES_PERMISSIONS.filter((p) => !p.default).map((p) => p.key)
+    expect([...off].sort()).toEqual(
+      ["account.create", "target.set", "team.dashboard", "team.funnel", "team.weekly"].sort()
+    )
+    expect(SALES_PERMISSIONS.filter((p) => p.phase === 1)).toHaveLength(20)
   })
 })
 
@@ -160,11 +156,11 @@ describe("savePermissions", () => {
     expect(prisma.auditLog.create).not.toHaveBeenCalled()
   })
 
-  it("refuses a Phase 2 switch until Phase 2 ships", async () => {
-    await expect(savePermissions([{ key: "target.set", enabled: true }], ADMIN)).rejects.toMatchObject({
-      statusCode: 400,
-    })
-    expect(prisma.salesPermission.upsert).not.toHaveBeenCalled()
+  it("saves a team switch now that it is available", async () => {
+    await savePermissions([{ key: "team.funnel", enabled: true }], ADMIN)
+    expect(prisma.salesPermission.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { key: "team.funnel" } })
+    )
   })
 
   it("writes nothing when the value already matches the current one", async () => {
