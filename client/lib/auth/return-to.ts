@@ -117,3 +117,27 @@ export function guardDecision(input: {
   if (roleMayOpen(user, area)) return { action: "allow" }
   return { action: "go", to: postLoginPath(user, null) }
 }
+
+export type LoginScreen = "checking" | "form"
+
+/**
+ * What the sign-in page draws.
+ *
+ * A person who is already signed in must never see the form: the session check
+ * takes a moment, and a form that shows first and then jumps away looks like
+ * the app does not know who they are. So while that check runs, and while a
+ * signed-in person is being sent on, the page shows a loading screen instead.
+ *
+ * `hasRefreshCookie` comes from the server. The cookie is httpOnly, so the
+ * browser cannot read it, but the server can. Without it the check would hold
+ * every first-time visitor behind a loading screen for a network round trip,
+ * when there is nothing to check.
+ */
+export function loginScreen(input: {
+  status: "loading" | "authenticated" | "unauthenticated"
+  hasRefreshCookie: boolean
+}): LoginScreen {
+  if (input.status === "unauthenticated") return "form"
+  if (input.status === "authenticated") return "checking"
+  return input.hasRefreshCookie ? "checking" : "form"
+}

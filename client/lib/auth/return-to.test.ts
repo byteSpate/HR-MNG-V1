@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { guardDecision, loginPathFor, nextFromSearch, postLoginPath, roleMayOpen, sanitizeNext } from "./return-to"
+import { guardDecision, loginPathFor, loginScreen, nextFromSearch, postLoginPath, roleMayOpen, sanitizeNext } from "./return-to"
 
 const employee = { role: "EMPLOYEE", salesRole: null, mustChangePassword: false } as const
 const manager = { role: "REPORTING_MANAGER", salesRole: null, mustChangePassword: false } as const
@@ -222,4 +222,24 @@ test("waits when signed in but the person is not known yet", () => {
     guardDecision({ status: "authenticated", user: null, ...at("/employee", "/employee") }),
     { action: "wait" },
   )
+})
+
+// ── loginScreen: the sign-in form never shows to a person who is signed in ───
+
+test("shows a loading screen while a person with a refresh cookie is being checked", () => {
+  assert.equal(loginScreen({ status: "loading", hasRefreshCookie: true }), "checking")
+})
+
+test("shows the form at once to a person with no refresh cookie", () => {
+  assert.equal(loginScreen({ status: "loading", hasRefreshCookie: false }), "form")
+})
+
+test("keeps the loading screen while a signed-in person is sent on", () => {
+  assert.equal(loginScreen({ status: "authenticated", hasRefreshCookie: true }), "checking")
+  assert.equal(loginScreen({ status: "authenticated", hasRefreshCookie: false }), "checking")
+})
+
+test("shows the form once the session is known to be gone", () => {
+  assert.equal(loginScreen({ status: "unauthenticated", hasRefreshCookie: true }), "form")
+  assert.equal(loginScreen({ status: "unauthenticated", hasRefreshCookie: false }), "form")
 })
