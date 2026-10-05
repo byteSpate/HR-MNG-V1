@@ -70,6 +70,38 @@ model SalesPermission {
   updatedAt DateTime @updatedAt
 }
 
+enum SalesRemovalStatus {
+  PENDING
+  APPROVED
+  REFUSED
+  CANCELLED
+}
+
+/// An Owner's request to take a collaborator off a Sales Account. A Sales
+/// Admin approves or refuses it. The collaborator keeps full access while it is
+/// PENDING. Only one PENDING request may exist for a person on a Sales Account:
+/// the service enforces that under the Sales Account row lock, because Prisma
+/// cannot express a partial unique index.
+model SalesCollaboratorRemoval {
+  id             String             @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount       @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  /// The collaborator to remove.
+  employeeId     String
+  employee       Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// User.id of the Owner who asked. A plain string: the audit log keeps the history.
+  requestedBy    String
+  status         SalesRemovalStatus @default(PENDING)
+  refusalReason  String?
+  /// User.id of whoever decided or cancelled it.
+  decidedBy      String?
+  decidedAt      DateTime?
+  createdAt      DateTime           @default(now())
+
+  @@index([status, createdAt])
+  @@index([salesAccountId, employeeId])
+}
+
 // Additive beyond spec §5 — see "Deviations" section, item 1.
 model RefreshToken {
   id        String    @id @default(uuid())
@@ -242,6 +274,7 @@ model Employee {
 
   salesAccountsOwned       SalesAccount[]           @relation("SalesAccountOwner")
   salesAccountAssignments  SalesAccountAssignment[] @relation("SalesAccountAssignee")
+  salesRemovalRequests     SalesCollaboratorRemoval[]
   salesCommunications      SalesCommunication[]
   opportunitiesOwned       Opportunity[]            @relation("OpportunityOwner")
   weeklyReports            WeeklyReport[]
@@ -2631,6 +2664,7 @@ model SalesAccount {
   updatedAt DateTime @updatedAt
 
   assignments    SalesAccountAssignment[]
+  collaboratorRemovals SalesCollaboratorRemoval[]
   contacts       SalesContact[]
   communications SalesCommunication[]
   opportunities  Opportunity[]
