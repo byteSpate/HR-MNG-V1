@@ -1,11 +1,20 @@
 import type { NextFunction, Request, Response } from "express"
 
 import { listPermissions, myPermissions, savePermissions } from "../sales.permissions"
+import { listPermissionHistory } from "./permission.history"
 import { savePermissionsSchema } from "./permission.validators"
 
 export async function listPermissionsHandler(_req: Request, res: Response, next: NextFunction) {
   try {
     return res.status(200).json({ items: await listPermissions() })
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function permissionHistoryHandler(_req: Request, res: Response, next: NextFunction) {
+  try {
+    return res.status(200).json({ items: await listPermissionHistory() })
   } catch (err) {
     return next(err)
   }
