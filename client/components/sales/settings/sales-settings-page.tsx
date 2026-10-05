@@ -31,6 +31,7 @@ import { MINUTES_KIND_LABEL, shortDay } from "@/components/sales/shared/sales-sh
 import { SWITCHED_OFF_HINT } from "@/components/sales/shared/permission-state"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { PermissionsPanel } from "./permissions-panel"
+import { RemovalRequestsPanel } from "./removal-requests-panel"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -56,6 +57,9 @@ export function SalesSettingsPage() {
         <PanelLoading />
       ) : (
         <div className="grid gap-4">
+          {/* First, because it is the one thing here that waits for a Sales
+              Admin. It renders nothing for a Sales User. */}
+          <RemovalRequestsPanel />
           <MinutesTemplatePanel />
           <PermissionsPanel />
         </div>

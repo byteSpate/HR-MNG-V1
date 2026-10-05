@@ -123,6 +123,9 @@ const shiftWeek = (week: string, weeks: number) =>
 export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
   const { user, status: sessionStatus } = useSession()
   const isAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin can let Sales Users read every Weekly Report (`team.weekly`).
+  const { can: canDo, ready } = useSalesPermissions()
+  const canTeamWeekly = isAdmin || canDo("team.weekly")
 
   const title =
     tab === "all" ? "All Reports" : isAdmin ? "Weekly Report" : tab === "history" ? "Past Weeks" : "My Week"
@@ -143,6 +146,7 @@ export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
           <>
             <TabLink href="/sales/weekly" label="My Week" active={tab === "mine"} />
             <TabLink href="/sales/weekly/history" label="Past Weeks" active={tab === "history"} />
+            {canTeamWeekly ? <TabLink href="/sales/weekly/all" label="All Reports" active={tab === "all"} /> : null}
           </>
         )}
       </nav>
@@ -150,7 +154,13 @@ export function WeeklyPage({ tab }: { tab: "mine" | "history" | "all" }) {
       {sessionStatus === "loading" ? (
         <Skeleton className="h-48 w-full" />
       ) : tab === "all" ? (
-        <TeamReports />
+        canTeamWeekly ? (
+          <TeamReports />
+        ) : ready ? (
+          <PanelNotice>A Sales Admin has not allowed you to read every report. Ask a Sales Admin.</PanelNotice>
+        ) : (
+          <Skeleton className="h-48 w-full" />
+        )
       ) : isAdmin ? (
         <PanelNotice>
           Weekly reports are written by Sales Users, so you have none of your own. Open{" "}

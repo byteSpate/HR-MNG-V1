@@ -10,7 +10,7 @@ import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { RiErrorWarningLine, RiRefreshLine } from "@remixicon/react"
 
-import { listSalesPermissions, saveSalesPermissions } from "@/lib/api/sales/permissions"
+import { listSalesPermissionHistory, listSalesPermissions, saveSalesPermissions } from "@/lib/api/sales/permissions"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import { CheckboxField, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -45,6 +45,12 @@ export function PermissionsPanel() {
       setDraft({})
       setSaved(true)
     },
+  })
+
+  const history = useQuery({
+    queryKey: salesKeys.permissionHistory(),
+    queryFn: () => listSalesPermissionHistory(accessToken!),
+    enabled: status === "authenticated" && !!accessToken,
   })
 
   if (query.isPending) {
@@ -145,6 +151,25 @@ export function PermissionsPanel() {
             ) : null}
           </div>
         ) : null}
+
+        <h3 className="mt-6 text-[12.5px] font-bold">Recent changes</h3>
+        {history.isPending ? (
+          <Skeleton className="mt-2 h-5 w-full" />
+        ) : history.isError ? (
+          <p className={`mt-2 text-[12px] ${TONE.muted}`}>The list of changes could not be loaded. {toMessage(history.error)}</p>
+        ) : history.data.items.length === 0 ? (
+          <p className={`mt-2 text-[12px] ${TONE.muted}`}>Nobody has changed these yet.</p>
+        ) : (
+          <ul className="mt-2 grid gap-1" data-testid="permission-history">
+            {history.data.items.map((item) => (
+              <li key={`${item.key}-${item.changedAt}`} className={`text-[12px] ${TONE.muted}`}>
+                {new Date(item.changedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                {": "}
+                {item.changedByName ?? "A Sales Admin"} turned &quot;{item.label}&quot; {item.enabled ? "on" : "off"}.
+              </li>
+            ))}
+          </ul>
+        )}
       </Panel>
     </div>
   )
