@@ -12,7 +12,7 @@ import {
   listAccountsFlat,
   listCashAccounts,
 } from "@/lib/api/accounting"
-import { bankBookHeadings } from "@/lib/accounting/side-style"
+import { bankBookHeadings, sides } from "@/lib/accounting/side-style"
 import { useSession } from "@/lib/auth/session-context"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
@@ -158,8 +158,8 @@ function LedgerPageInner({ mode }: { mode: Mode }) {
                 <TableHead className="w-32">Journal</TableHead>
                 <TableHead>Narration</TableHead>
                 <TableHead className="w-28">Reference</TableHead>
-                <TableHead className="w-36 text-right">{mode === "BANK" ? bankBookHeadings().debit : "Debit"}</TableHead>
-                <TableHead className="w-36 text-right">{mode === "BANK" ? bankBookHeadings().credit : "Credit"}</TableHead>
+                <TableHead className={`w-36 text-right ${sides.sideText("debit")}`}>{mode === "BANK" ? bankBookHeadings().debit : "Debit"}</TableHead>
+                <TableHead className={`w-36 text-right ${sides.sideText("credit")}`}>{mode === "BANK" ? bankBookHeadings().credit : "Credit"}</TableHead>
                 <TableHead className="w-36 text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
@@ -192,8 +192,8 @@ function LedgerPageInner({ mode }: { mode: Mode }) {
                       {r.lineNarration ?? r.narration}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{r.reference ?? ""}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatAmount(r.debit)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatAmount(r.credit)}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${sides.sideText("debit")}`}>{formatAmount(r.debit)}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${sides.sideText("credit")}`}>{formatAmount(r.credit)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatSigned(r.runningBalance)}
                     </TableCell>
@@ -203,10 +203,10 @@ function LedgerPageInner({ mode }: { mode: Mode }) {
 
               <TableRow className="border-t-2 font-medium">
                 <TableCell colSpan={4} className="text-right">Period total</TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className={`text-right tabular-nums ${sides.sideText("debit")}`}>
                   {formatTotal(ledger.data!.totalDebit)}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className={`text-right tabular-nums ${sides.sideText("credit")}`}>
                   {formatTotal(ledger.data!.totalCredit)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">

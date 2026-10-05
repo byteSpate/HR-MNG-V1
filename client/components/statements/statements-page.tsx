@@ -46,11 +46,11 @@ function BlockedPanel({ details, range }: { details: UnbalancedDetails; range: R
           </div>
           <dl className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-muted-foreground">Debit</dt>
+              <dt className={sides.sideText("debit")}>Debit</dt>
               <dd className="tabular-nums">{details.debitTotal}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Credit</dt>
+              <dt className={sides.sideText("credit")}>Credit</dt>
               <dd className="tabular-nums">{details.creditTotal}</dd>
             </div>
             <div>
