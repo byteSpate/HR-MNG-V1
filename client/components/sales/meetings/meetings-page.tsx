@@ -12,6 +12,7 @@ import { RiCalendarEventLine, RiErrorWarningLine, RiInboxLine, RiRefreshLine } f
 import { listMeetings } from "@/lib/api/sales/meetings"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type { SalesMeetingSummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -62,6 +63,9 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
   const { accessToken, user, status: sessionStatus } = useSession()
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin can switch creating Meetings off for Sales Users. For looks
+  // only: the server refuses it either way.
+  const { can } = useSalesPermissions()
 
   // A Sales User starts on their own meetings; a Sales Admin on everybody's.
   const [mineChoice, setMine] = useState<boolean | null>(initialMine)
@@ -93,8 +97,8 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
         kicker="Sales"
         title="Meetings"
         sub="Visits, meetings at our office and online calls, by day. Everyone attending on our side gets them in the 00:01 email."
-        cta="Schedule a meeting"
-        onCta={() => setScheduleOpen(true)}
+        cta={can("meeting.create") ? "Schedule a meeting" : undefined}
+        onCta={can("meeting.create") ? () => setScheduleOpen(true) : undefined}
         ctaIcon={RiCalendarEventLine}
       />
 

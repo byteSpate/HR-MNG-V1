@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { RiArrowLeftLine, RiCheckLine } from "@remixicon/react"
 
 import { PageHeader } from "@/components/dashboard/page-header"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -62,6 +63,9 @@ export function FunnelPage() {
   const queryClient = useQueryClient()
   const isAuthed = status === "authenticated" && Boolean(accessToken)
   const isAdmin = user?.salesRole === "SALES_ADMIN" || user?.role === "SUPER_ADMIN"
+  // A Sales Admin can switch editing the Funnel off for Sales Users. For
+  // looks only: the server refuses an edit either way.
+  const { can } = useSalesPermissions()
 
   /** Which person's grid is open. Null means the admin is on the team list. */
   const [openEmployeeId, setOpenEmployeeId] = useState<string | null>(null)
@@ -396,7 +400,7 @@ export function FunnelPage() {
           >
             <FunnelGridTable
               grid={grid}
-              editable
+              editable={can("funnel.edit_cell")}
               sort={filters.sort ?? "offeredOn"}
               direction={filters.direction ?? "desc"}
               onSort={onSort}

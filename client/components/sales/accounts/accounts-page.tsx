@@ -37,10 +37,12 @@ import {
   PanelAlert,
   PanelTable,
   RowActions,
+  TONE,
   toMessage,
 } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/shared/sales-shared"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { accountStats } from "@/components/sales/shared/sales-stats"
 import { VisitingCardPicker } from "@/components/sales/accounts/visiting-card-picker"
 import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
@@ -152,7 +154,12 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   const [qnaRows, setQnaRows] = useState<CustomRow[]>([])
 
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
-  const canCreate = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  const { can } = useSalesPermissions()
+  const isSalesAdminOrSuper = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin always can. A Sales User can when a Sales Admin has turned
+  // on `account.create`, and only if they can own a Sales Account at all (a
+  // login with no employee record cannot, and the server says so).
+  const canCreate = isSalesAdminOrSuper || (!!user?.salesRole && !!user.employeeCode && can("account.create"))
   // Whether this login can own an account at all — see sales-shell.tsx for
   // why `employeeCode` is the signal. Distinct from `canCreate`: a Super
   // Admin can create accounts for other people and still never hold one.
@@ -175,8 +182,9 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
     enabled: isAuthed && !shouldRedirect,
   })
 
-  // Only Sales Admin can open this dialog, and only Sales Admin may call this
-  // endpoint — same guard as creating the account itself. Scoped to people
+  // A Sales Admin picks the Owner and collaborators from this list. A Sales
+  // User, who is the Owner themselves, uses it for collaborators only. The
+  // server allows both while `account.create` is on. Scoped to people
   // who already hold a salesRole: this is the actual fix, not just a nicer
   // picker. Without it the server's own validation was the only thing
   // stopping an account from being handed to someone who could not open the
@@ -259,7 +267,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
     e?.preventDefault()
     setFormError(null)
 
-    const missing = [!name.trim() && "a name", !ownerEmployeeId && "an owner"].filter(
+    const missing = [!name.trim() && "a name", isSalesAdminOrSuper && !ownerEmployeeId && "an owner"].filter(
       (label): label is string => typeof label === "string"
     )
     if (missing.length > 0) {
@@ -276,7 +284,8 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
     createMutation.mutate({
       body: {
         name: name.trim(),
-        ownerEmployeeId,
+        // A Sales User is always the Owner of what they create, so they send none.
+        ownerEmployeeId: isSalesAdminOrSuper ? ownerEmployeeId : undefined,
         industry: industry.trim() || undefined,
         website: website.trim() || undefined,
         address: address.trim() || undefined,
@@ -318,11 +327,13 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
       ? canCreate
         ? "Create the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and Opportunities against it."
         : "A Sales Admin creates the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and Opportunities against it."
-      : canCreate
-        ? // On this page `canCreate` means Sales Admin: a Super Admin never
-          // gets here, having been redirected above.
+      : isSalesAdminOrSuper
+        ? // A Sales Admin never owns one, and a Super Admin never gets here,
+          // having been redirected above.
           "Sales Admins manage the hub rather than owning accounts in it, so this list stays empty. All Accounts has everything the team is working."
-        : "You don't own or collaborate on any accounts yet. All Accounts has everything the team is working."
+        : canCreate
+          ? "You don't own or collaborate on any Sales Accounts yet. Create your first one, or open All Accounts to see what the team is working on."
+          : "You don't own or collaborate on any accounts yet. All Accounts has everything the team is working."
 
   // On All Accounts there is nowhere else to send a Sales User: they cannot
   // create one, and "View All Accounts" would link this page to itself. The
@@ -403,6 +414,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                 </PanelAlert>
               ) : null}
 
+              {isSalesAdminOrSuper ? (
               <Field
                 label="Owner"
                 help="Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
@@ -431,6 +443,9 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                   </SelectContent>
                 </Select>
               </Field>
+              ) : (
+                <p className={`text-[12.5px] ${TONE.muted}`}>You will be the Owner of this Sales Account.</p>
+              )}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Industry" htmlFor="sa-industry" hint="Optional." help="The customer's line of business, like Garments or Banking.">
