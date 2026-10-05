@@ -55,6 +55,10 @@ const GATED: [Method, string, PermissionKey][] = [
   ["get", "/funnel/team", "team.funnel"],
   ["get", "/weekly/all", "team.weekly"],
   ["get", "/weekly/all/x", "team.weekly"],
+  ["get", "/accounts/x/collaborator-options", "account.edit"],
+  ["post", "/accounts/x/collaborators", "account.edit"],
+  ["post", "/accounts/x/removal-requests", "account.edit"],
+  ["patch", "/removal-requests/x/cancel", "account.edit"],
 ]
 
 beforeEach(() => {

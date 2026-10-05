@@ -9,6 +9,7 @@
 import { Router } from "express"
 
 import accountRouter from "./accounts/account.routes"
+import collaboratorRouter from "./accounts/collaborator.routes"
 import commentRouter from "./comments/comment.routes"
 import dashboardRouter from "./dashboard/dashboard.routes"
 import funnelRouter from "./funnel/funnel.routes"
@@ -24,6 +25,10 @@ import weeklyRouter from "./weekly/weekly.routes"
 const router = Router()
 
 router.use(accountRouter)
+// Collaborators and removal requests. Different path shapes from the account
+// routes above (`/accounts/:id/collaborators`, `/removal-requests`), so nothing
+// is shadowed in either direction.
+router.use(collaboratorRouter)
 
 router.use(opportunityRouter)
 // After the Opportunity router, which has no `POST /opportunities/:id/project`,

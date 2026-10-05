@@ -33,3 +33,17 @@ export function assertMayChangeOwner(args: {
     throw new AppError(403, OWNER_TO_COLLABORATOR_ONLY)
   }
 }
+
+/**
+ * The Owner of the Sales Account, or a Sales Admin. The same question several
+ * collaborator rules ask, so it is said once.
+ */
+export function assertOwnerOrAdmin(
+  actor: AccessTokenPayload,
+  actorEmployeeId: string | null,
+  ownerEmployeeId: string,
+  message: string
+): void {
+  if (isSalesAdmin(actor)) return
+  if (actorEmployeeId === null || actorEmployeeId !== ownerEmployeeId) throw new AppError(403, message)
+}

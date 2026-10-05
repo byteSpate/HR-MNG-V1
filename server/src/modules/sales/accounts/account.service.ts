@@ -26,6 +26,7 @@ import { presentChanges, resolveNames } from "./history.present"
 import { marginTotal, type MarginTotal } from "../sales.margin"
 import { resolveCreateOwner } from "./account.create-rules"
 import { assertMayChangeOwner } from "./account.owner-rules"
+import { closePendingRemovals } from "./removal.shared"
 
 /**
  * How many History rows one read returns.
@@ -93,7 +94,7 @@ async function lockAccountNames(client: typeof prisma): Promise<void> {
 }
 
 /** Lock one existing account before its authorization and before-values are read. */
-async function lockAccountRow(client: typeof prisma, id: string): Promise<void> {
+export async function lockAccountRow(client: typeof prisma, id: string): Promise<void> {
   await client.$queryRaw`SELECT "id" FROM "SalesAccount" WHERE "id" = ${id} FOR UPDATE`
 }
 
@@ -728,6 +729,8 @@ export async function updateSalesAccount(
             note: "The previous Owner stays as a collaborator",
           })
         }
+        // The new Owner is not bound by the old Owner's removal requests.
+        await closePendingRemovals(tx, { salesAccountId: id }, "CANCELLED", actor.sub)
       }
 
       const updated = await tx.salesAccount.update({
