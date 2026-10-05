@@ -6,6 +6,7 @@ import { requireSales } from "../../../middleware/requireSales"
 import {
   listPermissionsHandler,
   myPermissionsHandler,
+  permissionHistoryHandler,
   savePermissionsHandler,
 } from "./permission.controller"
 
@@ -16,6 +17,9 @@ const router = Router()
 // switch is a Sales Admin act and has no switch of its own, so nobody can lock
 // themselves out.
 router.get("/permissions/me", requireAuth, requireSales(), myPermissionsHandler)
+// The newest 50 switch changes, for the "Recent changes" list. Before
+// `/permissions` only for readability: no `:id` path exists here.
+router.get("/permissions/history", requireAuth, requireSales(), permissionHistoryHandler)
 router.get("/permissions", requireAuth, requireSales(), listPermissionsHandler)
 router.put("/permissions", requireAuth, requireSales(SalesRole.SALES_ADMIN), savePermissionsHandler)
 

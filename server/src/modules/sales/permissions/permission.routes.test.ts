@@ -6,7 +6,7 @@ vi.mock("../../../config/prisma", () => ({
     $transaction: vi.fn(),
     salesPermission: { findMany: vi.fn(), upsert: vi.fn() },
     user: { findMany: vi.fn() },
-    auditLog: { create: vi.fn() },
+    auditLog: { create: vi.fn(), findMany: vi.fn() },
   },
 }))
 
@@ -24,6 +24,20 @@ beforeEach(() => {
   vi.mocked(prisma.$transaction).mockImplementation((async (fn: any) => fn(prisma)) as never)
   vi.mocked(prisma.salesPermission.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.user.findMany).mockResolvedValue([] as never)
+  vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as never)
+})
+
+describe("GET /api/sales/permissions/history", () => {
+  it("answers the list to a Sales User", async () => {
+    const res = await request(app).get("/api/sales/permissions/history").set("Authorization", auth("EMPLOYEE", "SALES_USER"))
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ items: [] })
+  })
+
+  it("refuses a login with no Sales Hub access", async () => {
+    const res = await request(app).get("/api/sales/permissions/history").set("Authorization", auth("EMPLOYEE", null))
+    expect(res.status).toBe(403)
+  })
 })
 
 describe("GET /api/sales/permissions", () => {
