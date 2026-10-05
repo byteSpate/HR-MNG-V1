@@ -12,6 +12,7 @@ import {
   listAccountsFlat,
   listCashAccounts,
 } from "@/lib/api/accounting"
+import { bankBookHeadings } from "@/lib/accounting/side-style"
 import { useSession } from "@/lib/auth/session-context"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Button } from "@/components/ui/button"
@@ -157,8 +158,8 @@ function LedgerPageInner({ mode }: { mode: Mode }) {
                 <TableHead className="w-32">Journal</TableHead>
                 <TableHead>Narration</TableHead>
                 <TableHead className="w-28">Reference</TableHead>
-                <TableHead className="w-32 text-right">Debit</TableHead>
-                <TableHead className="w-32 text-right">Credit</TableHead>
+                <TableHead className="w-36 text-right">{mode === "BANK" ? bankBookHeadings().debit : "Debit"}</TableHead>
+                <TableHead className="w-36 text-right">{mode === "BANK" ? bankBookHeadings().credit : "Credit"}</TableHead>
                 <TableHead className="w-36 text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
