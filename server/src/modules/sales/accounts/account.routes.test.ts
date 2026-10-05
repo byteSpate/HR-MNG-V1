@@ -5,6 +5,7 @@ vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
+    salesPermission: { findMany: vi.fn() },
     salesAccount: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -64,6 +65,8 @@ beforeEach(() => {
   vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.salesComment.findMany).mockResolvedValue([] as never)
   vi.mocked(prisma.salesTask.findMany).mockResolvedValue([] as never)
+  // An empty switch table: every Permission switch keeps its default.
+  vi.mocked(prisma.salesPermission.findMany).mockResolvedValue([] as never)
 })
 
 describe("GET /api/sales/accounts/:id/margin", () => {
