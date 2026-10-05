@@ -22,6 +22,7 @@ import { Role, SalesRole } from "../../../generated/prisma/client"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { ZERO, dec, sum, toMoneyString, type Money } from "../../payroll/payroll.money"
 import { employeeIdFor } from "../sales.access"
+import { canDo } from "../sales.permissions"
 import { currentQuarter, quarterOf, quarterRange } from "./sales.quarters"
 import { phaseOf, planQuarters, type PlannedQuarter, type QuarterPhase } from "./target.plan"
 
@@ -81,6 +82,9 @@ export interface WinRow {
   amount: Money | null
   closedAt: Date | null
 }
+
+export const TARGET_NOT_ALLOWED = "You cannot set yearly Targets. Ask a Sales Admin."
+export const OWN_TARGET = "You cannot set your own yearly Target. Ask a Sales Admin."
 
 function isSalesAdmin(actor: AccessTokenPayload): boolean {
   return actor.role === Role.SUPER_ADMIN || actor.salesRole === SalesRole.SALES_ADMIN
@@ -200,7 +204,12 @@ export async function getTargetYear(
   const ownEmployeeId = await employeeIdFor(actor)
   const subjectId = query.employeeId ?? ownEmployeeId
 
-  if (query.employeeId && query.employeeId !== ownEmployeeId && !isSalesAdmin(actor)) {
+  if (
+    query.employeeId &&
+    query.employeeId !== ownEmployeeId &&
+    !(await canDo(actor, "team.dashboard")) &&
+    !(await canDo(actor, "target.set"))
+  ) {
     throw new AppError(403, "You can only see your own targets")
   }
   if (!subjectId) {
@@ -244,8 +253,13 @@ export async function setSalesTarget(
   actor: AccessTokenPayload,
   now: Date = new Date()
 ): Promise<SalesTargetYear> {
-  if (!isSalesAdmin(actor)) {
-    throw new AppError(403, "Only a Sales Admin can set a yearly target")
+  if (!(await canDo(actor, "target.set"))) {
+    throw new AppError(403, TARGET_NOT_ALLOWED)
+  }
+  // "A target somebody sets for themselves is not a target." A Sales Admin is
+  // not held to this: they set Targets for the people they lead.
+  if (!isSalesAdmin(actor) && body.employeeId === (await employeeIdFor(actor))) {
+    throw new AppError(403, OWN_TARGET)
   }
 
   const employee = await prisma.employee.findUnique({
