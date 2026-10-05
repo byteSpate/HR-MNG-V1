@@ -107,6 +107,11 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
         // Keyed "/funnel" for both, so the read is gated here, not on the key.
         "/sales/funnel": isSalesAdmin ? (dashboard.data?.badges["/funnel"] ?? 0) : 0,
         "/sales/tasks": badgeFor("/tasks"),
+        // Only a Sales Admin has a number: the Owners' removal requests wait
+        // for them in a panel on Sales Settings. Keyed "/settings" on the
+        // overview's badges like every other nav badge, so the card and this
+        // number are one count.
+        "/sales/settings": isSalesAdmin ? (dashboard.data?.badges["/settings"] ?? 0) : 0,
       }}
       // Wider than a role dashboard's 1220/1600px cap: the accounts table
       // (Day 5) and, later, the Opportunities pipeline want more columns

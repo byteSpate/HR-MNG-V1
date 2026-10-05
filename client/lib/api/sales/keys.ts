@@ -37,6 +37,13 @@ export const salesKeys = {
   permissions: () => ["sales", "permissions"] as const,
   /** Under `permissions`, so saving a switch refreshes the caller's own answers too. */
   myPermissions: () => ["sales", "permissions", "me"] as const,
+  /** Under `permissions`, so a save refreshes the change list too. */
+  permissionHistory: () => ["sales", "permissions", "history"] as const,
+
+  // ── collaborators and removal requests ──────────────────────────────────
+  /** All of them, or one Sales Account's. Under "sales" so a write can refresh both. */
+  removals: (accountId?: string) => ["sales", "removals", accountId ?? "all"] as const,
+  collaboratorOptions: (accountId: string) => ["sales", "accounts", accountId, "collaborator-options"] as const,
 
   // ── opportunities ───────────────────────────────────────────────────────
   /** Who may own a Software Opportunity, for the Hand-over dialog (spec §2.5). */

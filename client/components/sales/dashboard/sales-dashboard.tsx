@@ -16,6 +16,7 @@ import {
 } from "@remixicon/react"
 
 import { getSalesTargetYear, setSalesTarget } from "@/lib/api/sales/targets"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { getSalesDashboard } from "@/lib/api/sales/dashboard"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
@@ -315,6 +316,8 @@ function TeamTable({ team, onReview }: { team: SalesTeamRow[]; onReview: (employ
 
 function ScopeBar({
   isSalesAdmin,
+  canTeam,
+  canSetTarget,
   selectedEmployeeId,
   team,
   data,
@@ -322,6 +325,8 @@ function ScopeBar({
   onSetTarget,
 }: {
   isSalesAdmin: boolean
+  canTeam: boolean
+  canSetTarget: boolean
   selectedEmployeeId: string
   team: SalesTeamRow[]
   data: { scope: "me" | "employee" | "all"; employeeName: string | null }
@@ -339,7 +344,7 @@ function ScopeBar({
     <div className="mt-1 flex flex-wrap items-center justify-between gap-3 border-y border-[#E4E9EF] py-3">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {isSalesAdmin ? (
+          {canTeam ? (
             <Select value={selectedEmployeeId} onValueChange={(value) => onSelect(value ?? "all")}>
               <SelectTrigger aria-label="Dashboard scope" className="h-8 min-w-[12.5rem] border-0 bg-[#F7F9FB] text-[12.5px] font-bold shadow-none hover:bg-[#F1F4F8]">
                 <SelectValue>
@@ -363,7 +368,7 @@ function ScopeBar({
           <span className={`text-[12px] ${TONE.muted}`}>{scopeDescription}</span>
         </div>
       </div>
-      {isSalesAdmin && data.scope !== "all" && data.employeeName ? (
+      {canSetTarget && data.scope !== "all" && data.employeeName && (isSalesAdmin || data.scope === "employee") ? (
         <Button
           type="button"
           onClick={onSetTarget}
@@ -529,16 +534,22 @@ export function SalesDashboard() {
   const { accessToken, user, status: sessionStatus } = useSession()
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin can let a Sales User see the team (`team.dashboard`) and set
+  // other people's yearly Targets (`target.set`). For looks only: the server
+  // refuses either way.
+  const { can } = useSalesPermissions()
+  const canTeam = isSalesAdmin || can("team.dashboard")
+  const canSetTarget = isSalesAdmin || can("target.set")
 
   // An admin's default view is the team (§7). Everybody else only ever has one.
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("all")
   const [targetsOpen, setTargetsOpen] = useState(false)
 
-  const employeeId = isSalesAdmin ? selectedEmployeeId : undefined
+  const employeeId = canTeam ? selectedEmployeeId : undefined
   const teamQuery = useQuery({
     queryKey: salesKeys.dashboard("all"),
     queryFn: () => getSalesDashboard(accessToken!, "all"),
-    enabled: isAuthed && isSalesAdmin,
+    enabled: isAuthed && canTeam,
   })
   const query = useQuery({
     queryKey: salesKeys.dashboard(employeeId),
@@ -554,7 +565,7 @@ export function SalesDashboard() {
         kicker="Sales"
         title="Techno Sales Hub"
         sub={
-          isSalesAdmin
+          canTeam
             ? "The team's quarter, with a direct path into each person's work."
             : "Your quarter, and what needs doing across the accounts you work."
         }
@@ -584,6 +595,8 @@ export function SalesDashboard() {
         <>
           <ScopeBar
             isSalesAdmin={isSalesAdmin}
+            canTeam={canTeam}
+            canSetTarget={canSetTarget}
             selectedEmployeeId={selectedEmployeeId}
             team={teamQuery.data?.team ?? []}
             data={data}
@@ -658,7 +671,7 @@ export function SalesDashboard() {
           {/* Hidden from a Sales User rather than disabled: a target somebody
               sets for themselves is not a target, so the control is not theirs
               to see. */}
-          {isSalesAdmin && data.employeeId ? (
+          {canSetTarget && data.employeeId && (isSalesAdmin || data.scope === "employee") ? (
             <TargetEditor
               employeeId={data.employeeId}
               employeeName={data.employeeName}

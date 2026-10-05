@@ -1,5 +1,15 @@
 import { apiFetch } from "../client"
-import type { SalesPermissionKey, SalesPermissionRow, SaveSalesPermissionsBody } from "../types"
+import type {
+  SalesPermissionHistoryRow,
+  SalesPermissionKey,
+  SalesPermissionRow,
+  SaveSalesPermissionsBody,
+} from "../types"
+
+/** The newest 50 switch changes. Open to the whole hub. */
+export function listSalesPermissionHistory(accessToken: string): Promise<{ items: SalesPermissionHistoryRow[] }> {
+  return apiFetch<{ items: SalesPermissionHistoryRow[] }>("/api/sales/permissions/history", { accessToken })
+}
 
 /** Every switch with its value and who last changed it. Open to the whole hub. */
 export function listSalesPermissions(accessToken: string): Promise<{ items: SalesPermissionRow[] }> {

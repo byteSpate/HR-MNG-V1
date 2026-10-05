@@ -3821,3 +3821,27 @@ export interface SalesPermissionRow {
 export interface SaveSalesPermissionsBody {
   changes: Array<{ key: SalesPermissionKey; enabled: boolean }>
 }
+
+export interface SalesPermissionHistoryRow {
+  key: string
+  label: string
+  enabled: boolean
+  changedAt: string
+  changedByName: string | null
+}
+
+// ── Collaborator removal requests ────────────────────────────────────────
+export type SalesRemovalStatus = "PENDING" | "APPROVED" | "REFUSED" | "CANCELLED"
+
+export interface SalesRemovalRequest {
+  id: string
+  salesAccountId: string
+  accountName: string
+  employeeId: string
+  employeeName: string
+  requestedByName: string | null
+  status: SalesRemovalStatus
+  refusalReason: string | null
+  createdAt: string
+  decidedAt: string | null
+}
