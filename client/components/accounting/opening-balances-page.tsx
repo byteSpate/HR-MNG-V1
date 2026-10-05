@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
+import { sides } from "@/lib/accounting/side-style"
 import {
   createJournal,
   listAccountsFlat,
@@ -208,8 +209,8 @@ function AmountGrid({
             <TableRow>
               <TableHead className="w-20">Code</TableHead>
               <TableHead>Account</TableHead>
-              <TableHead className="w-40 text-right">Debit</TableHead>
-              <TableHead className="w-40 text-right">Credit</TableHead>
+              <TableHead className={`w-40 text-right ${sides.sideText("debit")}`}>Debit</TableHead>
+              <TableHead className={`w-40 text-right ${sides.sideText("credit")}`}>Credit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

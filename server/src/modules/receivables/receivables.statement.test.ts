@@ -106,6 +106,24 @@ describe("buildCustomerStatementHtml", () => {
     for (const grey of ["#52525b", "#71717a", "#a1a1aa"]) expect(html).not.toContain(grey)
   })
 
+  it("keeps an invoice under Owed and a receipt under Paid: those words are not Debit and Credit, so they are never swapped", () => {
+    const html = buildCustomerStatementHtml(
+      {
+        ...S,
+        entries: [
+          { date: new Date("2026-09-05"), kind: "Invoice", reference: "INV-1", debit: "227000.00", credit: null, balance: "227000.00" },
+          { date: new Date("2026-09-10"), kind: "Receipt", reference: "RC-1", debit: null, credit: "50000.00", balance: "177000.00" },
+        ],
+      } as never,
+      { name: "Byte Spate", address: "", logo: null }
+    )
+    expect(html).toContain("<th class=\"num\">Owed</th><th class=\"num\">Paid</th>")
+    // Invoice: money the customer owes, first column.
+    expect(html).toMatch(/<td class="num">2,27,000\.00<\/td>\s*<td class="num">—<\/td>/)
+    // Receipt: money the customer paid, second column.
+    expect(html).toMatch(/<td class="num">—<\/td>\s*<td class="num">50,000\.00<\/td>/)
+  })
+
   it("escapes the customer's name", () => {
     expect(buildCustomerStatementHtml(S, { name: "Byte Spate", address: "", logo: null })).toContain("Bengal &lt;Group&gt;")
   })
