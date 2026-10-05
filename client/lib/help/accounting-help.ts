@@ -307,7 +307,7 @@ export const HELP: Record<string, HelpEntry> = {
     reading: [
       {
         name: "The two columns",
-        body: "Debit for things the company owns or is owed — cash, bank, equipment, money customers owe. Credit for things it owes and for what the owners put in — suppliers, loans, share capital, retained earnings brought forward.",
+        body: "Credit for things the company owns or is owed — cash, bank, equipment, money customers owe. Debit for things it owes and for what the owners put in — suppliers, loans, share capital, retained earnings brought forward.",
       },
       {
         name: "The running difference",
@@ -335,8 +335,8 @@ export const HELP: Record<string, HelpEntry> = {
         title: "Starting mid-life, not from scratch",
         steps: [
           "Take the closing balance sheet from whatever was used before.",
-          "Enter each line against the matching account here — assets on the debit side, liabilities and equity on the credit side.",
-          "Include accumulated depreciation as a credit against its own account, not netted off the equipment cost. The fixed asset schedule needs both figures separately.",
+          "Enter each line against the matching account here — assets on the credit side, liabilities and equity on the debit side.",
+          "Include accumulated depreciation as a debit against its own account, not netted off the equipment cost. The fixed asset schedule needs both figures separately.",
           "The difference reads zero once the whole balance sheet is in. Post.",
           "The first trial balance now starts from reality rather than from nothing.",
         ],
@@ -637,7 +637,7 @@ export const HELP: Record<string, HelpEntry> = {
     reading: [
       {
         name: "Debit and credit",
-        body: "Every line goes on one side or the other. The short version that gets you through most entries: a debit increases something the company owns or a cost it has incurred; a credit increases something it owes, or income it has earned. Money leaving the bank is a credit to the bank; a cost is a debit.",
+        body: "Every line goes on one side or the other. The short version that gets you through most entries: a credit increases something the company owns or a cost it has incurred; a debit increases something it owes, or income it has earned. Money leaving the bank is a debit to the bank; a cost is a credit. This is the same way the bank writes its own statement.",
       },
       {
         name: "The running difference",
@@ -697,7 +697,7 @@ export const HELP: Record<string, HelpEntry> = {
         title: "A cost belongs to a month whose invoice has not arrived",
         steps: [
           "Date the entry the last day of the month it belongs to, while that month is still open.",
-          "Debit the expense account, credit trade and other payables, for the best estimate.",
+          "Credit the expense account, debit trade and other payables, for the best estimate.",
           "Narrate it clearly as an accrual, so the person who sees the real invoice next month knows to expect it.",
           "When the invoice arrives, reverse the accrual and enter the real bill.",
         ],
@@ -884,16 +884,16 @@ export const HELP: Record<string, HelpEntry> = {
     },
     reading: [
       {
-        name: "Opening, Movement, Closing",
-        body: "Three pairs of columns. Opening is where each account stood before the range. Movement is what happened inside it. Closing is opening plus movement, and closing is what the statements use.",
+        name: "Opening, In, Out, Closing",
+        body: "Four columns. Opening is where each account stood before the range. In, in green, is what was added to the account inside the range. Out, in red, is what was taken from it. Closing is opening plus In minus Out, and closing is what the statements use.",
       },
       {
-        name: "Why each pair has two columns",
-        body: "An account sits naturally on one side — assets and expenses on the debit side, liabilities, equity and income on the credit side. Showing both columns means an account sitting on the wrong side is visible at a glance rather than hidden inside a signed figure.",
+        name: "Balances in brackets",
+        body: "Each balance is one number. A balance in brackets means the account has had more Out than In. Liabilities, owners' money and income usually show in brackets. Assets and costs usually show as plain numbers.",
       },
       {
         name: "The totals row",
-        body: "The two totals must be identical. When they are, the page confirms it. When they are not, it says \"Not balanced\" and the statements will refuse to generate.",
+        body: "Total In and total Out must be the same, and the balance columns must add up to zero. When they do, the page confirms it. When they do not, it says \"Not balanced\" and the statements will refuse to generate.",
       },
       {
         name: "What a closed year looks like",
@@ -917,7 +917,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "Open the trial balance for the month.",
           "Confirm it agrees.",
-          "Scan the closing column for anything obviously wrong — a large balance on an account that is normally empty, or an account sitting on the opposite side to its neighbours.",
+          "Scan the closing column for anything obviously wrong — a large balance on an account that is normally empty, or an account with its balance in brackets when its neighbours are not.",
           "Then, and only then, go and read the statements. A statement built on a trial balance nobody checked is a guess.",
         ],
       },
@@ -1399,7 +1399,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Recoveries",
-        body: "An advance being recovered and an asset not returned are two different things and post to two different accounts — one reduces a receivable, the other is income. Folding them together would credit an account that was never debited.",
+        body: "An advance being recovered and an asset not returned are two different things and post to two different accounts — one reduces a receivable, the other is income. Folding them together would debit an account that was never credited.",
       },
     ],
     does: [

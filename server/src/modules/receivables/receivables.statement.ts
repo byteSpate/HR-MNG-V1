@@ -4,6 +4,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { env } from "../../config/env"
 import { escapeHtml, brandAsset, renderPdf } from "../../utils/pdf"
 import { BRAND_DOC_CSS, brandDocHeaderHtml } from "../../utils/pdf.brand"
+import { shownSides } from "../accounting/accounting.sideStyle"
 import { formatBdt } from "../accounting/accounting.utils"
 
 const ZERO = new Prisma.Decimal(0)
@@ -111,6 +112,8 @@ function formatShortIso(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+const money = (value: string | null) => (value ? formatBdt(new Prisma.Decimal(value)) : "—")
+
 export function buildCustomerStatementHtml(s: CustomerStatement, company: { name: string; address: string; logo: string | null }): string {
   const rows = s.entries.length
     ? s.entries.map((e) => `
@@ -118,8 +121,8 @@ export function buildCustomerStatementHtml(s: CustomerStatement, company: { name
           <td>${escapeHtml(longDate(e.date))}</td>
           <td>${escapeHtml(e.kind)}</td>
           <td>${escapeHtml(e.reference)}</td>
-          <td class="num">${e.debit ? formatBdt(new Prisma.Decimal(e.debit)) : "—"}</td>
-          <td class="num">${e.credit ? formatBdt(new Prisma.Decimal(e.credit)) : "—"}</td>
+          <td class="num">${money(shownSides(e.debit, e.credit).debit)}</td>
+          <td class="num">${money(shownSides(e.debit, e.credit).credit)}</td>
           <td class="num">${formatBdt(new Prisma.Decimal(e.balance))}</td>
         </tr>`).join("")
     : `<tr><td colspan="6" class="empty">No invoices, receipts or credit notes in this period.</td></tr>`

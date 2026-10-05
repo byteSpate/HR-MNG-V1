@@ -24,7 +24,10 @@ interface LedgerLine {
   amount: string
 }
 
-function LedgerLines({ lines }: { lines: LedgerLine[] }) {
+function LedgerLines({ lines: written }: { lines: LedgerLine[] }) {
+  // Debit rows first, then Credit, each in the order written. (The sides are
+  // named the way the bank's statement names them; see lib/accounting/side-style.ts.)
+  const lines = [...written].sort((a, b) => Number(a.side === "Credit") - Number(b.side === "Credit"))
   return (
     <dl className="my-4 rounded-md border border-[#E4E9EF] bg-white">
       {lines.map((line, i) => (
@@ -86,15 +89,15 @@ const STEPS: Step[] = [
         </p>
         <p>
           If the company already had money and obligations before the system went live, an{" "}
-          <T term="opening balance" />{" "}carries those in: one figure per account, debit for what
-          the company owns (cash, bank, equipment), credit for what it owes and what the owners
+          <T term="opening balance" />{" "}carries those in: one figure per account, credit for what
+          the company owns (cash, bank, equipment), debit for what it owes and what the owners
           put in (suppliers, loans, share capital). Say the company started with ৳5,00,000 in the
           bank, put in by its owners:
         </p>
         <LedgerLines
           lines={[
-            { side: "Debit", account: "Bank", amount: "৳5,00,000" },
-            { side: "Credit", account: "Share Capital", amount: "৳5,00,000" },
+            { side: "Credit", account: "Bank", amount: "৳5,00,000" },
+            { side: "Debit", account: "Share Capital", amount: "৳5,00,000" },
           ]}
         />
         <p>
@@ -142,8 +145,8 @@ const STEPS: Step[] = [
         </p>
         <LedgerLines
           lines={[
-            { side: "Debit", account: "Salary, Wages & Allowances", amount: "৳4,20,000" },
-            { side: "Credit", account: "Salary Payable", amount: "৳4,20,000" },
+            { side: "Credit", account: "Salary, Wages & Allowances", amount: "৳4,20,000" },
+            { side: "Debit", account: "Salary Payable", amount: "৳4,20,000" },
           ]}
         />
         <p>
@@ -173,8 +176,8 @@ const STEPS: Step[] = [
         </p>
         <LedgerLines
           lines={[
-            { side: "Debit", account: "Salary Payable", amount: "৳4,20,000" },
-            { side: "Credit", account: "Bank", amount: "৳4,20,000" },
+            { side: "Credit", account: "Salary Payable", amount: "৳4,20,000" },
+            { side: "Debit", account: "Bank", amount: "৳4,20,000" },
           ]}
         />
         <p>
@@ -271,8 +274,8 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Travel and Conveyance", amount: "৳1,200" },
-      { side: "Credit", account: "Employee Reimbursements Payable", amount: "৳1,200" },
+      { side: "Credit", account: "Travel and Conveyance", amount: "৳1,200" },
+      { side: "Debit", account: "Employee Reimbursements Payable", amount: "৳1,200" },
     ],
     note: (
       <>
@@ -295,14 +298,14 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Salary, Wages & Allowances", amount: "৳15,000" },
-      { side: "Debit", account: "Gratuity Expense", amount: "৳40,000" },
-      { side: "Credit", account: "Employee Advances", amount: "৳5,000" },
-      { side: "Credit", account: "Final Dues Payable", amount: "৳50,000" },
+      { side: "Credit", account: "Salary, Wages & Allowances", amount: "৳15,000" },
+      { side: "Credit", account: "Gratuity Expense", amount: "৳40,000" },
+      { side: "Debit", account: "Employee Advances", amount: "৳5,000" },
+      { side: "Debit", account: "Final Dues Payable", amount: "৳50,000" },
     ],
     note: (
       <>
-        Paid the same way payroll is: Debit Final Dues Payable, Credit Bank, for the ৳50,000
+        Paid the same way payroll is: Credit Final Dues Payable, Debit Bank, for the ৳50,000
         that is actually transferred.
       </>
     ),
@@ -318,10 +321,10 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Office Rent", amount: "৳45,000" },
-      { side: "Credit", account: "Trade and other Payables", amount: "৳45,000" },
+      { side: "Credit", account: "Office Rent", amount: "৳45,000" },
+      { side: "Debit", account: "Trade and other Payables", amount: "৳45,000" },
     ],
-    note: <>Paid later with Debit Trade and other Payables, Credit Bank, for the same ৳45,000.</>,
+    note: <>Paid later with Credit Trade and other Payables, Debit Bank, for the same ৳45,000.</>,
     also: "Expenses (company)",
   },
   {
@@ -334,13 +337,13 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Computer / Laptop", amount: "৳85,000" },
-      { side: "Credit", account: "Trade and other Payables", amount: "৳85,000" },
+      { side: "Credit", account: "Computer / Laptop", amount: "৳85,000" },
+      { side: "Debit", account: "Trade and other Payables", amount: "৳85,000" },
     ],
     note: (
       <>
         Paid the same way as any bill. Then, every month afterwards, a small slice of that
-        ৳85,000 moves on its own: Debit a Depreciation expense account, Credit Accumulated
+        ৳85,000 moves on its own: Credit a Depreciation expense account, Debit Accumulated
         Depreciation, never touching the ৳85,000 the laptop cost, only building up beside it,
         so both figures stay readable separately.
       </>
@@ -377,13 +380,13 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Goods Bought for Won Opportunities", amount: "৳8,00,000" },
-      { side: "Debit", account: "Input VAT", amount: "৳1,20,000" },
-      { side: "Credit", account: "Trade Payables, Suppliers", amount: "৳9,20,000" },
+      { side: "Credit", account: "Goods Bought for Won Opportunities", amount: "৳8,00,000" },
+      { side: "Credit", account: "Input VAT", amount: "৳1,20,000" },
+      { side: "Debit", account: "Trade Payables, Suppliers", amount: "৳9,20,000" },
     ],
     note: (
       <>
-        Paying it is Debit Trade Payables, Credit Bank, for what is cleared. A payment cannot be
+        Paying it is Credit Trade Payables, Debit Bank, for what is cleared. A payment cannot be
         more than the Opportunity&apos;s bills from that supplier still owe; there are no advances. A
         credit note for returned goods runs the bill backwards for the part returned.
       </>
@@ -403,14 +406,14 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Trade and other Receivables", amount: "৳11,50,000" },
-      { side: "Credit", account: "Product Sales", amount: "৳10,00,000" },
-      { side: "Credit", account: "VAT Payable", amount: "৳1,50,000" },
+      { side: "Credit", account: "Trade and other Receivables", amount: "৳11,50,000" },
+      { side: "Debit", account: "Product Sales", amount: "৳10,00,000" },
+      { side: "Debit", account: "VAT Payable", amount: "৳1,50,000" },
     ],
     note: (
       <>
-        In the same approval, the goods&apos; cost moves out of holding: Debit Hardware Purchase,
-        Credit Goods Bought for Won Opportunities, ৳8,00,000. When the customer pays, Finance clicks
+        In the same approval, the goods&apos; cost moves out of holding: Credit Hardware Purchase,
+        Debit Goods Bought for Won Opportunities, ৳8,00,000. When the customer pays, Finance clicks
         Record payment received on the Opportunity page; it is saved and counted at once, with no
         approval needed. When the supplier is paid, Finance clicks Pay supplier, also counted at
         once. Every step, from the PO to the final payment, happens on this one Opportunity page. Nobody
@@ -428,8 +431,8 @@ const MODULES: ModuleEntry[] = [
       </>
     ),
     lines: [
-      { side: "Debit", account: "Bank Interest & Charges", amount: "৳150" },
-      { side: "Credit", account: "Bank", amount: "৳150" },
+      { side: "Credit", account: "Bank Interest & Charges", amount: "৳150" },
+      { side: "Debit", account: "Bank", amount: "৳150" },
     ],
     note: (
       <>
