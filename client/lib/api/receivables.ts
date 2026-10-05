@@ -1,3 +1,5 @@
+import { sides } from "@/lib/accounting/side-style"
+
 import { apiFetch, apiFetchBlob } from "./client"
 import type { CustomerAgeingRow, CustomerStatement, CustomerTieOut } from "./types"
 
@@ -17,7 +19,7 @@ export function getCustomerStatement(
   return apiFetch<CustomerStatement>(
     `/api/receivables/customers/${customerId}/statement?from=${range.from}&to=${range.to}`,
     { accessToken }
-  )
+  ).then((statement) => ({ ...statement, entries: statement.entries.map((entry) => sides.pair(entry)) }))
 }
 
 export async function downloadCustomerStatementPdf(

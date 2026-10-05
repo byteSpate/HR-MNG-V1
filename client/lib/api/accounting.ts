@@ -1,3 +1,5 @@
+import { sides } from "@/lib/accounting/side-style"
+
 import { apiFetch } from "./client"
 import type {
   Account,
@@ -8,6 +10,7 @@ import type {
   FinancialYear,
   Journal,
   JournalAttachment,
+  JournalLineInput,
   JournalPage,
   JournalQuery,
   LedgerResult,
@@ -102,7 +105,7 @@ export function draftYearEnd(accessToken: string, id: string): Promise<Journal> 
   return apiFetch<Journal>(`/api/accounting/financial-years/${id}/year-end`, {
     method: "POST",
     accessToken,
-  })
+  }).then(sides.journal)
 }
 
 export function closePeriod(accessToken: string, id: string): Promise<AccountingPeriod> {
@@ -125,21 +128,29 @@ export function reopenPeriod(
 }
 
 // ── journals ──
+//
+// Journals cross the API edge through `sides` (see lib/accounting/side-style.ts):
+// what comes back is read in the bank's wording, and what is sent is saved on
+// the stored side.
+
+function toServer<T extends { lines?: JournalLineInput[] }>(input: T): T {
+  return input.lines ? { ...input, lines: input.lines.map((line) => sides.lineInput(line)) } : input
+}
 
 export function listJournals(accessToken: string, query: JournalQuery): Promise<JournalPage> {
-  return apiFetch<JournalPage>(`/api/accounting/journals${qs(query as never)}`, { accessToken })
+  return apiFetch<JournalPage>(`/api/accounting/journals${qs(query as never)}`, { accessToken }).then(sides.journalPage)
 }
 
 export function getJournal(accessToken: string, id: string): Promise<Journal> {
-  return apiFetch<Journal>(`/api/accounting/journals/${id}`, { accessToken })
+  return apiFetch<Journal>(`/api/accounting/journals/${id}`, { accessToken }).then(sides.journal)
 }
 
 export function createJournal(accessToken: string, input: CreateJournalInput): Promise<Journal> {
   return apiFetch<Journal>("/api/accounting/journals", {
     method: "POST",
     accessToken,
-    body: JSON.stringify(input),
-  })
+    body: JSON.stringify(toServer(input)),
+  }).then(sides.journal)
 }
 
 export function updateJournal(
@@ -150,8 +161,8 @@ export function updateJournal(
   return apiFetch<Journal>(`/api/accounting/journals/${id}`, {
     method: "PATCH",
     accessToken,
-    body: JSON.stringify(input),
-  })
+    body: JSON.stringify(toServer(input)),
+  }).then(sides.journal)
 }
 
 export function deleteJournal(accessToken: string, id: string): Promise<void> {
@@ -159,11 +170,11 @@ export function deleteJournal(accessToken: string, id: string): Promise<void> {
 }
 
 export function submitJournal(accessToken: string, id: string): Promise<Journal> {
-  return apiFetch<Journal>(`/api/accounting/journals/${id}/submit`, { method: "POST", accessToken })
+  return apiFetch<Journal>(`/api/accounting/journals/${id}/submit`, { method: "POST", accessToken }).then(sides.journal)
 }
 
 export function approveJournal(accessToken: string, id: string): Promise<Journal> {
-  return apiFetch<Journal>(`/api/accounting/journals/${id}/approve`, { method: "POST", accessToken })
+  return apiFetch<Journal>(`/api/accounting/journals/${id}/approve`, { method: "POST", accessToken }).then(sides.journal)
 }
 
 export function rejectJournal(accessToken: string, id: string, note: string): Promise<Journal> {
@@ -171,7 +182,7 @@ export function rejectJournal(accessToken: string, id: string, note: string): Pr
     method: "POST",
     accessToken,
     body: JSON.stringify({ note }),
-  })
+  }).then(sides.journal)
 }
 
 /** Returns the new REVERSAL draft, which then follows the ordinary path. */
@@ -180,7 +191,7 @@ export function reverseJournal(accessToken: string, id: string, reason: string):
     method: "POST",
     accessToken,
     body: JSON.stringify({ reason }),
-  })
+  }).then(sides.journal)
 }
 
 // ── attachments ──
@@ -236,15 +247,15 @@ export interface LedgerParams {
 }
 
 export function getLedger(accessToken: string, params: LedgerParams): Promise<LedgerResult> {
-  return apiFetch<LedgerResult>(`/api/accounting/ledger${qs(params as never)}`, { accessToken })
+  return apiFetch<LedgerResult>(`/api/accounting/ledger${qs(params as never)}`, { accessToken }).then(sides.ledger)
 }
 
 export function getCashBook(accessToken: string, params: LedgerParams): Promise<LedgerResult> {
-  return apiFetch<LedgerResult>(`/api/accounting/cash-book${qs(params as never)}`, { accessToken })
+  return apiFetch<LedgerResult>(`/api/accounting/cash-book${qs(params as never)}`, { accessToken }).then(sides.ledger)
 }
 
 export function getBankBook(accessToken: string, params: LedgerParams): Promise<LedgerResult> {
-  return apiFetch<LedgerResult>(`/api/accounting/bank-book${qs(params as never)}`, { accessToken })
+  return apiFetch<LedgerResult>(`/api/accounting/bank-book${qs(params as never)}`, { accessToken }).then(sides.ledger)
 }
 
 export function listCashAccounts(accessToken: string, kind: "CASH" | "BANK"): Promise<Account[]> {

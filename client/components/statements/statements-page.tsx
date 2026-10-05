@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/statements"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { sides } from "@/lib/accounting/side-style"
 import type { UnbalancedDetails } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelAlert, toMessage } from "@/components/dashboard/record-kit"
@@ -68,7 +69,7 @@ function BlockedPanel({ details, range }: { details: UnbalancedDetails; range: R
 
 function unbalanced(error: unknown): UnbalancedDetails | null {
   if (error instanceof ApiError && error.status === 409 && error.details?.difference) {
-    return error.details as unknown as UnbalancedDetails
+    return sides.totals(error.details as unknown as UnbalancedDetails)
   }
   return null
 }
