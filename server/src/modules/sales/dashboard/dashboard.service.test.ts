@@ -6,6 +6,8 @@ vi.mock("../../../config/prisma", () => ({
     // The service now asks the Permission switches. An empty table keeps every
     // switch at its default, which is today's behaviour.
     salesPermission: { findMany: vi.fn().mockResolvedValue([]) },
+    // The removal-requests row for a Sales Admin counts the pending ones.
+    salesCollaboratorRemoval: { count: vi.fn().mockResolvedValue(0) },
     salesTarget: { findMany: vi.fn() },
     opportunity: { findMany: vi.fn(), count: vi.fn() },
     salesAccount: { count: vi.fn(), findMany: vi.fn() },
@@ -547,8 +549,9 @@ describe("the team roll-up", () => {
 
     expect(payload.quarters.map((q) => q.quarter)).toEqual([1, 2, 3, 4])
     expect(payload.actions.map((row) => row.key))
-      .toEqual(["meetings", "tasks", "minutes", "weekly", "funnel", "closing", "unverified", "quiet", "stuck"])
-    expect(Object.keys(payload.badges)).toHaveLength(9)
+      .toEqual(["meetings", "tasks", "minutes", "weekly", "funnel", "closing", "unverified", "quiet", "stuck", "removals"])
+    // The last row is the Collaborator removals a Sales Admin has to decide.
+    expect(Object.keys(payload.badges)).toHaveLength(10)
   })
 
   it("takes the documented employeeId=all rather than a second spelling", async () => {
