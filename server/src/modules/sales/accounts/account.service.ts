@@ -11,6 +11,7 @@ import {
   ACCOUNT_NOT_VISIBLE,
   canManageAccount,
   employeeIdFor,
+  isSalesAdmin,
   ownedScopeFor,
   requireAccountAccess,
   requireAccountVisible,
@@ -24,6 +25,7 @@ import {
 import { presentChanges, resolveNames } from "./history.present"
 import { marginTotal, type MarginTotal } from "../sales.margin"
 import { resolveCreateOwner } from "./account.create-rules"
+import { assertMayChangeOwner } from "./account.owner-rules"
 
 /**
  * How many History rows one read returns.
@@ -311,6 +313,8 @@ export async function createSalesAccount(
         // be unable to log a call against it, having no Employee row to be
         // the author.
         canLogActivity: actorEmployeeId !== null,
+        // The creator is a Sales Admin or the Owner they just made themselves.
+        canChangeOwner: true,
         createdAt: account.createdAt.toISOString(),
       }
     })
@@ -451,6 +455,8 @@ function toSummary(
     // Permission is necessary but not sufficient: authorship is a required
     // column, so a caller with no Employee row cannot log one however senior.
     canLogActivity: canManage && viewerEmployeeId !== null,
+    // The Owner, or a Sales Admin. A collaborator may edit but not give it away.
+    canChangeOwner: isSalesAdmin(actor) || (viewerEmployeeId !== null && viewerEmployeeId === account.ownerEmployeeId),
     createdAt: account.createdAt.toISOString(),
   }
 }
@@ -640,6 +646,15 @@ export async function updateSalesAccount(
 
       let newOwner: { id: string; fullName: string } | null = null
       if (body.ownerEmployeeId !== undefined && body.ownerEmployeeId !== current.ownerEmployeeId) {
+        // Before anything is loaded: a person who may not do this learns that
+        // first, not that their pick was an ineligible employee.
+        assertMayChangeOwner({
+          actor,
+          actorEmployeeId: employeeId,
+          currentOwnerId: current.ownerEmployeeId,
+          collaboratorIds: current.assignments.map((assignment) => assignment.employee.id),
+          nextOwnerId: body.ownerEmployeeId,
+        })
         // The same four checks, and the same four sentences, that creating an
         // account uses. Reassignment is the operation that fixes an orphaned
         // account, so handing it to somebody who also cannot work it would
@@ -695,6 +710,24 @@ export async function updateSalesAccount(
         await tx.salesAccountAssignment.deleteMany({
           where: { salesAccountId: id, employeeId: newOwner.id },
         })
+        // The old Owner stays as a collaborator (owner's decision, 2026-10-05),
+        // so they can still work the Opportunities they own on this Sales
+        // Account. Only if they could still work it: a leaver, or someone
+        // whose hub access was revoked, is not added.
+        if (canBeAccountOwner(standingOf(current.owner))) {
+          await tx.salesAccountAssignment.createMany({
+            data: [{ salesAccountId: id, employeeId: current.ownerEmployeeId, assignedBy: actor.sub }],
+            skipDuplicates: true,
+          })
+          await writeAudit(tx, {
+            entity: "SALES_ACCOUNT_ASSIGNMENT",
+            entityId: id,
+            action: "ASSIGN",
+            changedBy: actor.sub,
+            after: { employeeId: current.ownerEmployeeId },
+            note: "The previous Owner stays as a collaborator",
+          })
+        }
       }
 
       const updated = await tx.salesAccount.update({
