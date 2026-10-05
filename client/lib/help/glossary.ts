@@ -18,11 +18,11 @@ export const GLOSSARY: Record<string, string> = {
   ledger:
     "The full record of every entry the company has made. Reports read the ledger; nothing is ever typed twice.",
   "trial balance":
-    "Every account at once, with its debits and credits side by side. When the two totals agree, the books are square and statements can be produced.",
+    "Every account at once, with its opening balance, what came In and went Out, and its closing balance. When the balances add up to zero, the books are square and statements can be produced.",
   debit:
-    "The left side of an entry — money going into an asset or expense account, or out of a liability or income account.",
+    "The left side of an entry. It holds money going out of an asset or expense account, or into a liability, income or equity account. This is the same way the bank writes a withdrawal.",
   credit:
-    "The right side of an entry — money going into a liability, income or equity account, or out of an asset or expense account.",
+    "The right side of an entry. It holds money going into an asset or expense account, or out of a liability, income or equity account. This is the same way the bank writes a deposit.",
   "contra account":
     "An account that reduces another account instead of holding money of its own. Accumulated depreciation is the classic one: it sits beside the asset's cost so the net figure shows what the asset is worth.",
   "written-down value":

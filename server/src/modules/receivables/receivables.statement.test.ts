@@ -106,6 +106,23 @@ describe("buildCustomerStatementHtml", () => {
     for (const grey of ["#52525b", "#71717a", "#a1a1aa"]) expect(html).not.toContain(grey)
   })
 
+  it("prints each entry on the side the screens show, which is the opposite of the stored one", () => {
+    const html = buildCustomerStatementHtml(
+      {
+        ...S,
+        entries: [
+          { date: new Date("2026-09-05"), kind: "Invoice", reference: "INV-1", debit: "227000.00", credit: null, balance: "227000.00" },
+          { date: new Date("2026-09-10"), kind: "Receipt", reference: "RC-1", debit: null, credit: "50000.00", balance: "177000.00" },
+        ],
+      } as never,
+      { name: "Byte Spate", address: "", logo: null }
+    )
+    // Invoice: stored as a debit, shown under Credit.
+    expect(html).toMatch(/<td class="num">—<\/td>\s*<td class="num">2,27,000\.00<\/td>/)
+    // Receipt: stored as a credit, shown under Debit.
+    expect(html).toMatch(/<td class="num">50,000\.00<\/td>\s*<td class="num">—<\/td>/)
+  })
+
   it("escapes the customer's name", () => {
     expect(buildCustomerStatementHtml(S, { name: "Byte Spate", address: "", logo: null })).toContain("Bengal &lt;Group&gt;")
   })

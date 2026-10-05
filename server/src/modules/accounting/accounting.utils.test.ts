@@ -57,8 +57,10 @@ describe("assertBalanced", () => {
 
   it("names both totals when they differ, so the error is diagnosable", () => {
     // en-IN grouping, the way the statements print: 5,20,000.00.
+    // The screens show the stored sides the other way round (bank style), so
+    // the message does too: the stored debit is read as the credit.
     expect(() => assertBalanced([line("520000.00", 0), line(0, "500000.00")])).toThrow(
-      /5,20,000\.00.*5,00,000\.00/
+      /Debit 5,00,000\.00 does not equal credit 5,20,000\.00/
     )
   })
 
@@ -72,9 +74,10 @@ describe("assertBalanced", () => {
 
   it("catches a one-paisa difference that float arithmetic would hide", () => {
     // 0.1 + 0.2 !== 0.3 in binary floating point. Decimal must not agree.
+    // Stored debit 0.30 and credit 0.31, said the way the screens say it.
     expect(() =>
       assertBalanced([line("0.10", 0), line("0.20", 0), line(0, "0.31")])
-    ).toThrow(/0\.30.*0\.31/)
+    ).toThrow(/0\.31.*0\.30/)
   })
 
   it("accepts the same figures when they do balance", () => {
