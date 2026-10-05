@@ -11,6 +11,7 @@ import { Router } from "express"
 import { SalesRole } from "../../../generated/prisma/client"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import {
   addManagementNoteHandler,
   completeMeetingHandler,
@@ -43,7 +44,7 @@ router.get("/team", requireAuth, requireSales(SalesRole.SALES_ADMIN), listFunnel
 router.get("/", requireAuth, requireSales(), getFunnelHandler)
 
 /** A cell, edited in place. Deal access decides this, not a sales role. */
-router.patch("/cell", requireAuth, requireSales(), editFunnelCellHandler)
+router.patch("/cell", requireAuth, requireSales(), requireSalesPermission("funnel.edit_cell"), editFunnelCellHandler)
 
 // ── the meeting ──
 
