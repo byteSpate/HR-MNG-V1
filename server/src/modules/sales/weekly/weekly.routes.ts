@@ -3,6 +3,7 @@ import { Router } from "express"
 import { SalesRole } from "../../../generated/prisma/client"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import {
   addOtherWorkHandler,
   getEmployeeWeekHandler,
@@ -36,7 +37,7 @@ router.delete("/weekly/project-log/:id", requireAuth, requireSales(), removeProj
 // A look at the week as it would print, keeping nothing (the owner's ask,
 // 2026-09-16). Before /weekly/submit, which is the one that records.
 router.get("/weekly/preview", requireAuth, requireSales(), previewMyWeekHandler)
-router.post("/weekly/submit", requireAuth, requireSales(), submitMyWeekHandler)
+router.post("/weekly/submit", requireAuth, requireSales(), requireSalesPermission("weekly.submit"), submitMyWeekHandler)
 router.get("/weekly/copies/:id/file", requireAuth, requireSales(), weeklyCopyHandler)
 // Before /weekly/all/:employeeId, or the path is read as an employee id.
 router.get("/weekly/all", requireAuth, requireSales(SalesRole.SALES_ADMIN), listTeamWeekHandler)
