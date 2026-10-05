@@ -22,6 +22,10 @@ export const SIDE_STYLE: SideStyle = "bank"
 
 type Pair = { debit?: unknown; credit?: unknown }
 
+/** Green: money coming in. Red: money going out. Full class names, so Tailwind sees them. */
+export const IN_TEXT = "text-emerald-700"
+export const OUT_TEXT = "text-red-700"
+
 export function createSideStyle(style: SideStyle) {
   const flip = style === "bank"
 
@@ -63,7 +67,17 @@ export function createSideStyle(style: SideStyle) {
     return flip ? { ...item, debitTotal: item.creditTotal, creditTotal: item.debitTotal } : item
   }
 
-  return { style, pair, lineInput, journal, journalPage, ledger, totals }
+  /**
+   * The colour of a column on screen. What is stored as a Debit is money
+   * coming in, the way the Trial Balance's In column reads it, so the column
+   * that shows it is green, whatever that column is called.
+   */
+  function sideText(column: "debit" | "credit"): string {
+    const showsIncoming = flip ? column === "credit" : column === "debit"
+    return showsIncoming ? IN_TEXT : OUT_TEXT
+  }
+
+  return { style, pair, lineInput, journal, journalPage, ledger, totals, sideText }
 }
 
 /** The one in use. */

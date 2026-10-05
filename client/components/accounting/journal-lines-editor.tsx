@@ -3,6 +3,7 @@
 import { useCallback, useRef } from "react"
 import { RiAddLine, RiDeleteBinLine } from "@remixicon/react"
 
+import { sides } from "@/lib/accounting/side-style"
 import type { Account } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -142,8 +143,8 @@ export function JournalLinesEditor({
       <div className="grid grid-cols-[1fr_1fr_160px_160px_40px] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
         <span>Account</span>
         <span>Line note</span>
-        <span className="text-right">Debit</span>
-        <span className="text-right">Credit</span>
+        <span className={cn("text-right", sides.sideText("debit"))}>Debit</span>
+        <span className={cn("text-right", sides.sideText("credit"))}>Credit</span>
         <span />
       </div>
 

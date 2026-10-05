@@ -106,7 +106,7 @@ describe("buildCustomerStatementHtml", () => {
     for (const grey of ["#52525b", "#71717a", "#a1a1aa"]) expect(html).not.toContain(grey)
   })
 
-  it("prints each entry on the side the screens show, which is the opposite of the stored one", () => {
+  it("keeps an invoice under Owed and a receipt under Paid: those words are not Debit and Credit, so they are never swapped", () => {
     const html = buildCustomerStatementHtml(
       {
         ...S,
@@ -117,10 +117,11 @@ describe("buildCustomerStatementHtml", () => {
       } as never,
       { name: "Byte Spate", address: "", logo: null }
     )
-    // Invoice: stored as a debit, shown under Credit.
-    expect(html).toMatch(/<td class="num">—<\/td>\s*<td class="num">2,27,000\.00<\/td>/)
-    // Receipt: stored as a credit, shown under Debit.
-    expect(html).toMatch(/<td class="num">50,000\.00<\/td>\s*<td class="num">—<\/td>/)
+    expect(html).toContain("<th class=\"num\">Owed</th><th class=\"num\">Paid</th>")
+    // Invoice: money the customer owes, first column.
+    expect(html).toMatch(/<td class="num">2,27,000\.00<\/td>\s*<td class="num">—<\/td>/)
+    // Receipt: money the customer paid, second column.
+    expect(html).toMatch(/<td class="num">—<\/td>\s*<td class="num">50,000\.00<\/td>/)
   })
 
   it("escapes the customer's name", () => {

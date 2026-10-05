@@ -1,3 +1,4 @@
+import { sides } from "@/lib/accounting/side-style"
 import { FLOW, type FlowStepId } from "@/lib/help/accounting-help"
 import { GLOSSARY } from "@/lib/help/glossary"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -41,8 +42,8 @@ function LedgerLines({ lines: written }: { lines: LedgerLine[] }) {
             <span
               className={
                 line.side === "Debit"
-                  ? "w-14 shrink-0 text-[11px] font-bold tracking-wide text-[#3B4757] uppercase"
-                  : "w-14 shrink-0 pl-3 text-[11px] font-bold tracking-wide text-[#8792A3] uppercase"
+                  ? `w-14 shrink-0 text-[11px] font-bold tracking-wide uppercase ${sides.sideText("debit")}`
+                  : `w-14 shrink-0 pl-3 text-[11px] font-bold tracking-wide uppercase ${sides.sideText("credit")}`
               }
             >
               {line.side}

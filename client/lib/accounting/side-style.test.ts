@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { bankBookHeadings, createSideStyle, toInOut } from "./side-style"
+import { IN_TEXT, OUT_TEXT, bankBookHeadings, createSideStyle, toInOut } from "./side-style"
 
 const bank = createSideStyle("bank")
 const books = createSideStyle("books")
@@ -109,4 +109,21 @@ test("bank style: the Bank Book columns read Withdrawal (Dr) then Deposit (Cr), 
 
 test("books style: the Bank Book columns read Debit then Credit", () => {
   assert.deepEqual(bankBookHeadings("books"), { debit: "Debit", credit: "Credit" })
+})
+
+// ── colour: green is money coming in, red is money going out ────────────────
+
+test("bank style: the Credit column is green and the Debit column is red", () => {
+  assert.equal(bank.sideText("credit"), IN_TEXT)
+  assert.equal(bank.sideText("debit"), OUT_TEXT)
+})
+
+test("books style: the Debit column is green and the Credit column is red", () => {
+  assert.equal(books.sideText("debit"), IN_TEXT)
+  assert.equal(books.sideText("credit"), OUT_TEXT)
+})
+
+test("the Trial Balance colours agree: In is green, Out is red", () => {
+  assert.match(IN_TEXT, /emerald/)
+  assert.match(OUT_TEXT, /red/)
 })

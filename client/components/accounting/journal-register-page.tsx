@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { RiAddLine, RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react"
 
+import { sides } from "@/lib/accounting/side-style"
 import { listAccountsFlat, listJournals } from "@/lib/api/accounting"
 import { useSession } from "@/lib/auth/session-context"
 import type { JournalStatus, JournalType } from "@/lib/api/types"
@@ -172,8 +173,8 @@ export function JournalRegisterPage() {
               <TableHead>Narration</TableHead>
               <TableHead className="w-24">Type</TableHead>
               <TableHead className="w-36">Status</TableHead>
-              <TableHead className="w-32 text-right">Debit</TableHead>
-              <TableHead className="w-32 text-right">Credit</TableHead>
+              <TableHead className={`w-32 text-right ${sides.sideText("debit")}`}>Debit</TableHead>
+              <TableHead className={`w-32 text-right ${sides.sideText("credit")}`}>Credit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -224,8 +225,8 @@ export function JournalRegisterPage() {
                         {JOURNAL_STATUS_LABEL[j.status]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{formatTotal(debit)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatTotal(credit)}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${sides.sideText("debit")}`}>{formatTotal(debit)}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${sides.sideText("credit")}`}>{formatTotal(credit)}</TableCell>
                   </TableRow>
                 )
               })
