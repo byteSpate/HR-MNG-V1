@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/statements"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { sides } from "@/lib/accounting/side-style"
 import type { UnbalancedDetails } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelAlert, toMessage } from "@/components/dashboard/record-kit"
@@ -45,11 +46,11 @@ function BlockedPanel({ details, range }: { details: UnbalancedDetails; range: R
           </div>
           <dl className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-muted-foreground">Debit</dt>
+              <dt className={sides.sideText("debit")}>Debit</dt>
               <dd className="tabular-nums">{details.debitTotal}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Credit</dt>
+              <dt className={sides.sideText("credit")}>Credit</dt>
               <dd className="tabular-nums">{details.creditTotal}</dd>
             </div>
             <div>
@@ -57,7 +58,7 @@ function BlockedPanel({ details, range }: { details: UnbalancedDetails; range: R
               <dd className="font-medium tabular-nums">{details.difference}</dd>
             </div>
           </dl>
-          <Button nativeButton={false} variant="outline" size="sm" render={<Link href={`../trial-balance?from=${range.from}&to=${range.to}`} />}>
+          <Button nativeButton={false} variant="outline" size="sm" render={<Link href={`./trial-balance?from=${range.from}&to=${range.to}`} />}>
             Open the trial balance
           </Button>
         </div>
@@ -68,7 +69,7 @@ function BlockedPanel({ details, range }: { details: UnbalancedDetails; range: R
 
 function unbalanced(error: unknown): UnbalancedDetails | null {
   if (error instanceof ApiError && error.status === 409 && error.details?.difference) {
-    return error.details as unknown as UnbalancedDetails
+    return sides.totals(error.details as unknown as UnbalancedDetails)
   }
   return null
 }

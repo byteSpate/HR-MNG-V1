@@ -10,6 +10,7 @@
 import { Prisma } from "../../generated/prisma/client"
 import type { AccountType } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
+import { shownSides } from "./accounting.sideStyle"
 
 export type Side = "DEBIT" | "CREDIT"
 
@@ -74,9 +75,12 @@ export function assertBalanced(lines: AmountPair[]): void {
   lines.forEach(assertLineShape)
 
   if (!debit.equals(credit)) {
+    // Said the way the screens say it, so the two figures sit under the same
+    // names the person sees (see accounting.sideStyle.ts).
+    const shown = shownSides(debit, credit)
     throw new AppError(
       400,
-      `Debit ${formatBdt(debit)} does not equal credit ${formatBdt(credit)}`
+      `Debit ${formatBdt(shown.debit)} does not equal credit ${formatBdt(shown.credit)}`
     )
   }
 }

@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { RiArrowGoBackLine, RiArrowLeftLine, RiDeleteBinLine } from "@remixicon/react"
 import { toast } from "sonner"
 
+import { sides } from "@/lib/accounting/side-style"
 import { deleteJournal, reverseJournal, submitJournal } from "@/lib/api/accounting"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
@@ -164,8 +165,8 @@ export function JournalDocument({ journal }: { journal: Journal }) {
               <TableHead className="w-20">Code</TableHead>
               <TableHead>Account</TableHead>
               <TableHead>Line note</TableHead>
-              <TableHead className="w-36 text-right">Debit</TableHead>
-              <TableHead className="w-36 text-right">Credit</TableHead>
+              <TableHead className={`w-36 text-right ${sides.sideText("debit")}`}>Debit</TableHead>
+              <TableHead className={`w-36 text-right ${sides.sideText("credit")}`}>Credit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -174,14 +175,14 @@ export function JournalDocument({ journal }: { journal: Journal }) {
                 <TableCell className="text-muted-foreground tabular-nums">{l.account.code}</TableCell>
                 <TableCell>{l.account.name}</TableCell>
                 <TableCell className="text-muted-foreground">{l.narration ?? ""}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatAmount(l.debit)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatAmount(l.credit)}</TableCell>
+                <TableCell className={`text-right tabular-nums ${sides.sideText("debit")}`}>{formatAmount(l.debit)}</TableCell>
+                <TableCell className={`text-right tabular-nums ${sides.sideText("credit")}`}>{formatAmount(l.credit)}</TableCell>
               </TableRow>
             ))}
             <TableRow className="border-t-2 font-medium">
               <TableCell colSpan={3} className="text-right">Total</TableCell>
-              <TableCell className="text-right tabular-nums">{formatTotal(debit)}</TableCell>
-              <TableCell className="text-right tabular-nums">{formatTotal(credit)}</TableCell>
+              <TableCell className={`text-right tabular-nums ${sides.sideText("debit")}`}>{formatTotal(debit)}</TableCell>
+              <TableCell className={`text-right tabular-nums ${sides.sideText("credit")}`}>{formatTotal(credit)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>
