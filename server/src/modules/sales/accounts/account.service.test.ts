@@ -12,6 +12,7 @@ vi.mock("../../../config/prisma", () => ({
       update: vi.fn(),
     },
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
+    salesCollaboratorRemoval: { findMany: vi.fn(), updateMany: vi.fn() },
     salesContact: { findMany: vi.fn() },
     opportunity: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
@@ -69,6 +70,7 @@ beforeEach(() => {
   } as any)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
   vi.mocked(prisma.user.findMany).mockResolvedValue([] as any)
+  vi.mocked(prisma.salesCollaboratorRemoval.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
   // Every requested assignee exists, holds Sales User, still works here and
   // still has a working login, unless a test says otherwise.
@@ -923,6 +925,21 @@ describe("updateSalesAccount", () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
       await updateSalesAccount("sa-1", { industry: "Garments" }, USER)
       expect(prisma.salesAccountAssignment.createMany).not.toHaveBeenCalled()
+    })
+
+    it("cancels the pending removal requests on the Sales Account", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      vi.mocked(prisma.salesCollaboratorRemoval.findMany).mockResolvedValue([{ id: "r-1" }] as any)
+      await updateSalesAccount("sa-1", { ownerEmployeeId: "emp-3" }, USER)
+      expect(prisma.salesCollaboratorRemoval.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED" }) })
+      )
+    })
+
+    it("does not touch removal requests when the Owner does not change", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      await updateSalesAccount("sa-1", { industry: "Garments" }, USER)
+      expect(prisma.salesCollaboratorRemoval.updateMany).not.toHaveBeenCalled()
     })
 
     it("tells the client who may give the Sales Account away", async () => {
