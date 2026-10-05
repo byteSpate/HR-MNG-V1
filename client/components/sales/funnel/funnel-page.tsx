@@ -274,7 +274,11 @@ export function FunnelPage() {
             {/* Loading, broken and "no meeting open" are three different
                 screens. A dead meeting endpoint must not read as an empty
                 week, or it would offer to open a second meeting. */}
-            {meetingQuery.isError && meetingQuery.data === undefined ? (
+            {/* The Funnel Meeting has no switch: opening it, marking people
+                reviewed and handing out action items stay with Sales Admins.
+                A Sales User who may read the team (`team.funnel`) gets the
+                list alone, with no control that cannot work for them. */}
+            {!isAdmin ? null : meetingQuery.isError && meetingQuery.data === undefined ? (
               <div className="space-y-2 rounded-lg border border-[#E4E9EF] bg-white px-4 py-4">
                 <PanelAlert>{toMessage(meetingQuery.error)}</PanelAlert>
                 <Button variant="outline" size="sm" onClick={() => void meetingQuery.refetch()}>

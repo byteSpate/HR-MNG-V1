@@ -48,7 +48,7 @@ export const SALES_PERMISSIONS = [
   // The four admin-only powers a Sales Admin may hand to Sales Users. Off by
   // default, as they are today. Enforced by `canDo` in the services and by
   // `requireSalesPermission` on the routes.
-  { key: "target.set", label: "Set yearly Targets for other people (they also need \"See the team Dashboard\")", group: "Team and Targets", default: false, phase: 1 },
+  { key: "target.set", label: "Set yearly Targets for other people (also turn on the team Dashboard)", group: "Team and Targets", default: false, phase: 1 },
   { key: "team.dashboard", label: "See the team Dashboard", group: "Team and Targets", default: false, phase: 1 },
   { key: "team.funnel", label: "See the team Funnel", group: "Team and Targets", default: false, phase: 1 },
   { key: "team.weekly", label: "See every Weekly Report", group: "Team and Targets", default: false, phase: 1 },

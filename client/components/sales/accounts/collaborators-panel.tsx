@@ -63,7 +63,9 @@ export function CollaboratorsPanel({ account }: { account: SalesAccountSummary }
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: salesKeys.account(account.id) })
-    void queryClient.invalidateQueries({ queryKey: salesKeys.removals() })
+    // The shared prefix, so both this Sales Account's list and the admin's
+    // list refresh. `salesKeys.removals()` alone is a sibling, not a parent.
+    void queryClient.invalidateQueries({ queryKey: ["sales", "removals"] })
     void queryClient.invalidateQueries({ queryKey: salesKeys.collaboratorOptions(account.id) })
     void queryClient.invalidateQueries({ queryKey: ["sales", "dashboard"] })
   }

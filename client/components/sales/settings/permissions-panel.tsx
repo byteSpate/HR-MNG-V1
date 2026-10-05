@@ -42,6 +42,9 @@ export function PermissionsPanel() {
     onSuccess: (next) => {
       queryClient.setQueryData(salesKeys.permissions(), next)
       queryClient.invalidateQueries({ queryKey: salesKeys.myPermissions() })
+      // A sibling key, not a child of the one above: without this the "Recent
+      // changes" list stays stale until the page is reloaded.
+      queryClient.invalidateQueries({ queryKey: salesKeys.permissionHistory() })
       setDraft({})
       setSaved(true)
     },
