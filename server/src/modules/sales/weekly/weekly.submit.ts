@@ -26,6 +26,7 @@ import { destroyAsset, signedDocumentUrl, uploadBuffer } from "../../media/media
 import { renderWeeklyPdf, weeklyFileName } from "./weekly.pdf"
 import { isLate, weekEndOf } from "./weekly.dates"
 import { employeeIdFor } from "../sales.access"
+import { canDo } from "../sales.permissions"
 import { loadWeek, weekFrom, writerFor, type WeekQuery } from "./weekly.service"
 
 export const WEEKLY_COPY_NOT_VISIBLE = "That copy does not exist, or is not yours"
@@ -43,8 +44,6 @@ function copyPublicId(reportId: string): string {
   return `sales/weekly/${reportId}/${randomUUID()}`
 }
 
-const isAdmin = (actor: AccessTokenPayload) =>
-  actor.role === Role.SUPER_ADMIN || actor.salesRole === SalesRole.SALES_ADMIN
 
 /**
  * The week as it would print, with nothing kept and nothing marked.
@@ -173,10 +172,13 @@ export async function submitMyWeek(query: WeekQuery, actor: AccessTokenPayload):
 /** A copy exactly as it was submitted: the writer's own, or any for an admin. */
 export async function getWeeklyCopy(copyId: string, actor: AccessTokenPayload): Promise<WeeklyFile> {
   const employeeId = await employeeIdFor(actor)
+  // Any copy for someone who may read every report (`team.weekly`), the
+  // writer's own for everybody else.
+  const mayReadAll = await canDo(actor, "team.weekly")
   const copy = await prisma.weeklyReportCopy.findFirst({
     where: {
       id: copyId,
-      ...(isAdmin(actor) ? {} : { weeklyReport: { employeeId: employeeId ?? "__none__" } }),
+      ...(mayReadAll ? {} : { weeklyReport: { employeeId: employeeId ?? "__none__" } }),
     },
     select: { id: true, fileId: true, fileName: true },
   })
