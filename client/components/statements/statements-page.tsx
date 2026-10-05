@@ -58,7 +58,7 @@ function BlockedPanel({ details, range }: { details: UnbalancedDetails; range: R
               <dd className="font-medium tabular-nums">{details.difference}</dd>
             </div>
           </dl>
-          <Button nativeButton={false} variant="outline" size="sm" render={<Link href={`../trial-balance?from=${range.from}&to=${range.to}`} />}>
+          <Button nativeButton={false} variant="outline" size="sm" render={<Link href={`./trial-balance?from=${range.from}&to=${range.to}`} />}>
             Open the trial balance
           </Button>
         </div>

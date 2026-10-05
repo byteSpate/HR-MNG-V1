@@ -143,7 +143,7 @@ export function TrialBalancePage() {
                       <TableCell>
                         {/* Drill-down: trial balance → ledger → journal. */}
                         <Link
-                          href={`../ledger?accountId=${r.accountId}&from=${from}&to=${to}`}
+                          href={`./ledger?accountId=${r.accountId}&from=${from}&to=${to}`}
                           className="hover:underline"
                         >
                           {r.name}
