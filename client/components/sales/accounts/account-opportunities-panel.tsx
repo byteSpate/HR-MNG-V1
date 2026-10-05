@@ -8,6 +8,7 @@ import { getAccountMargin } from "@/lib/api/sales/accounts"
 import { listOpportunities } from "@/lib/api/sales/opportunities"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type { SalesAccountSummary } from "@/lib/api/types"
 import { taka } from "@/components/sales/shared/sales-shared"
 import { OPPORTUNITY_STATUS_LABEL, OPPORTUNITY_STATUS_TONE, stageSentence } from "@/components/sales/shared/sales-shared"
@@ -83,6 +84,10 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
     enabled: !!accessToken && account.canManage,
   })
 
+  // A Sales Admin can switch creating Opportunities off for Sales Users. For
+  // looks only: the server refuses it either way.
+  const { can } = useSalesPermissions()
+
   if (!account.canManage) {
     return (
       <Panel>
@@ -105,6 +110,8 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
         action={
           <Button
             onClick={() => setCreateOpen(true)}
+            disabled={!can("opportunity.create")}
+            title={can("opportunity.create") ? undefined : "A Sales Admin has turned this off for Sales Users."}
             className="h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
           >
             New opportunity

@@ -48,6 +48,7 @@ import {
 } from "@/lib/api/sales/weekly"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type { WeeklyAccountRow, WeeklyDay, WeeklyReportDetail, WeeklyTeamRow } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { CheckboxField, Field, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -246,6 +247,10 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: salesKeys.weeklyMine(weekKey) })
 
+  // A Sales Admin can switch submitting off for Sales Users. For looks only:
+  // the server refuses it either way.
+  const { can } = useSalesPermissions()
+
   const submit = useMutation({
     mutationFn: () => submitMyWeek(accessToken!, weekKey),
     onSuccess: ({ blob, fileName }) => {
@@ -332,7 +337,8 @@ function WeekView({ week, weekKey, readOnly }: { week: WeeklyReportDetail; weekK
               <Button
                 type="button"
                 className={PRIMARY}
-                disabled={week.status === "NOT_STARTED" || submit.isPending}
+                disabled={week.status === "NOT_STARTED" || submit.isPending || !can("weekly.submit")}
+                title={can("weekly.submit") ? undefined : "A Sales Admin has turned this off for Sales Users."}
                 onClick={() => {
                   setError(null)
                   submit.mutate()

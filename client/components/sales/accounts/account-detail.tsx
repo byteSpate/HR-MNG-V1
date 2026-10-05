@@ -38,6 +38,7 @@ import { AccountOpportunitiesPanel } from "@/components/sales/accounts/account-o
 import { AccountProjectsPanel } from "@/components/sales/accounts/account-projects-panel"
 import { AccountHistoryPanel } from "@/components/sales/accounts/account-history-panel"
 import { AccountTimelinePanel } from "@/components/sales/accounts/account-timeline-panel"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 
 /**
  * The account page: a header card, then one tab per area (spec 2026-09-28
@@ -56,6 +57,9 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
   // Management notes are admin-only to write. The server refuses either way;
   // hiding the option keeps a control that cannot act off the screen.
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin can switch editing off for Sales Users. For looks only: the
+  // server refuses the edit either way.
+  const { can } = useSalesPermissions()
 
   const accountQuery = useQuery({
     queryKey: ["sales", "accounts", accountId],
@@ -108,7 +112,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
               tone={ACCOUNT_STATUS_TONE[accountQuery.data.status]}
             />
             {!accountQuery.data.canManage ? <Tag label="View only" tone="neutral" /> : null}
-            {accountQuery.data.canManage ? (
+            {accountQuery.data.canManage && can("account.edit") ? (
               <Button
                 type="button"
                 onClick={() => openEdit(false)}
@@ -164,7 +168,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
                 Hub access has been removed or they have left. It needs a new owner.
                 {/* The flag used to state a problem the interface could not
                     solve. It now leads to the one action that clears it. */}
-                {accountQuery.data.canManage ? (
+                {accountQuery.data.canChangeOwner && can("account.edit") ? (
                   <Button
                     type="button"
                     variant="link"
