@@ -34,7 +34,9 @@ const router = Router()
 
 // Before "/", so "team" is never read as a query against the caller's own
 // funnel and quietly answered with the wrong thing.
-router.get("/team", requireAuth, requireSales(SalesRole.SALES_ADMIN), listFunnelTeamHandler)
+// A Sales Admin can switch this on for Sales Users (`team.funnel`). The Funnel
+// Meeting routes below stay Sales Admin only.
+router.get("/team", requireAuth, requireSales(), requireSalesPermission("team.funnel"), listFunnelTeamHandler)
 
 /**
  * One person's funnel. No employeeId means the caller's own; naming somebody
