@@ -22,6 +22,7 @@ import { listMeetings } from "@/lib/api/sales/meetings"
 import { listTasks } from "@/lib/api/sales/tasks"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type { SalesMeetingSummary, SalesTaskSummary } from "@/lib/api/types"
 import { Tag } from "@/components/dashboard/tag"
 import { PanelAlert, RowActions, toMessage, type RowAction } from "@/components/dashboard/record-kit"
@@ -270,6 +271,9 @@ export function MeetingsPanel({
   opportunityId?: string
   canManage: boolean
 }) {
+  // A Sales Admin can switch creating Meetings off for Sales Users. For looks
+  // only: the server refuses it either way.
+  const { can } = useSalesPermissions()
   const { accessToken } = useSession()
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [editing, setEditing] = useState<SalesMeetingSummary | null>(null)
@@ -295,7 +299,7 @@ export function MeetingsPanel({
       <PanelHeading
         title="Meetings"
         action={
-          canManage ? (
+          canManage && can("meeting.create") ? (
             <Button onClick={() => setScheduleOpen(true)} className={ADD_BUTTON}>
               Schedule
             </Button>
@@ -440,6 +444,9 @@ export function TasksPanel({
   canManage: boolean
 }) {
   const { accessToken } = useSession()
+  // A Sales Admin can switch creating Tasks off for Sales Users. For looks
+  // only: the server refuses it either way.
+  const { can } = useSalesPermissions()
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<SalesTaskSummary | null>(null)
   const [ending, setEnding] = useState<{ task: SalesTaskSummary; action: "DONE" | "CANCELLED" } | null>(null)
@@ -478,9 +485,11 @@ export function TasksPanel({
       <PanelHeading
         title="Tasks"
         action={
-          <Button onClick={() => setCreateOpen(true)} className={ADD_BUTTON}>
-            New task
-          </Button>
+          can("task.create") ? (
+            <Button onClick={() => setCreateOpen(true)} className={ADD_BUTTON}>
+              New task
+            </Button>
+          ) : undefined
         }
       />
       {tasks.length === 0 ? (

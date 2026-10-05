@@ -21,6 +21,7 @@ import {
 import { getOpportunity } from "@/lib/api/sales/opportunities"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { Tag } from "@/components/dashboard/tag"
 import { TONE, toMessage } from "@/components/dashboard/record-kit"
 import { OPPORTUNITY_STATUS_LABEL, OPPORTUNITY_STATUS_TONE, stageSentence, taka } from "@/components/sales/shared/sales-shared"
@@ -53,6 +54,9 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
   const { accessToken, user, status: sessionStatus } = useSession()
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
+  // A Sales Admin can switch single actions off for Sales Users. For looks
+  // only: the server refuses the action either way.
+  const { can } = useSalesPermissions()
 
   const query = useQuery({
     queryKey: salesKeys.opportunity(opportunityId),
@@ -69,7 +73,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
   // The session carries no employee id, so the button is offered to anyone
   // who can change the Opportunity and the server refuses the rest, word for
   // word, on the Project tab.
-  const canStart = canManage
+  const canStart = canManage && can("project.start")
   const [editOpen, setEditOpen] = useState(false)
   const [handOverOpen, setHandOverOpen] = useState(false)
 
@@ -124,7 +128,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
                 already been handed over. */}
             {(() => {
               const canHandOver =
-                canManage && deal.track === "NETWORKING" && deal.softwareNeeded === true && !deal.handedOverTo
+                canManage && can("opportunity.hand_over") && deal.track === "NETWORKING" && deal.softwareNeeded === true && !deal.handedOverTo
               if (!canHandOver) return null
               return (
                 <div className="mt-2.5">
@@ -214,12 +218,12 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
           <RecordTabs<DealTab>
             initialTab={initialTab}
             tabs={[
-              { value: "workflow", icon: RiRouteLine, label: "Workflow", content: <WorkflowPanel deal={deal} canManage={canManage} /> },
-              { value: "status", icon: RiFlagLine, label: "Status", content: <StatusPanel deal={deal} canManage={canManage} isSalesAdmin={isSalesAdmin} /> },
-              { value: "products", icon: RiBox3Line, label: deal.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <LinesPanel deal={deal} canManage={canManage} /> },
+              { value: "workflow", icon: RiRouteLine, label: "Workflow", content: <WorkflowPanel deal={deal} canManage={canManage} canChangeStage={can("opportunity.change_stage")} /> },
+              { value: "status", icon: RiFlagLine, label: "Status", content: <StatusPanel deal={deal} canManage={canManage && can("opportunity.change_status")} isSalesAdmin={isSalesAdmin} /> },
+              { value: "products", icon: RiBox3Line, label: deal.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <LinesPanel deal={deal} canManage={canManage && can("opportunity.edit_products")} /> },
               ...(deal.status === "WON" ? [{ value: "money" as const, icon: RiMoneyDollarCircleLine, label: "Money", content: <MoneySection opportunityId={deal.id} /> }] : []),
               { value: "project", icon: RiFolder3Line, label: "Project", content: <OpportunityProjectPanel deal={deal} canStart={canStart} /> },
-              { value: "documents", icon: RiFileTextLine, label: "Documents", content: <DocumentsPanel deal={deal} canManage={canManage} /> },
+              { value: "documents", icon: RiFileTextLine, label: "Documents", content: <DocumentsPanel deal={deal} canManage={canManage} canRemoveLinks={can("opportunity.remove_document")} /> },
               { value: "meetings", icon: RiCalendar2Line, label: "Meetings", content: <MeetingsPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} /> },
               { value: "tasks", icon: RiTaskLine, label: "Tasks", content: <TasksPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} /> },
               {

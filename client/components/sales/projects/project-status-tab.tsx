@@ -6,6 +6,7 @@ import { RiAddLine } from "@remixicon/react"
 
 import { addMilestone, changeProjectStatus, removeMilestone, updateMilestone } from "@/lib/api/sales/projects"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type { ProjectStatus, ProjectSummary } from "@/lib/api/types"
 import {
   ConfirmDeleteDialog, ConfirmDialog, DialogActions, Field, FormError, PanelAlert, TONE, toMessage,
@@ -33,6 +34,11 @@ function onDate(value: string | null): string {
  * Completing warns about the milestones still open rather than refusing.
  */
 export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary; onSaved: (p: ProjectSummary) => void }) {
+  // A Sales Admin can switch editing a Project and its Milestones off for Sales
+  // Users. The Project's own Status has no switch. For looks only: the server
+  // refuses it either way.
+  const { can } = useSalesPermissions()
+  const mayEditMilestones = project.canManage && can("project.edit")
   const { accessToken } = useSession()
   const [chosen, setChosen] = useState<ProjectStatus>(project.status)
   const [reason, setReason] = useState("")
@@ -193,7 +199,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
           <ol className="divide-y divide-[#E4E9EF]">
             {project.milestones.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-2 py-2.5">
-                {project.canManage ? (
+                {mayEditMilestones ? (
                   <Checkbox
                     aria-label={`${m.title} reached`}
                     checked={m.doneAt !== null}
@@ -203,7 +209,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
                 ) : null}
                 <span className={`text-[13px] ${m.doneAt ? TONE.muted : "font-semibold"}`}>{m.title}</span>
                 <span className={`text-[12px] ${TONE.muted}`}>{onDate(m.dueOn)}</span>
-                {project.canManage ? (
+                {mayEditMilestones ? (
                   <span className="ml-auto flex items-center gap-1">
                     <Button
                       type="button"
@@ -228,7 +234,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
           </ol>
         )}
 
-        {project.canManage ? (
+        {mayEditMilestones ? (
           <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-end">
             <Field label="Milestone" htmlFor="ms-title">
               <Input id="ms-title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Delivery" />

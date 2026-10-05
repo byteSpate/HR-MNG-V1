@@ -34,6 +34,8 @@ import { toneFor } from "../../dashboard/dashboard.tone"
 import type { DashboardStat } from "../../dashboard/dashboard.types"
 import { dec, sum, toMoneyString, type Money } from "../../payroll/payroll.money"
 import { employeeIdFor } from "../sales.access"
+import { canDo } from "../sales.permissions"
+import { removalActionRows } from "./removal.dashboard"
 import { marginTotal, type MarginTotal } from "../sales.margin"
 import { WAITING_DAYS, waitingForMinutesWhere } from "../meetings/minutes.waiting"
 import { weekStartOf } from "../weekly/weekly.dates"
@@ -75,9 +77,6 @@ type Win = {
   lines: { lineValue: Money | null; marginPercent: Money | null }[]
 }
 
-function isSalesAdmin(actor: AccessTokenPayload): boolean {
-  return actor.role === Role.SUPER_ADMIN || actor.salesRole === SalesRole.SALES_ADMIN
-}
 
 /** `null` means every account, used by the team roll-up. */
 function ownerFilter(employeeIds: string[] | null) {
@@ -670,10 +669,14 @@ export async function getSalesDashboard(
   const ownEmployeeId = await employeeIdFor(actor)
   const wantsTeam = query.employeeId === ALL_EMPLOYEES
 
-  if (wantsTeam && !isSalesAdmin(actor)) {
-    throw new AppError(403, "Only a Sales Admin can see the whole team")
+  // Looking at the whole team or at somebody else needs `team.dashboard`. A
+  // Sales Admin always has it. Asking about yourself never needs it.
+  const wantsOther = !!query.employeeId && !wantsTeam && query.employeeId !== ownEmployeeId
+  const mayViewTeam = wantsTeam || wantsOther ? await canDo(actor, "team.dashboard") : true
+  if (wantsTeam && !mayViewTeam) {
+    throw new AppError(403, "You cannot see the whole team. Ask a Sales Admin.")
   }
-  if (query.employeeId && !wantsTeam && query.employeeId !== ownEmployeeId && !isSalesAdmin(actor)) {
+  if (wantsOther && !mayViewTeam) {
     throw new AppError(403, "You can only see your own dashboard")
   }
 
@@ -744,6 +747,8 @@ export async function getSalesDashboard(
       ongoing: ongoingByPerson[index],
     }))
 
+    const removalRows = await removalActionRows(actor)
+
     return {
       scope: "all",
       employeeId: null,
@@ -763,9 +768,9 @@ export async function getSalesDashboard(
       quarters: teamPlan.map((planned, index) =>
         presentQuarter(planned, teamBucket.deals[index], teamBucket.unpriced[index])
       ),
-      actions,
+      actions: [...actions, ...removalRows],
       team,
-      badges: Object.fromEntries(actions.map((row) => [row.href, row.count])),
+      badges: Object.fromEntries([...actions, ...removalRows].map((row) => [row.href, row.count])),
       notBuilt: [],
     }
   }
@@ -811,6 +816,8 @@ export async function getSalesDashboard(
   })
   const year = yearFigures(plan, bucket, wins, calendarYear, quarter, yearly, target?.startQuarter ?? null)
 
+  const removalRows = await removalActionRows(actor)
+
   return {
     scope: query.employeeId ? "employee" : "me",
     employeeId: employee.id,
@@ -830,10 +837,10 @@ export async function getSalesDashboard(
     quarters: plan.map((planned, index) =>
       presentQuarter(planned, bucket.deals[index], bucket.unpriced[index])
     ),
-    actions,
+    actions: [...actions, ...removalRows],
     // Counted once, here, and keyed by the row's own href. Two sources drift,
     // and the one that drifts is always the one nobody is looking at.
-    badges: Object.fromEntries(actions.map((row) => [row.href, row.count])),
+    badges: Object.fromEntries([...actions, ...removalRows].map((row) => [row.href, row.count])),
     notBuilt: [],
   }
 }

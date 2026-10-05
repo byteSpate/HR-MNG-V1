@@ -19,7 +19,16 @@ import { Skeleton } from "@/components/ui/skeleton"
  * Links to files kept outside the app, each with the Stage it belongs to
  * (spec 2026-09-28 §1.5). Optional. Every version stays in the list.
  */
-export function DocumentsPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: boolean }) {
+export function DocumentsPanel({
+  deal,
+  canManage,
+  canRemoveLinks = true,
+}: {
+  deal: OpportunitySummary
+  canManage: boolean
+  /** A Sales Admin can switch removing links off for Sales Users. For looks only. */
+  canRemoveLinks?: boolean
+}) {
   const { accessToken } = useSession()
   const queryClient = useQueryClient()
   const [name, setName] = useState("")
@@ -86,7 +95,7 @@ export function DocumentsPanel({ deal, canManage }: { deal: OpportunitySummary; 
               <span className={`text-[12px] ${TONE.muted}`}>
                 {STAGE_LABEL[d.stage]} · {d.createdByName ?? "Someone"} · {new Date(d.createdAt).toLocaleDateString()}
               </span>
-              {d.canRemove ? (
+              {d.canRemove && canRemoveLinks ? (
                 <Button type="button" variant="link" onClick={() => setRemoving(d.id)} className="ml-auto h-auto p-0 text-[12px] font-bold text-[#B03A3A]">
                   Remove
                 </Button>

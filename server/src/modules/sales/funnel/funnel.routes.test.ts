@@ -10,6 +10,9 @@ vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
+    // The routes now check a Permission switch first. An empty table keeps
+    // every switch at its default, which is today's behaviour.
+    salesPermission: { findMany: vi.fn().mockResolvedValue([]) },
     user: { findUnique: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), groupBy: vi.fn() },
     opportunity: { findMany: vi.fn(), findFirst: vi.fn(), groupBy: vi.fn() },

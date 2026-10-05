@@ -19,6 +19,7 @@ import { officeToday } from "../../attendance/attendance.time"
 import { resolveShift } from "../../attendance/attendance.grid"
 import { writeAudit } from "../../../utils/audit"
 import { accountScopeFor, employeeIdFor } from "../sales.access"
+import { canDo } from "../sales.permissions"
 import { composeWeek, type WeekView } from "./weekly.compose"
 import { deadlineDayOf, isInWeek, saturdayBefore, weekEndOf, weekStartOf } from "./weekly.dates"
 
@@ -36,7 +37,7 @@ const DEAL_CHANGE_EVENTS = [
 
 const NO_EMPLOYEE = "A weekly report belongs to an employee, and your login has no employee record"
 const NOT_A_WRITER = "Only a Sales User writes a weekly report"
-const NOT_A_READER = "Only a Sales Admin reads other people's weekly reports"
+const NOT_A_READER = "You cannot read other people's weekly reports. Ask a Sales Admin."
 const ACCOUNT_NOT_YOURS = "That Sales Account does not exist, or is not yours"
 const OTHER_WORK_NOT_FOUND = "That line does not exist, or is not yours"
 
@@ -82,9 +83,6 @@ export interface AddOtherWorkBody {
   date: string
   text: string
 }
-
-const isAdmin = (actor: AccessTokenPayload) =>
-  actor.role === Role.SUPER_ADMIN || actor.salesRole === SalesRole.SALES_ADMIN
 
 /** A date the person picked, refused as a 400 rather than a 500. */
 function dateFrom(value: string): Date {
@@ -504,7 +502,7 @@ export async function listTeamWeek(
   query: WeekQuery,
   actor: AccessTokenPayload
 ): Promise<TeamWeekRow[]> {
-  if (!isAdmin(actor)) throw new AppError(403, NOT_A_READER)
+  if (!(await canDo(actor, "team.weekly"))) throw new AppError(403, NOT_A_READER)
   const weekStart = weekFrom(query)
 
   const [people, reports] = await Promise.all([
@@ -554,7 +552,7 @@ export async function getEmployeeWeek(
   query: WeekQuery,
   actor: AccessTokenPayload
 ): Promise<MyWeek> {
-  if (!isAdmin(actor)) throw new AppError(403, NOT_A_READER)
+  if (!(await canDo(actor, "team.weekly"))) throw new AppError(403, NOT_A_READER)
   return loadWeek(employeeId, weekFrom(query), actor)
 }
 

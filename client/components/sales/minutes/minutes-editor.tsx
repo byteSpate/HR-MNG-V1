@@ -43,6 +43,7 @@ import {
 } from "@/lib/api/sales/minutes"
 import { planWriteKeys, salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
+import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import type {
   MinutesBullet,
   MinutesKind,
@@ -1452,6 +1453,9 @@ function SendDialog({
   onSent: () => void
 }) {
   const { accessToken } = useSession()
+  // A Sales Admin can switch sending Minutes off for Sales Users. For looks
+  // only: the server refuses it either way.
+  const { can } = useSalesPermissions()
   const [sentTo, setSentTo] = useState("")
   const [error, setError] = useState<string | null>(null)
   const send = useMutation({
@@ -1490,7 +1494,7 @@ function SendDialog({
             <DialogActions
               pending={send.isPending}
               submitLabel="Download for sending"
-              disabled={false}
+              disabled={!can("minutes.send")}
               onCancel={onClose}
               onSubmit={() => {
                 setError(null)

@@ -2,6 +2,7 @@ import { Router } from "express"
 
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import {
   changeMeetingStatusHandler,
   createMeetingHandler,
@@ -16,7 +17,7 @@ const router = Router()
 // Meetings. Reads are open to the hub, like the account they belong to; the
 // service narrows every write to the people who work that account.
 router.get("/meetings", requireAuth, requireSales(), listMeetingsHandler)
-router.post("/meetings", requireAuth, requireSales(), createMeetingHandler)
+router.post("/meetings", requireAuth, requireSales(), requireSalesPermission("meeting.create"), createMeetingHandler)
 // Who may attend on our side: anyone with Sales Hub access (§24.3). Open to
 // every hub member, unlike /employees, because anyone who works an account
 // schedules its meetings. Before /meetings/:id, or the path is read as an id.

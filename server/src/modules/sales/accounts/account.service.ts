@@ -11,6 +11,7 @@ import {
   ACCOUNT_NOT_VISIBLE,
   canManageAccount,
   employeeIdFor,
+  isSalesAdmin,
   ownedScopeFor,
   requireAccountAccess,
   requireAccountVisible,
@@ -23,6 +24,9 @@ import {
 } from "../sales.eligibility"
 import { presentChanges, resolveNames } from "./history.present"
 import { marginTotal, type MarginTotal } from "../sales.margin"
+import { resolveCreateOwner } from "./account.create-rules"
+import { assertMayChangeOwner } from "./account.owner-rules"
+import { closePendingRemovals } from "./removal.shared"
 
 /**
  * How many History rows one read returns.
@@ -90,7 +94,7 @@ async function lockAccountNames(client: typeof prisma): Promise<void> {
 }
 
 /** Lock one existing account before its authorization and before-values are read. */
-async function lockAccountRow(client: typeof prisma, id: string): Promise<void> {
+export async function lockAccountRow(client: typeof prisma, id: string): Promise<void> {
   await client.$queryRaw`SELECT "id" FROM "SalesAccount" WHERE "id" = ${id} FOR UPDATE`
 }
 
@@ -156,6 +160,9 @@ export async function createSalesAccount(
   // about the account being written, and issuing it on the global client
   // from inside the callback would run it outside the transaction anyway.
   const actorEmployeeId = await employeeIdFor(actor)
+  // Settled before the transaction opens, like `actorEmployeeId`: it is a fact
+  // about the caller, and a refusal here must not take any lock.
+  const ownerEmployeeId = resolveCreateOwner(body.ownerEmployeeId, actor, actorEmployeeId)
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -167,7 +174,7 @@ export async function createSalesAccount(
         throw new AppError(409, duplicateNameMessage(clash.name, clash.owner.fullName))
       }
 
-      const owner = await loadEligibleOwner(tx as typeof prisma, body.ownerEmployeeId)
+      const owner = await loadEligibleOwner(tx as typeof prisma, ownerEmployeeId)
 
       // The owner is already on the account. Storing them again as an
       // assignment is the same fact twice, and the two copies drift.
@@ -298,7 +305,7 @@ export async function createSalesAccount(
         // Just validated as eligible a few lines above, so this is true by
         // construction rather than by a second check.
         ownerActive: true,
-        // Creating an account is a Sales Admin act, and canManageAccount
+        // The creator is a Sales Admin, or the Owner they just made themselves. canManageAccount
         // already returns true for one — spelled out here rather than
         // computed, since the actor that just created this is always able
         // to manage it.
@@ -307,6 +314,8 @@ export async function createSalesAccount(
         // be unable to log a call against it, having no Employee row to be
         // the author.
         canLogActivity: actorEmployeeId !== null,
+        // The creator is a Sales Admin or the Owner they just made themselves.
+        canChangeOwner: true,
         createdAt: account.createdAt.toISOString(),
       }
     })
@@ -447,6 +456,8 @@ function toSummary(
     // Permission is necessary but not sufficient: authorship is a required
     // column, so a caller with no Employee row cannot log one however senior.
     canLogActivity: canManage && viewerEmployeeId !== null,
+    // The Owner, or a Sales Admin. A collaborator may edit but not give it away.
+    canChangeOwner: isSalesAdmin(actor) || (viewerEmployeeId !== null && viewerEmployeeId === account.ownerEmployeeId),
     createdAt: account.createdAt.toISOString(),
   }
 }
@@ -636,6 +647,15 @@ export async function updateSalesAccount(
 
       let newOwner: { id: string; fullName: string } | null = null
       if (body.ownerEmployeeId !== undefined && body.ownerEmployeeId !== current.ownerEmployeeId) {
+        // Before anything is loaded: a person who may not do this learns that
+        // first, not that their pick was an ineligible employee.
+        assertMayChangeOwner({
+          actor,
+          actorEmployeeId: employeeId,
+          currentOwnerId: current.ownerEmployeeId,
+          collaboratorIds: current.assignments.map((assignment) => assignment.employee.id),
+          nextOwnerId: body.ownerEmployeeId,
+        })
         // The same four checks, and the same four sentences, that creating an
         // account uses. Reassignment is the operation that fixes an orphaned
         // account, so handing it to somebody who also cannot work it would
@@ -691,6 +711,26 @@ export async function updateSalesAccount(
         await tx.salesAccountAssignment.deleteMany({
           where: { salesAccountId: id, employeeId: newOwner.id },
         })
+        // The old Owner stays as a collaborator (owner's decision, 2026-10-05),
+        // so they can still work the Opportunities they own on this Sales
+        // Account. Only if they could still work it: a leaver, or someone
+        // whose hub access was revoked, is not added.
+        if (canBeAccountOwner(standingOf(current.owner))) {
+          await tx.salesAccountAssignment.createMany({
+            data: [{ salesAccountId: id, employeeId: current.ownerEmployeeId, assignedBy: actor.sub }],
+            skipDuplicates: true,
+          })
+          await writeAudit(tx, {
+            entity: "SALES_ACCOUNT_ASSIGNMENT",
+            entityId: id,
+            action: "ASSIGN",
+            changedBy: actor.sub,
+            after: { employeeId: current.ownerEmployeeId },
+            note: "The previous Owner stays as a collaborator",
+          })
+        }
+        // The new Owner is not bound by the old Owner's removal requests.
+        await closePendingRemovals(tx, { salesAccountId: id }, "CANCELLED", actor.sub)
       }
 
       const updated = await tx.salesAccount.update({

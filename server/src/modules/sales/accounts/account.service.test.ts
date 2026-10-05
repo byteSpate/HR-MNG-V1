@@ -12,6 +12,7 @@ vi.mock("../../../config/prisma", () => ({
       update: vi.fn(),
     },
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
+    salesCollaboratorRemoval: { findMany: vi.fn(), updateMany: vi.fn() },
     salesContact: { findMany: vi.fn() },
     opportunity: { findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
@@ -69,6 +70,7 @@ beforeEach(() => {
   } as any)
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
   vi.mocked(prisma.user.findMany).mockResolvedValue([] as any)
+  vi.mocked(prisma.salesCollaboratorRemoval.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.salesAccount.findFirst).mockResolvedValue(null)
   // Every requested assignee exists, holds Sales User, still works here and
   // still has a working login, unless a test says otherwise.
@@ -847,6 +849,107 @@ describe("updateSalesAccount", () => {
 
     expect(prisma.salesAccountAssignment.deleteMany).toHaveBeenCalledWith({
       where: { salesAccountId: "sa-1", employeeId: "emp-9" },
+    })
+  })
+
+  describe("who may change the Owner", () => {
+    const COLLAB = { employee: { id: "emp-3", fullName: "Rahim" } }
+    const withOwnerAndCollaborator = {
+      ...CURRENT,
+      ownerEmployeeId: "emp-1",
+      assignments: [COLLAB],
+    }
+
+    beforeEach(() => {
+      vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue(withOwnerAndCollaborator as any)
+      // The person being made Owner: eligible, and named emp-3.
+      vi.mocked(prisma.employee.findUnique).mockResolvedValue({
+        id: "emp-3",
+        fullName: "Rahim",
+        employmentStatus: "ACTIVE",
+        lastWorkingDay: null,
+        user: { salesRole: "SALES_USER", isActive: true },
+      } as any)
+    })
+
+    it("refuses a collaborator who is not the Owner", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-3" } } as any)
+      await expect(updateSalesAccount("sa-1", { ownerEmployeeId: "emp-3" }, USER)).rejects.toMatchObject({
+        statusCode: 403,
+      })
+      expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+    })
+
+    it("refuses the Owner naming someone who is not a collaborator", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      await expect(updateSalesAccount("sa-1", { ownerEmployeeId: "emp-9" }, USER)).rejects.toMatchObject({
+        statusCode: 403,
+      })
+      expect(prisma.salesAccount.update).not.toHaveBeenCalled()
+    })
+
+    it("lets the Owner give the Sales Account to a collaborator", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      await updateSalesAccount("sa-1", { ownerEmployeeId: "emp-3" }, USER)
+      expect(prisma.salesAccount.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ ownerEmployeeId: "emp-3" }) })
+      )
+    })
+
+    it("lets a Sales Admin give it to anyone eligible", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-7" } } as any)
+      await updateSalesAccount("sa-1", { ownerEmployeeId: "emp-3" }, ADMIN)
+      expect(prisma.salesAccount.update).toHaveBeenCalled()
+    })
+
+    it("keeps the old Owner on the Sales Account as a collaborator", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      await updateSalesAccount("sa-1", { ownerEmployeeId: "emp-3" }, USER)
+      expect(prisma.salesAccountAssignment.createMany).toHaveBeenCalledWith({
+        data: [{ salesAccountId: "sa-1", employeeId: "emp-1", assignedBy: "user-2" }],
+        skipDuplicates: true,
+      })
+    })
+
+    it("does not keep an old Owner who has left the company", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-7" } } as any)
+      vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({
+        ...withOwnerAndCollaborator,
+        owner: { ...CURRENT.owner, employmentStatus: "RESIGNED", lastWorkingDay: new Date("2020-01-01") },
+      } as any)
+      await updateSalesAccount("sa-1", { ownerEmployeeId: "emp-3" }, ADMIN)
+      expect(prisma.salesAccountAssignment.createMany).not.toHaveBeenCalled()
+    })
+
+    it("does not touch collaborators when the Owner does not change", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      await updateSalesAccount("sa-1", { industry: "Garments" }, USER)
+      expect(prisma.salesAccountAssignment.createMany).not.toHaveBeenCalled()
+    })
+
+    it("cancels the pending removal requests on the Sales Account", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      vi.mocked(prisma.salesCollaboratorRemoval.findMany).mockResolvedValue([{ id: "r-1" }] as any)
+      await updateSalesAccount("sa-1", { ownerEmployeeId: "emp-3" }, USER)
+      expect(prisma.salesCollaboratorRemoval.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED" }) })
+      )
+    })
+
+    it("does not touch removal requests when the Owner does not change", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      await updateSalesAccount("sa-1", { industry: "Garments" }, USER)
+      expect(prisma.salesCollaboratorRemoval.updateMany).not.toHaveBeenCalled()
+    })
+
+    it("tells the client who may give the Sales Account away", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+      const asOwner = await updateSalesAccount("sa-1", { industry: "Garments" }, USER)
+      expect(asOwner.canChangeOwner).toBe(true)
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-3" } } as any)
+      const asCollaborator = await updateSalesAccount("sa-1", { industry: "Textiles" }, USER)
+      expect(asCollaborator.canChangeOwner).toBe(false)
     })
   })
 

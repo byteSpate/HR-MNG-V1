@@ -26,7 +26,16 @@ import { onDate } from "@/components/sales/opportunities/lines-panel"
  * decision with a reason and a confirm dialog, and it does not belong beside
  * a dropdown that moves the Opportunity along day to day.
  */
-export function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; canManage: boolean }) {
+export function WorkflowPanel({
+  deal,
+  canManage,
+  canChangeStage = true,
+}: {
+  deal: OpportunitySummary
+  canManage: boolean
+  /** A Sales Admin can switch stage changes off for Sales Users. For looks only. */
+  canChangeStage?: boolean
+}) {
   const { accessToken } = useSession()
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
@@ -79,7 +88,7 @@ export function WorkflowPanel({ deal, canManage }: { deal: OpportunitySummary; c
           label="Stage"
           hint={isOpen ? STAGE_WAITING_ON[deal.stage] : `This Opportunity is ${OPPORTUNITY_STATUS_LABEL[deal.status].toLowerCase()}, so its stage stays where it ended.`}
         >
-          <Select value={deal.stage} onValueChange={(v) => v && stageMutation.mutate(v as OpportunityStage)} disabled={!isOpen || stageMutation.isPending}>
+          <Select value={deal.stage} onValueChange={(v) => v && stageMutation.mutate(v as OpportunityStage)} disabled={!isOpen || stageMutation.isPending || !canChangeStage}>
             <SelectTrigger className="w-full"><SelectValue>{(v: string | null) => STAGE_LABEL[(v ?? deal.stage) as OpportunityStage]}</SelectValue></SelectTrigger>
             {/* The track decides the stages: a Networking Opportunity has no BRD to send. */}
             <SelectContent>{stagesFor(deal.track).map((s) => <SelectItem key={s} value={s}>{STAGE_LABEL[s]}</SelectItem>)}</SelectContent>

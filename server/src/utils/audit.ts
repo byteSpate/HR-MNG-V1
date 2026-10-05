@@ -51,6 +51,12 @@ export type AuditEntity =
   // The minutes template on Sales Settings: reference data edited from a
   // settings screen keeps a trail, as a department or a shift does.
   | "SALES_MINUTES_TEMPLATE"
+  // A Permission switch on Sales Settings: who turned what on or off for
+  // Sales Users, and when.
+  | "SALES_PERMISSION"
+  // An Owner's request to remove a collaborator from a Sales Account, and the
+  // Sales Admin's answer.
+  | "SALES_COLLABORATOR_REMOVAL"
   // The Saturday funnel review: opening it, completing it, reopening it
   // (revision §27.11). Edits made *during* a meeting are audited against the
   // deal they changed, not against this — the note on that row names the

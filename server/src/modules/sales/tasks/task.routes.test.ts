@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
+// The routes now check a Permission switch before the handler. This file mocks
+// the services, so the switch table gets an empty answer: every switch keeps
+// its default, which is today's behaviour.
+vi.mock("../../../config/prisma", () => ({
+  default: { salesPermission: { findMany: vi.fn().mockResolvedValue([]) } },
+}))
+
 vi.mock("./task.service", () => ({
   createTask: vi.fn(), listTasks: vi.fn(), getTask: vi.fn(),
   updateTask: vi.fn(), changeTaskStatus: vi.fn(),

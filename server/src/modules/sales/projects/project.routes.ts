@@ -2,6 +2,7 @@ import { Router } from "express"
 
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import {
   addMilestoneHandler, addProjectTaskHandler, cancelProjectTaskHandler, changeProjectStatusHandler,
   getProjectDailyLogHandler, getProjectHandler, listProjectActivityHandler, listProjectsHandler, listProjectTasksHandler,
@@ -15,18 +16,18 @@ const router = Router()
 // Milestones use `/project-milestones/:milestoneId` rather than
 // `/projects/milestones/:milestoneId`, so `/projects/:id` can never read
 // "milestones" as an id.
-router.post("/opportunities/:id/project", requireAuth, requireSales(), startProjectHandler)
+router.post("/opportunities/:id/project", requireAuth, requireSales(), requireSalesPermission("project.start"), startProjectHandler)
 router.get("/projects", requireAuth, requireSales(), listProjectsHandler)
-router.patch("/project-milestones/:milestoneId", requireAuth, requireSales(), updateMilestoneHandler)
-router.delete("/project-milestones/:milestoneId", requireAuth, requireSales(), removeMilestoneHandler)
+router.patch("/project-milestones/:milestoneId", requireAuth, requireSales(), requireSalesPermission("project.edit"), updateMilestoneHandler)
+router.delete("/project-milestones/:milestoneId", requireAuth, requireSales(), requireSalesPermission("project.edit"), removeMilestoneHandler)
 // Project Tasks (spec §2.1). Same rule as milestones: the task's own cancel
 // lives at `/project-tasks/:taskId`, so it can never be read as a Project id.
 router.post("/project-tasks/:taskId/cancel", requireAuth, requireSales(), cancelProjectTaskHandler)
 router.get("/projects/:id", requireAuth, requireSales(), getProjectHandler)
-router.patch("/projects/:id", requireAuth, requireSales(), updateProjectHandler)
-router.put("/projects/:id/team", requireAuth, requireSales(), setProjectTeamHandler)
+router.patch("/projects/:id", requireAuth, requireSales(), requireSalesPermission("project.edit"), updateProjectHandler)
+router.put("/projects/:id/team", requireAuth, requireSales(), requireSalesPermission("project.edit"), setProjectTeamHandler)
 router.patch("/projects/:id/status", requireAuth, requireSales(), changeProjectStatusHandler)
-router.post("/projects/:id/milestones", requireAuth, requireSales(), addMilestoneHandler)
+router.post("/projects/:id/milestones", requireAuth, requireSales(), requireSalesPermission("project.edit"), addMilestoneHandler)
 router.get("/projects/:id/activity", requireAuth, requireSales(), listProjectActivityHandler)
 router.get("/projects/:id/daily-log", requireAuth, requireSales(), getProjectDailyLogHandler)
 router.get("/projects/:id/tasks", requireAuth, requireSales(), listProjectTasksHandler)

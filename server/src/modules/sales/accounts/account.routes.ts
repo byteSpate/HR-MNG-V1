@@ -1,8 +1,8 @@
 import { Router } from "express"
 
-import { SalesRole } from "../../../generated/prisma/client"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
+import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import { cardUpload } from "../../media/media.upload"
 import {
   addContactHandler,
@@ -29,32 +29,34 @@ const router = Router()
 
 // Reads are open to anyone in the hub and narrowed by `accountScopeFor`, so
 // the guard here answers "may you be in the Sales Hub at all" and the scope
-// answers "which accounts". Creating one is a Sales Admin act.
+// answers "which accounts". Creating one is a Sales Admin act, or a Sales
+// User's own when a Sales Admin has turned on `account.create`.
 router.get("/accounts", requireAuth, requireSales(), listSalesAccountsHandler)
 router.get("/accounts/:id", requireAuth, requireSales(), getSalesAccountHandler)
-router.post("/accounts", requireAuth, requireSales(SalesRole.SALES_ADMIN), createSalesAccountHandler)
+router.post("/accounts", requireAuth, requireSales(), requireSalesPermission("account.create"), createSalesAccountHandler)
 // Editing is requireSales() and not SALES_ADMIN: the write gate inside the
 // service narrows it to the owner, the collaborators and admins. An owner
 // fixing a typo on their own account should not need an admin.
-router.patch("/accounts/:id", requireAuth, requireSales(), updateSalesAccountHandler)
+router.patch("/accounts/:id", requireAuth, requireSales(), requireSalesPermission("account.edit"), updateSalesAccountHandler)
 // The visiting card is set and removed on its own path, because a picture goes
 // as a file upload and the account's other fields go as JSON. The same write
 // gate as editing the account applies inside the service.
-router.put("/accounts/:id/visiting-card", requireAuth, requireSales(), cardUpload, setVisitingCardHandler)
-router.delete("/accounts/:id/visiting-card", requireAuth, requireSales(), removeVisitingCardHandler)
+router.put("/accounts/:id/visiting-card", requireAuth, requireSales(), requireSalesPermission("account.edit"), cardUpload, setVisitingCardHandler)
+router.delete("/accounts/:id/visiting-card", requireAuth, requireSales(), requireSalesPermission("account.edit"), removeVisitingCardHandler)
 
 // The Company profile (spec 2026-09-30). Anyone who can see the account can
 // read it. Changing it has the same write gate as editing the account, applied
 // inside the service.
 router.get("/accounts/:id/profile", requireAuth, requireSales(), getAccountProfileHandler)
-router.patch("/accounts/:id/profile", requireAuth, requireSales(), updateAccountProfileHandler)
+router.patch("/accounts/:id/profile", requireAuth, requireSales(), requireSalesPermission("account.edit"), updateAccountProfileHandler)
 
-// Who the owner/collaborator pickers on the create form may offer — Sales
-// Admin only, same guard as creating the account itself.
+// Who the owner/collaborator pickers on the create form may offer. Same
+// switch as creating the account itself (`account.create`).
 router.get(
   "/employees",
   requireAuth,
-  requireSales(SalesRole.SALES_ADMIN),
+  requireSales(),
+  requireSalesPermission("account.create"),
   listSalesEligibleEmployeesHandler
 )
 

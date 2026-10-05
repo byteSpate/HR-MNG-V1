@@ -62,6 +62,8 @@ export interface SalesAccountSummary {
       Admin) is refused by the server however senior. Gates "Log a call"
       specifically, so the button is never offered where it cannot work. */
   canLogActivity: boolean
+  /** The Owner or a Sales Admin may give the Sales Account to someone else. A collaborator may not. */
+  canChangeOwner: boolean
   createdAt: string
 }
 
@@ -75,7 +77,8 @@ export interface SalesEligibleEmployee {
 
 export interface CreateSalesAccountBody {
   name: string
-  ownerEmployeeId: string
+  /** Absent for a Sales User: they are always the Owner of what they create. */
+  ownerEmployeeId?: string
   industry?: string
   website?: string
   address?: string
@@ -3778,4 +3781,67 @@ export interface UpdateAccountProfileBody {
     update?: Array<{ id: string; question: string; answer: string }>
     remove?: string[]
   }
+}
+
+// ── Sales Hub permission switches ────────────────────────────────────────
+/** Mirrors `PermissionKey` in server/src/modules/sales/sales.permissions.ts. Keep both in step by hand. */
+export type SalesPermissionKey =
+  | "account.create"
+  | "account.edit"
+  | "opportunity.create"
+  | "opportunity.change_stage"
+  | "opportunity.change_status"
+  | "opportunity.hand_over"
+  | "opportunity.edit_products"
+  | "opportunity.remove_document"
+  | "project.start"
+  | "project.edit"
+  | "meeting.create"
+  | "minutes.send"
+  | "minutes.edit_template"
+  | "task.create"
+  | "weekly.submit"
+  | "funnel.edit_cell"
+  | "target.set"
+  | "team.dashboard"
+  | "team.funnel"
+  | "team.weekly"
+
+export interface SalesPermissionRow {
+  key: SalesPermissionKey
+  label: string
+  group: string
+  phase: 1 | 2
+  default: boolean
+  enabled: boolean
+  changedAt: string | null
+  changedByName: string | null
+}
+
+export interface SaveSalesPermissionsBody {
+  changes: Array<{ key: SalesPermissionKey; enabled: boolean }>
+}
+
+export interface SalesPermissionHistoryRow {
+  key: string
+  label: string
+  enabled: boolean
+  changedAt: string
+  changedByName: string | null
+}
+
+// ── Collaborator removal requests ────────────────────────────────────────
+export type SalesRemovalStatus = "PENDING" | "APPROVED" | "REFUSED" | "CANCELLED"
+
+export interface SalesRemovalRequest {
+  id: string
+  salesAccountId: string
+  accountName: string
+  employeeId: string
+  employeeName: string
+  requestedByName: string | null
+  status: SalesRemovalStatus
+  refusalReason: string | null
+  createdAt: string
+  decidedAt: string | null
 }
