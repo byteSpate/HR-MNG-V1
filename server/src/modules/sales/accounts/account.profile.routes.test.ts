@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import request from "supertest"
 
-vi.mock("../../../config/prisma", () => ({ default: { $transaction: vi.fn() } }))
+// The routes check a Permission switch first. An empty table keeps every
+// switch at its default, which is today's behaviour.
+vi.mock("../../../config/prisma", () => ({
+  default: { $transaction: vi.fn(), salesPermission: { findMany: vi.fn().mockResolvedValue([]) } },
+}))
 // The service is tested on its own; here only the door is under test.
 vi.mock("./account.profile", () => ({
   getAccountProfile: vi.fn(),
