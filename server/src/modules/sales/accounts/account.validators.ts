@@ -2,7 +2,8 @@ import { z } from "zod"
 
 export const createSalesAccountSchema = z.object({
   name: z.string().trim().min(2, "A Sales Account needs a name").max(160),
-  ownerEmployeeId: z.string().uuid("Choose an owner"),
+  /** Optional: a Sales User is always the Owner of what they create, so they send none. */
+  ownerEmployeeId: z.string().uuid("Choose an owner").optional(),
   industry: z.string().trim().max(120).optional(),
   website: z.string().trim().max(200).optional(),
   address: z.string().trim().max(400).optional(),

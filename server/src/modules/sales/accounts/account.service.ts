@@ -23,6 +23,7 @@ import {
 } from "../sales.eligibility"
 import { presentChanges, resolveNames } from "./history.present"
 import { marginTotal, type MarginTotal } from "../sales.margin"
+import { resolveCreateOwner } from "./account.create-rules"
 
 /**
  * How many History rows one read returns.
@@ -156,6 +157,9 @@ export async function createSalesAccount(
   // about the account being written, and issuing it on the global client
   // from inside the callback would run it outside the transaction anyway.
   const actorEmployeeId = await employeeIdFor(actor)
+  // Settled before the transaction opens, like `actorEmployeeId`: it is a fact
+  // about the caller, and a refusal here must not take any lock.
+  const ownerEmployeeId = resolveCreateOwner(body.ownerEmployeeId, actor, actorEmployeeId)
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -167,7 +171,7 @@ export async function createSalesAccount(
         throw new AppError(409, duplicateNameMessage(clash.name, clash.owner.fullName))
       }
 
-      const owner = await loadEligibleOwner(tx as typeof prisma, body.ownerEmployeeId)
+      const owner = await loadEligibleOwner(tx as typeof prisma, ownerEmployeeId)
 
       // The owner is already on the account. Storing them again as an
       // assignment is the same fact twice, and the two copies drift.
@@ -298,7 +302,7 @@ export async function createSalesAccount(
         // Just validated as eligible a few lines above, so this is true by
         // construction rather than by a second check.
         ownerActive: true,
-        // Creating an account is a Sales Admin act, and canManageAccount
+        // The creator is a Sales Admin, or the Owner they just made themselves. canManageAccount
         // already returns true for one — spelled out here rather than
         // computed, since the actor that just created this is always able
         // to manage it.
