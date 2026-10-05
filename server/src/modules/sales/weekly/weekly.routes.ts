@@ -1,6 +1,5 @@
 import { Router } from "express"
 
-import { SalesRole } from "../../../generated/prisma/client"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
 import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
@@ -39,12 +38,15 @@ router.delete("/weekly/project-log/:id", requireAuth, requireSales(), removeProj
 router.get("/weekly/preview", requireAuth, requireSales(), previewMyWeekHandler)
 router.post("/weekly/submit", requireAuth, requireSales(), requireSalesPermission("weekly.submit"), submitMyWeekHandler)
 router.get("/weekly/copies/:id/file", requireAuth, requireSales(), weeklyCopyHandler)
-// Before /weekly/all/:employeeId, or the path is read as an employee id.
-router.get("/weekly/all", requireAuth, requireSales(SalesRole.SALES_ADMIN), listTeamWeekHandler)
+// All Reports is an admin screen end to end, unless a Sales Admin turns on
+// `team.weekly` for Sales Users. Before /weekly/all/:employeeId, or the path is
+// read as an employee id.
+router.get("/weekly/all", requireAuth, requireSales(), requireSalesPermission("team.weekly"), listTeamWeekHandler)
 router.get(
   "/weekly/all/:employeeId",
   requireAuth,
-  requireSales(SalesRole.SALES_ADMIN),
+  requireSales(),
+  requireSalesPermission("team.weekly"),
   getEmployeeWeekHandler
 )
 

@@ -5,6 +5,9 @@ vi.mock("../../../config/env", () => ({ env: { APP_TIMEZONE: "Asia/Dhaka" } }))
 vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    // The service now asks the Permission switches. An empty table keeps every
+    // switch at its default, which is today's behaviour.
+    salesPermission: { findMany: vi.fn().mockResolvedValue([]) },
     project: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },
