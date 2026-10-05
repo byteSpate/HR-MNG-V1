@@ -33,6 +33,11 @@ export const salesKeys = {
    */
   accountMargin: (id: string) => ["sales", "account-margin", id] as const,
 
+  // ── permission switches ─────────────────────────────────────────────────
+  permissions: () => ["sales", "permissions"] as const,
+  /** Under `permissions`, so saving a switch refreshes the caller's own answers too. */
+  myPermissions: () => ["sales", "permissions", "me"] as const,
+
   // ── opportunities ───────────────────────────────────────────────────────
   /** Who may own a Software Opportunity, for the Hand-over dialog (spec §2.5). */
   handOverOwners: (id: string) => ["sales", "opportunities", id, "handover-owners"] as const,
