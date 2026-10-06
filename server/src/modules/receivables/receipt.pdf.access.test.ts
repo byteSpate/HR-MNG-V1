@@ -23,23 +23,13 @@ const d = (v: string) => new Prisma.Decimal(v)
 const SALES = { sub: "u-s", role: "EMPLOYEE", salesRole: "SALES_USER", email: "s@b.co", mustChangePassword: false } as any
 
 const RECEIPT_ROW = {
-  id: "r1", number: "MR-0007", date: new Date("2026-11-10"), createdAt: new Date("2026-11-10T09:00:00Z"),
+  id: "r1", number: "MR-0007", date: new Date("2026-11-10"),
   amount: d("1000"), vdsAmount: d("0"), aitAmount: d("0"), reference: null,
   paymentMethod: "CASH", bankName: null, status: "APPROVED", reversedAt: null, reversalReason: null,
   createdBy: "u-f", opportunityId: "opp-1",
   customer: { legalName: "Bengal Group" },
   opportunity: { serial: "BS-OPP-00001", name: "Core banking" },
-  allocations: [
-    {
-      amount: d("1000"),
-      invoice: {
-        invoiceNumber: "INV-1",
-        lines: [{ amount: d("1000"), vatAmount: d("0") }],
-        creditNotes: [],
-        allocations: [{ amount: d("1000"), receipt: { id: "r1", createdAt: new Date("2026-11-10T09:00:00Z"), status: "APPROVED" } }],
-      },
-    },
-  ],
+  allocations: [{ amount: d("1000"), invoiceTotal: d("1000"), balanceAfter: d("0"), invoice: { invoiceNumber: "INV-1" } }],
 }
 
 beforeEach(() => {
