@@ -307,7 +307,7 @@ export function InvoicedPart({
                       </div>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
                     <span className="mr-2 text-[13px] font-bold">{formatMoney(total.toFixed(2), "BDT")}</span>
                     {typedRates.length > 0 ? (
                       <span className="mr-2 rounded bg-[#FDF8EE] px-1.5 py-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">
