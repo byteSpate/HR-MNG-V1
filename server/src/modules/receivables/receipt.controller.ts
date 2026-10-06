@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express"
 import { AppError } from "../../middleware/errorHandler"
 import { createReceipt, getReceipt, listReceipts, updateReceiptCertificates } from "./receipt.service"
 import { reverseReceipt } from "./receipt.posting"
+import { renderReceiptPdf } from "./receipt.pdf"
 import { certificatesSchema, createReceiptSchema, reverseReceiptSchema } from "./receipt.validators"
 
 type RequestWithId = Request<{ id: string }>
@@ -48,6 +49,17 @@ export async function reverseReceiptHandler(req: RequestWithId, res: Response, n
   try {
     const body = reverseReceiptSchema.parse(req.body)
     return res.status(200).json(await reverseReceipt(req.params.id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function receiptPdfHandler(req: RequestWithId, res: Response, next: NextFunction) {
+  try {
+    const { pdf, number } = await renderReceiptPdf(req.params.id, req.user!)
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", `attachment; filename="${number}.pdf"`)
+    return res.status(200).send(pdf)
   } catch (err) {
     return next(err)
   }
