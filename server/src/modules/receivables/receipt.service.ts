@@ -10,6 +10,7 @@ import { loadRules } from "../posting/posting.rules"
 import { assertDealAccess } from "./receivables.access"
 import { assertReceivable } from "./receipt.allocation"
 import { nextReceiptNumber } from "./receipt.number"
+import { loadInvoiceFigures, savedFigures } from "./receipt.figures"
 import { buildReceiptLines, receiptPosition } from "./receipt.posting"
 import type { CertificatesInput, CreateReceiptInput } from "./receipt.validators"
 
@@ -97,6 +98,11 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
     // on the same invoice between the check above and this write.
     await assertReceivable(tx, customer.id, allocations)
 
+    // Saved with each payment and never worked out again: the invoice total and
+    // what is still owed once this payment counts. The same transaction that
+    // checked the balance reads it, so the two cannot disagree.
+    const figures = savedFigures(allocations, await loadInvoiceFigures(tx, invoiceIds))
+
     const now = new Date()
     const number = await nextReceiptNumber(tx)
     const receipt = await tx.receipt.create({
@@ -119,7 +125,14 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
         approvedBy: actor.sub,
         approvedAt: now,
         createdBy: actor.sub,
-        allocations: { create: allocations.map((a) => ({ invoiceId: a.invoiceId, amount: a.amount.toFixed(2) })) },
+        allocations: {
+          create: figures.map((f) => ({
+            invoiceId: f.invoiceId,
+            amount: f.amount.toFixed(2),
+            invoiceTotal: f.invoiceTotal.toFixed(2),
+            balanceAfter: f.balanceAfter.toFixed(2),
+          })),
+        },
       },
       include: RECEIPT_INCLUDE,
     })
