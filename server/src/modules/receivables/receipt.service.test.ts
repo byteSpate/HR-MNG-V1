@@ -16,6 +16,11 @@ vi.mock("../posting/posting.rules", async (importOriginal) => ({
   loadRules: vi.fn(),
 }))
 vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() }))
+vi.mock("./receipt.number", () => ({ nextReceiptNumber: vi.fn() }))
+vi.mock("./receipt.figures", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./receipt.figures")>()),
+  loadInvoiceFigures: vi.fn(),
+}))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
@@ -23,6 +28,8 @@ import { assertDealAccess } from "./receivables.access"
 import { assertReceivable } from "./receipt.allocation"
 import { loadRules } from "../posting/posting.rules"
 import { postSystemJournal } from "../accounting/accounting.posting"
+import { nextReceiptNumber } from "./receipt.number"
+import { loadInvoiceFigures } from "./receipt.figures"
 import { createReceipt, listReceipts, updateReceiptCertificates } from "./receipt.service"
 
 const d = (v: string) => new Prisma.Decimal(v)
@@ -40,7 +47,7 @@ let invoiceRows: Array<{ id: string; invoiceNumber: string; status: string; po: 
 function arrangeDealWithInvoice({
   opportunityId, invoiceId, outstanding,
 }: { opportunityId: string; invoiceId: string; outstanding: Prisma.Decimal }) {
-  void outstanding
+  vi.mocked(loadInvoiceFigures).mockResolvedValue(new Map([[invoiceId, { total: outstanding, outstanding }]]))
   vi.mocked(assertDealAccess).mockResolvedValue({
     id: opportunityId, serial: "BS-OPP-00001", status: "WON", salesAccountId: "sa-1",
   } as any)
@@ -59,6 +66,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(loadRules).mockResolvedValue(RULES)
+  vi.mocked(nextReceiptNumber).mockResolvedValue("MR-0007")
 })
 
 describe("createReceipt", () => {
@@ -74,6 +82,7 @@ describe("createReceipt", () => {
 
     const r = await createReceipt({
       opportunityId: "opp-1", date: "2026-11-10", amount: "950000", vdsAmount: "150000", aitAmount: "50000",
+      paymentMethod: "BANK_TRANSFER",
       allocations: [{ invoiceId: "inv-1", amount: "1150000" }],
     } as any, FINANCE)
 
@@ -84,9 +93,99 @@ describe("createReceipt", () => {
       data: expect.objectContaining({
         customerId: "c1", opportunityId: "opp-1", status: "APPROVED", approvedBy: FINANCE.sub, approvedAt: expect.any(Date),
         amount: "950000.00", vdsAmount: "150000.00", aitAmount: "50000.00", createdBy: FINANCE.sub,
-        allocations: { create: [{ invoiceId: "inv-1", amount: "1150000.00" }] },
+        allocations: { create: [{ invoiceId: "inv-1", amount: "1150000.00", invoiceTotal: "1150000.00", balanceAfter: "0.00" }] },
       }),
     }))
+  })
+
+  it("gives the receipt the next number, and writes it to the audit trail", async () => {
+    arrangeDealWithInvoice({ opportunityId: "opp-1", invoiceId: "inv-1", outstanding: d("1000") })
+    vi.mocked(prisma.receipt.create).mockResolvedValue({
+      id: "r1", customerId: "c1", opportunityId: "opp-1", date: new Date("2026-11-10"),
+      amount: d("1000"), vdsAmount: d("0"), aitAmount: d("0"), reference: null, number: "MR-0007",
+      customer: { id: "c1", legalName: "Bengal Group" }, allocations: [],
+    } as any)
+
+    await createReceipt({
+      opportunityId: "opp-1", date: "2026-11-10", amount: "1000", paymentMethod: "CASH",
+      allocations: [{ invoiceId: "inv-1", amount: "1000" }],
+    } as any, FINANCE)
+
+    expect(nextReceiptNumber).toHaveBeenCalledWith(prisma)
+    expect(prisma.receipt.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ number: "MR-0007" }),
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ after: expect.objectContaining({ number: "MR-0007" }) }),
+    }))
+  })
+
+  it("saves how the money was paid, and the bank when there is one", async () => {
+    arrangeDealWithInvoice({ opportunityId: "opp-1", invoiceId: "inv-1", outstanding: d("1000") })
+    vi.mocked(prisma.receipt.create).mockResolvedValue({
+      id: "r1", customerId: "c1", opportunityId: "opp-1", date: new Date("2026-11-10"),
+      amount: d("1000"), vdsAmount: d("0"), aitAmount: d("0"), reference: null,
+      customer: { id: "c1", legalName: "Bengal Group" }, allocations: [],
+    } as any)
+
+    await createReceipt({
+      opportunityId: "opp-1", date: "2026-11-10", amount: "1000", paymentMethod: "CHEQUE", bankName: "MTB",
+      allocations: [{ invoiceId: "inv-1", amount: "1000" }],
+    } as any, FINANCE)
+
+    expect(prisma.receipt.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ paymentMethod: "CHEQUE", bankName: "MTB" }),
+    }))
+  })
+
+  it("saves no bank name as null, not as an empty string", async () => {
+    arrangeDealWithInvoice({ opportunityId: "opp-1", invoiceId: "inv-1", outstanding: d("1000") })
+    vi.mocked(prisma.receipt.create).mockResolvedValue({
+      id: "r1", customerId: "c1", opportunityId: "opp-1", date: new Date("2026-11-10"),
+      amount: d("1000"), vdsAmount: d("0"), aitAmount: d("0"), reference: null,
+      customer: { id: "c1", legalName: "Bengal Group" }, allocations: [],
+    } as any)
+
+    await createReceipt({
+      opportunityId: "opp-1", date: "2026-11-10", amount: "1000", paymentMethod: "CASH",
+      allocations: [{ invoiceId: "inv-1", amount: "1000" }],
+    } as any, FINANCE)
+
+    expect(prisma.receipt.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ paymentMethod: "CASH", bankName: null }),
+    }))
+  })
+
+  it("saves the invoice total and the balance with each payment, so an old receipt never changes", async () => {
+    arrangeDealWithInvoice({ opportunityId: "opp-1", invoiceId: "inv-1", outstanding: d("30000") })
+    vi.mocked(loadInvoiceFigures).mockResolvedValue(new Map([["inv-1", { total: d("50000"), outstanding: d("30000") }]]))
+    vi.mocked(prisma.receipt.create).mockResolvedValue({
+      id: "r1", customerId: "c1", opportunityId: "opp-1", date: new Date("2026-11-10"),
+      amount: d("15000"), vdsAmount: d("0"), aitAmount: d("0"), reference: null,
+      customer: { id: "c1", legalName: "Bengal Group" }, allocations: [],
+    } as any)
+
+    await createReceipt({
+      opportunityId: "opp-1", date: "2026-11-10", amount: "15000", paymentMethod: "CASH",
+      allocations: [{ invoiceId: "inv-1", amount: "15000" }],
+    } as any, FINANCE)
+
+    expect(prisma.receipt.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        allocations: { create: [{ invoiceId: "inv-1", amount: "15000.00", invoiceTotal: "50000.00", balanceAfter: "15000.00" }] },
+      }),
+    }))
+  })
+
+  it("takes no number when the receipt is refused", async () => {
+    arrangeDealWithInvoice({ opportunityId: "opp-1", invoiceId: "inv-1", outstanding: d("1000") })
+
+    await expect(createReceipt({
+      opportunityId: "opp-1", date: "2026-11-10", amount: "1500", paymentMethod: "CASH",
+      allocations: [{ invoiceId: "inv-1", amount: "1000" }],
+    } as any, FINANCE)).rejects.toThrow()
+
+    expect(nextReceiptNumber).not.toHaveBeenCalled()
   })
 
   it("refuses an invoice from another deal, even for the same customer (Review Focus 1)", async () => {

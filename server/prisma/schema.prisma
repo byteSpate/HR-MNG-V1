@@ -2474,8 +2474,19 @@ model InvoiceLine {
   @@index([poLineId])
 }
 
+/// How the customer paid. Picked by Finance on every new receipt.
+enum ReceiptPaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  MOBILE_BANKING
+}
+
 model Receipt {
   id         String   @id @default(uuid())
+  /// The number on the money receipt, `MR-0001`. Made by the system from the
+  /// `MR` row of IdCounter. Never edited, never reused, kept after a reversal.
+  number     String   @unique
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
   date       DateTime
@@ -2493,6 +2504,11 @@ model Receipt {
   aitCertificateDate DateTime?
 
   reference String?
+
+  /// Null only on receipts saved before the method existed. The service
+  /// refuses a new receipt without one.
+  paymentMethod ReceiptPaymentMethod?
+  bankName      String?
 
   status     ReceivableDocStatus @default(DRAFT)
   approvedBy String?
@@ -2527,6 +2543,13 @@ model ReceiptAllocation {
   invoiceId String
   invoice   Invoice  @relation(fields: [invoiceId], references: [id])
   amount    Decimal  @db.Decimal(14, 2)
+  /// Saved with the payment and never changed, so the money receipt given to
+  /// the customer always matches the PDF. A later credit note or reversal
+  /// does not touch an old receipt. `invoiceTotal` is the invoice after
+  /// approved credit notes, and `balanceAfter` is what was still owed once
+  /// this payment was counted.
+  invoiceTotal Decimal @db.Decimal(14, 2)
+  balanceAfter Decimal @db.Decimal(14, 2)
   createdAt DateTime @default(now())
 
   @@index([invoiceId])

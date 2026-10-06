@@ -4,6 +4,8 @@ const positiveMoney = z.string().refine((v) => Number(v) > 0, "Must be greater t
 const nonNegativeMoney = z.string().refine((v) => Number(v) >= 0, "Cannot be negative")
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD")
 
+export const RECEIPT_PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"] as const
+
 export const createReceiptSchema = z.object({
   // The one deal this receipt belongs to (spec: every document belongs to
   // one deal). No customerId: it is derived from the deal's customer, never
@@ -20,6 +22,9 @@ export const createReceiptSchema = z.object({
   aitCertificateRef: z.string().trim().min(1).optional(),
   aitCertificateDate: dateString.optional(),
   reference: z.string().trim().max(200).optional(),
+  // Required on every new receipt. Old receipts have none and show "Not recorded".
+  paymentMethod: z.enum(RECEIPT_PAYMENT_METHODS, { error: "Pick how the money was paid." }),
+  bankName: z.string().trim().max(100).optional(),
   allocations: z.array(z.object({ invoiceId: z.string().uuid(), amount: positiveMoney })).min(1, "A receipt must be allocated to at least one invoice"),
 })
 

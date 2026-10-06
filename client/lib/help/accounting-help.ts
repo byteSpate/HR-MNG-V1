@@ -1645,8 +1645,12 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Record payment received",
-        body: "Saved and counted at once. No approval needed. Cannot be more than the Opportunity's invoices still owe; there are no advances.",
+        body: "Pick how the customer paid. Add the bank name if there is one. The payment is saved and counted at once. No approval is needed. The system gives it a number, such as MR-0001. A payment cannot be more than the invoices still owe. There are no advances. A customer can pay one invoice in many parts. Record each part as its own payment.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Download a money receipt",
+        body: "Every payment has its own number and its own PDF. The PDF shows the invoices it pays, the cash received, any tax the customer kept back, how it was paid, and what is still owed on each invoice after this payment. A mistake is fixed by a reversal. A reversed payment keeps its number and the PDF says REVERSED. Finance and the Opportunity's own sales person can download it. Only Finance can record a payment.",
       },
       {
         name: "Pay supplier",
