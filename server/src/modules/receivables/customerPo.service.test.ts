@@ -7,7 +7,8 @@ vi.mock("../../config/prisma", () => ({
     idCounter: { upsert: vi.fn() },
     opportunity: { findUnique: vi.fn(async () => ({ track: "NETWORKING" })) },
     opportunityLine: { findMany: vi.fn() },
-    customerPo: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
+    $queryRaw: vi.fn(),
+    customerPo: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
     customerPoLine: { deleteMany: vi.fn() },
     auditLog: { create: vi.fn() },
   },
@@ -57,6 +58,7 @@ function arrangeDeal(over: Partial<{ status: string; serial: string; closedAt: D
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+  vi.mocked(prisma.customerPo.findFirst).mockResolvedValue(null)
 })
 
 describe("prefillPoLines", () => {
@@ -140,6 +142,49 @@ describe("createCustomerPo", () => {
     arrangeDeal()
     vi.mocked(prisma.customerPo.create).mockRejectedValue({ code: "P2002" })
     await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow("This customer already has a PO numbered PO-778")
+  })
+})
+
+describe("createCustomerPo, one PO for each Opportunity", () => {
+  it("refuses a second PO on an Opportunity, and says which PO is already there", async () => {
+    arrangeDeal()
+    vi.mocked(prisma.customerPo.findFirst).mockResolvedValue({ serial: "BS-CPO-00001", status: "OPEN" } as any)
+
+    await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow(
+      "BS-OPP-00002 already has a PO (BS-CPO-00001). An Opportunity has one PO. To change it, edit or cancel that PO. If it already has an invoice, raise a credit note on the invoice instead."
+    )
+    expect(prisma.customerPo.create).not.toHaveBeenCalled()
+  })
+
+  it("does not count a cancelled PO, so the PO can be recorded again after a cancel", async () => {
+    arrangeDeal()
+    vi.mocked(prisma.customerPo.create).mockResolvedValue({ id: "po1", serial: "BS-CPO-00001", customerPoNumber: "PO-778", lines: [] } as any)
+
+    await createCustomerPo(PO_INPUT, FINANCE)
+
+    expect(prisma.customerPo.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { opportunityId: "opp-1", status: { not: "CANCELLED" } },
+    }))
+    expect(prisma.customerPo.create).toHaveBeenCalled()
+  })
+
+  it("locks the Opportunity row before it looks, so two saves at once cannot both pass", async () => {
+    arrangeDeal()
+    vi.mocked(prisma.customerPo.create).mockResolvedValue({ id: "po1", serial: "BS-CPO-00001", customerPoNumber: "PO-778", lines: [] } as any)
+
+    await createCustomerPo(PO_INPUT, FINANCE)
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(prisma.$queryRaw).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(prisma.customerPo.findFirst).mock.invocationCallOrder[0])
+  })
+
+  it("refuses before it issues a PO serial, so no number is burned", async () => {
+    arrangeDeal()
+    vi.mocked(prisma.customerPo.findFirst).mockResolvedValue({ serial: "BS-CPO-00001", status: "COMPLETE" } as any)
+
+    await expect(createCustomerPo(PO_INPUT, FINANCE)).rejects.toThrow("An Opportunity has one PO")
+    expect(prisma.idCounter.upsert).not.toHaveBeenCalled()
   })
 })
 

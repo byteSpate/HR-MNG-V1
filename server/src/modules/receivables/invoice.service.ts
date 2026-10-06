@@ -32,7 +32,25 @@ function addDays(date: Date, days: number): Date {
 
 type PoForInvoicing = Prisma.CustomerPoGetPayload<{ include: typeof PO_FOR_INVOICING }>
 
+/**
+ * A PO has one invoice. Said when someone tries to bill a PO that has already
+ * been billed in full, by a draft or by an approved invoice. Names that
+ * invoice, so the person knows where to look.
+ */
+async function alreadyInvoiced(tx: PrismaNamespace.TransactionClient, po: { id: string; serial: string }): Promise<AppError> {
+  const existing = await tx.invoice.findFirst({
+    where: { poId: po.id, status: { in: ["DRAFT", "APPROVED"] } },
+    orderBy: { createdAt: "asc" },
+    select: { invoiceNumber: true },
+  })
+  const what = existing ? `already has invoice ${existing.invoiceNumber}` : "is already invoiced in full"
+  return new AppError(409, `PO ${po.serial} ${what}. A PO has one invoice. To change it, edit the draft or raise a credit note on it.`)
+}
+
 async function buildLineRows(tx: PrismaNamespace.TransactionClient, po: PoForInvoicing, lines: CreateInvoiceInput["lines"]) {
+  // Nothing left means the PO was billed already: say so, before any line check.
+  if (po.lines.every((l) => poLineRemaining(l).lessThanOrEqualTo(0))) throw await alreadyInvoiced(tx, po)
+
   const byId = new Map(po.lines.map((l) => [l.id, l]))
   const wanted = new Map<string, Prisma.Decimal>()
   for (const l of lines) {
@@ -44,6 +62,19 @@ async function buildLineRows(tx: PrismaNamespace.TransactionClient, po: PoForInv
     const poLine = byId.get(id)!
     const left = poLineRemaining(poLine)
     if (amount.greaterThan(left)) throw new AppError(400, `Only ${left.toFixed(2)} is left to invoice on ${poLine.description}`)
+  }
+  // One invoice bills the whole PO: every line that still has something left,
+  // in full. On a new PO that is every line and the whole amount, so a second
+  // invoice has nothing left to bill. An older PO that already has a part
+  // invoice can still get one last invoice for all that remains.
+  for (const poLine of po.lines) {
+    const left = poLineRemaining(poLine)
+    if (left.lessThanOrEqualTo(0)) continue
+    const amount = wanted.get(poLine.id)
+    if (!amount) throw new AppError(400, `Bill the whole PO. Add ${poLine.description} to this invoice: ${left.toFixed(2)} is still left on it.`)
+    if (!amount.equals(left)) {
+      throw new AppError(400, `Bill all that is left on ${poLine.description}, which is ${left.toFixed(2)}. This invoice has ${amount.toFixed(2)}.`)
+    }
   }
 
   const rates = await loadActiveVatRates(tx, lines.map((l) => l.vatCodeId ?? byId.get(l.poLineId)!.vatCodeId))
@@ -73,8 +104,11 @@ async function buildLineRows(tx: PrismaNamespace.TransactionClient, po: PoForInv
 }
 
 async function loadOpenPo(tx: PrismaNamespace.TransactionClient, poId: string): Promise<PoForInvoicing> {
+  // Locked first: two saves at the same moment must not both see "nothing billed yet".
+  await tx.$queryRaw`SELECT "id" FROM "CustomerPo" WHERE "id" = ${poId} FOR UPDATE`
   const po = await tx.customerPo.findUnique({ where: { id: poId }, include: PO_FOR_INVOICING })
   if (!po) throw new AppError(404, "Customer PO not found")
+  if (po.status === "COMPLETE") throw await alreadyInvoiced(tx, po)
   if (po.status !== "OPEN") throw new AppError(400, `PO ${po.serial} is ${po.status.toLowerCase()}, so it cannot be invoiced`)
   return po
 }

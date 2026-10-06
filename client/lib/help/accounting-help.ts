@@ -1631,7 +1631,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Record the customer PO",
-        body: "The customer's own PO number, date and lines. Can be edited or cancelled with a reason until it has an invoice. Available to Finance, a Super Admin, or the Opportunity's own sales person.",
+        body: "The customer's own PO number, date and lines. An Opportunity has one PO, so the button is hidden while it has one. A cancelled PO does not count. A PO can be edited or cancelled with a reason until it has an invoice. Available to Finance, a Super Admin, or the Opportunity's own sales person.",
       },
       {
         name: "Add a supplier bill",
@@ -1640,7 +1640,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Create an invoice",
-        body: "Pick how much of each PO line to bill. It goes to Waiting for approval. If the customer's legal name, billing address or payment days are missing, a small form asks for them first.",
+        body: "A PO has one invoice, and it bills the whole PO. Every line is filled in and cannot be changed. To change an invoice later, edit the draft or raise a credit note. The invoice goes to Waiting for approval. If the customer's legal name, billing address or payment days are missing, a small form asks for them first.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {

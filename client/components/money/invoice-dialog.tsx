@@ -8,8 +8,8 @@ import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
 import type { CustomerPo, DealMoneyInvoice, Invoice, VatCode, VatMethod } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
+import { linesToBill } from "@/lib/po-rules"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
-import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { vatFieldsFor } from "@/lib/vat-payload"
@@ -19,16 +19,9 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-function lineInvoiced(line: CustomerPo["lines"][number]): number {
-  return line.invoiceLines.reduce((s, il) => s + Number(il.amount), 0)
-}
-
 interface LineDraft {
   poLineId: string
   description: string
-  /** Left to invoice on this PO line, at the moment the dialog opened. Blank
-   *  in edit mode — see the note on `invoice` below. */
-  remaining: string
   vatCodeId: string
   vatMethod: VatMethod
   vatRatePercent: string
@@ -87,21 +80,23 @@ export function InvoiceDialog({
   const [lines, setLines] = useState<LineDraft[]>(() => {
     if (invoice) {
       return invoice.lines.map((l) => ({
-        poLineId: l.poLineId, description: l.description, remaining: "", vatCodeId: l.vatCodeId,
+        poLineId: l.poLineId, description: l.description, vatCodeId: l.vatCodeId,
         vatMethod: l.vatMethod, vatRatePercent: l.vatRatePercent ?? "", vatTouched: true, amount: l.amount,
       }))
     }
+    // One invoice bills the whole PO: every line, in full. The amounts are
+    // filled in and cannot be changed. The server refuses anything else.
+    const left = new Map((po ? linesToBill(po) : []).map((l) => [l.poLineId, l.amount]))
     return (po?.lines ?? [])
-      .filter((l) => Number(l.amount) - lineInvoiced(l) > 0.004)
+      .filter((l) => left.has(l.id))
       .map((l) => ({
         poLineId: l.id,
         description: l.description,
-        remaining: (Number(l.amount) - lineInvoiced(l)).toFixed(2),
         vatCodeId: l.vatCodeId,
         vatMethod: l.vatMethod,
         vatRatePercent: l.vatMethod === "MANUAL" ? (l.vatRatePercent ?? "") : "",
         vatTouched: false,
-        amount: "",
+        amount: left.get(l.id)!,
       }))
   })
 
@@ -147,7 +142,9 @@ export function InvoiceDialog({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{invoice ? `Edit invoice ${invoice.invoiceNumber}` : "Create invoice"}</DialogTitle>
-          <DialogDescription>Bill against what is left to invoice on this PO.</DialogDescription>
+          <DialogDescription>
+            {invoice ? "An invoice bills the whole PO." : "This invoice bills the whole PO. Every line is filled in. A PO has one invoice."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
@@ -170,11 +167,6 @@ export function InvoiceDialog({
             <section className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines</h3>
-                {!invoice ? (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setLines((all) => all.map((l) => ({ ...l, amount: l.remaining || l.amount })))}>
-                    Bill all that is left
-                  </Button>
-                ) : null}
               </div>
               {lines.map((line) => (
                 <div key={line.poLineId} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
@@ -184,18 +176,15 @@ export function InvoiceDialog({
                     value={line.description}
                     onChange={(e) => update(line.poLineId, { description: e.target.value })}
                   />
-                  {!invoice ? (
-                    <div className={`flex items-center text-[12px] sm:col-span-2 ${TONE.muted}`}>
-                      Left {formatMoney(line.remaining, "BDT")}
-                    </div>
-                  ) : null}
                   <Input
                     aria-label={`${line.description} amount`}
-                    className="sm:col-span-2"
+                    className="sm:col-span-4"
                     type="number"
                     min={0}
                     step="0.01"
                     value={line.amount}
+                    // A new invoice bills the line in full, so its amount is fixed.
+                    readOnly={!invoice}
                     onChange={(e) => update(line.poLineId, { amount: e.target.value })}
                     placeholder="Amount"
                   />
