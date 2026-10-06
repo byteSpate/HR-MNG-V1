@@ -8,11 +8,13 @@ vi.mock("./receipt.service", () => ({
   updateReceiptCertificates: vi.fn(),
 }))
 vi.mock("./receipt.posting", () => ({ reverseReceipt: vi.fn() }))
+vi.mock("./receipt.pdf", () => ({ renderReceiptPdf: vi.fn() }))
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import { listReceipts } from "./receipt.service"
 import { reverseReceipt } from "./receipt.posting"
+import { renderReceiptPdf } from "./receipt.pdf"
 
 function tokenFor(role: "EMPLOYEE" | "FINANCE_OFFICER" | "SUPER_ADMIN") {
   return signAccessToken({ sub: "actor-1", role: role as any, email: "a@b.com", mustChangePassword: false, salesRole: null })
@@ -57,5 +59,31 @@ describe("/api/receipts", () => {
   it("400s an unknown certificates filter value", async () => {
     const res = await request(app).get("/api/receipts?certificates=anything-else").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
     expect(res.status).toBe(400)
+  })
+})
+
+describe("GET /api/receipts/:id/pdf", () => {
+  it("401s with no token", async () => {
+    expect((await request(app).get("/api/receipts/r1/pdf")).status).toBe(401)
+  })
+
+  it("sends the PDF as a download named after the receipt number", async () => {
+    vi.mocked(renderReceiptPdf).mockResolvedValue({ pdf: Buffer.from("%PDF-1.4"), number: "MR-0001" })
+
+    const res = await request(app).get("/api/receipts/r1/pdf").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+
+    expect(res.status).toBe(200)
+    expect(res.headers["content-type"]).toContain("application/pdf")
+    expect(res.headers["content-disposition"]).toBe('attachment; filename="MR-0001.pdf"')
+    expect(renderReceiptPdf).toHaveBeenCalledWith("r1", expect.objectContaining({ sub: "actor-1", role: "FINANCE_OFFICER" }))
+  })
+
+  it("is open to any signed-in user at the route, because the service checks access to the Opportunity", async () => {
+    vi.mocked(renderReceiptPdf).mockResolvedValue({ pdf: Buffer.from("%PDF-1.4"), number: "MR-0001" })
+
+    const res = await request(app).get("/api/receipts/r1/pdf").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+
+    expect(res.status).toBe(200)
+    expect(renderReceiptPdf).toHaveBeenCalledWith("r1", expect.objectContaining({ role: "EMPLOYEE" }))
   })
 })
