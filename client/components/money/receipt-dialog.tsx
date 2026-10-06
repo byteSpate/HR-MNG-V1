@@ -6,8 +6,10 @@ import { useMutation } from "@tanstack/react-query"
 import { createReceipt, type ReceiptInput } from "@/lib/api/receipt"
 import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneyInvoice, Receipt, ReceiptPaymentMethod } from "@/lib/api/types"
+import { invoicePayments, payOneInvoice } from "@/lib/invoice-payments"
 import { formatMoney } from "@/lib/money"
 import { paymentMethodLabel, RECEIPT_PAYMENT_METHODS } from "@/lib/receipt-method"
+import { fromPaisa, toPaisa } from "@/components/accounting/accounting-shared"
 import { DialogActions, Field, FormError, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -30,12 +32,7 @@ function today(): string {
  * `BoughtPart` uses `billStillOwed` for "Pay supplier".
  */
 export function invoiceStillOwed(inv: DealMoneyInvoice): number {
-  const gross = inv.lines.reduce((s, l) => s + Number(l.amount) + Number(l.vatAmount), 0)
-  const collected = inv.allocations.reduce((s, a) => s + Number(a.amount), 0)
-  const credited = inv.creditNotes
-    .filter((cn) => cn.status === "APPROVED")
-    .reduce((s, cn) => s + cn.lines.reduce((s2, l) => s2 + Number(l.amount) + Number(l.vatAmount), 0), 0)
-  return gross - collected - credited
+  return Number(invoicePayments(inv).balance)
 }
 
 /**
@@ -54,12 +51,16 @@ export function ReceiptDialog({
   onOpenChange,
   opportunityId,
   invoices,
+  onlyInvoiceId,
   onSaved,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   opportunityId: string
   invoices: DealMoneyInvoice[]
+  /** Set when Finance opens this from one invoice's own row. Everything
+   *  received then goes to that invoice, so nothing is typed twice. */
+  onlyInvoiceId?: string
   onSaved: (receipt: Receipt) => void
 }) {
   const { accessToken } = useSession()
@@ -78,15 +79,27 @@ export function ReceiptDialog({
   const [allocated, setAllocated] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
-  const owing = invoices.filter((inv) => inv.status === "APPROVED" && invoiceStillOwed(inv) > 0.004)
+  const owing = invoices.filter(
+    (inv) => inv.status === "APPROVED" && invoiceStillOwed(inv) > 0.004 && (!onlyInvoiceId || inv.id === onlyInvoiceId)
+  )
 
   const settledTotal = (Number(amount) || 0) + (Number(vdsAmount) || 0) + (Number(aitAmount) || 0)
-  const allocatedTotal = Object.values(allocated).reduce((s, v) => s + (Number(v) || 0), 0)
+
+  // From one invoice's row, everything received is settled on that invoice.
+  const only = onlyInvoiceId ? owing[0] : undefined
+  const paisaOf = (v: string) => (Number.isNaN(toPaisa(v)) ? 0 : toPaisa(v))
+  const settledText = fromPaisa(paisaOf(amount) + paisaOf(vdsAmount) + paisaOf(aitAmount))
+  const one = only ? payOneInvoice(settledText, invoicePayments(only).balance) : null
+  const effectiveAllocated: Record<string, string> = only
+    ? Number(one!.amount) > 0 ? { [only.id]: one!.amount } : {}
+    : allocated
+
+  const allocatedTotal = Object.values(effectiveAllocated).reduce((s, v) => s + (Number(v) || 0), 0)
   // Exactly, not "at most" — the server refuses a receipt with money left
   // over (an advance, removed) or allocated past what it settles.
   const matches = Math.abs(settledTotal - allocatedTotal) < 0.005
 
-  const canSubmit = Boolean(date && paymentMethod && Number(amount) > 0 && allocatedTotal > 0 && matches)
+  const canSubmit = Boolean(date && paymentMethod && Number(amount) > 0 && allocatedTotal > 0 && matches && !one?.tooMuch)
 
   const save = useMutation({
     mutationFn: (input: ReceiptInput) => createReceipt(accessToken!, input),
@@ -99,7 +112,7 @@ export function ReceiptDialog({
 
   const submit = () => {
     if (!paymentMethod) return
-    const allocations = Object.entries(allocated)
+    const allocations = Object.entries(effectiveAllocated)
       .filter(([, v]) => Number(v) > 0)
       .map(([invoiceId, v]) => ({ invoiceId, amount: v }))
     save.mutate({
@@ -197,6 +210,19 @@ export function ReceiptDialog({
             ) : (
               owing.map((inv) => {
                 const left = invoiceStillOwed(inv)
+                if (only) {
+                  return (
+                    <div key={inv.id} className="rounded-md border border-[#E4E9EF] p-3">
+                      <div className="text-[13px] font-semibold">This payment is for invoice {inv.invoiceNumber}.</div>
+                      <div className={`text-[11.5px] ${TONE.muted}`}>Still owed {formatMoney(left.toFixed(2), "BDT")}</div>
+                      {one?.tooMuch ? (
+                        <p role="status" className="mt-1 text-[12.5px] font-semibold text-[#8A5E0C]">
+                          This is more than the invoice still owes. Lower the amount received.
+                        </p>
+                      ) : null}
+                    </div>
+                  )
+                }
                 return (
                   <div key={inv.id} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
                     <div className="sm:col-span-6">
