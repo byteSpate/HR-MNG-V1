@@ -112,6 +112,21 @@ export async function createCustomerPo(input: CreateCustomerPoInput, actor: Acce
       const deal = await assertDealAccess(tx, actor, input.opportunityId)
       assertMoneyAllowed(deal, env.SALES_GO_LIVE)
 
+      // An Opportunity has one PO. Locked first, so two saves at the same moment
+      // cannot both pass. A cancelled PO does not count. An Opportunity that
+      // already had several POs before this rule keeps them.
+      await tx.$queryRaw`SELECT "id" FROM "Opportunity" WHERE "id" = ${deal.id} FOR UPDATE`
+      const existing = await tx.customerPo.findFirst({
+        where: { opportunityId: deal.id, status: { not: "CANCELLED" } },
+        select: { serial: true, status: true },
+      })
+      if (existing) {
+        throw new AppError(
+          409,
+          `${deal.serial} already has a PO (${existing.serial}). An Opportunity has one PO. To change it, edit or cancel that PO. If it already has an invoice, raise a credit note on the invoice instead.`
+        )
+      }
+
       const customer = await ensureCustomerForAccount(tx, deal.salesAccountId, "throw-on-conflict", actor.sub)
       const rates = await loadActiveVatRates(tx, input.lines.map((l) => l.vatCodeId))
 
