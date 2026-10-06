@@ -1,5 +1,5 @@
-import { apiFetch } from "./client"
-import type { Receipt } from "./types"
+import { apiFetch, apiFetchBlob } from "./client"
+import type { Receipt, ReceiptPaymentMethod } from "./types"
 
 export interface ReceiptInput {
   // The one deal this receipt belongs to (spec: every document belongs to
@@ -15,6 +15,9 @@ export interface ReceiptInput {
   aitCertificateRef?: string
   aitCertificateDate?: string
   reference?: string
+  /** Required: Finance says how the money was paid. */
+  paymentMethod: ReceiptPaymentMethod
+  bankName?: string
   allocations: Array<{ invoiceId: string; amount: string }>
 }
 
@@ -50,4 +53,11 @@ export function updateReceiptCertificates(accessToken: string, id: string, input
 /** Super Admin only. Corrects an approved receipt by reversing its posted journal. */
 export function reverseReceipt(accessToken: string, id: string, reason: string): Promise<Receipt> {
   return apiFetch<Receipt>(`/api/receipts/${id}/reverse`, { method: "POST", accessToken, body: JSON.stringify({ reason }) })
+}
+
+/** The money receipt as a PDF. Finance reaches any receipt. Sales reaches the
+ *  ones on its own Opportunities. */
+export async function downloadReceiptPdf(accessToken: string, id: string): Promise<Blob> {
+  const { blob } = await apiFetchBlob(`/api/receipts/${id}/pdf`, { accessToken })
+  return blob
 }
