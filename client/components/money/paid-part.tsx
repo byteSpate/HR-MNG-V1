@@ -4,12 +4,12 @@ import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { RiAddLine, RiArrowGoBackLine, RiDownloadLine, RiFileTextLine } from "@remixicon/react"
 
-import { downloadReceiptPdf, reverseReceipt } from "@/lib/api/receipt"
+import { reverseReceipt } from "@/lib/api/receipt"
 import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneyInvoice, Receipt } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { paymentMethodLabel } from "@/lib/receipt-method"
-import { downloadBlob } from "@/components/payroll/payroll-shared"
+import { useReceiptPdf } from "@/components/money/use-receipt-pdf"
 import { CertificateDialog } from "@/components/money/certificate-dialog"
 import { invoiceStillOwed, ReceiptDialog } from "@/components/money/receipt-dialog"
 import { DialogActions, Field, FormError, PanelAlert, RowActions, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -64,11 +64,7 @@ export function PaidPart({
 
   // Every role that can see this section can download the PDF of a receipt
   // it can see. The server checks access to the Opportunity again.
-  const download = useMutation({
-    mutationFn: async (receipt: Receipt) => ({ blob: await downloadReceiptPdf(accessToken!, receipt.id), number: receipt.number }),
-    onSuccess: ({ blob, number }) => downloadBlob(blob, `${number}.pdf`),
-    onError: () => setError("Could not download the receipt. Please try again."),
-  })
+  const download = useReceiptPdf(setError)
 
   // A control that cannot do anything is a bug: "Record payment received"
   // is hidden, not shown with an always-empty picker, when no approved

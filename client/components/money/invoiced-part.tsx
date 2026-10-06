@@ -2,19 +2,23 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
-import { RiAddLine, RiArrowGoBackLine, RiCheckLine, RiFileEditLine } from "@remixicon/react"
+import { RiAddLine, RiArrowGoBackLine, RiCheckLine, RiDownloadLine, RiFileEditLine } from "@remixicon/react"
 
 import { approveInvoice } from "@/lib/api/invoice"
 import { approveCustomerCreditNote } from "@/lib/api/customerCreditNote"
 import { sendBackApproval } from "@/lib/api/dealMoney"
 import { useSession } from "@/lib/auth/session-context"
 import type { CustomerPo, DealMoneyCustomerCreditNote, DealMoneyInvoice } from "@/lib/api/types"
+import { invoicePayments } from "@/lib/invoice-payments"
 import { formatMoney } from "@/lib/money"
+import { paymentMethodLabel } from "@/lib/receipt-method"
 import { cn } from "@/lib/utils"
 import type { MoneyHighlight } from "@/components/money/money-section"
 import { BillingDetailsDialog } from "@/components/money/billing-details-dialog"
 import { CreditNoteDialog } from "@/components/money/credit-note-dialog"
 import { InvoiceDialog } from "@/components/money/invoice-dialog"
+import { ReceiptDialog } from "@/components/money/receipt-dialog"
+import { useReceiptPdf } from "@/components/money/use-receipt-pdf"
 import {
   ConfirmDialog,
   DialogActions,
@@ -87,6 +91,7 @@ function creditNoteStatus(note: DealMoneyCustomerCreditNote): { label: string; t
  * (`PoPart`'s data, `MoneySection`'s own fetch) — no second query.
  */
 export function InvoicedPart({
+  opportunityId,
   invoices,
   pos,
   customer,
@@ -94,6 +99,7 @@ export function InvoicedPart({
   invalidate,
   highlight,
 }: {
+  opportunityId: string
   invoices: DealMoneyInvoice[]
   pos: CustomerPo[]
   customer: { id: string; legalName: string; billingAddress: string | null; paymentDays: number } | null
@@ -112,7 +118,10 @@ export function InvoicedPart({
   const [sendingBackInvoice, setSendingBackInvoice] = useState<DealMoneyInvoice | null>(null)
   const [sendBackNote, setSendBackNote] = useState("")
   const [approvingCn, setApprovingCn] = useState<DealMoneyCustomerCreditNote | null>(null)
+  const [payingInvoice, setPayingInvoice] = useState<DealMoneyInvoice | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const downloadPdf = useReceiptPdf(setError)
 
   const approve = useMutation({
     mutationFn: (id: string) => approveInvoice(accessToken!, id),
@@ -219,6 +228,8 @@ export function InvoicedPart({
         <ul className="space-y-3">
           {invoices.map((inv) => {
             const { total } = invoiceTotals(inv)
+            const money = invoicePayments(inv)
+            const owesMoney = Number(money.balance) > 0.004
             const typedRates = typedVatRates(inv.lines)
             const status = invoiceStatus(inv)
             // Approve and Send back, together. Only a Super Admin can reach
@@ -245,6 +256,16 @@ export function InvoicedPart({
                       label: "Send back",
                       icon: <RiArrowGoBackLine className="size-3.5" aria-hidden />,
                       onClick: () => { setError(null); setSendingBackInvoice(inv); setSendBackNote("") },
+                    },
+                  ]
+                : []),
+              ...(canEdit && inv.status === "APPROVED" && owesMoney
+                ? [
+                    {
+                      kind: "custom" as const,
+                      label: "Record payment",
+                      icon: <RiAddLine className="size-3.5" aria-hidden />,
+                      onClick: () => { setError(null); setPayingInvoice(inv) },
                     },
                   ]
                 : []),
@@ -302,6 +323,50 @@ export function InvoicedPart({
                     <PanelNotice>
                       Sent back by {inv.sentBackByUser?.fullName ?? inv.sentBackByUser?.email ?? "someone"}: {inv.rejectionNote}
                     </PanelNotice>
+                  </div>
+                ) : null}
+
+                {inv.status === "APPROVED" ? (
+                  <div className="mt-3 border-t border-[#EEF1F5] pt-3" data-testid={`payments-${inv.invoiceNumber}`}>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+                      <span>
+                        Paid so far <span className="font-bold">{formatMoney(money.paid, "BDT")}</span>
+                      </span>
+                      {owesMoney ? (
+                        <span>
+                          Still owed <span className="font-bold">{formatMoney(money.balance, "BDT")}</span>
+                        </span>
+                      ) : (
+                        <Tag label="Paid in full" tone="green" />
+                      )}
+                    </div>
+                    {money.payments.length > 0 ? (
+                      <ul className="mt-2 space-y-1">
+                        {money.payments.map((p) => (
+                          <li key={p.receiptId} className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
+                            <span>
+                              <span className="font-bold tracking-wide">{p.number}</span>
+                              <span className={TONE.muted}>
+                                {" "}
+                                · {formatDate(p.date)} · {formatMoney(p.amount, "BDT")} · {paymentMethodLabel(p.method)}
+                              </span>
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 px-2 text-[12px]"
+                              aria-label={`Download PDF for ${p.number}`}
+                              disabled={downloadPdf.isPending}
+                              onClick={() => { setError(null); downloadPdf.mutate({ id: p.receiptId, number: p.number }) }}
+                            >
+                              <RiDownloadLine className="size-3.5" aria-hidden />
+                              PDF
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -402,6 +467,20 @@ export function InvoicedPart({
           invoice={fixingInvoice}
           onSaved={() => {
             setFixingInvoice(null)
+            invalidate()
+          }}
+        />
+      ) : null}
+
+      {payingInvoice ? (
+        <ReceiptDialog
+          open
+          onOpenChange={(open) => !open && setPayingInvoice(null)}
+          opportunityId={opportunityId}
+          invoices={invoices}
+          onlyInvoiceId={payingInvoice.id}
+          onSaved={() => {
+            setPayingInvoice(null)
             invalidate()
           }}
         />
