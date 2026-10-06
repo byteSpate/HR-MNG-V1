@@ -231,7 +231,7 @@ describe("buildReceiptHtml", () => {
     const withTax = buildReceiptHtml(buildReceiptPdfData(arrange("1", FIRST_ONLY, { vdsAmount: d("20") })), COMPANY)
 
     expect(plain).not.toContain("VAT kept back")
-    expect(plain).not.toContain("Bank:")
+    expect(plain).not.toContain("Bank name")
     expect(withTax).toContain("VAT kept back")
   })
 
