@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query"
 import { RiAddLine } from "@remixicon/react"
 
 import { cancelCustomerPo } from "@/lib/api/customerPo"
+import { canRecordPo } from "@/lib/po-rules"
 import { useSession } from "@/lib/auth/session-context"
 import type { CustomerPo, CustomerPoStatus, SalesTrack } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
@@ -43,8 +44,9 @@ function canChange(po: CustomerPo): boolean {
 }
 
 /**
- * The Customer PO part of the Money section. "Record PO" is always offered —
- * a deal can have more than one PO — and needs no role check here: anyone
+ * The Customer PO part of the Money section. "Record PO" is offered only while
+ * the Opportunity has no live PO (an Opportunity has one PO; a cancelled one
+ * does not count). It needs no role check here: anyone
  * who can load this deal's Money section already satisfies the server's
  * `requireFinanceOrSales` on the PO write routes (both read the same
  * Finance-or-assigned-sales-user rule — `receivables.access.ts`'s
@@ -86,17 +88,19 @@ export function PoPart({
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-heading text-[15px] font-bold tracking-tight">Customer PO</h2>
-        <Button
-          type="button"
-          onClick={() => {
-            setError(null)
-            setRecording(true)
-          }}
-          className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
-        >
-          <RiAddLine className="size-3.5" aria-hidden />
-          Record PO
-        </Button>
+        {canRecordPo(pos) ? (
+          <Button
+            type="button"
+            onClick={() => {
+              setError(null)
+              setRecording(true)
+            }}
+            className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+          >
+            <RiAddLine className="size-3.5" aria-hidden />
+            Record PO
+          </Button>
+        ) : null}
       </div>
 
       {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
