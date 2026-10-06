@@ -377,7 +377,7 @@ const ROW_ACTION =
  */
 export function RowActions({ actions }: { actions: RowAction[] }) {
   return (
-    <div className="flex items-center justify-end gap-0.5">
+    <div className="flex flex-wrap items-center justify-end gap-0.5">
       {actions.map((action) => {
         if (action.kind === "link") {
           return (
