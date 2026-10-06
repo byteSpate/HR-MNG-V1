@@ -152,6 +152,7 @@ export function MoneySection({
       <MoneyNumbers numbers={data.numbers} canSeeCost={data.canSeeCost} hasDrafts={hasAnyDraft(data)} />
       <PoPart opportunityId={opportunityId} track={data.deal.track} pos={data.pos} invalidate={invalidate} />
       <InvoicedPart
+        opportunityId={opportunityId}
         invoices={data.invoices}
         pos={data.pos}
         customer={data.deal.customer}

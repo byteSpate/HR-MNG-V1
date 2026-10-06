@@ -13,7 +13,14 @@ import type { MoneyNotRecordedReason } from "./dealMoney.goLive"
 
 export const DEAL_INVOICE_INCLUDE = {
   ...INVOICE_INCLUDE,
-  allocations: { where: { receipt: { status: "APPROVED" } }, select: { amount: true } },
+  // Approved receipts only, so a reversed payment never lowers what is owed.
+  // The receipt's number, date and method let the invoice row list each
+  // payment. Oldest first, with the id as a tie-break, so the order never moves.
+  allocations: {
+    where: { receipt: { status: "APPROVED" } },
+    select: { amount: true, receipt: { select: { id: true, number: true, date: true, paymentMethod: true } } },
+    orderBy: [{ receipt: { createdAt: "asc" } }, { id: "asc" }],
+  },
   creditNotes: { include: { lines: true } },
 } satisfies Prisma.InvoiceInclude
 

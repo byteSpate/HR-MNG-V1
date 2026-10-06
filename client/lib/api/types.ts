@@ -2108,7 +2108,11 @@ export interface DealMoneyInvoice extends Invoice {
    * been sent back, or when the account behind the id no longer exists.
    */
   sentBackByUser: { id: string; email: string; fullName: string | null } | null
-  allocations: Array<{ amount: string }>
+  /** Approved payments only, oldest first. `receipt` is missing from an older server. */
+  allocations: Array<{
+    amount: string
+    receipt?: { id: string; number: string; date: string; paymentMethod: ReceiptPaymentMethod | null }
+  }>
   creditNotes: DealMoneyCustomerCreditNote[]
 }
 
