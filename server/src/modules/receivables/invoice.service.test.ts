@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
     customerPo: { findUnique: vi.fn(), findMany: vi.fn() },
-    invoice: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
+    invoice: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
     invoiceLine: { deleteMany: vi.fn() },
     auditLog: { create: vi.fn() },
   },
@@ -31,9 +32,14 @@ const PO = {
   ],
 }
 
+// An invoice bills everything still left on the PO: here 500,000 on the
+// Firewall (300,000 was billed before the one-invoice rule) and all 100,000
+// of the Installation.
+const FULL_LINES = [{ poLineId: "pl1", amount: "500000" }, { poLineId: "pl2", amount: "100000" }]
+
 const INPUT = {
   poId: "po1", invoiceNumber: "INV-2026-041", date: "2026-09-23",
-  lines: [{ poLineId: "pl1", amount: "500000" }],
+  lines: FULL_LINES,
 } as any
 
 function uniqueViolation() {
@@ -55,6 +61,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.customerPo.findUnique).mockResolvedValue(PO as any)
+  vi.mocked(prisma.invoice.findFirst).mockResolvedValue({ invoiceNumber: "INV-2026-001" } as any)
   vi.mocked(loadActiveVatRates).mockResolvedValue(new Map([["vat-15", d("15")], ["vat-0", d("0")]]))
 })
 
@@ -68,9 +75,71 @@ describe("createInvoice", () => {
       data: expect.objectContaining({
         invoiceNumber: "INV-2026-041", customerId: "c1", poId: "po1", createdBy: FINANCE.sub,
         dueDate: new Date("2026-10-23"),
-        lines: { create: [{ poLineId: "pl1", description: "Firewall", amount: "500000.00", vatCodeId: "vat-15", vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "75000.00" }] },
+        lines: { create: [
+          { poLineId: "pl1", description: "Firewall", amount: "500000.00", vatCodeId: "vat-15", vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "75000.00" },
+          { poLineId: "pl2", description: "Installation", amount: "100000.00", vatCodeId: "vat-15", vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "15000.00" },
+        ] },
       }),
     }))
+  })
+
+  it("locks the PO row before it reads what is left, so two saves at once cannot both pass", async () => {
+    vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv1" } as any)
+
+    await createInvoice(INPUT, FINANCE)
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(prisma.$queryRaw).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(prisma.customerPo.findUnique).mock.invocationCallOrder[0])
+  })
+
+  it("refuses an invoice that leaves a PO line out, and names the line and what is left on it", async () => {
+    await expect(createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "500000" }] }, FINANCE))
+      .rejects.toThrow("Bill the whole PO. Add Installation to this invoice: 100000.00 is still left on it.")
+    expect(prisma.invoice.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a line that bills less than what is left on it", async () => {
+    await expect(createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "400000" }, { poLineId: "pl2", amount: "100000" }] }, FINANCE))
+      .rejects.toThrow("Bill all that is left on Firewall, which is 500000.00. This invoice has 400000.00.")
+    expect(prisma.invoice.create).not.toHaveBeenCalled()
+  })
+
+  it("accepts two lines on one PO line that add up to what is left", async () => {
+    vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv1" } as any)
+
+    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "200000" }, { poLineId: "pl1", amount: "300000" }, { poLineId: "pl2", amount: "100000" }] }, FINANCE)
+
+    expect(prisma.invoice.create).toHaveBeenCalled()
+  })
+
+  it("on a PO with no invoice yet, bills every line in full, and half a line is refused", async () => {
+    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue({
+      ...PO, lines: PO.lines.map((l) => ({ ...l, invoiceLines: [] })),
+    } as any)
+
+    await expect(createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "400000" }, { poLineId: "pl2", amount: "100000" }] }, FINANCE))
+      .rejects.toThrow("Bill all that is left on Firewall, which is 800000.00. This invoice has 400000.00.")
+  })
+
+  it("refuses a second invoice on a PO that is already fully billed by a draft, and names that invoice", async () => {
+    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue({
+      ...PO, lines: PO.lines.map((l) => ({ ...l, invoiceLines: [{ amount: l.amount }] })),
+    } as any)
+
+    await expect(createInvoice(INPUT, FINANCE)).rejects.toThrow(
+      "PO BS-CPO-00001 already has invoice INV-2026-001. A PO has one invoice. To change it, edit the draft or raise a credit note on it."
+    )
+    expect(prisma.invoice.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { poId: "po1", status: { in: ["DRAFT", "APPROVED"] } },
+    }))
+    expect(prisma.invoice.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses an invoice on a complete PO, with the same sentence", async () => {
+    vi.mocked(prisma.customerPo.findUnique).mockResolvedValue({ ...PO, status: "COMPLETE" } as any)
+
+    await expect(createInvoice(INPUT, FINANCE)).rejects.toThrow("PO BS-CPO-00001 already has invoice INV-2026-001. A PO has one invoice.")
   })
 
   it("refuses more than is left to invoice on a PO line, counting drafts", async () => {
@@ -106,11 +175,11 @@ describe("createInvoice", () => {
     } as any)
     vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv2" } as any)
 
-    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "1000000" }] }, FINANCE)
+    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "2000000" }] }, FINANCE)
 
     expect(prisma.invoice.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        lines: { create: [expect.objectContaining({ amount: "1000000.00", vatAmount: "75000.00" })] },
+        lines: { create: [expect.objectContaining({ amount: "2000000.00", vatAmount: "150000.00" })] },
       }),
     }))
   })
@@ -128,27 +197,27 @@ describe("createInvoice", () => {
     vi.mocked(prisma.customerPo.findUnique).mockResolvedValue(poWithTypedVat() as any)
     vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv3" } as any)
 
-    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "1000" }] }, FINANCE)
+    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "800000" }, { poLineId: "pl2", amount: "100000" }] }, FINANCE)
 
     const data = vi.mocked(prisma.invoice.create).mock.calls[0][0].data as any
-    expect(data.lines.create[0]).toMatchObject({ vatMethod: "MANUAL", vatRatePercent: "7.50", vatAmount: "75.00" })
+    expect(data.lines.create[0]).toMatchObject({ vatMethod: "MANUAL", vatRatePercent: "7.50", vatAmount: "60000.00" })
   })
 
   it("uses the code rate when the invoice line picks the code again", async () => {
     vi.mocked(prisma.customerPo.findUnique).mockResolvedValue(poWithTypedVat() as any)
     vi.mocked(prisma.invoice.create).mockResolvedValue({ id: "inv4" } as any)
 
-    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "1000", vatMethod: "CODE" }] }, FINANCE)
+    await createInvoice({ ...INPUT, lines: [{ poLineId: "pl1", amount: "800000", vatMethod: "CODE" }, { poLineId: "pl2", amount: "100000" }] }, FINANCE)
 
     const data = vi.mocked(prisma.invoice.create).mock.calls[0][0].data as any
-    expect(data.lines.create[0]).toMatchObject({ vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "150.00" })
+    expect(data.lines.create[0]).toMatchObject({ vatMethod: "CODE", vatRatePercent: "15.00", vatAmount: "120000.00" })
   })
 })
 
 describe("updateInvoice", () => {
   it("edits a draft, checking what is left without counting its own old lines", async () => {
     vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "DRAFT" } as any)
-    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: [{ poLineId: "pl1", amount: "500000" }] } as any, FINANCE)
+    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: FULL_LINES } as any, FINANCE)
     expect(prisma.invoiceLine.deleteMany).toHaveBeenCalledWith({ where: { invoiceId: "inv1" } })
     expect(prisma.invoice.update).toHaveBeenCalled()
     const deleteOrder = vi.mocked(prisma.invoiceLine.deleteMany).mock.invocationCallOrder[0]
@@ -156,9 +225,18 @@ describe("updateInvoice", () => {
     expect(deleteOrder).toBeLessThan(reloadOrder)
   })
 
+  it("refuses to save a draft that leaves part of the PO unbilled", async () => {
+    vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "DRAFT" } as any)
+
+    await expect(
+      updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: [{ poLineId: "pl1", amount: "500000" }] } as any, FINANCE)
+    ).rejects.toThrow("Bill the whole PO. Add Installation to this invoice: 100000.00 is still left on it.")
+    expect(prisma.invoice.update).not.toHaveBeenCalled()
+  })
+
   it("records who saved the draft, so that person cannot approve it (final review Fix 1)", async () => {
     vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "DRAFT", createdBy: "someone-else" } as any)
-    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: [{ poLineId: "pl1", amount: "500000" }] } as any, FINANCE)
+    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: FULL_LINES } as any, FINANCE)
     expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ updatedBy: FINANCE.sub }),
     }))
@@ -171,7 +249,7 @@ describe("updateInvoice", () => {
 
   it("clears the sent-back note when the draft is saved again", async () => {
     vi.mocked(prisma.invoice.findUnique).mockResolvedValue({ id: "inv1", poId: "po1", status: "DRAFT", rejectionNote: "Wrong number" } as any)
-    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: [{ poLineId: "pl1", amount: "500000" }] } as any, FINANCE)
+    await updateInvoice("inv1", { invoiceNumber: "INV-2026-041", date: "2026-09-23", lines: FULL_LINES } as any, FINANCE)
     expect(prisma.invoice.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ rejectionNote: null, sentBackBy: null, sentBackAt: null }),
     }))
