@@ -1977,13 +1977,21 @@ export interface Invoice {
   lines: InvoiceLine[]
 }
 
+/** How the customer paid. Mirrors the server's `ReceiptPaymentMethod` enum. */
+export type ReceiptPaymentMethod = "CASH" | "BANK_TRANSFER" | "CHEQUE" | "MOBILE_BANKING"
+
 export interface Receipt {
   id: string
+  /** The money receipt number, `MR-0001`. Made by the server. */
+  number: string
   /** The one deal this receipt belongs to (spec: every document belongs to one deal). */
   opportunityId: string
   date: string
   amount: string
   reference: string | null
+  /** Null only on a receipt saved before the method existed. */
+  paymentMethod: ReceiptPaymentMethod | null
+  bankName: string | null
   status: ReceivableDocStatus
   approvedBy: string
   approvedAt: string

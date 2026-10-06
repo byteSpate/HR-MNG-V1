@@ -5,12 +5,14 @@ import { useMutation } from "@tanstack/react-query"
 
 import { createReceipt, type ReceiptInput } from "@/lib/api/receipt"
 import { useSession } from "@/lib/auth/session-context"
-import type { DealMoneyInvoice, Receipt } from "@/lib/api/types"
+import type { DealMoneyInvoice, Receipt, ReceiptPaymentMethod } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
+import { paymentMethodLabel, RECEIPT_PAYMENT_METHODS } from "@/lib/receipt-method"
 import { DialogActions, Field, FormError, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -64,6 +66,8 @@ export function ReceiptDialog({
   const [date, setDate] = useState(today())
   const [amount, setAmount] = useState("")
   const [reference, setReference] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<ReceiptPaymentMethod | "">("")
+  const [bankName, setBankName] = useState("")
   const [taxOpen, setTaxOpen] = useState(false)
   const [vdsAmount, setVdsAmount] = useState("")
   const [vdsCertificateRef, setVdsCertificateRef] = useState("")
@@ -82,7 +86,7 @@ export function ReceiptDialog({
   // over (an advance, removed) or allocated past what it settles.
   const matches = Math.abs(settledTotal - allocatedTotal) < 0.005
 
-  const canSubmit = Boolean(date && Number(amount) > 0 && allocatedTotal > 0 && matches)
+  const canSubmit = Boolean(date && paymentMethod && Number(amount) > 0 && allocatedTotal > 0 && matches)
 
   const save = useMutation({
     mutationFn: (input: ReceiptInput) => createReceipt(accessToken!, input),
@@ -94,6 +98,7 @@ export function ReceiptDialog({
   })
 
   const submit = () => {
+    if (!paymentMethod) return
     const allocations = Object.entries(allocated)
       .filter(([, v]) => Number(v) > 0)
       .map(([invoiceId, v]) => ({ invoiceId, amount: v }))
@@ -102,6 +107,8 @@ export function ReceiptDialog({
       date,
       amount,
       reference: reference.trim() || undefined,
+      paymentMethod,
+      bankName: bankName.trim() || undefined,
       vdsAmount: vdsAmount || undefined,
       vdsCertificateRef: vdsCertificateRef.trim() || undefined,
       vdsCertificateDate: vdsCertificateDate || undefined,
@@ -127,11 +134,28 @@ export function ReceiptDialog({
             <Field label="Date" htmlFor="rcpt-date">
               <Input id="rcpt-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
+            <Field label="How was it paid?" htmlFor="rcpt-method">
+              <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod((v as ReceiptPaymentMethod | null) ?? "")}>
+                <SelectTrigger id="rcpt-method" className="w-full">
+                  <SelectValue>{() => (paymentMethod ? paymentMethodLabel(paymentMethod) : "Pick one")}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {RECEIPT_PAYMENT_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {paymentMethodLabel(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Amount received (BDT)" htmlFor="rcpt-amount">
               <Input id="rcpt-amount" type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </Field>
             <Field label="Reference" htmlFor="rcpt-reference">
               <Input id="rcpt-reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="TT-4471" />
+            </Field>
+            <Field label="Bank name" htmlFor="rcpt-bank" hint="Leave this empty for cash.">
+              <Input id="rcpt-bank" value={bankName} maxLength={100} onChange={(e) => setBankName(e.target.value)} />
             </Field>
           </div>
 
