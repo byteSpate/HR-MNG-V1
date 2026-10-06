@@ -9,6 +9,7 @@ import { toLedgerDate } from "../accounting/accounting.utils"
 import { loadRules } from "../posting/posting.rules"
 import { assertDealAccess } from "./receivables.access"
 import { assertReceivable } from "./receipt.allocation"
+import { nextReceiptNumber } from "./receipt.number"
 import { buildReceiptLines, receiptPosition } from "./receipt.posting"
 import type { CertificatesInput, CreateReceiptInput } from "./receipt.validators"
 
@@ -97,8 +98,10 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
     await assertReceivable(tx, customer.id, allocations)
 
     const now = new Date()
+    const number = await nextReceiptNumber(tx)
     const receipt = await tx.receipt.create({
       data: {
+        number,
         customerId: customer.id,
         opportunityId: deal.id,
         date: new Date(input.date),
@@ -110,6 +113,8 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
         aitCertificateRef: input.aitCertificateRef ?? null,
         aitCertificateDate: input.aitCertificateDate ? new Date(input.aitCertificateDate) : null,
         reference: input.reference ?? null,
+        paymentMethod: input.paymentMethod,
+        bankName: input.bankName || null,
         status: "APPROVED",
         approvedBy: actor.sub,
         approvedAt: now,
@@ -130,7 +135,7 @@ export async function createReceipt(input: CreateReceiptInput, actor: AccessToke
 
     await writeAudit(tx, {
       entity: "RECEIPT", entityId: receipt.id, action: "CREATE", changedBy: actor.sub,
-      after: { amount: receipt.amount, vdsAmount: receipt.vdsAmount, aitAmount: receipt.aitAmount, opportunityId: deal.id },
+      after: { number: receipt.number, amount: receipt.amount, vdsAmount: receipt.vdsAmount, aitAmount: receipt.aitAmount, opportunityId: deal.id },
     })
     return receipt
   })
