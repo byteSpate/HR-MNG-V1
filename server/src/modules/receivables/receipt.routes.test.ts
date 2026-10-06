@@ -11,6 +11,7 @@ vi.mock("./receipt.posting", () => ({ reverseReceipt: vi.fn() }))
 vi.mock("./receipt.pdf", () => ({ renderReceiptPdf: vi.fn() }))
 
 import app from "../../app"
+import { AppError } from "../../middleware/errorHandler"
 import { signAccessToken } from "../auth/auth.utils"
 import { listReceipts } from "./receipt.service"
 import { reverseReceipt } from "./receipt.posting"
@@ -76,6 +77,24 @@ describe("GET /api/receipts/:id/pdf", () => {
     expect(res.headers["content-type"]).toContain("application/pdf")
     expect(res.headers["content-disposition"]).toBe('attachment; filename="MR-0001.pdf"')
     expect(renderReceiptPdf).toHaveBeenCalledWith("r1", expect.objectContaining({ sub: "actor-1", role: "FINANCE_OFFICER" }))
+  })
+
+  it("passes a refusal from the service on, with its own sentence", async () => {
+    vi.mocked(renderReceiptPdf).mockRejectedValue(new AppError(403, "You do not have access to this Opportunity"))
+
+    const res = await request(app).get("/api/receipts/r1/pdf").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+
+    expect(res.status).toBe(403)
+    expect(res.body).toEqual({ error: "You do not have access to this Opportunity" })
+  })
+
+  it("says Receipt not found for an unknown receipt", async () => {
+    vi.mocked(renderReceiptPdf).mockRejectedValue(new AppError(404, "Receipt not found"))
+
+    const res = await request(app).get("/api/receipts/nope/pdf").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({ error: "Receipt not found" })
   })
 
   it("is open to any signed-in user at the route, because the service checks access to the Opportunity", async () => {
