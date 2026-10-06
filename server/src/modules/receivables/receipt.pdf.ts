@@ -22,16 +22,13 @@ const METHOD_LABEL: Record<ReceiptPaymentMethod, string> = {
 }
 
 type Money = Prisma.Decimal
-type Lines = Array<{ amount: Money; vatAmount: Money }>
 
-/** What the page needs, as loaded from the database. Kept plain so the
- *  balance rule can be tested without a database. */
+/** What the page needs, as loaded from the database. Kept plain so it can be
+ *  tested without a database. */
 export interface ReceiptPdfSource {
   id: string
   number: string
   date: Date
-  /** When the receipt was saved. The order of payments follows this, not `date`. */
-  createdAt: Date
   amount: Money
   vdsAmount: Money
   aitAmount: Money
@@ -48,14 +45,11 @@ export interface ReceiptPdfSource {
   allocations: Array<{
     /** Gross: cash plus the share of tax the customer kept back. */
     amount: Money
-    invoice: {
-      invoiceNumber: string
-      lines: Lines
-      /** Approved credit notes only. */
-      creditNotes: Array<{ approvedAt: Date | null; lines: Lines }>
-      /** Every payment on this invoice, from every receipt. */
-      allocations: Array<{ amount: Money; receipt: { id: string; createdAt: Date; status: ReceivableDocStatus } }>
-    }
+    /** Saved with the payment. They never change, so this page always
+     *  matches the receipt the customer was given. */
+    invoiceTotal: Money
+    balanceAfter: Money
+    invoice: { invoiceNumber: string }
   }>
 }
 
@@ -71,46 +65,25 @@ export interface ReceiptPdfData {
   bankName: string | null
   reference: string | null
   recordedBy: string | null
-  /** Set only for a reversed receipt. The number and the amounts stay. */
+  /** Set only for a reversed receipt. The number, the amounts and the saved balance stay. */
   reversed: { on: string; reason: string } | null
   invoices: Array<{
     invoiceNumber: string
     invoiceTotal: string
     thisPayment: string
-    /** Null on a reversed receipt, because that payment did not count. */
-    balanceAfter: string | null
+    balanceAfter: string
   }>
-}
-
-const grossOf = (lines: Lines): Money => lines.reduce((sum, l) => sum.plus(l.amount).plus(l.vatAmount), ZERO)
-
-/** A payment counts toward this receipt's balance when it was saved before it,
- *  or at the same moment with an id that sorts first. Same order every time. */
-function savedAtOrBefore(other: { createdAt: Date; id: string }, me: { createdAt: Date; id: string }): boolean {
-  const a = other.createdAt.getTime()
-  const b = me.createdAt.getTime()
-  return a < b || (a === b && other.id <= me.id)
 }
 
 export function buildReceiptPdfData(src: ReceiptPdfSource): ReceiptPdfData {
   const reversed = src.status === "REVERSED"
 
-  const invoices = src.allocations.map(({ amount, invoice }) => {
-    const credited = invoice.creditNotes
-      .filter((note) => note.approvedAt !== null && note.approvedAt.getTime() <= src.createdAt.getTime())
-      .reduce((sum, note) => sum.plus(grossOf(note.lines)), ZERO)
-    const total = grossOf(invoice.lines).minus(credited)
-    const paidUpToHere = invoice.allocations
-      .filter((a) => a.receipt.status === "APPROVED" && savedAtOrBefore(a.receipt, src))
-      .reduce((sum, a) => sum.plus(a.amount), ZERO)
-
-    return {
-      invoiceNumber: invoice.invoiceNumber,
-      invoiceTotal: total.toFixed(2),
-      thisPayment: amount.toFixed(2),
-      balanceAfter: reversed ? null : total.minus(paidUpToHere).toFixed(2),
-    }
-  })
+  const invoices = src.allocations.map((a) => ({
+    invoiceNumber: a.invoice.invoiceNumber,
+    invoiceTotal: a.invoiceTotal.toFixed(2),
+    thisPayment: a.amount.toFixed(2),
+    balanceAfter: a.balanceAfter.toFixed(2),
+  }))
 
   return {
     number: src.number,
@@ -133,7 +106,6 @@ const bdt = (value: string) => formatBdt(new Prisma.Decimal(value))
 const esc = escapeHtml
 
 export function buildReceiptHtml(data: ReceiptPdfData, company: { name: string; address: string; logo: string | null }): string {
-  const showBalance = data.reversed === null
   const rows = data.invoices
     .map(
       (i) => `
@@ -141,7 +113,7 @@ export function buildReceiptHtml(data: ReceiptPdfData, company: { name: string; 
           <td>${esc(i.invoiceNumber)}</td>
           <td class="num">${bdt(i.invoiceTotal)}</td>
           <td class="num">${bdt(i.thisPayment)}</td>
-          ${showBalance ? `<td class="num">${bdt(i.balanceAfter ?? "0")}</td>` : ""}
+          <td class="num">${bdt(i.balanceAfter)}</td>
         </tr>`
     )
     .join("")
@@ -194,12 +166,12 @@ export function buildReceiptHtml(data: ReceiptPdfData, company: { name: string; 
       <thead>
         <tr>
           <th>Invoice</th><th class="num">Invoice total</th><th class="num">This payment</th>
-          ${showBalance ? `<th class="num">Balance after this payment</th>` : ""}
+          <th class="num">Balance after this payment</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
       <tfoot>
-        <tr><td colspan="2">Total paid against invoices</td><td class="num">${bdt(totalPaid)}</td>${showBalance ? "<td></td>" : ""}</tr>
+        <tr><td colspan="2">Total paid against invoices</td><td class="num">${bdt(totalPaid)}</td><td></td></tr>
       </tfoot>
     </table>
     <div class="note muted">All amounts are in BDT.</div>
@@ -215,27 +187,14 @@ export async function renderReceiptPdf(id: string, actor: AccessTokenPayload): P
   const receipt = await prisma.receipt.findUnique({
     where: { id },
     select: {
-      id: true, number: true, date: true, createdAt: true, amount: true, vdsAmount: true, aitAmount: true,
+      id: true, number: true, date: true, amount: true, vdsAmount: true, aitAmount: true,
       reference: true, paymentMethod: true, bankName: true, status: true, reversedAt: true, reversalReason: true,
       createdBy: true, opportunityId: true,
       customer: { select: { legalName: true } },
       opportunity: { select: { serial: true, name: true } },
       allocations: {
         orderBy: { createdAt: "asc" },
-        select: {
-          amount: true,
-          invoice: {
-            select: {
-              invoiceNumber: true,
-              lines: { select: { amount: true, vatAmount: true } },
-              creditNotes: {
-                where: { status: "APPROVED" },
-                select: { approvedAt: true, lines: { select: { amount: true, vatAmount: true } } },
-              },
-              allocations: { select: { amount: true, receipt: { select: { id: true, createdAt: true, status: true } } } },
-            },
-          },
-        },
+        select: { amount: true, invoiceTotal: true, balanceAfter: true, invoice: { select: { invoiceNumber: true } } },
       },
     },
   })
