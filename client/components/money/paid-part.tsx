@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
-import { RiAddLine, RiArrowGoBackLine, RiFileTextLine } from "@remixicon/react"
+import { RiAddLine, RiArrowGoBackLine, RiDownloadLine, RiFileTextLine } from "@remixicon/react"
 
-import { reverseReceipt } from "@/lib/api/receipt"
+import { downloadReceiptPdf, reverseReceipt } from "@/lib/api/receipt"
 import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneyInvoice, Receipt } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
+import { paymentMethodLabel } from "@/lib/receipt-method"
+import { downloadBlob } from "@/components/payroll/payroll-shared"
 import { CertificateDialog } from "@/components/money/certificate-dialog"
 import { invoiceStillOwed, ReceiptDialog } from "@/components/money/receipt-dialog"
 import { DialogActions, Field, FormError, PanelAlert, RowActions, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -60,6 +62,14 @@ export function PaidPart({
     onError: (err) => setError(toMessage(err)),
   })
 
+  // Every role that can see this section can download the PDF of a receipt
+  // it can see. The server checks access to the Opportunity again.
+  const download = useMutation({
+    mutationFn: async (receipt: Receipt) => ({ blob: await downloadReceiptPdf(accessToken!, receipt.id), number: receipt.number }),
+    onSuccess: ({ blob, number }) => downloadBlob(blob, `${number}.pdf`),
+    onError: () => setError("Could not download the receipt. Please try again."),
+  })
+
   // A control that cannot do anything is a bug: "Record payment received"
   // is hidden, not shown with an always-empty picker, when no approved
   // invoice on this deal has money still owed. Same rule as "Pay supplier"
@@ -95,6 +105,7 @@ export function PaidPart({
             const missingVds = Number(r.vdsAmount) > 0 && !r.vdsCertificateRef
             const missingAit = Number(r.aitAmount) > 0 && !r.aitCertificateRef
             const actions = [
+              { kind: "custom" as const, label: "Download PDF", icon: <RiDownloadLine className="size-3.5" aria-hidden />, onClick: () => { setError(null); download.mutate(r) } },
               ...(canEdit && !reversed && (missingVds || missingAit)
                 ? [{ kind: "custom" as const, label: "Add certificate", icon: <RiFileTextLine className="size-3.5" aria-hidden />, onClick: () => { setError(null); setCertifying(r) } }]
                 : []),
@@ -107,10 +118,15 @@ export function PaidPart({
               <li key={r.id} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className={`min-w-0 ${reversed ? "line-through opacity-60" : ""}`}>
+                    <div className="text-[12px] font-bold tracking-wide">{r.number}</div>
                     <div className="text-[13.5px] font-bold">{formatMoney(r.amount, "BDT")}</div>
                     <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
                       {formatDate(r.date)}
                       {r.reference ? ` · ${r.reference}` : ""}
+                    </div>
+                    <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                      {paymentMethodLabel(r.paymentMethod)}
+                      {r.bankName ? ` · ${r.bankName}` : ""}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
