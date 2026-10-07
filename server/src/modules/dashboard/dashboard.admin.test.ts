@@ -267,3 +267,51 @@ describe("card isolation", () => {
     expect(cardBy(payload, "This month's payroll").failed).toBeUndefined()
   })
 })
+
+describe("round trips", () => {
+  it("counts payroll runs and settlements once, not twice", async () => {
+    await buildAdminDashboard(actor)
+
+    expect(prisma.payrollRun.count).toHaveBeenCalledTimes(1)
+    expect(prisma.settlement.count).toHaveBeenCalledTimes(1)
+  })
+
+  it("starts the reads that need no count without waiting for the counts", async () => {
+    let finishCount!: (n: number) => void
+    vi.mocked(prisma.payrollRun.count).mockReturnValue(
+      new Promise<number>((resolve) => {
+        finishCount = resolve
+      }) as never
+    )
+
+    const pending = buildAdminDashboard(actor)
+    await vi.advanceTimersByTimeAsync(0)
+
+    // The chart and the waiting table read payrollRun.findMany, and the
+    // headcount sparkline reads employee.findMany. Before the fix they started
+    // only after the first wave of counts had finished.
+    expect(prisma.payrollRun.findMany).toHaveBeenCalled()
+    expect(prisma.employee.findMany).toHaveBeenCalled()
+
+    finishCount(0)
+    await pending
+  })
+
+  it("still shows the other cards when one card's own read fails", async () => {
+    vi.mocked(prisma.employee.count).mockRejectedValue(new Error("db down"))
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    const payload = await buildAdminDashboard(actor)
+
+    expect(cardBy(payload, "Total employees").failed).toBe(true)
+    expect(cardBy(payload, "Awaiting your approval").failed).toBeUndefined()
+    expect(cardBy(payload, "Attendance backlog").failed).toBeUndefined()
+  })
+
+  it("fails as a whole when a badge count fails, as it did before", async () => {
+    vi.mocked(prisma.attendance.count).mockRejectedValue(new Error("db down"))
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    await expect(buildAdminDashboard(actor)).rejects.toThrow("db down")
+  })
+})

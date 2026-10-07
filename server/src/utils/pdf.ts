@@ -14,7 +14,15 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import type { Browser, PDFOptions } from "puppeteer"
 
+import { createLimiter } from "./limiter"
+
 let browserPromise: Promise<Browser> | null = null
+
+/**
+ * One shared Chromium on a 512 MB dyno. Each open page costs memory, so only
+ * two documents are made at once. The rest wait, for up to 30 seconds.
+ */
+const limit = createLimiter(2, 30_000)
 
 /**
  * Never launched at import time, and never in tests — puppeteer is imported
@@ -59,20 +67,22 @@ for (const signal of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
  * out its own timeout for nothing.
  */
 export async function renderPdf(html: string, options: PDFOptions = {}): Promise<Buffer> {
-  const page = await (await getBrowser()).newPage()
-  try {
-    await page.setContent(html, { waitUntil: "load" })
-    return Buffer.from(
-      await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "12mm", bottom: "14mm", left: "10mm", right: "10mm" },
-        ...options,
-      })
-    )
-  } finally {
-    await page.close().catch(() => undefined)
-  }
+  return limit(async () => {
+    const page = await (await getBrowser()).newPage()
+    try {
+      await page.setContent(html, { waitUntil: "load" })
+      return Buffer.from(
+        await page.pdf({
+          format: "A4",
+          printBackground: true,
+          margin: { top: "12mm", bottom: "14mm", left: "10mm", right: "10mm" },
+          ...options,
+        })
+      )
+    } finally {
+      await page.close().catch(() => undefined)
+    }
+  })
 }
 
 /**

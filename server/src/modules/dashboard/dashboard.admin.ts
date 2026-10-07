@@ -19,13 +19,15 @@ import { headcountSeries, payrollSeries } from "./dashboard.series"
 import { toneFor } from "./dashboard.tone"
 import type { DashboardPayload, DashboardStat, TableCell } from "./dashboard.types"
 
+type ApprovalQueue = { runs: number; settlements: number; total: number }
+
 /**
  * What is actually waiting on this person's decision.
  *
  * A `DRAFT` settlement that was never calculated is a stub, not a queued
  * decision — counting it puts a number on the card that nobody can action.
  */
-async function approvalQueue(): Promise<{ runs: number; settlements: number; total: number }> {
+async function approvalQueue(): Promise<ApprovalQueue> {
   const [runs, settlements] = await Promise.all([
     prisma.payrollRun.count({ where: { status: "SUBMITTED" } }),
     prisma.settlement.count({ where: { status: "DRAFT", calculatedAt: { not: null } } }),
@@ -33,14 +35,15 @@ async function approvalQueue(): Promise<{ runs: number; settlements: number; tot
   return { runs, settlements, total: runs + settlements }
 }
 
-async function awaitingApprovalCard(count: number): Promise<DashboardStat> {
-  const { runs, settlements } = await approvalQueue()
+// Takes the queue that was already counted. It must not count again.
+function awaitingApprovalCard(queue: ApprovalQueue): DashboardStat {
+  const { runs, settlements, total } = queue
   return {
     label: "Awaiting your approval",
-    value: String(count),
+    value: String(total),
     sub: `${runs} payroll run${runs === 1 ? "" : "s"} · ${settlements} settlement${settlements === 1 ? "" : "s"}`,
-    tag: count === 0 ? "Clear" : "Action needed",
-    tone: toneFor.blockers(count),
+    tag: total === 0 ? "Clear" : "Action needed",
+    tone: toneFor.blockers(total),
     href: "/admin/payroll",
   }
 }
@@ -162,28 +165,32 @@ async function approvalRows(): Promise<TableCell[][]> {
 }
 
 export async function buildAdminDashboard(actor: AccessTokenPayload): Promise<DashboardPayload> {
-  // Counted once and used by both the card and the nav badge. Two sources
-  // drift, and the one that drifts is always the one nobody is looking at.
-  const [queue, attendanceBacklog, assetQueue, moneyWaiting] = await Promise.all([
-    approvalQueue(),
-    prisma.attendance.count({ where: { approval: "PENDING" } }),
-    // Requests still waiting on somebody, plus handovers the holder has not
-    // confirmed. Both are work; a fulfilled request and an acknowledged
-    // handover are not, and must not keep the badge lit.
-    Promise.all([
-      prisma.assetRequest.count({ where: { status: { in: ["PENDING", "APPROVED", "ORDERED"] } } }),
-      prisma.assetAssignment.count({ where: { returnedAt: null, acknowledgedAt: null } }),
-    ]).then(([requests, unacknowledged]) => requests + unacknowledged),
-    countWaitingForApproval(),
-  ])
+  // Every read starts now. The counts are counted once and used by both the
+  // card and the nav badge: two sources drift, and the one that drifts is
+  // always the one nobody is looking at. Only the cards that show a count wait
+  // for it. The rest do not need it, so they must not wait.
+  const queueP = approvalQueue()
+  const attendanceBacklogP = prisma.attendance.count({ where: { approval: "PENDING" } })
+  // Requests still waiting on somebody, plus handovers the holder has not
+  // confirmed. Both are work; a fulfilled request and an acknowledged
+  // handover are not, and must not keep the badge lit.
+  const assetQueueP = Promise.all([
+    prisma.assetRequest.count({ where: { status: { in: ["PENDING", "APPROVED", "ORDERED"] } } }),
+    prisma.assetAssignment.count({ where: { returnedAt: null, acknowledgedAt: null } }),
+  ]).then(([requests, unacknowledged]) => requests + unacknowledged)
+  const moneyWaitingP = countWaitingForApproval()
 
-  const [stats, bars, waiting] = await Promise.all([
+  const [queue, attendanceBacklog, assetQueue, moneyWaiting, stats, bars, waiting] = await Promise.all([
+    queueP,
+    attendanceBacklogP,
+    assetQueueP,
+    moneyWaitingP,
     settleCards([
-      { label: "Awaiting your approval", build: () => awaitingApprovalCard(queue.total) },
+      { label: "Awaiting your approval", build: async () => awaitingApprovalCard(await queueP) },
       { label: "Total employees", build: () => headcountCard() },
       { label: "This month's payroll", build: () => currentPayrollCard("/admin/payroll") },
-      { label: "Attendance backlog", build: () => attendanceBacklogCard(attendanceBacklog) },
-      { label: "Waiting for approval", build: async () => waitingForApprovalCard(moneyWaiting) },
+      { label: "Attendance backlog", build: async () => attendanceBacklogCard(await attendanceBacklogP) },
+      { label: "Waiting for approval", build: async () => waitingForApprovalCard(await moneyWaitingP) },
     ]),
     payrollSeries(6),
     approvalRows(),

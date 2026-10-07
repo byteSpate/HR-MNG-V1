@@ -1,0 +1,11 @@
+[
+  { "name": "dashboard-admin", "as": "admin", "path": "/api/dashboard" },
+  { "name": "dashboard-hr", "as": "hr", "path": "/api/dashboard" },
+  { "name": "dashboard-finance", "as": "finance", "path": "/api/dashboard" },
+  { "name": "events-feed", "as": "admin", "path": "/api/events?limit=20" },
+  { "name": "employees", "as": "admin", "path": "/api/employees" },
+  { "name": "assets", "as": "admin", "path": "/api/assets" },
+  { "name": "deal-money-list", "as": "finance", "path": "/api/deal-money/deals" },
+  { "name": "trial-balance", "as": "finance", "path": "/api/accounting/trial-balance?from=2026-01-01&to=2026-12-31" },
+  { "name": "statements-notes", "as": "finance", "path": "/api/statements/notes?from=2026-01-01&to=2026-12-31" }
+]
