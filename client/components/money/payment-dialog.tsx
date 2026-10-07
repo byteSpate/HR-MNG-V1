@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query"
 import { createSupplierPayment, type SupplierPaymentInput } from "@/lib/api/supplierPayment"
 import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneySupplierBill, SupplierPayment, SupplierPaymentMethod } from "@/lib/api/types"
+import { billPayments, payOneBill } from "@/lib/bill-payments"
 import { formatMoney } from "@/lib/money"
 import { SUPPLIER_PAYMENT_METHODS, supplierMethodLabel } from "@/lib/supplier-payment-method"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
@@ -30,12 +31,7 @@ function today(): string {
  * this deal is still waiting for approval must not appear as payable).
  */
 export function billStillOwed(bill: DealMoneySupplierBill): number {
-  const gross = bill.lines.reduce((s, l) => s + Number(l.amount) + Number(l.vatAmount), 0)
-  const paid = bill.allocations.reduce((s, a) => s + Number(a.amount), 0)
-  const credited = bill.creditNotes
-    .filter((cn) => cn.status === "APPROVED")
-    .reduce((s, cn) => s + cn.lines.reduce((s2, l) => s2 + Number(l.amount) + Number(l.vatAmount), 0), 0)
-  return gross - paid - credited
+  return Number(billPayments(bill).balance)
 }
 
 /**
@@ -53,6 +49,7 @@ export function PaymentDialog({
   onOpenChange,
   opportunityId,
   bills,
+  onlyBillId,
   onSaved,
 }: {
   open: boolean
@@ -61,12 +58,16 @@ export function PaymentDialog({
   /** This deal's supplier bills, any status — filtered here to the chosen
    *  supplier's approved, still-owed ones. */
   bills: DealMoneySupplierBill[]
+  /** Set when Finance opens this from one bill's own row. Everything paid
+   *  then goes to that bill, so nothing is typed twice. */
+  onlyBillId?: string
   onSaved: (payment: SupplierPayment) => void
 }) {
   const { accessToken } = useSession()
-  const [supplierId, setSupplierId] = useState("")
+  const onlyBill = onlyBillId ? bills.find((b) => b.id === onlyBillId) : undefined
+  const [supplierId, setSupplierId] = useState(onlyBill?.supplierId ?? "")
   const [date, setDate] = useState(today())
-  const [currency, setCurrency] = useState<"BDT" | "USD">("BDT")
+  const [currency, setCurrency] = useState<"BDT" | "USD">(onlyBill?.currency ?? "BDT")
   const [amount, setAmount] = useState("")
   const [reference, setReference] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<SupplierPaymentMethod | "">("")
@@ -101,12 +102,18 @@ export function PaymentDialog({
     return billStillOwed(bill)
   }
 
-  const allocatedTotal = Object.values(allocated).reduce((s, v) => s + (Number(v) || 0), 0)
+  // From one bill's row, everything paid goes to that bill.
+  const one = onlyBill ? payOneBill(amount, leftOn(onlyBill).toFixed(2)) : null
+  const effectiveAllocated: Record<string, string> = onlyBill
+    ? Number(one!.amount) > 0 ? { [onlyBill.id]: one!.amount } : {}
+    : allocated
+
+  const allocatedTotal = Object.values(effectiveAllocated).reduce((s, v) => s + (Number(v) || 0), 0)
   // Exactly, not "at most" — no advance: the server refuses a payment with
   // money left over or allocated past what it settles.
   const matches = Math.abs((Number(amount) || 0) - allocatedTotal) < 0.005
 
-  const canSubmit = Boolean(supplierId && date && paymentMethod && Number(amount) > 0 && allocatedTotal > 0 && matches)
+  const canSubmit = Boolean(supplierId && date && paymentMethod && Number(amount) > 0 && allocatedTotal > 0 && matches && !one?.tooMuch)
 
   const changeScope = (apply: () => void) => {
     apply()
@@ -124,7 +131,7 @@ export function PaymentDialog({
 
   const submit = () => {
     if (!paymentMethod) return
-    const allocations = Object.entries(allocated)
+    const allocations = Object.entries(effectiveAllocated)
       .filter(([, v]) => Number(v) > 0)
       .map(([billId, v]) => ({ billId, amount: v }))
     save.mutate({
@@ -150,18 +157,18 @@ export function PaymentDialog({
 
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Supplier" htmlFor="pay-supplier">
+            {onlyBill ? null : <Field label="Supplier" htmlFor="pay-supplier">
               <select id="pay-supplier" className={SELECT} value={supplierId} onChange={(e) => changeScope(() => setSupplierId(e.target.value))}>
                 <option value="">Choose a supplier</option>
                 {supplierOptions.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
-            </Field>
+            </Field>}
             <Field label="Payment date" htmlFor="pay-date">
               <Input id="pay-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
-            <Field
+            {onlyBill ? null : <Field
               label="Currency"
               htmlFor="pay-currency"
               hint={currency === "USD" ? "A US dollar bill is paid in US dollars only. Any gap to the bill's own rate is posted as an exchange gain or loss." : undefined}
@@ -170,7 +177,7 @@ export function PaymentDialog({
                 <option value="BDT">BDT</option>
                 <option value="USD">USD</option>
               </select>
-            </Field>
+            </Field>}
             <Field label={`Amount paid (${currency})`} htmlFor="pay-amount">
               <Input id="pay-amount" type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </Field>
@@ -192,7 +199,17 @@ export function PaymentDialog({
 
           <section className="space-y-2">
             <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Bills this pays</h3>
-            {!supplierId ? (
+            {onlyBill ? (
+              <div className="rounded-md border border-[#E4E9EF] p-3">
+                <div className="text-[13px] font-semibold">This payment is for bill {onlyBill.billNumber} from {onlyBill.supplier.name}.</div>
+                <div className={`text-[11.5px] ${TONE.muted}`}>Still owed {formatMoney(leftOn(onlyBill).toFixed(2), currency)}</div>
+                {one?.tooMuch ? (
+                  <p role="status" className="mt-1 text-[12.5px] font-semibold text-[#8A5E0C]">
+                    This is more than the bill still owes. Lower the amount paid.
+                  </p>
+                ) : null}
+              </div>
+            ) : !supplierId ? (
               <p className={`text-[12.5px] ${TONE.muted}`}>Choose a supplier to see what is still owed on this Opportunity.</p>
             ) : candidates.length === 0 ? (
               <p className={`text-[12.5px] ${TONE.muted}`}>
