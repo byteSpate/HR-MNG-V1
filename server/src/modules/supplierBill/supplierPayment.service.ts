@@ -19,6 +19,8 @@ import { toLedgerDate } from "../accounting/accounting.utils"
 import { loadRules } from "../posting/posting.rules"
 import { assertDealAccess } from "../receivables/receivables.access"
 import { assertAllocatable } from "./supplierBill.allocation"
+import { loadBillFigures, savedFigures } from "./supplierPayment.figures"
+import { nextPaymentVoucherNumber } from "./supplierPayment.number"
 import { buildSupplierPaymentLines } from "./supplierPayment.posting"
 import type { CreateSupplierPaymentInput } from "./supplierPayment.validators"
 
@@ -115,9 +117,16 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
     // and this write.
     await assertAllocatable(tx, input.supplierId, allocations)
 
+    // Saved with each payment and never worked out again: the bill total and
+    // what is still owed once this payment counts. Read in the same
+    // transaction that checked the balance, so the two cannot disagree.
+    const figures = savedFigures(allocations, await loadBillFigures(tx, [...new Set(allocations.map((a) => a.billId))]))
+    const number = await nextPaymentVoucherNumber(tx)
+
     const now = new Date()
     const payment = await tx.supplierPayment.create({
       data: {
+        number,
         supplierId: input.supplierId,
         opportunityId: deal.id,
         date: new Date(input.date),
@@ -126,11 +135,23 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
         currency: input.currency,
         fxRateToBdt: rate ? rate.toFixed(6) : null,
         reference: input.reference ?? null,
+        paymentMethod: input.paymentMethod,
+        bankName: input.bankName || null,
         status: "APPROVED",
         approvedBy: actor.sub,
         approvedAt: now,
         createdBy: actor.sub,
-        allocations: { create: allocations },
+        allocations: {
+          create: figures.map((f) => ({
+            billId: f.billId,
+            amount: f.amount.toFixed(2),
+            amountUsd: f.amountUsd?.toFixed(2) ?? null,
+            billTotal: f.billTotal.toFixed(2),
+            balanceAfter: f.balanceAfter.toFixed(2),
+            billTotalUsd: f.billTotalUsd?.toFixed(2) ?? null,
+            balanceAfterUsd: f.balanceAfterUsd?.toFixed(2) ?? null,
+          })),
+        },
       },
       include: { allocations: true, supplier: { select: { name: true } } },
     })
@@ -149,7 +170,7 @@ export async function createSupplierPayment(input: CreateSupplierPaymentInput, a
       entityId: payment.id,
       action: "CREATE",
       changedBy: actor.sub,
-      after: { supplierId: payment.supplierId, amount: payment.amount, opportunityId: deal.id },
+      after: { number: payment.number, supplierId: payment.supplierId, amount: payment.amount, opportunityId: deal.id },
     })
 
     return payment
