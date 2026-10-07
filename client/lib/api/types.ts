@@ -3798,6 +3798,74 @@ export interface AccountProfile {
   canManage: boolean
 }
 
+// ── Heatmap (owner, 2026-10-07). Mirrors server sales.types.ts ────────────
+export type HeatmapColour = "GREEN" | "YELLOW" | "RED" | "GREY"
+export type HeatmapNeed = "NEED" | "NO_NEED" | "NOT_ASKED"
+
+export interface HeatmapFieldView {
+  key: string
+  label: string
+  type: "TEXT" | "NUMBER" | "YES_NO" | "CHOICE" | "DATE"
+  options: string[] | null
+}
+
+export interface HeatmapItemView {
+  id: string
+  brand: string
+  model: string | null
+  quantity: number
+  site: string | null
+  boughtFrom: string | null
+  /** Calendar days, YYYY-MM-DD. */
+  boughtOn: string | null
+  supportEndsOn: string | null
+  endOfLifeOn: string | null
+  supportBy: string | null
+  notes: string | null
+  details: Record<string, string>
+  recordedByName: string | null
+  recordedAt: string
+}
+
+export interface HeatmapCardView {
+  key: string
+  group: string
+  title: string
+  quantityLabel: string
+  endsLabel: string
+  extras: HeatmapFieldView[]
+  need: HeatmapNeed
+  needReason: string | null
+  needByName: string | null
+  needAt: string | null
+  colour: HeatmapColour
+  /** The sentence that explains the colour, written by the server. */
+  reason: string
+  chanceFrom: string | null
+  items: HeatmapItemView[]
+}
+
+export interface AccountHeatmap {
+  groups: { key: string; title: string }[]
+  cards: HeatmapCardView[]
+  counts: Record<HeatmapColour, number>
+  canManage: boolean
+}
+
+export interface HeatmapItemBody {
+  brand: string
+  model: string | null
+  quantity: number
+  site: string | null
+  boughtFrom: string | null
+  boughtOn: string | null
+  supportEndsOn: string | null
+  endOfLifeOn: string | null
+  supportBy: string | null
+  notes: string | null
+  details: Record<string, string>
+}
+
 /** Only what changed. A null answer clears it. */
 export interface UpdateAccountProfileBody {
   answers?: Record<string, { answer: string; detail?: string } | null>
