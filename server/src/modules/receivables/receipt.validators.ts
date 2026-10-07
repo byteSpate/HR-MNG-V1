@@ -4,7 +4,11 @@ const positiveMoney = z.string().refine((v) => Number(v) > 0, "Must be greater t
 const nonNegativeMoney = z.string().refine((v) => Number(v) >= 0, "Cannot be negative")
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD")
 
-export const RECEIPT_PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"] as const
+// No Cash: every receipt posts to the bank account in the books, so a Cash
+// label would be wrong. A receipt saved as Cash before this stays as it is (the
+// database still knows CASH, and the PDF still labels it). Cash comes back
+// when real cash posting is built.
+export const RECEIPT_PAYMENT_METHODS = ["BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"] as const
 
 export const createReceiptSchema = z.object({
   // The one deal this receipt belongs to (spec: every document belongs to

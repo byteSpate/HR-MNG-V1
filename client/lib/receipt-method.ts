@@ -1,7 +1,9 @@
 import type { ReceiptPaymentMethod } from "@/lib/api/types"
 
-/** In the order Finance sees them. Kept in step with the server by hand. */
-export const RECEIPT_PAYMENT_METHODS: readonly ReceiptPaymentMethod[] = ["CASH", "BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"]
+/** What Finance can pick for a new receipt, in this order. No Cash: every receipt posts
+ *  to the bank account, so Cash is only a label on a receipt saved before this change.
+ *  Kept in step with the server by hand. */
+export const RECEIPT_PAYMENT_METHODS: readonly ReceiptPaymentMethod[] = ["BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"]
 
 const LABEL: Record<ReceiptPaymentMethod, string> = {
   CASH: "Cash",

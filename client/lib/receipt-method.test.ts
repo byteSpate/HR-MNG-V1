@@ -14,8 +14,16 @@ test("an old receipt with no method says Not recorded", () => {
   assert.equal(paymentMethodLabel(null), "Not recorded")
 })
 
+test("Cash is not offered for a new receipt, because the books post every receipt to the bank", () => {
+  assert.ok(!(RECEIPT_PAYMENT_METHODS as readonly string[]).includes("CASH"))
+})
+
+test("an old receipt saved as Cash still reads Cash", () => {
+  assert.equal(paymentMethodLabel("CASH"), "Cash")
+})
+
 test("the list matches what the server accepts, in the order Finance sees it", () => {
-  assert.deepEqual([...RECEIPT_PAYMENT_METHODS], ["CASH", "BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"])
+  assert.deepEqual([...RECEIPT_PAYMENT_METHODS], ["BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"])
 })
 
 test("no label uses an em-dash", () => {
