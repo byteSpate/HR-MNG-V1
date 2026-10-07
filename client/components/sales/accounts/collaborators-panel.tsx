@@ -1,10 +1,12 @@
 "use client"
 
 /**
- * A Sales Account's collaborators. The Owner adds one directly and can ask for
- * one to be removed, which waits for a Sales Admin. A Sales Admin removes at
- * once. Everyone else just reads the list. Buttons that the server would
- * refuse are hidden; the server is the real gate.
+ * A Sales Account's collaborators, inside the Edit Sales Account dialog (owner,
+ * 2026-10-07; it used to be its own panel on the About tab). The Owner adds one
+ * directly and can ask for one to be removed, which waits for a Sales Admin. A
+ * Sales Admin removes at once. Buttons that the server would refuse are hidden;
+ * the server is the real gate. Each change saves at once, apart from the
+ * dialog's own Save changes button, and the section says so.
  */
 
 import { useState } from "react"
@@ -22,7 +24,6 @@ import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { SalesAccountSummary, SalesRemovalRequest } from "@/lib/api/types"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
-import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -36,7 +37,7 @@ function latestByPerson(rows: SalesRemovalRequest[]): Map<string, SalesRemovalRe
   return latest
 }
 
-export function CollaboratorsPanel({ account }: { account: SalesAccountSummary }) {
+export function CollaboratorsSection({ account }: { account: SalesAccountSummary }) {
   const { accessToken, user, status } = useSession()
   const queryClient = useQueryClient()
   const { can } = useSalesPermissions()
@@ -96,9 +97,16 @@ export function CollaboratorsPanel({ account }: { account: SalesAccountSummary }
   const options = optionsQuery.data ?? []
 
   return (
-    <Panel>
-      <PanelHeading title="Collaborators" />
-      {error ? <div className="mb-3"><PanelAlert>{error}</PanelAlert></div> : null}
+    <section className={`space-y-3 border-t pt-4 ${TONE.line}`} aria-labelledby="collaborators-heading">
+      <div>
+        <h3 id="collaborators-heading" className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>
+          Collaborators
+        </h3>
+        <p className={`mt-1 text-[12px] leading-relaxed ${TONE.muted}`}>
+          Each change here is saved at once. You do not need to press Save changes.
+        </p>
+      </div>
+      {error ? <PanelAlert>{error}</PanelAlert> : null}
 
       {account.assignees.length === 0 ? (
         <p className={`text-[13px] ${TONE.muted}`}>This Sales Account has no collaborators yet.</p>
@@ -154,7 +162,7 @@ export function CollaboratorsPanel({ account }: { account: SalesAccountSummary }
       )}
 
       {mayWrite ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={pick} onValueChange={(value) => setPick(value ?? "")}>
             <SelectTrigger className="w-64" aria-label="Add a collaborator">
               <SelectValue>
@@ -184,6 +192,6 @@ export function CollaboratorsPanel({ account }: { account: SalesAccountSummary }
           ) : null}
         </div>
       ) : null}
-    </Panel>
+    </section>
   )
 }

@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CollaboratorsSection } from "@/components/sales/accounts/collaborators-panel";
 import { ACCOUNT_STATUS_LABEL } from "@/components/sales/shared/sales-shared";
 
 const STATUSES: SalesAccountStatus[] = ["ACTIVE", "INACTIVE", "DO_NOT_CONTACT"];
@@ -374,6 +375,8 @@ function EditAccountForm({
           />
         </Field>
       ) : null}
+
+      <CollaboratorsSection account={account} />
 
       {error ? <FormError>{error}</FormError> : null}
 
