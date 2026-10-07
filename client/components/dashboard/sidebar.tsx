@@ -251,8 +251,13 @@ export function Sidebar({
     queryKey: ["dashboard"],
     queryFn: () => getDashboard(accessToken!),
     enabled: externalBadges === undefined && status === "authenticated" && !!accessToken,
+    // The sidebar only needs the badge counts, and the dashboard page keeps
+    // this same data fresh. A minute is enough, and it stops a full dashboard
+    // fetch on every focus and every remount.
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   })
-  const badges = externalBadges ?? data?.badges ?? {}
+  const badges =externalBadges ?? data?.badges ?? {}
 
   return (
     <UiSidebar collapsible="offcanvas" className="border-r-0">
