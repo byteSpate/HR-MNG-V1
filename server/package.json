@@ -13,6 +13,10 @@
     "seed": "prisma db seed",
     "seed:reference": "tsx prisma/sync-reference.ts",
     "typecheck": "tsc --noEmit",
+    "perf:bench": "node scripts/perf/bench.mjs",
+    "perf:compare": "node scripts/perf/compare.mjs",
+    "perf:db-latency": "node scripts/perf/db-latency.mjs",
+    "perf:db-baseline": "node scripts/perf/db-baseline.mjs",
     "typecheck:seed": "tsc --noEmit --ignoreConfig --strict --noUnusedLocals --target ES2022 --module commonjs --moduleResolution bundler --esModuleInterop --skipLibCheck --resolveJsonModule prisma/seed.ts",
     "test": "tsc --noEmit && npm run typecheck:seed && vitest run"
   },
