@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from "vitest"
 
+const { poolStub } = vi.hoisted(() => ({ poolStub: { id: "the-pool" } }))
+
 vi.mock("./env", () => ({ env: { DATABASE_URL: "postgresql://user:pass@db.example.com:5432/postgres" } }))
 vi.mock("@prisma/adapter-pg", () => ({ PrismaPg: vi.fn() }))
+vi.mock("pg", () => ({ Pool: vi.fn(function () { return poolStub }) }))
+vi.mock("../observability/instrument-pool", () => ({ instrumentPool: vi.fn() }))
 vi.mock("../generated/prisma/client", () => ({ PrismaClient: vi.fn() }))
 
 import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool } from "pg"
 import { PrismaClient } from "../generated/prisma/client"
+import { instrumentPool } from "../observability/instrument-pool"
 import "./prisma"
 
 /**
@@ -24,7 +30,7 @@ describe("the one Prisma client", () => {
   })
 
   it("keeps idle connections open, so a pause does not mean a fresh one-second connect", () => {
-    const options = vi.mocked(PrismaPg).mock.calls[0][0] as any
+    const options = vi.mocked(Pool).mock.calls[0][0] as any
 
     // pg closes an idle connection after 10 s; Prisma 6 kept it for 300 s.
     expect(options.connectionString).toBe("postgresql://user:pass@db.example.com:5432/postgres")
@@ -34,12 +40,24 @@ describe("the one Prisma client", () => {
   })
 
   it("takes at most 5 connections, so a second process still fits in Supabase's 15", () => {
-    const options = vi.mocked(PrismaPg).mock.calls[0][0] as any
+    const options = vi.mocked(Pool).mock.calls[0][0] as any
 
     // Supabase's session pooler allows 15 clients in all. pg's default of 10
     // per process, now kept for 300 s, left no room: running the daily email
     // by hand beside the dev server failed with EMAXCONNSESSION.
     expect(options.max).toBeGreaterThan(0)
     expect(options.max).toBeLessThanOrEqual(5)
+  })
+
+  it("counts trips and waits on that same pool", () => {
+    expect(instrumentPool).toHaveBeenCalledWith(poolStub)
+  })
+
+  it("hands the adapter that pool, and closes it on $disconnect", () => {
+    // With our own pool the adapter would leave it open, and a one-off script
+    // would then hang until the 300 s idle timeout.
+    const [pool, options] = vi.mocked(PrismaPg).mock.calls[0] as unknown as [unknown, any]
+    expect(pool).toBe(poolStub)
+    expect(options).toEqual({ disposeExternalPool: true })
   })
 })
