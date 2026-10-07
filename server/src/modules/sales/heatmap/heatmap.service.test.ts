@@ -44,7 +44,9 @@ const auditData = () => vi.mocked(prisma.auditLog.create).mock.calls[0][0].data 
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
-  vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+  // user-1 is the owner (emp-1). Anyone else is an employee with no part in the account.
+  vi.mocked(prisma.user.findUnique).mockImplementation((async (args: any) =>
+    ({ employee: { id: args.where.id === "user-1" ? "emp-1" : "emp-9" } })) as any)
   vi.mocked(prisma.user.findMany).mockResolvedValue([
     { id: "user-1", displayName: null, email: "a@b.c", employee: { fullName: "Rahim" } },
   ] as any)

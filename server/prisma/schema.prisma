@@ -272,26 +272,26 @@ model Employee {
   journalLines   JournalLine[]
   changeRequests EmployeeChangeRequest[]
 
-  salesAccountsOwned       SalesAccount[]           @relation("SalesAccountOwner")
-  salesAccountAssignments  SalesAccountAssignment[] @relation("SalesAccountAssignee")
+  salesAccountsOwned       SalesAccount[]             @relation("SalesAccountOwner")
+  salesAccountAssignments  SalesAccountAssignment[]   @relation("SalesAccountAssignee")
   salesRemovalRequests     SalesCollaboratorRemoval[]
   salesCommunications      SalesCommunication[]
-  opportunitiesOwned       Opportunity[]            @relation("OpportunityOwner")
+  opportunitiesOwned       Opportunity[]              @relation("OpportunityOwner")
   weeklyReports            WeeklyReport[]
-  opportunitiesWon         Opportunity[]            @relation("OpportunityWonBy")
+  opportunitiesWon         Opportunity[]              @relation("OpportunityWonBy")
   salesComments            SalesComment[]
   salesTargets             SalesTarget[]
   salesMeetingAttendances  SalesMeetingAttendee[]
-  salesTasksAssigned       SalesTask[]              @relation("SalesTaskAssignee")
-  salesTasksGiven          SalesTask[]              @relation("SalesTaskAssigner")
+  salesTasksAssigned       SalesTask[]                @relation("SalesTaskAssignee")
+  salesTasksGiven          SalesTask[]                @relation("SalesTaskAssigner")
   salesMinutesPrepared     SalesMinutesPreparer[]
-  funnelMeetingsRan        FunnelMeeting[]          @relation("FunnelMeetingRanBy")
-  funnelMeetingAttendances FunnelMeetingAttendee[]  @relation("FunnelMeetingAttendee")
-  funnelReviews            FunnelMeetingReview[]    @relation("FunnelMeetingReviewSubject")
+  funnelMeetingsRan        FunnelMeeting[]            @relation("FunnelMeetingRanBy")
+  funnelMeetingAttendances FunnelMeetingAttendee[]    @relation("FunnelMeetingAttendee")
+  funnelReviews            FunnelMeetingReview[]      @relation("FunnelMeetingReviewSubject")
   // Projects (spec 2026-09-28). Two separate relations because the two roles
   // are genuinely different: running a Project, and being on its Team.
-  managedProjects          Project[]                @relation("ProjectManager")
-  projectTeams             ProjectTeamMember[]      @relation("ProjectTeamMember")
+  managedProjects          Project[]                  @relation("ProjectManager")
+  projectTeams             ProjectTeamMember[]        @relation("ProjectTeamMember")
 }
 
 enum EmployeeChangeField {
@@ -2213,13 +2213,13 @@ model SupplierBillLine {
   // currency is not BDT, same pattern as JournalLine.sourceAmount.
   sourceAmount Decimal? @db.Decimal(14, 2)
 
-  vatCodeId String
-  vatCode   VatCode @relation(fields: [vatCodeId], references: [id])
+  vatCodeId      String
+  vatCode        VatCode   @relation(fields: [vatCodeId], references: [id])
   vatMethod      VatMethod @default(CODE)
   /// The rate actually used on this line. Filled for old lines by the
   /// migration, from their VAT code.
   vatRatePercent Decimal?  @db.Decimal(5, 2)
-  vatAmount Decimal @db.Decimal(14, 2)
+  vatAmount      Decimal   @db.Decimal(14, 2)
 
   creditNoteLines SupplierCreditNoteLine[]
 
@@ -2301,8 +2301,8 @@ model SupplierPaymentAllocation {
   /// Saved with the payment and never changed, so the payment voucher always
   /// matches the PDF. A later credit note or reversal does not touch an old
   /// voucher. In taka, at the bill's own rate, the same figure the books use.
-  billTotal    Decimal @db.Decimal(14, 2)
-  balanceAfter Decimal @db.Decimal(14, 2)
+  billTotal       Decimal  @db.Decimal(14, 2)
+  balanceAfter    Decimal  @db.Decimal(14, 2)
   /// The same two figures in US dollars, only for a bill in US dollars.
   billTotalUsd    Decimal? @db.Decimal(14, 2)
   balanceAfterUsd Decimal? @db.Decimal(14, 2)
@@ -2416,19 +2416,19 @@ model CustomerPoLine {
   poId String
   po   CustomerPo @relation(fields: [poId], references: [id], onDelete: Cascade)
 
-  description String
-  kind        SaleLineKind
-  quantity    Decimal      @db.Decimal(14, 2)
-  unitPrice   Decimal      @db.Decimal(14, 2)
+  description    String
+  kind           SaleLineKind
+  quantity       Decimal      @db.Decimal(14, 2)
+  unitPrice      Decimal      @db.Decimal(14, 2)
   /// quantity × unitPrice, net of VAT, worked out by the server at write.
-  amount      Decimal      @db.Decimal(14, 2)
-  vatCodeId   String
-  vatCode     VatCode      @relation(fields: [vatCodeId], references: [id])
-  vatMethod      VatMethod @default(CODE)
+  amount         Decimal      @db.Decimal(14, 2)
+  vatCodeId      String
+  vatCode        VatCode      @relation(fields: [vatCodeId], references: [id])
+  vatMethod      VatMethod    @default(CODE)
   /// The rate actually used on this line. Filled for old lines by the
   /// migration, from their VAT code.
-  vatRatePercent Decimal?  @db.Decimal(5, 2)
-  order       Int          @default(0)
+  vatRatePercent Decimal?     @db.Decimal(5, 2)
+  order          Int          @default(0)
 
   invoiceLines InvoiceLine[]
 
@@ -2482,16 +2482,16 @@ model InvoiceLine {
   poLineId  String
   poLine    CustomerPoLine @relation(fields: [poLineId], references: [id])
 
-  description String
+  description    String
   /// Net of VAT. Capped by what is left to invoice on the PO line.
-  amount      Decimal @db.Decimal(14, 2)
-  vatCodeId   String
-  vatCode     VatCode @relation(fields: [vatCodeId], references: [id])
+  amount         Decimal   @db.Decimal(14, 2)
+  vatCodeId      String
+  vatCode        VatCode   @relation(fields: [vatCodeId], references: [id])
   vatMethod      VatMethod @default(CODE)
   /// The rate actually used on this line. Filled for old lines by the
   /// migration, from their VAT code.
   vatRatePercent Decimal?  @db.Decimal(5, 2)
-  vatAmount   Decimal @db.Decimal(14, 2)
+  vatAmount      Decimal   @db.Decimal(14, 2)
 
   creditNoteLines CustomerCreditNoteLine[]
 
@@ -2562,20 +2562,20 @@ model Receipt {
 /// "This much of this receipt settles this invoice", gross: cash plus the
 /// share of withheld tax.
 model ReceiptAllocation {
-  id        String   @id @default(uuid())
-  receiptId String
-  receipt   Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
-  invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
-  amount    Decimal  @db.Decimal(14, 2)
+  id           String   @id @default(uuid())
+  receiptId    String
+  receipt      Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  invoiceId    String
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id])
+  amount       Decimal  @db.Decimal(14, 2)
   /// Saved with the payment and never changed, so the money receipt given to
   /// the customer always matches the PDF. A later credit note or reversal
   /// does not touch an old receipt. `invoiceTotal` is the invoice after
   /// approved credit notes, and `balanceAfter` is what was still owed once
   /// this payment was counted.
-  invoiceTotal Decimal @db.Decimal(14, 2)
-  balanceAfter Decimal @db.Decimal(14, 2)
-  createdAt DateTime @default(now())
+  invoiceTotal Decimal  @db.Decimal(14, 2)
+  balanceAfter Decimal  @db.Decimal(14, 2)
+  createdAt    DateTime @default(now())
 
   @@index([invoiceId])
 }
@@ -2711,17 +2711,19 @@ model SalesAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignments    SalesAccountAssignment[]
+  assignments          SalesAccountAssignment[]
   collaboratorRemovals SalesCollaboratorRemoval[]
-  contacts       SalesContact[]
-  communications SalesCommunication[]
-  opportunities  Opportunity[]
-  meetings       SalesMeeting[]
-  tasks          SalesTask[]
-  answers        SalesAccountAnswer[]
-  weeklyNotes    WeeklyAccountNote[]
+  contacts             SalesContact[]
+  communications       SalesCommunication[]
+  opportunities        Opportunity[]
+  meetings             SalesMeeting[]
+  tasks                SalesTask[]
+  answers              SalesAccountAnswer[]
+  heatmapNeeds         SalesAccountHeatmapNeed[]
+  heatmapItems         SalesAccountHeatmapItem[]
+  weeklyNotes          WeeklyAccountNote[]
   /// The delivery work on this account's Won Opportunities (ADR 0005).
-  projects       Project[]
+  projects             Project[]
 
   // Receivables & payables, Phase 1. Set the day this account's first
   // Opportunity is Won (Phase 3 wires the hook); absent for accounts with
@@ -2771,6 +2773,57 @@ model SalesAccountAnswer {
   /// of its own questions while each ready-made key appears once.
   @@unique([salesAccountId, questionKey])
   @@index([salesAccountId])
+}
+
+/// "Do they need it?" for one card on an account's Heatmap tab (owner,
+/// 2026-10-07). No row means "Not asked yet". The card list lives in code
+/// (`heatmap.cards.ts`), so `card` is its key, like "switch".
+enum HeatmapNeed {
+  NEED
+  NO_NEED
+}
+
+model SalesAccountHeatmapNeed {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  card           String
+  need           HeatmapNeed
+  /// Why there is no need. Kept only with NO_NEED.
+  reason         String?
+  /// The user id that set it last.
+  updatedBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([salesAccountId, card])
+}
+
+/// One thing the company has on a Heatmap card, like "24 Cisco switches".
+/// The dates are calendar days. `details` holds the card's own fields as
+/// short text, checked against the card list in code.
+model SalesAccountHeatmapItem {
+  id             String       @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  card           String
+  brand          String
+  model          String?
+  quantity       Int
+  site           String?
+  boughtFrom     String?
+  boughtOn       DateTime?    @db.Date
+  supportEndsOn  DateTime?    @db.Date
+  endOfLifeOn    DateTime?    @db.Date
+  supportBy      String?
+  notes          String?
+  details        Json         @default("{}")
+  createdBy      String
+  updatedBy      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([salesAccountId, card])
 }
 
 enum SalesContactStatus {
@@ -3617,10 +3670,10 @@ model WeeklyReport {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  copies       WeeklyReportCopy[]
-  notes        WeeklyAccountNote[]
-  otherWork    WeeklyOtherWork[]
-  projectLogs  ProjectDailyLog[]
+  copies      WeeklyReportCopy[]
+  notes       WeeklyAccountNote[]
+  otherWork   WeeklyOtherWork[]
+  projectLogs ProjectDailyLog[]
 
   @@unique([employeeId, weekStart])
   @@index([weekStart, status])
