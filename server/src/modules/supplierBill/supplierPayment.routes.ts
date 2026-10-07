@@ -7,12 +7,15 @@ import {
   getSupplierPaymentHandler,
   listSupplierPaymentsHandler,
   reverseSupplierPaymentHandler,
+  supplierPaymentPdfHandler,
 } from "./supplierPayment.controller"
 
 const router = Router()
 const WRITE_ROLES = [Role.FINANCE_OFFICER, Role.SUPER_ADMIN] as const
 
 router.get("/", requireAuth, requireRole(...WRITE_ROLES), listSupplierPaymentsHandler)
+// Finance and Super Admin only: supplier money is cost, which Sales never sees.
+router.get("/:id/pdf", requireAuth, requireRole(...WRITE_ROLES), supplierPaymentPdfHandler)
 router.get("/:id", requireAuth, requireRole(...WRITE_ROLES), getSupplierPaymentHandler)
 router.post("/", requireAuth, requireRole(...WRITE_ROLES), createSupplierPaymentHandler)
 router.post("/:id/reverse", requireAuth, requireRole(Role.SUPER_ADMIN), reverseSupplierPaymentHandler)

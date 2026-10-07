@@ -4,7 +4,8 @@ vi.mock("../../config/env", () => ({ env: { SALES_GO_LIVE: "2026-11-01" } }))
 vi.mock("../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
-    supplierBill: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    $queryRaw: vi.fn(),
+    supplierBill: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), findFirst: vi.fn() },
     supplierBillLine: { deleteMany: vi.fn() },
     vatCode: { findMany: vi.fn() },
     opportunity: { findUnique: vi.fn() },
@@ -46,6 +47,7 @@ beforeEach(() => {
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(prisma.vatCode.findMany).mockResolvedValue([{ id: "vat-std", ratePercent: "15.00" }] as any)
   arrangeWonDeal({ id: "opp-1", serial: "BS-OPP-00001" })
+  vi.mocked(prisma.supplierBill.findFirst).mockResolvedValue(null)
 })
 
 describe("bill and deals", () => {
@@ -185,5 +187,77 @@ describe("updateSupplierBill", () => {
     expect(prisma.supplierBill.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ rejectionNote: null, sentBackBy: null, sentBackAt: null }),
     }))
+  })
+})
+
+describe("one bill for each supplier on an Opportunity", () => {
+  const EXISTING = { billNumber: "SUP-INV-1", supplier: { name: "Star Tech" }, opportunity: { serial: "BS-OPP-00001" } }
+
+  it("refuses a second live bill from the same supplier on the same Opportunity, naming the first", async () => {
+    vi.mocked(prisma.supplierBill.findFirst).mockResolvedValueOnce(EXISTING as any)
+
+    await expect(createSupplierBill(INPUT, ACTOR)).rejects.toThrow(
+      "Star Tech already has bill SUP-INV-1 on BS-OPP-00001. A supplier has one bill on an Opportunity. To change it, edit the draft or raise a credit note on it."
+    )
+    expect(prisma.supplierBill.create).not.toHaveBeenCalled()
+  })
+
+  it("counts a draft or an approved bill, and not a reversed one", async () => {
+    vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1", lines: [] } as any)
+
+    await createSupplierBill(INPUT, ACTOR)
+
+    expect(prisma.supplierBill.findFirst).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: { supplierId: "sup-1", opportunityId: "opp-1", status: { in: ["DRAFT", "APPROVED"] } },
+    }))
+  })
+
+  it("refuses a bill number the same supplier already has on a live bill, whatever the capitals", async () => {
+    vi.mocked(prisma.supplierBill.findFirst).mockResolvedValueOnce(null).mockResolvedValueOnce(EXISTING as any)
+
+    await expect(createSupplierBill({ ...INPUT, billNumber: "sup-inv-1" }, ACTOR)).rejects.toThrow(
+      "Star Tech already has a bill numbered sup-inv-1 (on BS-OPP-00001). Each bill number can be used once. Check the number on the supplier's bill."
+    )
+    expect(vi.mocked(prisma.supplierBill.findFirst).mock.calls[1][0]).toMatchObject({
+      where: { supplierId: "sup-1", billNumber: { equals: "sup-inv-1", mode: "insensitive" }, status: { in: ["DRAFT", "APPROVED"] } },
+    })
+  })
+
+  it("accepts a bill when the supplier has nothing live on this Opportunity and the number is new", async () => {
+    vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1", lines: [] } as any)
+
+    await createSupplierBill(INPUT, ACTOR)
+
+    expect(prisma.supplierBill.create).toHaveBeenCalled()
+  })
+
+  it("locks the supplier row before it looks, so two saves at once cannot both pass", async () => {
+    vi.mocked(prisma.supplierBill.create).mockResolvedValue({ id: "b1", lines: [] } as any)
+
+    await createSupplierBill(INPUT, ACTOR)
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(prisma.$queryRaw).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(prisma.supplierBill.findFirst).mock.invocationCallOrder[0])
+  })
+
+  it("does not count the bill being edited when a draft is saved again", async () => {
+    vi.mocked(prisma.supplierBill.findUnique).mockResolvedValue({ id: "b1", status: "DRAFT", billNumber: "SUP-INV-1" } as any)
+    vi.mocked(prisma.supplierBill.update).mockResolvedValue({ id: "b1", billNumber: "SUP-INV-1", lines: [] } as any)
+
+    await updateSupplierBill("b1", INPUT, ACTOR)
+
+    for (const call of vi.mocked(prisma.supplierBill.findFirst).mock.calls) {
+      expect((call[0] as any).where.id).toEqual({ not: "b1" })
+    }
+    expect(prisma.supplierBill.findFirst).toHaveBeenCalledTimes(2)
+  })
+
+  it("refuses to save a draft into a second bill for the same supplier on the Opportunity", async () => {
+    vi.mocked(prisma.supplierBill.findUnique).mockResolvedValue({ id: "b1", status: "DRAFT", billNumber: "SUP-INV-9" } as any)
+    vi.mocked(prisma.supplierBill.findFirst).mockResolvedValueOnce(EXISTING as any)
+
+    await expect(updateSupplierBill("b1", INPUT, ACTOR)).rejects.toThrow("A supplier has one bill on an Opportunity")
+    expect(prisma.supplierBill.update).not.toHaveBeenCalled()
   })
 })

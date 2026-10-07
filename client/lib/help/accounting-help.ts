@@ -1635,7 +1635,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Add a supplier bill",
-        body: "Supplier and lines are filled in from the Opportunity's product lines. Finance types the bill number, real prices and VAT, then it goes to Waiting for approval.",
+        body: "Supplier and lines are filled in from the Opportunity's product lines. Finance types the supplier's own bill number, real prices and VAT, then it goes to Waiting for approval. A supplier has one bill on an Opportunity, and the same supplier cannot use a bill number twice. To change a bill later, edit the draft or raise a credit note.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
@@ -1654,7 +1654,12 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Pay supplier",
-        body: "Saved and counted at once. No approval needed. Cannot be more than the Opportunity's bills from that supplier still owe.",
+        body: "Pick how the supplier was paid: bank transfer, cheque or mobile banking. Add the bank name if there is one. The payment is saved and counted at once. No approval is needed. The system gives it a payment voucher number, such as PV-0001. A payment cannot be more than the bills from that supplier still owe. A supplier bill can be paid in many parts. Record each part as its own payment.",
+        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
+      },
+      {
+        name: "Download a payment voucher",
+        body: "Every supplier payment has its own number and its own PDF. The PDF shows the supplier's bill number, how much was paid, how it was paid, and what is still owed on the bill after this payment. A mistake is fixed by a reversal. A reversed payment keeps its number and the PDF says REVERSED. Only Finance and Super Admin can see supplier money.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {

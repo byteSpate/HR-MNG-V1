@@ -33,6 +33,47 @@ async function assertBillDealAllowed(tx: PrismaNamespace.TransactionClient, oppo
   assertMoneyAllowed(opp, env.SALES_GO_LIVE)
 }
 
+/**
+ * A supplier has one bill on an Opportunity, and a supplier's bill number can
+ * be used once. Both are the supplier's own invoice, recorded once. Only live
+ * bills count (a draft or an approved one). Bills that were already there
+ * before this rule are left alone. The supplier row is locked first, so two
+ * saves at the same moment cannot both pass. `exceptId` is the bill being
+ * edited, which must not count against itself.
+ */
+async function assertOneBill(
+  tx: PrismaNamespace.TransactionClient,
+  input: { supplierId: string; opportunityId: string; billNumber: string },
+  exceptId?: string
+): Promise<void> {
+  await tx.$queryRaw`SELECT "id" FROM "Supplier" WHERE "id" = ${input.supplierId} FOR UPDATE`
+  const live = { in: ["DRAFT", "APPROVED"] as Array<"DRAFT" | "APPROVED"> }
+  const not = exceptId ? { id: { not: exceptId } } : {}
+  const select = { billNumber: true, supplier: { select: { name: true } }, opportunity: { select: { serial: true } } } as const
+
+  const onDeal = await tx.supplierBill.findFirst({
+    where: { supplierId: input.supplierId, opportunityId: input.opportunityId, status: live, ...not },
+    select,
+  })
+  if (onDeal) {
+    throw new AppError(
+      409,
+      `${onDeal.supplier.name} already has bill ${onDeal.billNumber} on ${onDeal.opportunity.serial}. A supplier has one bill on an Opportunity. To change it, edit the draft or raise a credit note on it.`
+    )
+  }
+
+  const sameNumber = await tx.supplierBill.findFirst({
+    where: { supplierId: input.supplierId, billNumber: { equals: input.billNumber, mode: "insensitive" }, status: live, ...not },
+    select,
+  })
+  if (sameNumber) {
+    throw new AppError(
+      409,
+      `${sameNumber.supplier.name} already has a bill numbered ${input.billNumber} (on ${sameNumber.opportunity.serial}). Each bill number can be used once. Check the number on the supplier's bill.`
+    )
+  }
+}
+
 // VAT is frozen per line when the line is written, from its VAT code's rate
 // at that moment or from a % typed on the line, rounded to the paisa
 // (design §3.2, spec 2026-09-28 §1.6). A later change to the code's rate
@@ -86,6 +127,7 @@ export async function getSupplierBill(id: string) {
 export async function createSupplierBill(input: CreateSupplierBillInput, actor: AccessTokenPayload) {
   return prisma.$transaction(async (tx) => {
     await assertBillDealAllowed(tx, input.opportunityId)
+    await assertOneBill(tx, input)
 
     const fxRateToBdt =
       input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)
@@ -129,6 +171,7 @@ export async function updateSupplierBill(
 
   return prisma.$transaction(async (tx) => {
     await assertBillDealAllowed(tx, input.opportunityId)
+    await assertOneBill(tx, input, id)
 
     const fxRateToBdt =
       input.currency === "BDT" ? null : (await resolveRateOrThrow("USD", new Date(input.date))).toFixed(6)

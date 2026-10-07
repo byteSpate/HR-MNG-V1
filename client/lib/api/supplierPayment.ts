@@ -1,5 +1,5 @@
-import { apiFetch } from "./client"
-import type { SupplierPayment } from "./types"
+import { apiFetch, apiFetchBlob } from "./client"
+import type { SupplierPayment, SupplierPaymentMethod } from "./types"
 
 /** Amount and allocations are in the payment's own currency; the server
  *  converts a USD payment to taka at the payment-date rate. */
@@ -12,6 +12,9 @@ export interface SupplierPaymentInput {
   amount: string
   currency: "BDT" | "USD"
   reference?: string
+  /** Required: Finance says how the money was paid. No Cash. */
+  paymentMethod: SupplierPaymentMethod
+  bankName?: string
   allocations: Array<{ billId: string; amount: string }>
 }
 
@@ -37,4 +40,10 @@ export function reverseSupplierPayment(accessToken: string, id: string, reason: 
     accessToken,
     body: JSON.stringify({ reason }),
   })
+}
+
+/** The payment voucher as a PDF. Finance and Super Admin only. */
+export async function downloadSupplierPaymentPdf(accessToken: string, id: string): Promise<Blob> {
+  const { blob } = await apiFetchBlob(`/api/supplier-payments/${id}/pdf`, { accessToken })
+  return blob
 }
