@@ -2159,7 +2159,12 @@ export interface DealMoneySupplierBill {
   updatedBy: string | null
   supplier: { id: string; name: string }
   lines: SupplierBillLine[]
-  allocations: Array<{ amount: string }>
+  /** Approved payments only, oldest first. `payment` is missing from an older server. */
+  allocations: Array<{
+    amount: string
+    amountUsd: string | null
+    payment?: { id: string; number: string; date: string; paymentMethod: SupplierPaymentMethod | null; currency: "BDT" | "USD" }
+  }>
   creditNotes: SupplierCreditNote[]
 }
 
