@@ -64,6 +64,7 @@ export function OpportunityFormDialog({
   open,
   onOpenChange,
   fromMeeting,
+  suggestedName,
   onCreated,
 }: {
   /** The deal's account. Its owner pre-fills the form and its collaborators
@@ -76,6 +77,9 @@ export function OpportunityFormDialog({
   /** A new deal made from a meeting's minutes (revision §25.6): the name
       starts as the meeting's title, and the meeting is its origin. */
   fromMeeting?: { id: string; title: string }
+  /** A new deal started from somewhere else, like a green Heatmap card: the
+      name starts as this. A meeting's title wins if both are given. */
+  suggestedName?: string
   /** Called with the new deal instead of going to it, so an editor with its
       own unsaved work is not left behind. */
   onCreated?: (deal: OpportunitySummary) => void
@@ -94,6 +98,7 @@ export function OpportunityFormDialog({
             accountId={accountId}
             deal={deal}
             fromMeeting={fromMeeting}
+            suggestedName={suggestedName}
             onCreated={onCreated}
             onDone={() => onOpenChange(false)}
           />
@@ -108,12 +113,14 @@ function OpportunityForm({
   accountId,
   deal,
   fromMeeting,
+  suggestedName,
   onCreated,
   onDone,
 }: {
   accountId: string
   deal?: OpportunitySummary
   fromMeeting?: { id: string; title: string }
+  suggestedName?: string
   onCreated?: (deal: OpportunitySummary) => void
   onDone: () => void
 }) {
@@ -175,6 +182,7 @@ function OpportunityForm({
       eligibleError={isSalesAdmin && eligibleQuery.isError ? toMessage(eligibleQuery.error) : null}
       onRetryEligible={() => eligibleQuery.refetch()}
       fromMeeting={fromMeeting}
+      suggestedName={suggestedName}
       onCreated={onCreated}
       onDone={onDone}
     />
@@ -205,6 +213,7 @@ function OpportunityFields({
   eligibleError,
   onRetryEligible,
   fromMeeting,
+  suggestedName,
   onCreated,
   onDone,
 }: {
@@ -216,6 +225,7 @@ function OpportunityFields({
   eligibleError: string | null
   onRetryEligible: () => void
   fromMeeting?: { id: string; title: string }
+  suggestedName?: string
   onCreated?: (deal: OpportunitySummary) => void
   onDone: () => void
 }) {
@@ -229,7 +239,7 @@ function OpportunityFields({
   // are still in the list.
   const accountOwnerCanRun = employees.some((e) => e.id === account.ownerEmployeeId)
 
-  const [name, setName] = useState(deal?.name ?? fromMeeting?.title ?? "")
+  const [name, setName] = useState(deal?.name ?? fromMeeting?.title ?? suggestedName ?? "")
   const [amount, setAmount] = useState(deal?.amount ?? "")
   const [closeDate, setCloseDate] = useState(deal?.expectedCloseDate?.slice(0, 10) ?? "")
   const [oemContact, setOemContact] = useState(deal?.oemAccountManager ?? "")

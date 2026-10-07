@@ -26,6 +26,8 @@ export const salesKeys = {
   accountHistory: (id: string) => ["sales", "accounts", id, "history"] as const,
   /** Under the account's prefix, so invalidating the account refreshes it too. */
   accountProfile: (id: string) => ["sales", "accounts", id, "profile"] as const,
+  /** Under the account's prefix, like the profile. */
+  accountHeatmap: (id: string) => ["sales", "accounts", id, "heatmap"] as const,
   /**
    * Under its own prefix rather than the account's: it moves when a deal on
    * the account is won or its value or margin changes, so every deal write

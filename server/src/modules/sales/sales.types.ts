@@ -631,3 +631,61 @@ export interface AccountProfile {
   /** Whether the viewer may change the profile: the owner, a collaborator, or a Sales Admin. */
   canManage: boolean
 }
+
+// ── Heatmap (owner, 2026-10-07) ────────────────────────────────────────────
+export type HeatmapColourValue = "GREEN" | "YELLOW" | "RED" | "GREY"
+export type HeatmapNeedValue = "NEED" | "NO_NEED" | "NOT_ASKED"
+
+export interface HeatmapFieldView {
+  key: string
+  label: string
+  type: "TEXT" | "NUMBER" | "YES_NO" | "CHOICE" | "DATE"
+  /** Pick list only. */
+  options: string[] | null
+}
+
+export interface HeatmapItemView {
+  id: string
+  brand: string
+  model: string | null
+  quantity: number
+  site: string | null
+  boughtFrom: string | null
+  /** Calendar days, YYYY-MM-DD. */
+  boughtOn: string | null
+  supportEndsOn: string | null
+  endOfLifeOn: string | null
+  supportBy: string | null
+  notes: string | null
+  /** The card's own fields, by key. Only what was filled in. */
+  details: Record<string, string>
+  recordedByName: string | null
+  recordedAt: string
+}
+
+export interface HeatmapCardView {
+  key: string
+  group: string
+  title: string
+  quantityLabel: string
+  endsLabel: string
+  extras: HeatmapFieldView[]
+  need: HeatmapNeedValue
+  needReason: string | null
+  needByName: string | null
+  needAt: string | null
+  colour: HeatmapColourValue
+  /** The sentence that explains the colour, like "Ends on 3 March 2027." */
+  reason: string
+  /** The day the chance opens: 12 months before the earliest end date. */
+  chanceFrom: string | null
+  items: HeatmapItemView[]
+}
+
+export interface AccountHeatmap {
+  groups: { key: string; title: string }[]
+  cards: HeatmapCardView[]
+  counts: Record<HeatmapColourValue, number>
+  /** Whether the viewer may change it: the owner, a collaborator, or a Sales Admin. */
+  canManage: boolean
+}
