@@ -1,7 +1,9 @@
 import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool } from "pg"
 
 import { env } from "./env"
 import { PrismaClient } from "../generated/prisma/client"
+import { instrumentPool } from "../observability/instrument-pool"
 
 /**
  * Tuned for a database that is far away. The dev Supabase project is in
@@ -19,12 +21,20 @@ import { PrismaClient } from "../generated/prisma/client"
  * failed with EMAXCONNSESSION. Five leaves room for a second process, such as
  * that job, Prisma Studio, or an old and a new dyno during a deploy.
  */
-const adapter = new PrismaPg({
+const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: 5,
   idleTimeoutMillis: 300_000,
   connectionTimeoutMillis: 10_000,
 })
+
+// Counts every trip to the database and every wait for a connection, for the
+// request that caused it. It changes nothing for the callers.
+instrumentPool(pool)
+
+// The pool is ours, so the adapter must be told to close it on $disconnect().
+// Without this a one-off script hangs until the 300 s idle timeout.
+const adapter = new PrismaPg(pool, { disposeExternalPool: true })
 
 /**
  * Prisma's defaults give a transaction 2 s to start and 5 s to run. A write
