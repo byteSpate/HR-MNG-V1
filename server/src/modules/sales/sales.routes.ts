@@ -1,7 +1,7 @@
 /**
  * The Sales Hub's routes. Each feature folder owns its own router (accounts,
  * opportunities, comments, meetings, tasks, minutes, weekly, funnel, targets,
- * projects, permissions, dashboard); this file only mounts them, in the order their routes were first
+ * projects, permissions, dashboard, heatmap); this file only mounts them, in the order their routes were first
  * registered, so first-match order is unchanged. The routers are mounted at
  * `/` with full paths, except the funnel, which keeps `/funnel`.
  */
@@ -13,6 +13,7 @@ import collaboratorRouter from "./accounts/collaborator.routes"
 import commentRouter from "./comments/comment.routes"
 import dashboardRouter from "./dashboard/dashboard.routes"
 import funnelRouter from "./funnel/funnel.routes"
+import heatmapRouter from "./heatmap/heatmap.routes"
 import meetingRouter from "./meetings/meeting.routes"
 import minutesRouter from "./minutes/minutes.routes"
 import opportunityRouter from "./opportunities/opportunity.routes"
@@ -29,6 +30,9 @@ router.use(accountRouter)
 // routes above (`/accounts/:id/collaborators`, `/removal-requests`), so nothing
 // is shadowed in either direction.
 router.use(collaboratorRouter)
+// The Heatmap tab. Its paths all sit under `/accounts/:id/heatmap`, which no
+// router above uses, so nothing is shadowed in either direction.
+router.use(heatmapRouter)
 
 router.use(opportunityRouter)
 // After the Opportunity router, which has no `POST /opportunities/:id/project`,

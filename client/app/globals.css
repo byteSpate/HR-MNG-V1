@@ -128,6 +128,36 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Thin scrollbars that match the app (owner, 2026-10-07). The browser's
+       own bar is thick and grey and clashes with the cards. One colour, a
+       grey-blue at half strength, so it reads on a white panel and on the dark
+       sidebar alike. The track is clear. A phone and a tablet draw their own
+       thin bar that fades away, so these lines change nothing there. */
+    scrollbar-width: thin;
+    scrollbar-color: rgb(95 107 124 / 0.45) transparent;
+    }
+  /* Safari before 18.2 ignores the two lines above, so it gets the same look
+     here. Chrome and Firefox stop at the lines above and skip this block. */
+  @supports not (scrollbar-width: thin) {
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+      }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+      }
+    ::-webkit-scrollbar-thumb {
+      background-color: rgb(95 107 124 / 0.45);
+      border-radius: 9999px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+      }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: rgb(95 107 124 / 0.7);
+      }
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+      }
     }
   body {
     @apply bg-background text-foreground;

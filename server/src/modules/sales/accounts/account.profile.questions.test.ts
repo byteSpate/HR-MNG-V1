@@ -27,6 +27,14 @@ describe("the ready-made questions", () => {
     }
   })
 
+  // The IT setup questions moved to the Heatmap tab (owner, 2026-10-07).
+  it("no longer ask about the IT setup", () => {
+    expect(PROFILE_GROUPS.map((g) => g.title)).toEqual(["Offices and sites", "How they buy", "Current vendors", "Plans"])
+    for (const key of ["servers", "switches", "firewall", "wifi", "cctv", "cabling", "internet", "backupLine", "dataBackup", "software"]) {
+      expect(QUESTION_BY_KEY.has(key)).toBe(false)
+    }
+  })
+
   it("are written without em-dashes", () => {
     for (const question of PROFILE_QUESTIONS) {
       expect(`${question.text} ${question.detailLabel ?? ""} ${(question.options ?? []).join(" ")}`).not.toContain("—")
@@ -54,17 +62,17 @@ describe("checking an answer", () => {
   })
 
   it("takes only the listed options for a pick list", () => {
-    expect(checkAnswer(q("cabling"), { answer: "Fibre" })).toEqual({ answer: "Fibre", detail: null })
-    expect(() => checkAnswer(q("cabling"), { answer: "Plastic" })).toThrow(/Choose one of/)
+    expect(checkAnswer(q("buyMethod"), { answer: "Tender" })).toEqual({ answer: "Tender", detail: null })
+    expect(() => checkAnswer(q("buyMethod"), { answer: "Barter" })).toThrow(/Choose one of/)
   })
 
   it("refuses a follow-up on a question that has none", () => {
     expect(() => checkAnswer(q("staff"), { answer: "10", detail: "about" })).toThrow(/no follow-up/)
-    expect(() => checkAnswer(q("internet"), { answer: "BTCL 50 Mbps", detail: "x" })).toThrow(/no follow-up/)
+    expect(() => checkAnswer(q("decider"), { answer: "The CEO", detail: "x" })).toThrow(/no follow-up/)
   })
 
   it("refuses an empty answer and tells the person how to clear one", () => {
-    expect(() => checkAnswer(q("internet"), { answer: "   " })).toThrow(/or clear it/)
+    expect(() => checkAnswer(q("decider"), { answer: "   " })).toThrow(/or clear it/)
   })
 })
 

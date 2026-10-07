@@ -9,6 +9,10 @@ import { AppError } from "../../../middleware/errorHandler"
  * change its text: answers stay attached because they point at the key.
  * Never reuse a key for a different question.
  *
+ * The IT setup questions moved to the Heatmap tab (owner, 2026-10-07). Their
+ * keys (servers, switches, firewall, wifi, cctv, cabling, internet, backupLine,
+ * dataBackup, software) are retired: do not reuse them.
+ *
  * Every word is read by people whose first language is often not English, so
  * these are short and plain (see CLAUDE.md, Easy English).
  */
@@ -17,7 +21,6 @@ export type ProfileQuestionType = "YES_NO" | "TEXT" | "NUMBER" | "CHOICE"
 
 export const PROFILE_GROUPS = [
   { key: "offices", title: "Offices and sites" },
-  { key: "it", title: "IT setup" },
   { key: "buying", title: "How they buy" },
   { key: "vendors", title: "Current vendors" },
   { key: "plans", title: "Plans" },
@@ -46,17 +49,6 @@ export const PROFILE_QUESTIONS: readonly ProfileQuestion[] = [
   { key: "branches", group: "offices", type: "YES_NO", text: "Does the company have branches?", detailLabel: "Where are they, and how many?" },
   { key: "staff", group: "offices", type: "NUMBER", text: "How many people work in the company?" },
   { key: "serverRoom", group: "offices", type: "YES_NO", text: "Is there a data centre or server room?", detailLabel: "Where is it?" },
-  // IT setup
-  { key: "servers", group: "it", type: "YES_NO", text: "Does the company have servers?", detailLabel: "How many, and which brand?" },
-  { key: "switches", group: "it", type: "YES_NO", text: "Does the company use network switches?", detailLabel: "Which brand, how many, and are they managed?" },
-  { key: "firewall", group: "it", type: "YES_NO", text: "Does the company have a firewall?", detailLabel: "Which brand?" },
-  { key: "wifi", group: "it", type: "YES_NO", text: "Does the company have Wi-Fi access points?", detailLabel: "Which brand, and how many?" },
-  { key: "cctv", group: "it", type: "YES_NO", text: "Is CCTV installed?", detailLabel: "Which brand, and how many cameras?" },
-  { key: "cabling", group: "it", type: "CHOICE", text: "What kind of cabling does the company use?", options: ["Copper", "Fibre", "Both", "Not sure"] },
-  { key: "internet", group: "it", type: "TEXT", text: "Who is the internet provider, and how fast is the line?" },
-  { key: "backupLine", group: "it", type: "YES_NO", text: "Is there a backup internet line?", detailLabel: "Which provider?" },
-  { key: "dataBackup", group: "it", type: "YES_NO", text: "Is there a data backup or storage system?", detailLabel: "Which one?" },
-  { key: "software", group: "it", type: "TEXT", text: "Which main software does the company use? For example ERP, email or accounts." },
   // How they buy
   { key: "decider", group: "buying", type: "TEXT", text: "Who decides on a purchase?" },
   { key: "approver", group: "buying", type: "TEXT", text: "Who approves the money?" },
