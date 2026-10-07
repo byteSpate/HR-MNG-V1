@@ -18,6 +18,10 @@ const envSchema = z.object({
   // is already tomorrow in Dhaka, and a US-region host would file every
   // morning check-in under the previous day.
   APP_TIMEZONE: z.string().default("Asia/Dhaka"),
+  // "on" writes one JSON line per request (time, database trips, memory) to the
+  // console. Off by default so tests and local runs stay quiet. Heroku can set
+  // it to "on" later. Needed because a Basic dyno has no metrics page.
+  PERF_LOG: z.enum(["on", "off"]).default("off"),
   // The date attendance became the record of truth. Required with no default
   // on purpose: without a floor, every working day before the system existed
   // derives as ABSENT for every employee who joined earlier, and the first
