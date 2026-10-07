@@ -11,6 +11,7 @@ import {
   RiEyeLine,
   RiFlashlightLine,
   RiFolder3Line,
+  RiGridLine,
   RiGlobalLine,
   RiGroupLine,
   RiHistoryLine,
@@ -27,6 +28,7 @@ import { Tag } from "@/components/dashboard/tag"
 import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/shared/sales-shared"
 import { MeetingsPanel, TasksPanel } from "@/components/sales/shared/plan-panels"
 import { Button } from "@/components/ui/button"
+import { AccountHeatmapPanel } from "@/components/sales/accounts/account-heatmap-panel"
 import { AccountEditDialog } from "@/components/sales/accounts/account-edit-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
@@ -232,6 +234,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
             },
             { value: "opportunities", icon: RiFlashlightLine, label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
             { value: "projects", icon: RiFolder3Line, label: "Projects", content: <AccountProjectsPanel accountId={accountId} /> },
+            { value: "heatmap", icon: RiGridLine, label: "Heatmap", content: <AccountHeatmapPanel accountId={accountId} /> },
             {
               value: "timeline",
               icon: RiHistoryLine,
