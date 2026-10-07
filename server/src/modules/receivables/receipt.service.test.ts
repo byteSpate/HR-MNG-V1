@@ -107,7 +107,7 @@ describe("createReceipt", () => {
     } as any)
 
     await createReceipt({
-      opportunityId: "opp-1", date: "2026-11-10", amount: "1000", paymentMethod: "CASH",
+      opportunityId: "opp-1", date: "2026-11-10", amount: "1000", paymentMethod: "CHEQUE",
       allocations: [{ invoiceId: "inv-1", amount: "1000" }],
     } as any, FINANCE)
 
@@ -147,12 +147,12 @@ describe("createReceipt", () => {
     } as any)
 
     await createReceipt({
-      opportunityId: "opp-1", date: "2026-11-10", amount: "1000", paymentMethod: "CASH",
+      opportunityId: "opp-1", date: "2026-11-10", amount: "1000", paymentMethod: "CHEQUE",
       allocations: [{ invoiceId: "inv-1", amount: "1000" }],
     } as any, FINANCE)
 
     expect(prisma.receipt.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ paymentMethod: "CASH", bankName: null }),
+      data: expect.objectContaining({ paymentMethod: "CHEQUE", bankName: null }),
     }))
   })
 
@@ -166,7 +166,7 @@ describe("createReceipt", () => {
     } as any)
 
     await createReceipt({
-      opportunityId: "opp-1", date: "2026-11-10", amount: "15000", paymentMethod: "CASH",
+      opportunityId: "opp-1", date: "2026-11-10", amount: "15000", paymentMethod: "CHEQUE",
       allocations: [{ invoiceId: "inv-1", amount: "15000" }],
     } as any, FINANCE)
 
@@ -181,7 +181,7 @@ describe("createReceipt", () => {
     arrangeDealWithInvoice({ opportunityId: "opp-1", invoiceId: "inv-1", outstanding: d("1000") })
 
     await expect(createReceipt({
-      opportunityId: "opp-1", date: "2026-11-10", amount: "1500", paymentMethod: "CASH",
+      opportunityId: "opp-1", date: "2026-11-10", amount: "1500", paymentMethod: "CHEQUE",
       allocations: [{ invoiceId: "inv-1", amount: "1000" }],
     } as any, FINANCE)).rejects.toThrow()
 

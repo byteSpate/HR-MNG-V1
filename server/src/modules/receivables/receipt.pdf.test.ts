@@ -78,6 +78,8 @@ describe("the figures on a receipt", () => {
     expect(data.bankName).toBeNull()
   })
 
+  // CASH is no longer offered for a new receipt, but an old receipt saved as
+  // Cash must still read "Cash" on its PDF.
   it.each([
     ["CASH", "Cash"],
     ["BANK_TRANSFER", "Bank transfer"],
