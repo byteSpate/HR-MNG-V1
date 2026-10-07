@@ -1621,7 +1621,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Customer PO, Bought, Invoiced, Paid",
-        body: "Four parts on one page, top to bottom. Customer PO is what the customer ordered. Bought is the supplier bills and what was paid for them. Invoiced is the invoices and any credit notes against them. Each approved invoice also shows what was paid so far, every payment with its receipt number, and what is still owed. Paid is the receipts from the customer, with any tax it withheld.",
+        body: "Four parts on one page, top to bottom. Customer PO is what the customer ordered. Bought is the supplier bills and what was paid for them. Invoiced is the invoices and any credit notes against them. Each approved invoice also shows what was paid so far, every payment with its receipt number, and what is still owed. Each approved supplier bill shows the same, with its payment voucher numbers. Paid is the receipts from the customer, with any tax it withheld.",
       },
     ],
     does: [
@@ -1654,7 +1654,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Pay supplier",
-        body: "Pick how the supplier was paid: bank transfer, cheque or mobile banking. Add the bank name if there is one. The payment is saved and counted at once. No approval is needed. The system gives it a payment voucher number, such as PV-0001. A payment cannot be more than the bills from that supplier still owe. A supplier bill can be paid in many parts. Record each part as its own payment.",
+        body: "Pick how the supplier was paid: bank transfer, cheque or mobile banking. Add the bank name if there is one. The payment is saved and counted at once. No approval is needed. The system gives it a payment voucher number, such as PV-0001. A payment cannot be more than the bills from that supplier still owe. A supplier bill can be paid in many parts. Record each part as its own payment. You can also press Pay supplier on the bill itself. The money then goes to that bill.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {

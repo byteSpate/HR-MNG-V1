@@ -27,7 +27,18 @@ export const DEAL_INVOICE_INCLUDE = {
 export const DEAL_BILL_INCLUDE = {
   supplier: { select: { id: true, name: true } },
   lines: true,
-  allocations: { where: { payment: { status: "APPROVED" } }, select: { amount: true } },
+  // Approved payments only, so a reversed one never lowers what is owed. The
+  // payment's voucher number, date, method and currency let the bill row list
+  // each payment. Oldest first, with the id as a tie-break, so the order never moves.
+  allocations: {
+    where: { payment: { status: "APPROVED" } },
+    select: {
+      amount: true,
+      amountUsd: true,
+      payment: { select: { id: true, number: true, date: true, paymentMethod: true, currency: true } },
+    },
+    orderBy: [{ payment: { createdAt: "asc" } }, { id: "asc" }],
+  },
   creditNotes: { include: { lines: true } },
 } satisfies Prisma.SupplierBillInclude
 
