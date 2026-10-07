@@ -10,6 +10,7 @@ import { reverseSupplierPayment } from "@/lib/api/supplierPayment"
 import { sendBackApproval } from "@/lib/api/dealMoney"
 import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneyProductLine, DealMoneySupplierBill, SalesTrack, SupplierCreditNote, SupplierPayment } from "@/lib/api/types"
+import { billPayments } from "@/lib/bill-payments"
 import { formatMoney } from "@/lib/money"
 import { supplierMethodLabel } from "@/lib/supplier-payment-method"
 import { cn } from "@/lib/utils"
@@ -107,6 +108,7 @@ export function BoughtPart({
   const [paying, setPaying] = useState(false)
   const [reversingPayment, setReversingPayment] = useState<SupplierPayment | null>(null)
   const [reverseReason, setReverseReason] = useState("")
+  const [payingBill, setPayingBill] = useState<DealMoneySupplierBill | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const approve = useMutation({
@@ -231,6 +233,8 @@ export function BoughtPart({
         <ul className="space-y-3">
           {bills.map((bill) => {
             const { total } = billTotals(bill)
+            const money = billPayments(bill)
+            const owesMoney = Number(money.balance) > 0.004
             const typedRates = typedVatRates(bill.lines)
             const status = billStatus(bill)
             // Approve and Send back, together. Only a Super Admin can reach
@@ -257,6 +261,16 @@ export function BoughtPart({
                       label: "Send back",
                       icon: <RiArrowGoBackLine className="size-3.5" aria-hidden />,
                       onClick: () => { setError(null); setSendingBackBill(bill); setSendBackNote("") },
+                    },
+                  ]
+                : []),
+              ...(canEdit && bill.status === "APPROVED" && owesMoney
+                ? [
+                    {
+                      kind: "custom" as const,
+                      label: "Pay supplier",
+                      icon: <RiAddLine className="size-3.5" aria-hidden />,
+                      onClick: () => { setError(null); setPayingBill(bill) },
                     },
                   ]
                 : []),
@@ -293,7 +307,7 @@ export function BoughtPart({
                       {bill.billNumber} · {formatDate(bill.date)} · due {formatDate(bill.dueDate)}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
                     <span className="mr-2 text-[13px] font-bold">{formatMoney(total.toFixed(2), "BDT")}</span>
                     {typedRates.length > 0 ? (
                       <span className="mr-2 rounded bg-[#FDF8EE] px-1.5 py-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">
@@ -309,6 +323,52 @@ export function BoughtPart({
                     <PanelNotice>
                       Sent back by {bill.sentBackByUser?.fullName ?? bill.sentBackByUser?.email ?? "someone"}: {bill.rejectionNote}
                     </PanelNotice>
+                  </div>
+                ) : null}
+
+                {bill.status === "APPROVED" ? (
+                  <div className="mt-3 border-t border-[#EEF1F5] pt-3" data-testid={`payments-${bill.billNumber}`}>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+                      <span>
+                        Paid so far <span className="font-bold">{formatMoney(money.paid, "BDT")}</span>
+                        {money.usd ? <span className={TONE.muted}> ({formatMoney(money.usd.paid, "USD")})</span> : null}
+                      </span>
+                      {owesMoney ? (
+                        <span>
+                          Still owed <span className="font-bold">{formatMoney(money.balance, "BDT")}</span>
+                          {money.usd ? <span className={TONE.muted}> ({formatMoney(money.usd.balance, "USD")})</span> : null}
+                        </span>
+                      ) : (
+                        <Tag label="Paid in full" tone="green" />
+                      )}
+                    </div>
+                    {money.payments.length > 0 ? (
+                      <ul className="mt-2 space-y-1">
+                        {money.payments.map((p) => (
+                          <li key={p.paymentId} className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
+                            <span>
+                              <span className="font-bold tracking-wide">{p.number}</span>
+                              <span className={TONE.muted}>
+                                {" "}
+                                · {formatDate(p.date)} · {p.amountUsd ? formatMoney(p.amountUsd, "USD") : formatMoney(p.amount, "BDT")} · {supplierMethodLabel(p.method)}
+                              </span>
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 px-2 text-[12px]"
+                              aria-label={`Download PDF for ${p.number}`}
+                              disabled={downloadVoucher.isPending}
+                              onClick={() => { setError(null); downloadVoucher.mutate({ id: p.paymentId, number: p.number }) }}
+                            >
+                              <RiDownloadLine className="size-3.5" aria-hidden />
+                              PDF
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -456,6 +516,20 @@ export function BoughtPart({
           bill={fixingBill}
           onSaved={() => {
             setFixingBill(null)
+            invalidate()
+          }}
+        />
+      ) : null}
+
+      {payingBill ? (
+        <PaymentDialog
+          open
+          onOpenChange={(open) => !open && setPayingBill(null)}
+          opportunityId={opportunityId}
+          bills={bills}
+          onlyBillId={payingBill.id}
+          onSaved={() => {
+            setPayingBill(null)
             invalidate()
           }}
         />
