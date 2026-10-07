@@ -2226,8 +2226,19 @@ model SupplierBillLine {
   @@index([billId])
 }
 
+/// How Finance paid the supplier. No Cash: every payment posts to the bank
+/// account, so a cash option waits for real cash posting.
+enum SupplierPaymentMethod {
+  BANK_TRANSFER
+  CHEQUE
+  MOBILE_BANKING
+}
+
 model SupplierPayment {
   id         String   @id @default(uuid())
+  /// The number on the payment voucher, `PV-0001`. Made by the system from the
+  /// `PV` row of IdCounter. Never edited, never reused, kept after a reversal.
+  number     String   @unique
   supplierId String
   supplier   Supplier @relation(fields: [supplierId], references: [id])
   date       DateTime
@@ -2243,6 +2254,11 @@ model SupplierPayment {
   // Cheque number, bank reference, bKash transaction id, same field as
   // OperatingCost.paymentRef.
   reference String?
+
+  /// Null only on payments saved before the method existed. The service
+  /// refuses a new payment without one.
+  paymentMethod SupplierPaymentMethod?
+  bankName      String?
 
   status     SupplierDocStatus @default(DRAFT)
   approvedBy String?
@@ -2281,6 +2297,15 @@ model SupplierPaymentAllocation {
   // bill, what FX variance is computed against: this same principal at
   // the bill's frozen rate versus the payment's frozen rate.
   amountUsd Decimal? @db.Decimal(14, 2)
+
+  /// Saved with the payment and never changed, so the payment voucher always
+  /// matches the PDF. A later credit note or reversal does not touch an old
+  /// voucher. In taka, at the bill's own rate, the same figure the books use.
+  billTotal    Decimal @db.Decimal(14, 2)
+  balanceAfter Decimal @db.Decimal(14, 2)
+  /// The same two figures in US dollars, only for a bill in US dollars.
+  billTotalUsd    Decimal? @db.Decimal(14, 2)
+  balanceAfterUsd Decimal? @db.Decimal(14, 2)
 
   @@index([paymentId])
   @@index([billId])

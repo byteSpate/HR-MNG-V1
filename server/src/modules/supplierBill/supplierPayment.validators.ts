@@ -6,6 +6,8 @@ const allocationSchema = z.object({
   amount: z.string().refine((v) => Number(v) > 0, "Allocation amount must be greater than zero"),
 })
 
+export const SUPPLIER_PAYMENT_METHODS = ["BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"] as const
+
 export const createSupplierPaymentSchema = z.object({
   // The one deal this payment belongs to (spec: every document belongs to
   // one deal).
@@ -17,6 +19,10 @@ export const createSupplierPaymentSchema = z.object({
   amount: z.string().refine((v) => Number(v) > 0, "Amount must be greater than zero"),
   currency: z.enum(["BDT", "USD"]).default("BDT"),
   reference: z.string().trim().max(100).optional(),
+  // Required on every new payment. No Cash: every payment posts to the bank.
+  // Old payments have none and show "Not recorded".
+  paymentMethod: z.enum(SUPPLIER_PAYMENT_METHODS, { error: "Pick how the money was paid." }),
+  bankName: z.string().trim().max(100).optional(),
   allocations: z.array(allocationSchema).min(1, "A payment must be allocated to at least one bill"),
 })
 
