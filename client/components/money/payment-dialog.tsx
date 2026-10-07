@@ -5,8 +5,9 @@ import { useMutation } from "@tanstack/react-query"
 
 import { createSupplierPayment, type SupplierPaymentInput } from "@/lib/api/supplierPayment"
 import { useSession } from "@/lib/auth/session-context"
-import type { DealMoneySupplierBill, SupplierPayment } from "@/lib/api/types"
+import type { DealMoneySupplierBill, SupplierPayment, SupplierPaymentMethod } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
+import { SUPPLIER_PAYMENT_METHODS, supplierMethodLabel } from "@/lib/supplier-payment-method"
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -68,6 +69,8 @@ export function PaymentDialog({
   const [currency, setCurrency] = useState<"BDT" | "USD">("BDT")
   const [amount, setAmount] = useState("")
   const [reference, setReference] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<SupplierPaymentMethod | "">("")
+  const [bankName, setBankName] = useState("")
   const [allocated, setAllocated] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -103,7 +106,7 @@ export function PaymentDialog({
   // money left over or allocated past what it settles.
   const matches = Math.abs((Number(amount) || 0) - allocatedTotal) < 0.005
 
-  const canSubmit = Boolean(supplierId && date && Number(amount) > 0 && allocatedTotal > 0 && matches)
+  const canSubmit = Boolean(supplierId && date && paymentMethod && Number(amount) > 0 && allocatedTotal > 0 && matches)
 
   const changeScope = (apply: () => void) => {
     apply()
@@ -120,6 +123,7 @@ export function PaymentDialog({
   })
 
   const submit = () => {
+    if (!paymentMethod) return
     const allocations = Object.entries(allocated)
       .filter(([, v]) => Number(v) > 0)
       .map(([billId, v]) => ({ billId, amount: v }))
@@ -130,6 +134,8 @@ export function PaymentDialog({
       amount,
       currency,
       reference: reference.trim() || undefined,
+      paymentMethod,
+      bankName: bankName.trim() || undefined,
       allocations,
     })
   }
@@ -167,6 +173,17 @@ export function PaymentDialog({
             </Field>
             <Field label={`Amount paid (${currency})`} htmlFor="pay-amount">
               <Input id="pay-amount" type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </Field>
+            <Field label="How was it paid?" htmlFor="pay-method">
+              <select id="pay-method" className={SELECT} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as SupplierPaymentMethod | "")}>
+                <option value="">Pick one</option>
+                {SUPPLIER_PAYMENT_METHODS.map((m) => (
+                  <option key={m} value={m}>{supplierMethodLabel(m)}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Bank name" htmlFor="pay-bank">
+              <Input id="pay-bank" value={bankName} maxLength={100} onChange={(e) => setBankName(e.target.value)} />
             </Field>
             <Field label="Reference" htmlFor="pay-ref" hint="Cheque number, bank reference or transaction ID.">
               <Input id="pay-ref" value={reference} onChange={(e) => setReference(e.target.value)} />

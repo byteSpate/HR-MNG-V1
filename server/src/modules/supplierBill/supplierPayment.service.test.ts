@@ -17,6 +17,11 @@ vi.mock("../posting/posting.rules", async (importOriginal) => ({
   loadRules: vi.fn(),
 }))
 vi.mock("../accounting/accounting.posting", () => ({ postSystemJournal: vi.fn() }))
+vi.mock("./supplierPayment.number", () => ({ nextPaymentVoucherNumber: vi.fn() }))
+vi.mock("./supplierPayment.figures", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./supplierPayment.figures")>()),
+  loadBillFigures: vi.fn(),
+}))
 
 import { Prisma } from "../../generated/prisma/client"
 import prisma from "../../config/prisma"
@@ -25,6 +30,8 @@ import { assertDealAccess } from "../receivables/receivables.access"
 import { loadRules } from "../posting/posting.rules"
 import { postSystemJournal } from "../accounting/accounting.posting"
 import { createSupplierPayment } from "./supplierPayment.service"
+import { nextPaymentVoucherNumber } from "./supplierPayment.number"
+import { loadBillFigures } from "./supplierPayment.figures"
 
 const ACTOR = { sub: "u1", role: "FINANCE_OFFICER", email: "f@byte.spate", mustChangePassword: false, salesRole: null } as any
 const d = (v: string) => new Prisma.Decimal(v)
@@ -54,12 +61,18 @@ function arrangeWonDeal({ opportunityId, bills }: { opportunityId: string; bills
     id: opportunityId, serial: "BS-OPP-00001", status: "WON", salesAccountId: "sa-1",
   } as any)
   vi.mocked(prisma.supplierBill.findMany).mockResolvedValue(bills as any)
+  // What each bill looked like just before this payment: its total and what is still owed.
+  vi.mocked(loadBillFigures).mockResolvedValue(new Map(bills.map((b: any) => {
+    const total = b.lines.reduce((sum: Prisma.Decimal, l: any) => sum.plus(l.amount).plus(l.vatAmount), d("0"))
+    return [b.id, { total, outstanding: total, currency: b.currency, fxRateToBdt: b.fxRateToBdt }]
+  })) as any)
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
   vi.mocked(loadRules).mockImplementation(async (_tx, event) => (event === "FX" ? FX_RULES : RULES) as any)
+  vi.mocked(nextPaymentVoucherNumber).mockResolvedValue("PV-0007")
   arrangeWonDeal({ opportunityId: "opp-1", bills: [BDT_BILL] })
 })
 
@@ -74,7 +87,7 @@ describe("createSupplierPayment", () => {
     } as any)
 
     const p = await createSupplierPayment(
-      { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-10-10", amount: "500000", currency: "BDT", allocations: [{ billId: "b1", amount: "500000" }] } as any,
+      { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-10-10", amount: "500000", currency: "BDT", paymentMethod: "BANK_TRANSFER", allocations: [{ billId: "b1", amount: "500000" }] } as any,
       ACTOR
     )
 
@@ -90,6 +103,77 @@ describe("createSupplierPayment", () => {
         }),
       })
     )
+  })
+
+  it("gives the payment the next voucher number, and writes it to the audit trail", async () => {
+    vi.mocked(prisma.supplierPayment.create).mockResolvedValue({
+      id: "p1", supplierId: "sup-1", opportunityId: "opp-1", date: new Date("2026-10-10"), number: "PV-0007",
+      amount: d("500000"), sourceAmount: null, currency: "BDT", fxRateToBdt: null,
+      supplier: { name: "Star Tech" }, allocations: [],
+    } as any)
+
+    await createSupplierPayment(
+      { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-10-10", amount: "500000", currency: "BDT", paymentMethod: "CHEQUE", allocations: [{ billId: "b1", amount: "500000" }] } as any,
+      ACTOR
+    )
+
+    expect(nextPaymentVoucherNumber).toHaveBeenCalledWith(prisma)
+    expect(prisma.supplierPayment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ number: "PV-0007" }),
+    }))
+    expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ after: expect.objectContaining({ number: "PV-0007" }) }),
+    }))
+  })
+
+  it("saves how it was paid, and the bank when there is one, as null when there is none", async () => {
+    vi.mocked(prisma.supplierPayment.create).mockResolvedValue({
+      id: "p1", supplierId: "sup-1", opportunityId: "opp-1", date: new Date("2026-10-10"),
+      amount: d("500000"), sourceAmount: null, currency: "BDT", fxRateToBdt: null,
+      supplier: { name: "Star Tech" }, allocations: [],
+    } as any)
+    const base = { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-10-10", amount: "500000", currency: "BDT", allocations: [{ billId: "b1", amount: "500000" }] }
+
+    await createSupplierPayment({ ...base, paymentMethod: "CHEQUE", bankName: "MTB" } as any, ACTOR)
+    await createSupplierPayment({ ...base, paymentMethod: "MOBILE_BANKING" } as any, ACTOR)
+
+    const calls = vi.mocked(prisma.supplierPayment.create).mock.calls
+    expect(calls[0][0].data).toMatchObject({ paymentMethod: "CHEQUE", bankName: "MTB" })
+    expect(calls[1][0].data).toMatchObject({ paymentMethod: "MOBILE_BANKING", bankName: null })
+  })
+
+  it("saves the bill total and the balance with each payment, so an old voucher never changes", async () => {
+    const bill = { ...BDT_BILL, lines: [{ amount: d("50000"), vatAmount: d("0") }] }
+    arrangeWonDeal({ opportunityId: "opp-1", bills: [bill] })
+    vi.mocked(loadBillFigures).mockResolvedValue(new Map([["b1", { total: d("50000"), outstanding: d("30000"), currency: "BDT", fxRateToBdt: null }]]) as any)
+    vi.mocked(prisma.supplierPayment.create).mockResolvedValue({
+      id: "p1", supplierId: "sup-1", opportunityId: "opp-1", date: new Date("2026-10-10"),
+      amount: d("15000"), sourceAmount: null, currency: "BDT", fxRateToBdt: null,
+      supplier: { name: "Star Tech" }, allocations: [],
+    } as any)
+
+    await createSupplierPayment(
+      { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-10-10", amount: "15000", currency: "BDT", paymentMethod: "CHEQUE", allocations: [{ billId: "b1", amount: "15000" }] } as any,
+      ACTOR
+    )
+
+    expect(prisma.supplierPayment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        allocations: { create: [{
+          billId: "b1", amount: "15000.00", amountUsd: null,
+          billTotal: "50000.00", balanceAfter: "15000.00", billTotalUsd: null, balanceAfterUsd: null,
+        }] },
+      }),
+    }))
+  })
+
+  it("takes no voucher number when the payment is refused", async () => {
+    await expect(createSupplierPayment(
+      { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-10-10", amount: "900000", currency: "BDT", paymentMethod: "CHEQUE", allocations: [{ billId: "b1", amount: "500000" }] } as any,
+      ACTOR
+    )).rejects.toThrow()
+
+    expect(nextPaymentVoucherNumber).not.toHaveBeenCalled()
   })
 
   it("refuses a bill on a different deal (Review Focus 1, supplier side)", async () => {
@@ -155,7 +239,7 @@ describe("createSupplierPayment in USD", () => {
     } as any)
 
     await createSupplierPayment(
-      { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-11-01", amount: "10000", currency: "USD", allocations: [{ billId: "b2", amount: "10000" }] } as any,
+      { opportunityId: "opp-1", supplierId: "sup-1", date: "2026-11-01", amount: "10000", currency: "USD", paymentMethod: "BANK_TRANSFER", allocations: [{ billId: "b2", amount: "10000" }] } as any,
       ACTOR
     )
 
@@ -167,7 +251,10 @@ describe("createSupplierPayment in USD", () => {
           sourceAmount: "10000",
           fxRateToBdt: "125.000000",
           allocations: {
-            create: [expect.objectContaining({ billId: "b2", amount: "1225000.00", amountUsd: "10000" })],
+            create: [expect.objectContaining({
+              billId: "b2", amount: "1225000.00", amountUsd: "10000.00",
+              billTotal: "1225000.00", balanceAfter: "0.00", billTotalUsd: "10000.00", balanceAfterUsd: "0.00",
+            })],
           },
         }),
       })

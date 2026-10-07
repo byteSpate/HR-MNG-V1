@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express"
 import { reverseSupplierPayment } from "./supplierPayment.posting"
+import { renderSupplierPaymentPdf } from "./supplierPayment.pdf"
 import { createSupplierPayment, getSupplierPayment, listSupplierPayments } from "./supplierPayment.service"
 import { createSupplierPaymentSchema, reverseSupplierPaymentSchema } from "./supplierPayment.validators"
 
@@ -34,6 +35,17 @@ export async function reverseSupplierPaymentHandler(req: RequestWithId, res: Res
   try {
     const body = reverseSupplierPaymentSchema.parse(req.body)
     return res.status(200).json(await reverseSupplierPayment(req.params.id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function supplierPaymentPdfHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const { pdf, number } = await renderSupplierPaymentPdf(req.params.id)
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", `attachment; filename="${number}.pdf"`)
+    return res.status(200).send(pdf)
   } catch (err) {
     return next(err)
   }

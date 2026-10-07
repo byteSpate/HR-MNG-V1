@@ -7,11 +7,14 @@ vi.mock("./supplierPayment.service", () => ({
   createSupplierPayment: vi.fn(),
 }))
 vi.mock("./supplierPayment.posting", () => ({ reverseSupplierPayment: vi.fn() }))
+vi.mock("./supplierPayment.pdf", () => ({ renderSupplierPaymentPdf: vi.fn() }))
 
 import app from "../../app"
 import { signAccessToken } from "../auth/auth.utils"
 import { listSupplierPayments } from "./supplierPayment.service"
 import { reverseSupplierPayment } from "./supplierPayment.posting"
+import { renderSupplierPaymentPdf } from "./supplierPayment.pdf"
+import { AppError } from "../../middleware/errorHandler"
 
 function tokenFor(role: "EMPLOYEE" | "FINANCE_OFFICER" | "SUPER_ADMIN") {
   return signAccessToken({ sub: "actor-1", role: role as any, email: "a@b.com", mustChangePassword: false, salesRole: null })
@@ -82,5 +85,42 @@ describe("POST /api/supplier-payments/:id/reverse", () => {
       .send({})
       .set("Authorization", `Bearer ${tokenFor("SUPER_ADMIN")}`)
     expect(res.status).toBe(400)
+  })
+})
+
+describe("GET /api/supplier-payments/:id/pdf", () => {
+  it("refuses with no token", async () => {
+    expect((await request(app).get("/api/supplier-payments/p1/pdf")).status).toBe(401)
+  })
+
+  it("refuses an employee: supplier money is for Finance and Super Admin only", async () => {
+    expect((await request(app).get("/api/supplier-payments/p1/pdf").set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)).status).toBe(403)
+    expect(renderSupplierPaymentPdf).not.toHaveBeenCalled()
+  })
+
+  it("sends the PDF as a download named after the voucher number", async () => {
+    vi.mocked(renderSupplierPaymentPdf).mockResolvedValue({ pdf: Buffer.from("%PDF-1.4"), number: "PV-0001" })
+
+    const res = await request(app).get("/api/supplier-payments/p1/pdf").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+
+    expect(res.status).toBe(200)
+    expect(res.headers["content-type"]).toContain("application/pdf")
+    expect(res.headers["content-disposition"]).toBe('attachment; filename="PV-0001.pdf"')
+    expect(renderSupplierPaymentPdf).toHaveBeenCalledWith("p1")
+  })
+
+  it("lets a Super Admin download too", async () => {
+    vi.mocked(renderSupplierPaymentPdf).mockResolvedValue({ pdf: Buffer.from("%PDF-1.4"), number: "PV-0001" })
+
+    expect((await request(app).get("/api/supplier-payments/p1/pdf").set("Authorization", `Bearer ${tokenFor("SUPER_ADMIN")}`)).status).toBe(200)
+  })
+
+  it("says Supplier payment not found for an unknown payment", async () => {
+    vi.mocked(renderSupplierPaymentPdf).mockRejectedValue(new AppError(404, "Supplier payment not found"))
+
+    const res = await request(app).get("/api/supplier-payments/nope/pdf").set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({ error: "Supplier payment not found" })
   })
 })
