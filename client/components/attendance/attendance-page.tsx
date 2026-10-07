@@ -113,10 +113,12 @@ export function AttendancePage() {
     queryKey: ["attendance", "today"],
     queryFn: () => getToday(accessToken!),
     enabled: isAuthed && isStaff,
+    // The punch state must never be 30 seconds old.
+    staleTime: 0,
     refetchOnWindowFocus: true,
   })
 
-  const from = `${year}-${String(month).padStart(2, "0")}-01`
+  const from =`${year}-${String(month).padStart(2, "0")}-01`
   const to = `${year}-${String(month).padStart(2, "0")}-${new Date(year, month, 0).getDate()}`
 
   const daysQuery = useQuery({
