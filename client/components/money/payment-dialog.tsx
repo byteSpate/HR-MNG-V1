@@ -152,7 +152,11 @@ export function PaymentDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Pay supplier</DialogTitle>
-          <DialogDescription>Pick the bills this pays. The amount must be put against bills in full.</DialogDescription>
+          <DialogDescription>
+            {onlyBill
+              ? "Everything you pay goes to this bill. A bill can be paid in parts. Record each part as its own payment."
+              : "Pick the bills this pays. The amount must be put against bills in full."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
