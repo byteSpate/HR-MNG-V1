@@ -16,7 +16,6 @@ import { TONE } from "@/components/dashboard/record-kit"
 import { ACCOUNT_STATUS_LABEL } from "@/components/sales/shared/sales-shared"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { CompanyProfilePanel } from "@/components/sales/accounts/company-profile-panel"
-import { CollaboratorsPanel } from "@/components/sales/accounts/collaborators-panel"
 
 /**
  * What the app knows about this account that is not a person or a list of
@@ -58,8 +57,6 @@ export function AccountAboutPanel({ account }: { account: SalesAccountSummary })
         ))}
       </dl>
       </Panel>
-
-      <CollaboratorsPanel account={account} />
 
       <CompanyProfilePanel accountId={account.id} />
     </div>
