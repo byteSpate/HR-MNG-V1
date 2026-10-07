@@ -168,9 +168,10 @@ function ItemEditor({ card, accountId, item, onDone }: {
       <div className="text-[13px] font-bold">{item ? `Edit ${itemTitle(item)}` : `Add to ${card.title}`}</div>
       <HeatmapItemForm card={card} draft={draft} onChange={setDraft} />
       {error ? <FormError>{error}</FormError> : null}
-      <DialogFooter>
+      {/* Not DialogFooter: its negative margins fit the dialog edge, and inside this scroller they push the form sideways. */}
+      <div className="flex flex-wrap justify-end gap-2">
         <DialogActions pending={save.isPending} submitLabel="Save" disabled={false} onCancel={onDone} onSubmit={submit} />
-      </DialogFooter>
+      </div>
     </form>
   )
 }
