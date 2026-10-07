@@ -19,8 +19,17 @@ describe("createReceiptSchema payment method", () => {
     }
   })
 
-  it.each(["CASH", "BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"])("accepts %s", (paymentMethod) => {
+  it.each(["BANK_TRANSFER", "CHEQUE", "MOBILE_BANKING"])("accepts %s", (paymentMethod) => {
     expect(createReceiptSchema.safeParse({ ...BASE, paymentMethod }).success).toBe(true)
+  })
+
+  it("refuses Cash, because the books post every receipt to the bank", () => {
+    const r = createReceiptSchema.safeParse({ ...BASE, paymentMethod: "CASH" })
+
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      expect(r.error.issues.find((i) => i.path[0] === "paymentMethod")?.message).toBe("Pick how the money was paid.")
+    }
   })
 
   it("refuses a method that is not on the list", () => {
@@ -32,7 +41,7 @@ describe("createReceiptSchema payment method", () => {
 
 describe("createReceiptSchema bank name", () => {
   it("is optional", () => {
-    expect(createReceiptSchema.safeParse({ ...BASE, paymentMethod: "CASH" }).success).toBe(true)
+    expect(createReceiptSchema.safeParse({ ...BASE, paymentMethod: "CHEQUE" }).success).toBe(true)
   })
 
   it("is trimmed", () => {
