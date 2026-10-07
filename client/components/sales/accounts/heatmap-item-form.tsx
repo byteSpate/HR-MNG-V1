@@ -48,7 +48,7 @@ export function HeatmapItemForm({ card, draft, onChange }: {
   const set = <K extends keyof ItemDraft>(key: K, value: ItemDraft[K]) => onChange({ ...draft, [key]: value })
   const id = (name: string) => `heatmap-${card.key}-${name}`
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
       <Field label="Brand" htmlFor={id("brand")}>
         <Input id={id("brand")} value={draft.brand} maxLength={100} onChange={(e) => set("brand", e.target.value)} />
       </Field>
