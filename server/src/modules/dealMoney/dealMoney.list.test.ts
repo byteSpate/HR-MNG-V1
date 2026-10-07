@@ -91,3 +91,27 @@ describe("listDealMoney cost", () => {
     expect(loadRules).toHaveBeenCalledWith(expect.anything(), "FX")
   })
 })
+
+describe("listDealMoney round trips", () => {
+  it("reads the FX posting rules while the deals are still loading", async () => {
+    let finishDeals!: (rows: never[]) => void
+    vi.mocked(prisma.opportunity.findMany).mockReturnValue(
+      new Promise((resolve) => {
+        finishDeals = resolve as (rows: never[]) => void
+      }) as never
+    )
+
+    const pending = listDealMoney({})
+    await Promise.resolve()
+
+    // Before the fix this was read only after the deals had loaded.
+    expect(loadRules).toHaveBeenCalledWith(expect.anything(), "FX")
+
+    finishDeals([])
+    await pending
+  })
+
+  it("still returns an empty page when there are no deals", async () => {
+    await expect(listDealMoney({})).resolves.toEqual({ rows: [], total: 0 })
+  })
+})

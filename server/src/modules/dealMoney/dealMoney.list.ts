@@ -47,7 +47,10 @@ export async function listDealMoney(query: { search?: string; page?: number }): 
       : {}),
   }
 
-  const [deals, total] = await Promise.all([
+  // The posting-rule read needs nothing from the deals, so it starts with them.
+  // On an empty page it is one wasted read; on every other page it saves a
+  // whole trip to the database.
+  const [deals, total, costWhere] = await Promise.all([
     prisma.opportunity.findMany({
       where,
       select: { id: true, serial: true, name: true, salesAccount: { select: { customer: { select: { legalName: true } } } } },
@@ -56,11 +59,11 @@ export async function listDealMoney(query: { search?: string; page?: number }): 
       take: PAGE_SIZE,
     }),
     prisma.opportunity.count({ where }),
+    dealCostLineWhere(),
   ])
 
   if (deals.length === 0) return { rows: [], total }
   const ids = deals.map((d) => d.id)
-  const costWhere = await dealCostLineWhere()
 
   const [invoices, billCosts, waitingInvoices, waitingBills, waitingCustomerCreditNotes, waitingSupplierCreditNotes] = await Promise.all([
     prisma.invoice.findMany({
