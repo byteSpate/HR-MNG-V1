@@ -6,7 +6,9 @@ import morgan from "morgan"
 
 import { parseOrigins } from "./config/cors"
 import { env } from "./config/env"
+import { compressResponses } from "./middleware/compress"
 import { errorHandler } from "./middleware/errorHandler"
+import { requestMetrics } from "./observability/request-metrics"
 import accountingRoutes from "./modules/accounting/accounting.routes"
 import announcementRoutes from "./modules/announcement/announcement.routes"
 import assetRoutes from "./modules/asset/asset.routes"
@@ -53,6 +55,7 @@ const app = express()
 app.set("trust proxy", 1)
 
 app.use(helmet())
+app.use(compressResponses())
 app.use(
   cors({
     origin: parseOrigins(env.CORS_ORIGINS, env.CLIENT_ORIGIN),
@@ -61,7 +64,11 @@ app.use(
 )
 app.use(cookieParser())
 app.use(express.json())
-app.use(morgan("dev"))
+// After the body parser on purpose: see request-metrics.ts.
+app.use(requestMetrics({ log: env.PERF_LOG === "on" }))
+// "dev" colours the line for a terminal. On Heroku that would put colour codes
+// in the log, so production uses the plain format.
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"))
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" })
