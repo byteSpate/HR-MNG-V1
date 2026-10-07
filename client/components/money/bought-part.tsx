@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
-import { RiAddLine, RiArrowGoBackLine, RiCheckLine, RiFileEditLine } from "@remixicon/react"
+import { RiAddLine, RiArrowGoBackLine, RiCheckLine, RiDownloadLine, RiFileEditLine } from "@remixicon/react"
 
 import { approveSupplierBill } from "@/lib/api/supplierBill"
 import { approveSupplierCreditNote } from "@/lib/api/supplierCreditNote"
@@ -11,11 +11,13 @@ import { sendBackApproval } from "@/lib/api/dealMoney"
 import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneyProductLine, DealMoneySupplierBill, SalesTrack, SupplierCreditNote, SupplierPayment } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
+import { supplierMethodLabel } from "@/lib/supplier-payment-method"
 import { cn } from "@/lib/utils"
 import type { MoneyHighlight } from "@/components/money/money-section"
 import { BillCreditNoteDialog } from "@/components/money/bill-credit-note-dialog"
 import { BillDialog } from "@/components/money/bill-dialog"
 import { billStillOwed, PaymentDialog } from "@/components/money/payment-dialog"
+import { useSupplierPaymentPdf } from "@/components/money/use-supplier-payment-pdf"
 import {
   ConfirmDialog,
   DialogActions,
@@ -143,6 +145,8 @@ export function BoughtPart({
       setError(toMessage(err))
     },
   })
+
+  const downloadVoucher = useSupplierPaymentPdf(setError)
 
   const reversePayment = useMutation({
     mutationFn: () => reverseSupplierPayment(accessToken!, reversingPayment!.id, reverseReason.trim()),
@@ -370,6 +374,7 @@ export function BoughtPart({
               const reversed = p.reversedAt !== null
               const settles = p.allocations.map((a) => a.bill?.billNumber ?? billNumberOf(a.billId))
               const actions = [
+                { kind: "custom" as const, label: "Download PDF", icon: <RiDownloadLine className="size-3.5" aria-hidden />, onClick: () => { setError(null); downloadVoucher.mutate({ id: p.id, number: p.number }) } },
                 ...(canEdit && !reversed && isSuperAdmin
                   ? [
                       {
@@ -385,11 +390,16 @@ export function BoughtPart({
                 <li key={p.id} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className={`min-w-0 ${reversed ? "line-through opacity-60" : ""}`}>
+                      <div className="text-[12px] font-bold tracking-wide">{p.number}</div>
                       <div className="text-[13.5px] font-bold">{supplierNameOf(p.supplierId)}</div>
                       <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
                         {formatDate(p.date)}
                         {p.currency === "USD" && p.sourceAmount ? ` · ${formatMoney(p.sourceAmount, "USD")} at ${Number(p.fxRateToBdt).toFixed(2)}` : ""}
                         {p.reference ? ` · ${p.reference}` : ""}
+                      </div>
+                      <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                        {supplierMethodLabel(p.paymentMethod)}
+                        {p.bankName ? ` · ${p.bankName}` : ""}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">

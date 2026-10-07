@@ -1818,6 +1818,9 @@ export interface SupplierBillListRow {
   lines: SupplierBillLine[]
 }
 
+/** How Finance paid the supplier. Mirrors the server's `SupplierPaymentMethod` enum. No Cash. */
+export type SupplierPaymentMethod = "BANK_TRANSFER" | "CHEQUE" | "MOBILE_BANKING"
+
 export interface SupplierPaymentAllocation {
   id: string
   billId: string
@@ -1829,6 +1832,8 @@ export interface SupplierPaymentAllocation {
 
 export interface SupplierPayment {
   id: string
+  /** The payment voucher number, `PV-0001`. Made by the server. */
+  number: string
   supplierId: string
   /** The one deal this payment belongs to (spec: every document belongs to one deal). */
   opportunityId: string
@@ -1838,6 +1843,9 @@ export interface SupplierPayment {
   currency: "BDT" | "USD"
   fxRateToBdt: string | null
   reference: string | null
+  /** Null only on a payment saved before the method existed. */
+  paymentMethod: SupplierPaymentMethod | null
+  bankName: string | null
   status: SupplierDocStatus
   approvedBy: string
   approvedAt: string
