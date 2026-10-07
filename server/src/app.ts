@@ -6,6 +6,7 @@ import morgan from "morgan"
 
 import { parseOrigins } from "./config/cors"
 import { env } from "./config/env"
+import { compressResponses } from "./middleware/compress"
 import { errorHandler } from "./middleware/errorHandler"
 import { requestMetrics } from "./observability/request-metrics"
 import accountingRoutes from "./modules/accounting/accounting.routes"
@@ -54,6 +55,7 @@ const app = express()
 app.set("trust proxy", 1)
 
 app.use(helmet())
+app.use(compressResponses())
 app.use(
   cors({
     origin: parseOrigins(env.CORS_ORIGINS, env.CLIENT_ORIGIN),

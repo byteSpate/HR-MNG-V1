@@ -17,4 +17,10 @@ describe("app wiring", () => {
     expect(res.status).toBe(401)
     expect(res.headers["server-timing"]).toMatch(/^total;dur=\d/)
   })
+
+  it("compresses responses", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const layers = (app as any).router.stack as { name: string }[]
+    expect(layers.map((l) => l.name)).toContain("compression")
+  })
 })
