@@ -7,6 +7,7 @@ import { RiAddLine, RiDeleteBinLine } from "@remixicon/react"
 import { createCustomerPo, prefillPoLines, updateCustomerPo, type CustomerPoInput } from "@/lib/api/customerPo"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { CustomerPo, SaleLineKind, SalesTrack, VatCode, VatMethod } from "@/lib/api/types"
 import { MONEY_PROFILE } from "@/components/money/track-profile"
 import { formatMoney } from "@/lib/money"
@@ -83,6 +84,7 @@ export function CustomerPoDialog({
 
   const vatCodes = useQuery({
     queryKey: ["vat-codes"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listVatCodes(accessToken!),
     enabled: Boolean(accessToken),
   })

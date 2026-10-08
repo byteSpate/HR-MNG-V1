@@ -17,6 +17,7 @@ import { listShifts } from "@/lib/api/shifts"
 import { SalaryStructureDialog } from "@/components/employees/salary-structure-dialog"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import { toDateString } from "@/lib/utils"
 import type {
   CreateStaffAccountInput,
@@ -255,6 +256,7 @@ export function EmployeesPage() {
 
   const departmentsQuery = useQuery({
     queryKey: ["departments"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listDepartments(accessToken!),
     enabled: sessionStatus === "authenticated" && !!accessToken,
   })
@@ -267,6 +269,7 @@ export function EmployeesPage() {
 
   const shiftsQuery = useQuery({
     queryKey: ["shifts"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listShifts(accessToken!),
     enabled: sessionStatus === "authenticated" && !!accessToken,
   })

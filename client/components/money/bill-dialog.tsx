@@ -8,6 +8,7 @@ import { createSupplierBill, updateSupplierBill, type SupplierBillInput, type Su
 import { listSuppliers } from "@/lib/api/supplier"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { DealMoneyProductLine, DealMoneySupplierBill, SalesTrack, SupplierBill, VatMethod } from "@/lib/api/types"
 import { MONEY_PROFILE } from "@/components/money/track-profile"
 import { formatMoney } from "@/lib/money"
@@ -114,6 +115,7 @@ export function BillDialog({
   })
   const vatCodes = useQuery({
     queryKey: ["vat-codes"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listVatCodes(accessToken!),
     enabled: Boolean(accessToken) && open,
   })
