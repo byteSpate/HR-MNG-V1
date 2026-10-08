@@ -513,41 +513,56 @@ export async function processRun(id: string, actorUserId: string, excludedEmploy
   // choice; otherwise the earlier choice stays.
   const leftOut = [...new Set(excludedEmployeeIds ?? run.excludedEmployeeIds ?? [])]
 
+  // Everything that only reads, and does not depend on the delete below, runs
+  // BEFORE the transaction starts, on the plain client. Inside the transaction
+  // each of these reads needed a second connection while the transaction held
+  // the first, from a pool of five. A few overlapping payroll actions could
+  // use up the pool and wait on each other. It also kept the transaction open
+  // for the whole attendance summary.
+  //
+  // These reads could never see the transaction's own uncommitted delete (the
+  // plain client reads committed data), so moving them earlier changes what
+  // they read in no way.
+  //
+  // `assertProcessable` is first, so a run that cannot legally be paid is
+  // never partially rewritten. Same read-then-write pattern
+  // `assertMonthNotLocked` uses elsewhere in this codebase.
+  await assertProcessable(run.month, run.year, leftOut)
+
+  const [rosterAll, summaries] = await Promise.all([
+    loadPayrollRoster(run.month, run.year),
+    // Attendance does not depend on payslips, so it is safe to read before the
+    // delete.
+    getMonthlySummary(SYSTEM_ACTOR, run.month, run.year),
+  ])
+  const roster = rosterAll
+    .filter((e) => !leftOut.includes(e.id))
+    .filter(
+      (e): e is typeof e & { salaryStructure: NonNullable<(typeof e)["salaryStructure"]> } =>
+        e.salaryStructure !== null
+    )
+  const rosterIds = roster.map((e) => e.id)
+  const { to: monthEnd } = monthRange(run.year, run.month)
+
+  // Resolve the run's rate once. USD is the only non-BDT currency this
+  // system has, so "the rate per currency" collapses to "the USD rate" —
+  // null when nobody in the roster is paid in it, since there is then no
+  // "the rate" to speak of.
+  const needsUsd = roster.some((e) => e.salaryStructure.currency !== REPORTING_CURRENCY)
+  const usdRate = needsUsd ? await resolveRateOrThrow("USD", monthEnd) : null
+  const summaryByEmployee = new Map(summaries.map((s) => [s.employee.id, s]))
+
   return prisma.$transaction(async (tx) => {
-    // First, so a run that cannot legally be paid is never partially
-    // rewritten. Read via the plain client rather than `tx` — the same
-    // read-then-write pattern `assertMonthNotLocked` already uses elsewhere
-    // in this codebase — because these are sanity reads with nothing to roll
-    // back if they pass; only the writes below need the transaction.
-    await assertProcessable(run.month, run.year, leftOut)
-
-    const roster = (await loadPayrollRoster(run.month, run.year))
-      .filter((e) => !leftOut.includes(e.id))
-      .filter(
-        (e): e is typeof e & { salaryStructure: NonNullable<(typeof e)["salaryStructure"]> } =>
-          e.salaryStructure !== null
-      )
-    const rosterIds = roster.map((e) => e.id)
-    const { to: monthEnd } = monthRange(run.year, run.month)
-
-    // Resolve the run's rate once. USD is the only non-BDT currency this
-    // system has, so "the rate per currency" collapses to "the USD rate" —
-    // null when nobody in the roster is paid in it, since there is then no
-    // "the rate" to speak of.
-    const needsUsd = roster.some((e) => e.salaryStructure.currency !== REPORTING_CURRENCY)
-    const usdRate = needsUsd ? await resolveRateOrThrow("USD", monthEnd) : null
-
     // Deleting the payslip rows is enough to release every PayrollAdjustment
     // and ExpenseClaim that pointed at them — both foreign keys are
     // ON DELETE SET NULL precisely so a reprocess does not have to remember
-    // to clear them by hand.
+    // to clear them by hand. The reads for adjustments and claims below must
+    // stay inside the transaction, after this delete, to see them released.
     await tx.payslip.deleteMany({ where: { payrollRunId: id } })
 
     // Read inside the transaction, so a run uses the rule that was in force
     // when it was processed. The payslip then freezes the result.
     const { deductLossOfPay, recoverAssetsFromSalary } = await loadPayrollSettings(tx)
-    const summaries = await getMonthlySummary(SYSTEM_ACTOR, run.month, run.year)
-    const summaryByEmployee = new Map(summaries.map((s) => [s.employee.id, s]))
 
     const unclaimedAdjustments =
       rosterIds.length === 0
