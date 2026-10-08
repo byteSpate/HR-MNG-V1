@@ -7,6 +7,7 @@ import { createAsset, getAsset, listCategories, updateAsset } from "@/lib/api/as
 import { listDepartments } from "@/lib/api/departments"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { AssetDetail, Currency } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
 import {
@@ -143,11 +144,13 @@ function AssetForm({
 
   const categoriesQuery = useQuery({
     queryKey: ["asset-categories"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listCategories(accessToken!),
   })
 
   const departmentsQuery = useQuery({
     queryKey: ["departments"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listDepartments(accessToken!),
   })
 

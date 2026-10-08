@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/leave"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { LeaveRequestItem } from "@/lib/api/types"
 import { DataTable } from "@/components/dashboard/data-table"
 import { MiniStat, PageHeader } from "@/components/dashboard/page-header"
@@ -145,6 +146,7 @@ export function LeavePage() {
 
   const typesQuery = useQuery({
     queryKey: ["leave-types"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listLeaveTypes(accessToken!),
     enabled: isAuthed && isStaff,
   })

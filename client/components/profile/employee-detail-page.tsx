@@ -17,6 +17,7 @@ import { listSalaryStructures } from "@/lib/api/payroll"
 import { listShifts } from "@/lib/api/shifts"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { EmployeeView, SalesRole } from "@/lib/api/types"
 import { SalaryStructureDialog } from "@/components/employees/salary-structure-dialog"
 import { ShiftDialog } from "@/components/employees/shift-dialog"
@@ -99,6 +100,7 @@ export function EmployeeDetailPage({
   // from cache.
   const shiftsQuery = useQuery({
     queryKey: ["shifts"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listShifts(accessToken!),
     enabled: assigningShift && sessionStatus === "authenticated" && !!accessToken,
   })

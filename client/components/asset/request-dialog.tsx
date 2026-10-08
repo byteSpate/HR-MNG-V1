@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { listCategories, submitAssetRequest } from "@/lib/api/assets"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -43,6 +44,7 @@ export function RequestDialog({
 
   const categoriesQuery = useQuery({
     queryKey: ["asset-categories"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listCategories(accessToken!),
     enabled: open,
   })
