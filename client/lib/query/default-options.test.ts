@@ -3,7 +3,7 @@ import test from "node:test"
 
 import { QueryClient } from "@tanstack/react-query"
 
-import { defaultQueryOptions } from "./default-options"
+import { defaultQueryOptions, REFERENCE_STALE_MS } from "./default-options"
 
 test("a list stays fresh for 30 seconds, so going back to a page does not fetch it again", () => {
   const client = new QueryClient({ defaultOptions: defaultQueryOptions })
@@ -29,4 +29,9 @@ test("a query can still ask for fresh data every time", async () => {
   await run()
 
   assert.equal(calls, 2)
+})
+
+test("settings lists stay fresh longer than an ordinary list", () => {
+  assert.equal(REFERENCE_STALE_MS, 600_000)
+  assert.ok(REFERENCE_STALE_MS > (defaultQueryOptions.queries?.staleTime as number))
 })

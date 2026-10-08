@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { createInvoice, updateInvoice, type InvoiceInput } from "@/lib/api/invoice"
 import { listVatCodes } from "@/lib/api/vatCode"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { CustomerPo, DealMoneyInvoice, Invoice, VatCode, VatMethod } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { linesToBill } from "@/lib/po-rules"
@@ -69,6 +70,7 @@ export function InvoiceDialog({
 
   const vatCodes = useQuery({
     queryKey: ["vat-codes"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listVatCodes(accessToken!),
     enabled: Boolean(accessToken),
   })

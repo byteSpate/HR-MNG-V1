@@ -31,6 +31,7 @@ import {
 } from "@/lib/api/assets"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { Asset, AssetAssignment, AssetRepair, AssetRequest } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
 import { ALL, FilterBar, FilterSelect } from "@/components/dashboard/filter-bar"
@@ -791,6 +792,7 @@ export function AssetPage() {
 
   const categoriesQuery = useQuery({
     queryKey: ["asset-categories"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listCategories(accessToken!),
     enabled: isAuthed,
   })

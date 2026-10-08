@@ -14,3 +14,11 @@ export const defaultQueryOptions: DefaultOptions = {
     refetchOnWindowFocus: false,
   },
 }
+
+/**
+ * For lists that change a few times a year: shifts, departments, leave types,
+ * asset categories, VAT codes. Their settings panels clear the cache key when
+ * somebody edits one, so this only hides a change made by somebody else in
+ * the last ten minutes.
+ */
+export const REFERENCE_STALE_MS = 600_000

@@ -12,6 +12,7 @@ import {
 import { ApiError } from "@/lib/api/client"
 import { listDepartments } from "@/lib/api/departments"
 import { useSession } from "@/lib/auth/session-context"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import {
   RiBuilding2Line,
   RiDraftLine,
@@ -223,6 +224,7 @@ export function AnnouncementsPage() {
 
   const departmentsQuery = useQuery({
     queryKey: ["departments"],
+    staleTime: REFERENCE_STALE_MS,
     queryFn: () => listDepartments(accessToken!),
     enabled: isAuthed && canPublish,
   })
