@@ -962,3 +962,52 @@ describe("every illegal transition 409s", () => {
     }
   )
 })
+
+describe("processRun order of work", () => {
+  const draftRun = { id: "run-1", month: 7, year: 2026, status: "DRAFT" }
+
+  it("reads the roster and the attendance summary before it opens the transaction", async () => {
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue(draftRun as never)
+    tx.payrollRun.update.mockResolvedValue(draftRun)
+    const order: string[] = []
+    vi.mocked(prisma.employee.findMany).mockImplementation((async () => {
+      order.push("roster")
+      return [employeeRow()]
+    }) as never)
+    vi.mocked(getMonthlySummary).mockImplementation(async () => {
+      order.push("summary")
+      return [summaryFor()]
+    })
+    vi.mocked(prisma.$transaction).mockImplementationOnce((async (fn: (t: typeof tx) => unknown) => {
+      order.push("transaction")
+      return fn(tx)
+    }) as never)
+
+    await processRun("run-1", "user-finance")
+
+    // Inside the transaction these reads each need a second connection while
+    // the transaction holds the first, from a pool of five.
+    expect(order[order.length - 1]).toBe("transaction")
+    expect(order).toContain("roster")
+    expect(order).toContain("summary")
+  })
+
+  it("does not open a transaction when the attendance summary fails", async () => {
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue(draftRun as never)
+    vi.mocked(getMonthlySummary).mockRejectedValue(new Error("summary failed"))
+
+    await expect(processRun("run-1", "user-finance")).rejects.toThrow("summary failed")
+
+    expect(prisma.$transaction).not.toHaveBeenCalled()
+    expect(tx.payslip.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it("still reads the payroll rule inside the transaction, so a run uses the rule in force when it was processed", async () => {
+    vi.mocked(prisma.payrollRun.findUnique).mockResolvedValue(draftRun as never)
+    tx.payrollRun.update.mockResolvedValue(draftRun)
+
+    await processRun("run-1", "user-finance")
+
+    expect(tx.payrollSetting.findUnique).toHaveBeenCalled()
+  })
+})
