@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -69,11 +70,10 @@ import { OpportunityFormDialog } from "@/components/sales/opportunities/opportun
 import { TaskFormDialog } from "@/components/sales/tasks/task-dialogs"
 import {
   EMPTY_RICH,
-  RichTextEditor,
   bulletsToRich,
   paragraphsToRich,
   topicsToRich,
-} from "@/components/sales/minutes/rich-text-editor"
+} from "@/components/sales/minutes/rich-text-doc"
 import {
   MINUTES_KIND_LABEL,
   MINUTES_STATUS_LABEL,
@@ -88,6 +88,18 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+
+// The editor brings Tiptap, about 470 KB. It loads when the box is shown, and
+// the placeholder has the same minimum height, so the page does not jump.
+const RichTextEditor = dynamic(
+  () => import("@/components/sales/minutes/rich-text-editor").then((m) => m.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-28 animate-pulse rounded-md border border-[#E4E9EF] bg-[#F7F9FB]" aria-hidden />
+    ),
+  }
+)
 
 /** First-plan decision 21: a follow-up is offered 15 days out. */
 const FOLLOW_UP_DAYS = 15
