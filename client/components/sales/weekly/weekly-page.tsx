@@ -224,7 +224,7 @@ function MyWeek({ history }: { history: boolean }) {
           <RiArrowRightSLine className="size-4" aria-hidden />
         </Button>
         {week !== weekStartOf(new Date()) ? (
-          <Button type="button" className={QUIET} onClick={() => setWeek(weekStartOf(new Date()))}>
+          <Button type="button" variant="ghost" className={QUIET} onClick={() => setWeek(weekStartOf(new Date()))}>
             This week
           </Button>
         ) : null}
@@ -419,7 +419,7 @@ function CopyButton({ copyId, fileName }: { copyId: string; fileName: string }) 
     onError: (err) => toast.error(toMessage(err)),
   })
   return (
-    <Button type="button" className={QUIET} disabled={get.isPending} onClick={() => get.mutate()}>
+    <Button type="button" variant="ghost" className={QUIET} disabled={get.isPending} onClick={() => get.mutate()}>
       {get.isPending ? "Fetching…" : "Download"}
     </Button>
   )
@@ -921,8 +921,8 @@ function AddActivityDialog({ weekKey, onClose }: { weekKey: string; onClose: () 
         )}
 
         <DialogFooter>
-          {kind !== "choose" ? <Button type="button" className={QUIET} onClick={() => setKind("choose")}>Back</Button> : null}
-          <Button type="button" className={QUIET} onClick={onClose}>Cancel</Button>
+          {kind !== "choose" ? <Button type="button" variant="ghost" className={QUIET} onClick={() => setKind("choose")}>Back</Button> : null}
+          <Button type="button" variant="ghost" className={QUIET} onClick={onClose}>Cancel</Button>
           {kind === "communication" ? (
             <Button
               type="button"
@@ -970,7 +970,7 @@ function AddOtherWorkDialog({ weekKey, onClose }: { weekKey: string; onClose: ()
           {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
         </div>
         <DialogFooter>
-          <Button type="button" className={QUIET} onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="ghost" className={QUIET} onClick={onClose}>Cancel</Button>
           <Button type="button" className={PRIMARY} disabled={!text.trim() || add.isPending} onClick={() => add.mutate()}>{add.isPending ? "Adding…" : "Add"}</Button>
         </DialogFooter>
       </DialogContent>
@@ -1056,7 +1056,7 @@ function TeamReports() {
                       />
                     </td>
                     <td className="px-3.5 py-2 text-right">
-                      <Button type="button" className={QUIET} onClick={() => setOpenFor(row)}>
+                      <Button type="button" variant="ghost" className={QUIET} onClick={() => setOpenFor(row)}>
                         Open
                       </Button>
                     </td>

@@ -117,7 +117,7 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
             type="button"
             disabled={!canAdd}
             onClick={() => add.mutate()}
-            className="h-9 bg-[#17191C] text-[12px] font-bold text-white"
+            className="h-9 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]"
           >
             {add.isPending ? "Saving…" : "Add link"}
           </Button>
