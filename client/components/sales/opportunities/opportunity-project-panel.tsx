@@ -49,7 +49,7 @@ export function OpportunityProjectPanel({ deal, canStart }: { deal: OpportunityS
           <p className={`text-[12.5px] ${TONE.muted}`}>
             Start a Project if this Opportunity needs delivery work, such as install or setup. A sale with no delivery work does not need one.
           </p>
-          <Button type="button" disabled={start.isPending} onClick={() => start.mutate()} className="h-8 bg-[#17191C] text-[12px] font-bold text-white">
+          <Button type="button" disabled={start.isPending} onClick={() => start.mutate()} className="h-8 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]">
             {start.isPending ? "Starting…" : "Start project"}
           </Button>
         </div>

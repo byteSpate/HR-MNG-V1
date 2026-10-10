@@ -25,9 +25,9 @@ import { useSession } from "@/lib/auth/session-context"
 import type { AttendanceDay } from "@/lib/api/types"
 import { MiniStat, PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, RowActions } from "@/components/dashboard/record-kit"
+import { SegmentedToggle } from "@/components/dashboard/segmented-toggle"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
 import type { TableCell } from "@/components/dashboard/types"
 import { AttendanceCalendar } from "@/components/attendance/attendance-calendar"
 import { PunchCard } from "@/components/attendance/punch-card"
@@ -57,9 +57,9 @@ const HR_ROLES = ["HR_ADMIN", "SUPER_ADMIN"]
 const REGULARISE_WINDOW_DAYS = 14
 
 const VIEW_MODES = [
-  { mode: "list" as const, label: "List", Icon: RiListUnordered },
-  { mode: "calendar" as const, label: "Calendar", Icon: RiCalendarLine },
-]
+  { value: "list", label: "List", Icon: RiListUnordered },
+  { value: "calendar", label: "Calendar", Icon: RiCalendarLine },
+] as const
 
 /**
  * A month-shaped placeholder, so switching to the calendar while the month
@@ -402,38 +402,12 @@ export function AttendancePage() {
             <h2 className="font-heading text-[16px] font-bold tracking-tight">
               Attendance log, {formatMonthLabel(month, year)}
             </h2>
-            {/* aria-pressed, because these are two toggles over one view and
-                not two links. Without it a screen reader announces "list" and
-                "calendar" with no indication which one is showing. */}
-            <div
-              role="group"
-              aria-label="Log view"
-              className="flex rounded-md border border-[#E4E9EF] bg-white p-0.5"
-            >
-              {VIEW_MODES.map(({ mode, label, Icon }) => (
-                <Button
-                  key={mode}
-                  type="button"
-                  // `ghost` rather than the default variant: without it the
-                  // button's own background and shadow sit under these
-                  // classes and the unselected half reads as a raised
-                  // control rather than as the other half of a toggle.
-                  variant="ghost"
-                  size="sm"
-                  aria-pressed={view === mode}
-                  onClick={() => setView(mode)}
-                  className={cn(
-                    "gap-1.5 rounded px-3 text-[12px] transition-colors",
-                    view === mode
-                      ? "bg-[#17191C] font-bold text-white hover:bg-[#17191C] hover:text-white"
-                      : "font-semibold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
-                  )}
-                >
-                  <Icon className="size-3.5" aria-hidden />
-                  {label}
-                </Button>
-              ))}
-            </div>
+            <SegmentedToggle
+              label="Log view"
+              value={view}
+              options={VIEW_MODES}
+              onChange={setView}
+            />
           </div>
 
           {/* The view you chose is the view you keep, loading or not. This

@@ -6,9 +6,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { bulkDecideAttendance, getApprovals } from "@/lib/api/attendance"
 import { ApiError } from "@/lib/api/client"
 import { PanelAlert, PanelTable } from "@/components/dashboard/record-kit"
+import { SegmentedToggle } from "@/components/dashboard/segmented-toggle"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { cn } from "@/lib/utils"
 import type { TableCell } from "@/components/dashboard/types"
 import { DecisionDialog } from "@/components/leave/decision-dialog"
 import {
@@ -19,11 +19,11 @@ import {
 } from "@/components/attendance/attendance-shared"
 import { SectionHeading } from "@/components/attendance/attendance-ui"
 
-const TAB_LABEL = {
-  PENDING: "Needs review",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-} as const
+const TAB_OPTIONS = [
+  { value: "PENDING", label: "Needs review" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "REJECTED", label: "Rejected" },
+] as const
 
 /**
  * The manager's queue. **Every closed day lands here** — nothing approves
@@ -141,33 +141,18 @@ export function ApprovalsSection({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <SectionHeading
           title={isHr ? "Attendance approvals" : "Approvals for my team"}
-          sub="Every closed day waits here for a named person to sign it off. Flags mark the ones worth a harder look."
+          sub="Every day that has closed waits here until a manager approves it. A flag marks a day to look at more closely."
         />
-        <div
-          role="group"
-          aria-label="Queue shown"
-          className="mb-3.5 flex shrink-0 rounded-md border border-[#E4E9EF] bg-white p-0.5"
-        >
-          {(["PENDING", "APPROVED", "REJECTED"] as const).map((mode) => (
-            <Button
-              key={mode}
-              type="button"
-              aria-pressed={tab === mode}
-              onClick={() => {
-                setTab(mode)
-                setSelected(new Set())
-              }}
-              className={cn(
-                "rounded px-3 py-1 text-[12px] transition-colors",
-                tab === mode
-                  ? "bg-[#17191C] font-bold text-white"
-                  : "font-semibold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
-              )}
-            >
-              {TAB_LABEL[mode]}
-            </Button>
-          ))}
-        </div>
+        <SegmentedToggle
+          label="Queue shown"
+          value={tab}
+          options={TAB_OPTIONS}
+          onChange={(next) => {
+            setTab(next)
+            setSelected(new Set())
+          }}
+          className="mb-3.5 shrink-0"
+        />
       </div>
 
       {isPending && items.length > 0 ? (
@@ -231,7 +216,7 @@ export function ApprovalsSection({
         }
         emptyBody={
           isPending
-            ? "Every closed day has been signed off. New ones appear here as they close."
+            ? "Every closed day is approved. New days will show here when they close."
             : `Records you ${tab === "APPROVED" ? "approve" : "reject"} are listed here.`
         }
         emptyAction="Refresh"
