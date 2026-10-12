@@ -65,7 +65,7 @@ export function DocumentsPanel({
           <Field label="Web address" htmlFor="doc-url">
             <Input id="doc-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://drive.google.com/..." />
           </Field>
-          <Button type="button" disabled={!name.trim() || !url.trim().startsWith("https://") || add.isPending} onClick={() => add.mutate()} className="h-9 bg-[#17191C] text-[12px] font-bold text-white">
+          <Button type="button" disabled={!name.trim() || !url.trim().startsWith("https://") || add.isPending} onClick={() => add.mutate()} className="h-9 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]">
             {add.isPending ? "Saving…" : "Add link"}
           </Button>
           {badAddress ? (
