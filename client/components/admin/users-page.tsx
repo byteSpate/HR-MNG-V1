@@ -12,13 +12,14 @@ import {
 } from "@remixicon/react"
 
 import { cn } from "@/lib/utils"
-import { createUser, listUsers, setUserRole, setUserStatus } from "@/lib/api/users"
+import { createUser, listUsers, resendUserInvite, setUserRole, setUserStatus } from "@/lib/api/users"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
 import type { CreateUserInput, Role, UserAccount } from "@/lib/api/types"
 import { DataTable } from "@/components/dashboard/data-table"
 import { FilterChip } from "@/components/dashboard/filter-chip"
 import { MiniStat } from "@/components/dashboard/page-header"
+import { ResendPasswordDialog } from "@/components/dashboard/resend-password-dialog"
 import { Tag } from "@/components/dashboard/tag"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import type { TableCell } from "@/components/dashboard/types"
@@ -151,6 +152,7 @@ export function UsersPage() {
   const [newRole, setNewRole] = useState<CreateUserInput["role"]>("HR_ADMIN")
   const [created, setCreated] = useState<{ email: string; temporaryPassword: string } | null>(null)
   const [roleTarget, setRoleTarget] = useState<UserAccount | null>(null)
+  const [resendTarget, setResendTarget] = useState<UserAccount | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
@@ -282,6 +284,19 @@ export function UsersPage() {
               >
                 Change role
               </RowAction>
+              {/* Only while the person has not chosen a password, and only
+                  for an account that can sign in: the server refuses the
+                  rest, and a button that always refuses is a bug. */}
+              {u.mustChangePassword && u.isActive ? (
+                <RowAction
+                  onClick={() => {
+                    setError(null)
+                    setResendTarget(u)
+                  }}
+                >
+                  Resend password
+                </RowAction>
+              ) : null}
               {/* No control on your own row: deactivating yourself revokes
                   your own session, and the server refuses it with a 409. */}
               {u.id === user?.id ? null : (
@@ -548,6 +563,14 @@ export function UsersPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ResendPasswordDialog
+        open={!!resendTarget}
+        who={resendTarget?.email ?? ""}
+        send={() => resendUserInvite(accessToken!, resendTarget!.id)}
+        onClose={() => setResendTarget(null)}
+        onSent={invalidate}
+      />
 
       <Dialog open={!!roleTarget} onOpenChange={(open) => !open && setRoleTarget(null)}>
         <DialogContent>

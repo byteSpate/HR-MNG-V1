@@ -9,6 +9,7 @@ import type {
   EmployeeView,
   ExitReason,
   MyProfileResponse,
+  ResendInviteResult,
   SalesRole,
   SetSalesRoleResult,
   SignedDocumentUrl,
@@ -82,6 +83,20 @@ export function setAccountActive(
       body: JSON.stringify({ isActive }),
     }
   )
+}
+
+/**
+ * Sends an employee a new temporary password. HR and Super Admin only, and
+ * only while the person has not chosen their own (`passwordPending`).
+ */
+export function resendEmployeeInvite(
+  accessToken: string,
+  employeeId: string
+): Promise<ResendInviteResult> {
+  return apiFetch<ResendInviteResult>(`/api/employees/${employeeId}/resend-invite`, {
+    method: "POST",
+    accessToken,
+  })
 }
 
 /**
