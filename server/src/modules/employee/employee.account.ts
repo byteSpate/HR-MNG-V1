@@ -17,6 +17,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { revokeAllUserTokens } from "../auth/auth.service"
+import { resendInvite, type ResendInviteResult } from "../auth/auth.invite"
 import { employmentAllowsSales } from "../sales/sales.eligibility"
 
 export async function setAccountActive(
@@ -41,6 +42,23 @@ export async function setAccountActive(
   if (!isActive) await revokeAllUserTokens(employee.userId)
 
   return { id: employeeId, accountActive: updated.isActive }
+}
+
+/**
+ * Sends an employee a new temporary password. Keyed on the employee id for
+ * the same reason as `setAccountActive`: the client never holds the user id.
+ * The rules live in `auth.invite.ts`, shared with `/api/users/:id/resend-invite`.
+ */
+export async function resendEmployeeInvite(
+  employeeId: string,
+  actor: AccessTokenPayload
+): Promise<ResendInviteResult> {
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: { userId: true },
+  })
+  if (!employee) throw new AppError(404, "Employee not found")
+  return resendInvite(employee.userId, actor)
 }
 
 export interface SetSalesRoleResult {

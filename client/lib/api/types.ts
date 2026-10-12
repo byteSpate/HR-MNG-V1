@@ -919,6 +919,11 @@ export interface EmploymentDetails {
       Hub access. Granting/revoking is HR/Super Admin only. */
   salesRole: SalesRole | null
   deviceUserId?: string | null
+  /**
+   * Only sent to HR and Super Admin. True while the person has not chosen
+   * their own password, which is when Resend password can do something.
+   */
+  passwordPending?: boolean
 }
 
 export interface PayrollDetails {
@@ -1596,6 +1601,13 @@ export interface UserAccount {
 export interface CreateUserInput {
   email: string
   role: "SUPER_ADMIN" | "HR_ADMIN" | "FINANCE_OFFICER"
+}
+
+/** Result of sending a temporary password again. Shown once, like creation. */
+export interface ResendInviteResult {
+  id: string
+  email: string
+  temporaryPassword: string
 }
 
 export interface CreateUserResult {

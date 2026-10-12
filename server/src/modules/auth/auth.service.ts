@@ -24,7 +24,8 @@ type UserRow = {
   mustChangePassword: boolean
 }
 
-const STAFF_ROLES: Role[] = [Role.EMPLOYEE, Role.REPORTING_MANAGER]
+/** The roles that sign in with an Employee ID rather than an email address. */
+export const STAFF_ROLES: Role[] = [Role.EMPLOYEE, Role.REPORTING_MANAGER]
 
 function refreshExpiryDate(): Date {
   return new Date(Date.now() + refreshLifetimeMs())

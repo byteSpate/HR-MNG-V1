@@ -29,6 +29,11 @@ vi.mock("./employee.update", () => ({
 
 vi.mock("./employee.account", () => ({
   setAccountActive: vi.fn(async () => ({ id: "emp-1", accountActive: false })),
+  resendEmployeeInvite: vi.fn(async () => ({
+    id: "user-1",
+    email: "ayesha@demo.com",
+    temporaryPassword: "NewTemp-5678",
+  })),
   setSalesRole: vi.fn(async (_id: string, body: { salesRole: string | null }) => body),
 }))
 
@@ -522,6 +527,47 @@ describe("PATCH /api/employees/:id/account", () => {
   it("401s without a token", async () => {
     const res = await request(app).patch("/api/employees/emp-1/account").send({ isActive: false })
 
+    expect(res.status).toBe(401)
+  })
+})
+
+describe("POST /api/employees/:id/resend-invite", () => {
+  const url = "/api/employees/emp-1/resend-invite"
+
+  it("lets HR_ADMIN send the password again and passes the caller through", async () => {
+    const res = await request(app).post(url).set("Authorization", `Bearer ${tokenFor("HR_ADMIN")}`)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      id: "user-1",
+      email: "ayesha@demo.com",
+      temporaryPassword: "NewTemp-5678",
+    })
+    expect(employeeAccount.resendEmployeeInvite).toHaveBeenCalledWith(
+      "emp-1",
+      expect.objectContaining({ role: "HR_ADMIN" })
+    )
+  })
+
+  it("lets a SUPER_ADMIN do it too", async () => {
+    const res = await request(app).post(url).set("Authorization", `Bearer ${tokenFor("SUPER_ADMIN")}`)
+    expect(res.status).toBe(200)
+  })
+
+  it("403s for an EMPLOYEE", async () => {
+    const res = await request(app).post(url).set("Authorization", `Bearer ${tokenFor("EMPLOYEE")}`)
+    expect(res.status).toBe(403)
+  })
+
+  it("403s for FINANCE_OFFICER", async () => {
+    const res = await request(app)
+      .post(url)
+      .set("Authorization", `Bearer ${tokenFor("FINANCE_OFFICER")}`)
+    expect(res.status).toBe(403)
+  })
+
+  it("401s without a token", async () => {
+    const res = await request(app).post(url)
     expect(res.status).toBe(401)
   })
 })

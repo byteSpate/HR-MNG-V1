@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import type { CreateUserInput, CreateUserResult, Role, UserAccount } from "./types"
+import type { CreateUserInput, CreateUserResult, ResendInviteResult, Role, UserAccount } from "./types"
 
 /** Every endpoint here is SUPER_ADMIN on the server. */
 export function listUsers(accessToken: string): Promise<UserAccount[]> {
@@ -43,5 +43,16 @@ export function setUserStatus(
     method: "PATCH",
     accessToken,
     body: JSON.stringify({ isActive }),
+  })
+}
+
+/**
+ * Sends a new temporary password to an account that has not yet chosen its
+ * own. The server refuses everyone else, and says why in plain words.
+ */
+export function resendUserInvite(accessToken: string, userId: string): Promise<ResendInviteResult> {
+  return apiFetch<ResendInviteResult>(`/api/users/${userId}/resend-invite`, {
+    method: "POST",
+    accessToken,
   })
 }

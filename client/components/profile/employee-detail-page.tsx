@@ -8,6 +8,7 @@ import {
   approveNationalIdChangeRequest,
   getEmployee,
   rejectNationalIdChangeRequest,
+  resendEmployeeInvite,
   setAccountActive,
   setSalaryStructure,
   setSalesRole,
@@ -37,6 +38,7 @@ import { PayslipsCard } from "@/components/payroll/payslips-card"
 import { ProfileCard, formatDateValue } from "@/components/profile/profile-card"
 import { ProfileHeader } from "@/components/profile/profile-header"
 import { ProfileInsights } from "@/components/profile/profile-insights"
+import { ResendPasswordDialog } from "@/components/dashboard/resend-password-dialog"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -73,6 +75,7 @@ export function EmployeeDetailPage({
   const [editingName, setEditingName] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
+  const [resendOpen, setResendOpen] = useState(false)
   const [assigningStructure, setAssigningStructure] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
   const [assigningShift, setAssigningShift] = useState(false)
@@ -220,6 +223,13 @@ export function EmployeeDetailPage({
   // control can never 403 when pressed.
   const canToggleAccount = user?.role === "SUPER_ADMIN" && !!employee.employment
   const accountActive = employee.employment?.accountActive ?? true
+  // Mirrors requireRole on POST /:id/resend-invite. `passwordPending` is only
+  // sent to HR and Super Admin, so it is also the guard that the server would
+  // accept the call: the person has not chosen a password and can sign in.
+  const canResendInvite =
+    (user?.role === "HR_ADMIN" || user?.role === "SUPER_ADMIN") &&
+    employee.employment?.passwordPending === true &&
+    accountActive
   // Mirrors requireRole on PATCH /:id/sales-role — deliberately not
   // requireSales, so a Sales Admin cannot widen their own team.
   const canGrantSalesRole =
@@ -271,7 +281,7 @@ export function EmployeeDetailPage({
         onAvatarChanged={refresh}
         onEditName={canEditName ? () => setEditingName(true) : undefined}
         action={
-          canEdit || canToggleAccount || canGrantSalesRole ? (
+          canEdit || canToggleAccount || canGrantSalesRole || canResendInvite ? (
             <>
               {/*
                 Only actions with no row of their own live up here.
@@ -304,6 +314,13 @@ export function EmployeeDetailPage({
                     : accountActive
                       ? "Deactivate login"
                       : "Reactivate login"}
+                </Button>
+              ) : null}
+              {/* For a person whose first email never arrived. Shown only while
+                  they have not chosen their own password. */}
+              {canResendInvite ? (
+                <Button type="button" variant="outline" onClick={() => setResendOpen(true)}>
+                  Resend password
                 </Button>
               ) : null}
               {/* A second permission axis, held alongside role rather than
@@ -655,6 +672,14 @@ export function EmployeeDetailPage({
           onChanged={refresh}
         />
       ) : null}
+
+      <ResendPasswordDialog
+        open={resendOpen}
+        who={employee.work.fullName}
+        send={() => resendEmployeeInvite(accessToken!, employeeId)}
+        onClose={() => setResendOpen(false)}
+        onSent={refresh}
+      />
 
       <ExitDetailsDialog
         employee={employee}

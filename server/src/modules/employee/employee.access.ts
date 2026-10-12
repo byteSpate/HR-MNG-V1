@@ -114,7 +114,9 @@ export const EMPLOYEE_INCLUDE = {
   reportingManager: { select: { id: true, fullName: true } },
   shift: { select: { id: true, name: true } },
   salaryStructure: { select: { id: true, name: true, currency: true } },
-  user: { select: { email: true, isActive: true, salesRole: true, role: true } },
+  user: {
+    select: { email: true, isActive: true, salesRole: true, role: true, mustChangePassword: true },
+  },
 } satisfies Prisma.EmployeeInclude
 
 export type EmployeeWithRelations = Prisma.EmployeeGetPayload<{
@@ -199,7 +201,13 @@ export function projectEmployee(
       accountActive: employee.user.isActive,
       salesRole: employee.user.salesRole,
       // FULL only, deliberately not SELF.
-      ...(tier === "FULL" ? { deviceUserId: employee.deviceUserId } : {}),
+      ...(tier === "FULL"
+        ? {
+            deviceUserId: employee.deviceUserId,
+            // Only here to decide whether Resend password is shown.
+            passwordPending: employee.user.mustChangePassword,
+          }
+        : {}),
     }
   }
 

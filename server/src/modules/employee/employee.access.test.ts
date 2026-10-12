@@ -358,6 +358,25 @@ describe("projectEmployee — accountActive", () => {
   })
 })
 
+describe("projectEmployee — passwordPending", () => {
+  const waiting = { ...row, user: { ...row.user, mustChangePassword: true } } as never
+  const settled = { ...row, user: { ...row.user, mustChangePassword: false } } as never
+
+  it("tells a FULL viewer the person has not chosen their own password yet", () => {
+    expect(projectEmployee(waiting, "FULL").employment?.passwordPending).toBe(true)
+  })
+
+  it("is false once they have chosen one", () => {
+    expect(projectEmployee(settled, "FULL").employment?.passwordPending).toBe(false)
+  })
+
+  it("is not shown to anyone below FULL — it is only there for the Resend button", () => {
+    for (const tier of ["SELF", "FINANCE", "MANAGER"] as const) {
+      expect(projectEmployee(waiting, tier).employment?.passwordPending).toBeUndefined()
+    }
+  })
+})
+
 describe("projectEmployee — salesRole", () => {
   it("reports null for an employee with no Sales Hub access", () => {
     expect(projectEmployee(row, "FULL").employment?.salesRole).toBeNull()

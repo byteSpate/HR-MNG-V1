@@ -18,6 +18,7 @@ import {
   listEmployeesHandler,
   rejectNationalIdChangeHandler,
   requestNationalIdChangeHandler,
+  resendEmployeeInviteHandler,
   setAccountActiveHandler,
   setSalesRoleHandler,
   setExitDetailsHandler,
@@ -118,6 +119,16 @@ router.patch(
   requireAuth,
   requireRole(Role.SUPER_ADMIN),
   setAccountActiveHandler
+)
+
+// HR may send the temporary password again: it replaces one that never arrived
+// and only works while the person has not chosen their own. Unlike /account,
+// this does not lock anybody out. See auth.invite.ts.
+router.post(
+  "/:id/resend-invite",
+  requireAuth,
+  requireRole(Role.SUPER_ADMIN, Role.HR_ADMIN),
+  resendEmployeeInviteHandler
 )
 
 // Sales Hub access is an account capability granted by HR or Super Admin.

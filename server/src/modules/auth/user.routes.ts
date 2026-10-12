@@ -6,6 +6,7 @@ import { Role } from "../../generated/prisma/client"
 import {
   createUserHandler,
   listUsersHandler,
+  resendUserInviteHandler,
   setUserRoleHandler,
   updateUserStatusHandler,
 } from "./user.controller"
@@ -18,6 +19,7 @@ const router = Router()
 router.get("/", requireAuth, requireRole(Role.SUPER_ADMIN), listUsersHandler)
 router.post("/", requireAuth, requireRole(Role.SUPER_ADMIN), createUserHandler)
 router.patch("/:id/status", requireAuth, requireRole(Role.SUPER_ADMIN), updateUserStatusHandler)
+router.post("/:id/resend-invite", requireAuth, requireRole(Role.SUPER_ADMIN), resendUserInviteHandler)
 router.patch("/:id/role", requireAuth, requireRole(Role.SUPER_ADMIN), setUserRoleHandler)
 
 export default router
