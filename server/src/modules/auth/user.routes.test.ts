@@ -33,8 +33,17 @@ vi.mock("./user.service", () => ({
   })),
 }))
 
+vi.mock("./auth.invite", () => ({
+  resendInvite: vi.fn(async () => ({
+    id: "u2",
+    email: "b@c.com",
+    temporaryPassword: "NewTemp-5678",
+  })),
+}))
+
 import app from "../../app"
 import { AppError } from "../../middleware/errorHandler"
+import { resendInvite } from "./auth.invite"
 import { signAccessToken } from "./auth.utils"
 import { setUserRole, setUserStatus } from "./user.service"
 
@@ -213,5 +222,45 @@ describe("PATCH /api/users/:id/role", () => {
       .send({ role: "FINANCE_OFFICER" })
 
     expect(res.status).toBe(403)
+  })
+})
+
+describe("POST /api/users/:id/resend-invite", () => {
+  it("returns 401 with no Authorization header", async () => {
+    const res = await request(app).post("/api/users/u2/resend-invite")
+    expect(res.status).toBe(401)
+  })
+
+  it("returns 403 for HR_ADMIN — account administration is Super Admin only", async () => {
+    const res = await request(app)
+      .post("/api/users/u2/resend-invite")
+      .set("Authorization", `Bearer ${tokenFor("HR_ADMIN")}`)
+    expect(res.status).toBe(403)
+    expect(resendInvite).not.toHaveBeenCalled()
+  })
+
+  it("returns 200 with the new password, and passes the caller through for the audit row", async () => {
+    const res = await request(app)
+      .post("/api/users/u2/resend-invite")
+      .set("Authorization", `Bearer ${tokenFor("SUPER_ADMIN")}`)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ id: "u2", email: "b@c.com", temporaryPassword: "NewTemp-5678" })
+    expect(resendInvite).toHaveBeenCalledWith(
+      "u2",
+      expect.objectContaining({ sub: "actor-1", role: "SUPER_ADMIN" })
+    )
+  })
+
+  it("passes a refusal from the service through as its own status and sentence", async () => {
+    vi.mocked(resendInvite).mockRejectedValueOnce(
+      new AppError(409, "This person already chose their own password.")
+    )
+    const res = await request(app)
+      .post("/api/users/u2/resend-invite")
+      .set("Authorization", `Bearer ${tokenFor("SUPER_ADMIN")}`)
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toBe("This person already chose their own password.")
   })
 })
