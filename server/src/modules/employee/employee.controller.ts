@@ -41,7 +41,7 @@ import {
   setSalaryStructureSchema,
   updateEmployeeSchema,
 } from "./employee.validators"
-import { setAccountActive, setSalesRole } from "./employee.account"
+import { resendEmployeeInvite, setAccountActive, setSalesRole } from "./employee.account"
 
 type RequestWithId = Request<{ id: string }>
 type RequestWithDoc = Request<{ id: string; docId: string }>
@@ -134,6 +134,18 @@ export async function setAccountActiveHandler(
   }
   try {
     return res.status(200).json(await setAccountActive(req.params.id, parsed.data.isActive))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function resendEmployeeInviteHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    return res.status(200).json(await resendEmployeeInvite(req.params.id, req.user!))
   } catch (err) {
     return next(err)
   }

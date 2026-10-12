@@ -87,6 +87,11 @@ export interface EmploymentDetails {
   salesRole: SalesRole | null
   /** FULL only. A biometric enrolment id the employee cannot act on. */
   deviceUserId?: string | null
+  /**
+   * FULL only. True while the person has not chosen their own password, which
+   * is exactly when HR can send the temporary one again.
+   */
+  passwordPending?: boolean
 }
 
 export interface PayrollDetails {
