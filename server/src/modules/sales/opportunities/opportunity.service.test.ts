@@ -379,6 +379,18 @@ describe("opportunity reads and plain edits", () => {
     })
   })
 
+  it("says whether the viewer may change quotes: the owner or a Sales Admin, not a collaborator", async () => {
+    expect((await getOpportunity("opp-1", USER)).canEditQuotes).toBe(true)
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-2" } } as any)
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      salesAccount: { ...ACCOUNT, assignments: [{ employeeId: "emp-2" }] },
+    }) as any)
+    const deal = await getOpportunity("opp-1", USER)
+    expect(deal.canManage).toBe(true)
+    expect(deal.canEditQuotes).toBe(false)
+    expect((await getOpportunity("opp-1", { ...USER, salesRole: "SALES_ADMIN" })).canEditQuotes).toBe(true)
+  })
+
   it("uses the not-visible refusal for an opportunity outside the shared directory", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(null as any)
     await expect(getOpportunity("missing", USER)).rejects.toThrow(/does not exist, or is not yours/i)

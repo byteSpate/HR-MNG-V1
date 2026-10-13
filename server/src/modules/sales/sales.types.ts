@@ -92,6 +92,8 @@ export interface OpportunitySummary {
   /** Whether this viewer may change the deal. The directory is shared, so
       seeing one and being able to work it are different questions. */
   canManage: boolean
+  /** May the viewer edit or delete the latest quote: the owner or a Sales Admin. */
+  canEditQuotes: boolean
 }
 
 export interface SalesCommentSummary {

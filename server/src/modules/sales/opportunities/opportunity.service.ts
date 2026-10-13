@@ -11,6 +11,7 @@ import {
   canManageAccount,
   commentKindScopeFor,
   employeeIdFor,
+  isSalesAdmin,
   OPPORTUNITY_NOT_VISIBLE,
   requireAccountAccess,
 } from "../sales.access"
@@ -298,7 +299,8 @@ export async function getOpportunity(id: string, actor: AccessTokenPayload) {
     include: INCLUDE,
   })
   if (!row) throw new AppError(404, OPPORTUNITY_NOT_VISIBLE)
-  return presentOpportunity(row, canManageDeal(row, actor, employeeId))
+  const canManage = canManageDeal(row, actor, employeeId)
+  return presentOpportunity(row, canManage, canManage && (isSalesAdmin(actor) || employeeId === row.ownerEmployeeId))
 }
 
 export async function loadForWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {

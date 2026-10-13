@@ -20,7 +20,7 @@ export function presentLine(row: any): OpportunityLineSummary {
   }
 }
 
-export function presentOpportunity(row: any, canManage = true): OpportunitySummary {
+export function presentOpportunity(row: any, canManage = true, canEditQuotes = canManage): OpportunitySummary {
   const rows = row.lines ?? []
   const priced = rows.filter((line: any) => line.lineValue != null)
   const total = sum(priced.map((line: any) => dec(line.lineValue)))
@@ -72,5 +72,8 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     // Decided by the caller, which knows the actor. Defaults to true because
     // every other call site is a write the actor just made.
     canManage,
+    // Edit or Delete the latest quote: the owner or a Sales Admin (owner,
+    // 2026-10-13). Decided by the caller, like canManage.
+    canEditQuotes,
   }
 }
