@@ -44,31 +44,59 @@ export function QuarterPicker({
   )
 }
 
-function Tile({ label, children, tone }: { label: string; children: React.ReactNode; tone?: string }) {
-  return (
-    <div className="min-w-0 rounded-md border border-[#E4E9EF] bg-white px-3 py-2.5">
-      <dt className={cn("text-xs", TONE.muted)}>{label}</dt>
-      <dd className={cn("mt-0.5 text-base font-semibold tabular-nums [overflow-wrap:anywhere]", tone)}>{children}</dd>
-    </div>
-  )
-}
+const muted = (text: string) => <span className={cn("text-xs", TONE.muted)}>{text}</span>
 
-const muted = (text: string) => <span className={cn("text-sm font-normal", TONE.muted)}>{text}</span>
+/** A quarter with nothing won says so in words. ৳0 would read as a result (UI rule 1). */
+export const nothingWon = (won: string) => Number(won) === 0
 
+/**
+ * One table row, in the same look as the grid under it (owner, 2026-10-13:
+ * the funnel stays a table). It scrolls inside its own box on a phone.
+ */
 export function FunnelSummaryStrip({ summary }: { summary: FunnelSummary }) {
   const coverage = coverageText(summary)
+  const heads = ["Quarter", "Target", "Won", "Gap", "Open quoted", "Coverage", "Quotes missing"]
   return (
-    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={`Targets for ${summary.quarterLabel}`}>
-      <Tile label="Target">{summary.target === null ? muted("No target set") : taka(summary.target)}</Tile>
-      <Tile label="Won" tone="text-[#0B7A3B]">{taka(summary.won)}</Tile>
-      <Tile label="Gap">
-        {summary.gap === null ? muted("No target set") : summary.targetMet ? "Target met" : taka(summary.gap)}
-      </Tile>
-      <Tile label="Open quoted">{summary.openQuoted === null ? muted("No open quotes") : taka(summary.openQuoted)}</Tile>
-      <Tile label="Coverage">{summary.coverage === null ? muted(coverage) : coverage}</Tile>
-      <Tile label="Quotes missing" tone={summary.quoteMissingCount > 0 ? "text-[#8A5E0C]" : undefined}>
-        {summary.quoteMissingCount}
-      </Tile>
-    </dl>
+    <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] border-collapse text-sm" aria-label={`Targets for ${summary.quarterLabel}`}>
+          <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
+            <tr>
+              {heads.map((h, i) => (
+                <th key={h} scope="col" className={cn("px-4 py-2 font-medium", i === 0 ? "text-left" : "text-right")}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-t border-[#EEF1F5]">
+              <td className="px-4 py-2.5 font-medium">{summary.quarterLabel}</td>
+              <td className="px-4 py-2.5 text-right tabular-nums">
+                {summary.target === null ? muted("No target set") : taka(summary.target)}
+              </td>
+              <td className="px-4 py-2.5 text-right tabular-nums text-[#0B7A3B]">
+                {nothingWon(summary.won) ? muted("Nothing won yet") : taka(summary.won)}
+              </td>
+              <td className="px-4 py-2.5 text-right tabular-nums">
+                {summary.gap === null ? muted("No target set") : summary.targetMet ? "Target met" : taka(summary.gap)}
+              </td>
+              <td className="px-4 py-2.5 text-right tabular-nums">
+                {summary.openQuoted === null ? muted("No open quotes") : taka(summary.openQuoted)}
+              </td>
+              <td className="px-4 py-2.5 text-right tabular-nums">{summary.coverage === null ? muted(coverage) : coverage}</td>
+              <td
+                className={cn(
+                  "px-4 py-2.5 text-right tabular-nums",
+                  summary.quoteMissingCount > 0 && "font-medium text-[#8A5E0C]"
+                )}
+              >
+                {summary.quoteMissingCount}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }

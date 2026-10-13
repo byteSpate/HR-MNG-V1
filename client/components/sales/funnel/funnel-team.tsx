@@ -15,6 +15,7 @@ import type { FunnelTeam } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
 import { coverageText } from "./funnel-labels"
+import { nothingWon } from "./funnel-summary"
 
 interface FunnelTeamListProps {
   team: FunnelTeam
@@ -95,7 +96,9 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                   <td className="px-4 py-2.5 text-right tabular-nums">
                     {row.summary.target === null ? <span className={cn("text-xs", TONE.muted)}>No target set</span> : taka(row.summary.target)}
                   </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{taka(row.summary.won)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {nothingWon(row.summary.won) ? <span className={cn("text-xs", TONE.muted)}>Nothing won yet</span> : taka(row.summary.won)}
+                  </td>
                   <td className="px-4 py-2.5 text-right tabular-nums">
                     {row.summary.gap === null ? (
                       <span className={cn("text-xs", TONE.muted)}>—</span>
