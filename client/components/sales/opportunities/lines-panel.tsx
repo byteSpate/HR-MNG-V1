@@ -224,7 +224,10 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
             <span>
               The Opportunity value is {taka(deal.amount)}, but the {modules ? "modules" : "products"} add up to {taka(deal.lineTotal)}.
             </span>
-            {canManage ? (
+            {/* Once quoted, the value is the latest quote: a new quote changes it, not this. */}
+            {deal.quotes.length > 0 ? (
+              <span>To change the value, add a new quote.</span>
+            ) : canManage ? (
               <Button
                 type="button"
                 variant="link"

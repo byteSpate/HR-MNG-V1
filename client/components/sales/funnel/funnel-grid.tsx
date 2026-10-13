@@ -1,8 +1,10 @@
 "use client"
 
 /**
- * The funnel grid: the owner's fifteen columns, in the owner's order, under
- * the owner's headings (revision §27.6).
+ * The funnel grid (revision §27.6), slimmed to quotes and targets (owner,
+ * 2026-10-13). Use Case, the product lines, Stage, Lost To, Next Step and
+ * Remarks moved into the row detail; the grid keeps what an admin reads at a
+ * glance.
  *
  * The widest table in the app. It scrolls inside its own container so the page
  * body never scrolls sideways.
@@ -13,7 +15,8 @@ import { useState } from "react"
 import { RiArrowUpSLine, RiErrorWarningLine } from "@remixicon/react"
 
 import { FieldHelp, PanelNotice, TONE } from "@/components/dashboard/record-kit"
-import { FUNNEL_NAME_HEADING, FUNNEL_NAME_HELP } from "./funnel-labels"
+import { daysLeftText, FUNNEL_NAME_HEADING, FUNNEL_NAME_HELP } from "./funnel-labels"
+import { longDay } from "@/lib/quotes"
 import { taka } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import type { FunnelCellField, FunnelGrid, FunnelRow, FunnelSort } from "@/lib/api/types"
@@ -29,27 +32,6 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: "Cancelled",
 }
 
-const STAGE_LABEL: Record<string, string> = {
-  REQUIREMENT_RECEIVED: "Requirement received",
-  // The team's own funnel sheet calls Negotiation "Quotation Revision", and
-  // that is deliberate, so it stays.
-  NEGOTIATION: "Quotation Revision",
-  AWAITING_DECISION: "Awaiting decision",
-  // Software Development stages (spec §2.4).
-  REQUIREMENT_GATHERING: "Requirement gathering",
-  BRD_SENT: "BRD sent",
-  SRS_SENT: "SRS sent",
-  PROPOSAL_SUBMITTED: "Proposal submitted",
-  PROPOSAL_REVISION: "Proposal revision",
-  // Networking stages (spec 2026-09-30).
-  ASSIGNED_QUALIFIED: "Opportunity Assigned & Qualified",
-  DISCOVERY_DESIGN: "Discovery & Solution Design",
-  TECHNICAL_VALIDATION: "Technical Validation & Approval",
-  COMMERCIAL_NEGOTIATION: "Commercial Proposal & Negotiation",
-  CUSTOMER_PROCUREMENT: "Customer Approval & Procurement",
-  PO_RECEIVED: "PO Received / Closed Won",
-}
-
 const STATUS_TONE: Record<string, string> = {
   ONGOING: "bg-[#EAF2FB] text-[#1F4E79]",
   WON: "bg-[#E6F4EA] text-[#0B7A3B]",
@@ -57,11 +39,12 @@ const STATUS_TONE: Record<string, string> = {
   CANCELLED: "bg-slate-100 text-[#5F6B7C]",
 }
 
-/** The five sorts the header offers (§27.9), given to everyone. */
+/** The five sorts the header offers (§27.9), given to everyone. The Quote
+    column sorts by the Opportunity value, which is the latest quote. */
 const SORTABLE: Partial<Record<string, FunnelSort>> = {
   date: "offeredOn",
   account: "account",
-  amount: "amount",
+  quote: "amount",
   status: "status",
   closing: "expectedCloseDate",
 }
@@ -173,7 +156,7 @@ export function FunnelGridTable({
       <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
         {/* The grid scrolls in here. The page body never scrolls sideways. */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1800px] border-collapse text-sm">
+          <table className="w-full min-w-[1300px] border-collapse text-sm">
             <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
               <tr>
                 {head("sn", "S/N", "w-14 text-center")}
@@ -185,17 +168,14 @@ export function FunnelGridTable({
                     <FieldHelp label={FUNNEL_NAME_HEADING}>{FUNNEL_NAME_HELP}</FieldHelp>
                   </span>
                 </th>
-                {head("useCase", "Use Case", "w-44")}
-                {head("brand", "Brand", "w-32")}
-                {head("model", "Model", "w-32")}
-                {head("qty", "Qty", "w-20")}
-                {head("amount", "Amount", "w-32 text-right")}
-                {head("status", "Opportunity Status", "w-32")}
-                {head("stage", "Stage", "w-40")}
+                {head("owner", "Owner", "w-36")}
+                {head("quote", "Quote", "w-40 text-right")}
+                {head("changes", "Quote changes", "w-24 text-right")}
+                {head("quarter", "Quarter", "w-24")}
                 {head("closing", "Tentative Closing", "w-36")}
-                {head("lostTo", "Lost To", "w-52")}
-                {head("nextStep", "Next Step", "w-52")}
-                {head("remarks", "Remarks", "w-64")}
+                {head("daysLeft", "Days left", "w-32")}
+                {head("since", "Days since quoted", "w-28 text-right")}
+                {head("status", "Opportunity Status", "w-32")}
               </tr>
             </thead>
             <tbody>
@@ -246,15 +226,9 @@ function FunnelGridRow({
       <tr className="border-t border-[#EEF1F5] align-top hover:bg-[#FAFBFC]">
         <td className="px-2 py-1.5 text-center tabular-nums text-[#5F6B7C]">{row.serialNo}</td>
 
-        <td className="px-1 py-1.5">
-          <FunnelCell
-            value={row.offeredOn}
-            editable={editable}
-            type="date"
-            // A quoted deal keeps its offer date: it can change, not go blank.
-            clearable={false}
-            onSave={save("offeredOn")}
-          />
+        {/* The Funnel date is Quote 1's date, so it changes with the quote, not here. */}
+        <td className="px-2 py-1.5 tabular-nums">
+          {row.offeredOn ? longDay(row.offeredOn) : <span className={TONE.muted}>—</span>}
         </td>
 
         <td className="px-2 py-1.5">
@@ -268,57 +242,34 @@ function FunnelGridRow({
           <span className="block truncate">{row.projectName}</span>
         </td>
 
-        <td className="px-1 py-1.5">
-          <FunnelCell
-            value={row.useCase}
-            editable={editable}
-            placeholder="Add"
-            onSave={save("useCase")}
-          />
+        <td className="px-2 py-1.5">
+          <span className="block truncate">{row.ownerName}</span>
         </td>
 
-        {/* Brand, Model and Qty are summarised from the deal's lines and are
-            edited on the deal itself, not here (§27.6). */}
-        <td className="px-2 py-1.5">
-          <span className="block truncate">
-            {row.brand || <span className={TONE.muted}>—</span>}
-          </span>
-        </td>
-        <td className="px-2 py-1.5">
-          <span className="block truncate">
-            {row.model || <span className={TONE.muted}>—</span>}
-          </span>
-        </td>
-        <td className="px-2 py-1.5 tabular-nums">
-          {row.quantity || <span className={TONE.muted}>—</span>}
-        </td>
-
-        <td className="px-1 py-1.5">
-          <FunnelCell
-            value={row.amount}
-            display={row.amount ? taka(row.amount) : ""}
-            editable={editable}
-            type="money"
-            align="right"
-            placeholder="No price"
-            onSave={save("amount")}
-          />
-        </td>
-
-        <td className="px-2 py-1.5">
-          <span
-            className={cn(
-              "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
-              STATUS_TONE[row.status]
+        {/* The latest quote; the detail below lists them all. */}
+        <td className="px-2 py-1.5 text-right">
+          <button type="button" onClick={onToggle} className="block w-full text-right hover:underline">
+            {row.latestQuote ? (
+              <>
+                <span className="block font-medium tabular-nums text-[#1B2733]">{taka(row.latestQuote.amount)}</span>
+                <span className={cn("block text-xs", TONE.muted)}>
+                  {longDay(row.latestQuote.quotedOn)} · Quote {row.quoteCount}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className={cn("block", TONE.muted)}>No price yet</span>
+                <span className="mt-0.5 inline-block rounded-full bg-[#FDF3E2] px-2 py-0.5 text-[11px] font-medium text-[#8A5E0C]">
+                  Quote missing
+                </span>
+              </>
             )}
-          >
-            {STATUS_LABEL[row.status] ?? row.status}
-          </span>
+          </button>
         </td>
 
-        <td className="px-2 py-1.5 text-xs text-[#5F6B7C]">
-          {STAGE_LABEL[row.stage] ?? row.stage}
-        </td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{row.quoteChanges}</td>
+
+        <td className="px-2 py-1.5">{row.quarterLabel ?? <span className={TONE.muted}>—</span>}</td>
 
         <td className="px-1 py-1.5">
           <div className="flex items-center gap-1">
@@ -340,68 +291,33 @@ function FunnelGridRow({
           </div>
         </td>
 
-        <td className="px-1 py-1.5">
-          {row.status === "LOST" ? (
-            <div className="space-y-0.5">
-              <FunnelCell
-                value={row.lostTo.partner}
-                editable={editable}
-                placeholder="Who won it"
-                onSave={save("lostToPartner")}
-              />
-              <FunnelCell
-                value={row.lostTo.amount}
-                display={row.lostTo.amount ? taka(row.lostTo.amount) : ""}
-                editable={editable}
-                type="money"
-                placeholder="At what price"
-                onSave={save("lostToAmount")}
-              />
-              <FunnelCell
-                value={row.lostTo.product}
-                editable={editable}
-                placeholder="With what"
-                onSave={save("lostToProduct")}
-              />
-            </div>
-          ) : (
-            // Asked for only when a deal is lost (§27.4). Three empty boxes on
-            // every live deal would read as work somebody owes.
-            <span className={TONE.muted}>—</span>
-          )}
+        <td className={cn("px-2 py-1.5 tabular-nums", row.daysLeft !== null && row.daysLeft < 0 ? "font-medium text-[#B03A3A]" : row.daysLeft === null ? TONE.muted : undefined)}>
+          {daysLeftText(row.daysLeft)}
         </td>
 
-        <td className="px-1 py-1.5">
-          <FunnelCell
-            value={row.nextStep}
-            editable={editable}
-            placeholder="Add"
-            onSave={save("nextStep")}
-          />
+        <td className="px-2 py-1.5 text-right tabular-nums">
+          {row.daysSinceQuoted ?? <span className={TONE.muted}>—</span>}
         </td>
 
         <td className="px-2 py-1.5">
-          <button type="button" onClick={onToggle} className="block w-full text-left">
-            {row.offerLine ? (
-              <span className="block truncate text-xs text-[#1B2733]">{row.offerLine}</span>
-            ) : null}
-            {row.remarks.length > 0 ? (
-              <span className={cn("block truncate text-xs", TONE.muted)}>
-                {row.remarks[0].body}
-                {row.remarks.length > 1 ? ` +${row.remarks.length - 1} more` : ""}
-              </span>
-            ) : (
-              <span className={cn("block text-xs", TONE.muted)}>No remarks</span>
+          <span
+            className={cn(
+              "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+              STATUS_TONE[row.status]
             )}
-          </button>
+          >
+            {STATUS_LABEL[row.status] ?? row.status}
+          </span>
         </td>
       </tr>
 
       {open ? (
         <tr className="border-t border-[#EEF1F5] bg-[#FAFBFC]">
-          <td colSpan={15} className="px-4 py-3">
+          <td colSpan={12} className="px-4 py-3">
             <FunnelRowDetail
               row={row}
+              editable={editable}
+              onEdit={onEdit}
               canAddManagementNote={canAddManagementNote}
               onAddManagementNote={onAddManagementNote}
             />

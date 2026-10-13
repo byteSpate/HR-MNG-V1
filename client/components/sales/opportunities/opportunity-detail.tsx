@@ -32,6 +32,7 @@ import { OpportunityFormDialog } from "@/components/sales/opportunities/opportun
 import { HandOverDialog } from "@/components/sales/opportunities/handover-dialog"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
 import { WorkflowPanel } from "@/components/sales/opportunities/workflow-panel"
+import { QuotesPanel } from "@/components/sales/opportunities/quotes-panel"
 import { StatusPanel } from "@/components/sales/opportunities/status-panel"
 import { LinesPanel, marginWords, onDate } from "@/components/sales/opportunities/lines-panel"
 import { OpportunityProjectPanel } from "@/components/sales/opportunities/opportunity-project-panel"
@@ -218,7 +219,12 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
           <RecordTabs<DealTab>
             initialTab={initialTab}
             tabs={[
-              { value: "workflow", icon: RiRouteLine, label: "Workflow", content: <WorkflowPanel deal={deal} canManage={canManage} canChangeStage={can("opportunity.change_stage")} /> },
+              { value: "workflow", icon: RiRouteLine, label: "Workflow", content: (
+                <div className="grid gap-4">
+                  <WorkflowPanel deal={deal} canManage={canManage} canChangeStage={can("opportunity.change_stage")} canSkipQuote={can("opportunity.skip_quote")} />
+                  <QuotesPanel deal={deal} canManage={canManage} />
+                </div>
+              ) },
               { value: "status", icon: RiFlagLine, label: "Status", content: <StatusPanel deal={deal} canManage={canManage && can("opportunity.change_status")} isSalesAdmin={isSalesAdmin} /> },
               { value: "products", icon: RiBox3Line, label: deal.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <LinesPanel deal={deal} canManage={canManage && can("opportunity.edit_products")} /> },
               ...(deal.status === "WON" ? [{ value: "money" as const, icon: RiMoneyDollarCircleLine, label: "Money", content: <MoneySection opportunityId={deal.id} /> }] : []),

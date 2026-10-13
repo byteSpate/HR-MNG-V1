@@ -7,11 +7,12 @@ import {
   changeOpportunityNextStep, changeOpportunityStage,
 } from "@/lib/api/sales/opportunities"
 import { opportunityWriteKeys, planWriteKeys } from "@/lib/api/sales/keys"
+import { funnelKeys } from "@/lib/api/sales/funnel-keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunitySummary } from "@/lib/api/types"
 import { CheckboxField, Field, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { OPPORTUNITY_STATUS_LABEL, STAGE_LABEL, STAGE_WAITING_ON, daysSince } from "@/components/sales/shared/sales-shared"
-import { STAGE_LINK_FIELDS, stagesFor } from "@/lib/api/sales/stages"
+import { quoteAskFor, STAGE_LINK_FIELDS, stagesFor } from "@/lib/api/sales/stages"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -20,6 +21,7 @@ import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import { StageLinks } from "@/components/sales/opportunities/stage-links"
 import { onDate } from "@/components/sales/opportunities/lines-panel"
+import { StageChangeDialog } from "@/components/sales/opportunities/stage-change-dialog"
 
 /**
  * Stage and next step. The status itself moved to the Status tab: it is a
@@ -30,11 +32,14 @@ export function WorkflowPanel({
   deal,
   canManage,
   canChangeStage = true,
+  canSkipQuote = true,
 }: {
   deal: OpportunitySummary
   canManage: boolean
   /** A Sales Admin can switch stage changes off for Sales Users. For looks only. */
   canChangeStage?: boolean
+  /** A Sales Admin can switch "Move without a quote" off for Sales Users. For looks only. */
+  canSkipQuote?: boolean
 }) {
   const { accessToken } = useSession()
   const queryClient = useQueryClient()
@@ -47,12 +52,21 @@ export function WorkflowPanel({
   // document link (spec 2026-09-28 §1.5). Cleared on the next stage move so
   // the question is asked once per move, not once per render.
   const [stageChanged, setStageChanged] = useState(false)
+  // A quote stage asks for the quote first (owner, 2026-10-13), in a box.
+  const [asking, setAsking] = useState<{ stage: OpportunityStage; ask: "REQUIRED" | "OPTIONAL" } | null>(null)
 
   const isOpen = deal.status === "ONGOING"
   const invalidate = () => {
     for (const key of opportunityWriteKeys(deal.id)) {
       queryClient.invalidateQueries({ queryKey: key })
     }
+    queryClient.invalidateQueries({ queryKey: funnelKeys.all })
+  }
+  const pickStage = (stage: OpportunityStage) => {
+    setError(null)
+    const ask = quoteAskFor(stage, deal)
+    if (ask) setAsking({ stage, ask })
+    else stageMutation.mutate(stage)
   }
 
   const stageMutation = useMutation({
@@ -88,7 +102,7 @@ export function WorkflowPanel({
           label="Stage"
           hint={isOpen ? STAGE_WAITING_ON[deal.stage] : `This Opportunity is ${OPPORTUNITY_STATUS_LABEL[deal.status].toLowerCase()}, so its stage stays where it ended.`}
         >
-          <Select value={deal.stage} onValueChange={(v) => v && stageMutation.mutate(v as OpportunityStage)} disabled={!isOpen || stageMutation.isPending || !canChangeStage}>
+          <Select value={deal.stage} onValueChange={(v) => v && v !== deal.stage && pickStage(v as OpportunityStage)} disabled={!isOpen || stageMutation.isPending || !canChangeStage}>
             <SelectTrigger className="w-full"><SelectValue>{(v: string | null) => STAGE_LABEL[(v ?? deal.stage) as OpportunityStage]}</SelectValue></SelectTrigger>
             {/* The track decides the stages: a Networking Opportunity has no BRD to send. */}
             <SelectContent>{stagesFor(deal.track).map((s) => <SelectItem key={s} value={s}>{STAGE_LABEL[s]}</SelectItem>)}</SelectContent>
@@ -109,6 +123,17 @@ export function WorkflowPanel({
             <a href="?tab=documents" className="font-bold underline">Add a link</a>
           </PanelNotice>
         </div>
+      ) : null}
+
+      {asking ? (
+        <StageChangeDialog
+          deal={deal}
+          stage={asking.stage}
+          ask={asking.ask}
+          canSkipQuote={canSkipQuote}
+          onClose={() => setAsking(null)}
+          onMoved={() => { setAsking(null); setStageChanged(true); invalidate() }}
+        />
       ) : null}
 
       <StageBar status={deal.status} stage={deal.stage} track={deal.track} className="mt-2.5 max-w-[16rem]" />

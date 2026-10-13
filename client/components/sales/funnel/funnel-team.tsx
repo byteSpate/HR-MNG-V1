@@ -14,6 +14,8 @@ import { taka } from "@/components/sales/shared/sales-shared"
 import type { FunnelTeam } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 
+import { coverageText } from "./funnel-labels"
+
 interface FunnelTeamListProps {
   team: FunnelTeam
   onOpen: (employeeId: string) => void
@@ -45,12 +47,12 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
   return (
     <div className="space-y-3">
       <p className={cn("text-sm", TONE.muted)}>
-        Reviewing the week of {team.weekStart}. {walked} of {team.rows.length} walked so far.
+        Reviewing the week of {team.weekStart}. {walked} of {team.rows.length} walked so far. Targets are for {team.quarterLabel}.
       </p>
 
       <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-sm">
+          <table className="w-full min-w-[1200px] border-collapse text-sm">
             <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
@@ -65,6 +67,12 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                 <th scope="col" className="px-4 py-2 text-right font-medium">
                   Still open
                 </th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Target</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Won</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Gap</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Open quoted</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Coverage</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Quotes missing</th>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
                   Reviewed
                 </th>
@@ -81,6 +89,30 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums text-[#0B7A3B]">
                     <Money amount={row.stillOpen} />
+                  </td>
+                  {/* The quarter against the target (owner, 2026-10-13). A missing
+                      target is said in words, never as ৳0. */}
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {row.summary.target === null ? <span className={cn("text-xs", TONE.muted)}>No target set</span> : taka(row.summary.target)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{taka(row.summary.won)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {row.summary.gap === null ? (
+                      <span className={cn("text-xs", TONE.muted)}>—</span>
+                    ) : row.summary.targetMet ? (
+                      "Target met"
+                    ) : (
+                      taka(row.summary.gap)
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    <Money amount={row.summary.openQuoted} />
+                  </td>
+                  <td className={cn("px-4 py-2.5 text-right tabular-nums", row.summary.coverage === null && "text-xs " + TONE.muted)}>
+                    {coverageText(row.summary)}
+                  </td>
+                  <td className={cn("px-4 py-2.5 text-right tabular-nums", row.summary.quoteMissingCount > 0 && "font-medium text-[#8A5E0C]")}>
+                    {row.summary.quoteMissingCount}
                   </td>
                   <td className="px-4 py-2.5">
                     {row.reviewed ? (

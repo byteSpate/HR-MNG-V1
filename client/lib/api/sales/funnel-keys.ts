@@ -18,7 +18,8 @@ export const funnelKeys = {
    */
   grid: (options: FunnelQueryOptions = {}) => ["sales", "funnel", "grid", options] as const,
 
-  team: () => ["sales", "funnel", "team"] as const,
+  /** The quarter is part of the key: each quarter has its own figures. */
+  team: (quarter?: string) => ["sales", "funnel", "team", quarter ?? "current"] as const,
 
   /**
    * The week is part of the key: last week's meeting and this week's are

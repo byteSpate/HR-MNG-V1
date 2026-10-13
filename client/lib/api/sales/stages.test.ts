@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { NETWORKING_STAGES, SOFTWARE_STAGES, STAGE_LINK_FIELDS, stagesFor } from "./stages"
+import { NETWORKING_STAGES, quoteAskFor, SOFTWARE_STAGES, STAGE_LINK_FIELDS, stagesFor } from "./stages"
 
 test("Networking has the six stages, in order", () => {
   assert.deepEqual(NETWORKING_STAGES, [
@@ -28,4 +28,12 @@ test("only Discovery and Commercial ask for a link, in easy words", () => {
   assert.equal(STAGE_LINK_FIELDS.DISCOVERY_DESIGN?.empty, "No design file link added yet.")
   assert.equal(STAGE_LINK_FIELDS.COMMERCIAL_NEGOTIATION?.title, "Quotation documents")
   assert.equal(STAGE_LINK_FIELDS.COMMERCIAL_NEGOTIATION?.empty, "No quotation link added yet.")
+})
+
+test("the first move into a quote stage needs the quote; a revision stage offers one", () => {
+  assert.equal(quoteAskFor("COMMERCIAL_NEGOTIATION", { offeredOn: null }), "REQUIRED")
+  assert.equal(quoteAskFor("PROPOSAL_SUBMITTED", { offeredOn: null }), "REQUIRED")
+  assert.equal(quoteAskFor("NEGOTIATION", { offeredOn: "2026-10-01" }), "OPTIONAL")
+  assert.equal(quoteAskFor("CUSTOMER_PROCUREMENT", { offeredOn: "2026-10-01" }), null)
+  assert.equal(quoteAskFor("TECHNICAL_VALIDATION", { offeredOn: null }), null)
 })

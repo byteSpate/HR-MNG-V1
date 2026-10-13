@@ -1,8 +1,9 @@
 "use client"
 
 /**
- * What opens under a funnel row: the full product list the grid summarised,
- * and the deal's remarks (revision §27.6, §27.8).
+ * What opens under a funnel row: every quote, the details that moved off
+ * the grid (owner, 2026-10-13), the full product list, and the remarks
+ * (revision §27.6, §27.8).
  *
  * The grid shows the first line and "+N more" because fifteen columns leave no
  * room for a three-product deal. This is where the rest actually is — every
@@ -18,8 +19,32 @@ import { RiArrowRightLine } from "@remixicon/react"
 
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
-import type { FunnelRemark, FunnelRow } from "@/lib/api/types"
+import type { FunnelCellField, FunnelRemark, FunnelRow } from "@/lib/api/types"
+import { longDay, quoteTitle } from "@/lib/quotes"
+import { taka } from "@/components/sales/shared/sales-shared"
+import { FunnelCell } from "./funnel-cell"
 import { cn } from "@/lib/utils"
+
+const STAGE_LABEL: Record<string, string> = {
+  REQUIREMENT_RECEIVED: "Requirement received",
+  // The team's own funnel sheet calls Negotiation "Quotation Revision", and
+  // that is deliberate, so it stays.
+  NEGOTIATION: "Quotation Revision",
+  AWAITING_DECISION: "Awaiting decision",
+  // Software Development stages (spec §2.4).
+  REQUIREMENT_GATHERING: "Requirement gathering",
+  BRD_SENT: "BRD sent",
+  SRS_SENT: "SRS sent",
+  PROPOSAL_SUBMITTED: "Proposal submitted",
+  PROPOSAL_REVISION: "Proposal revision",
+  // Networking stages (spec 2026-09-30).
+  ASSIGNED_QUALIFIED: "Opportunity Assigned & Qualified",
+  DISCOVERY_DESIGN: "Discovery & Solution Design",
+  TECHNICAL_VALIDATION: "Technical Validation & Approval",
+  COMMERCIAL_NEGOTIATION: "Commercial Proposal & Negotiation",
+  CUSTOMER_PROCUREMENT: "Customer Approval & Procurement",
+  PO_RECEIVED: "PO Received / Closed Won",
+}
 
 const KIND_LABEL: Record<FunnelRemark["kind"], string> = {
   GENERAL: "Note",
@@ -40,10 +65,14 @@ function when(iso: string): string {
 
 export function FunnelRowDetail({
   row,
+  editable,
+  onEdit,
   canAddManagementNote,
   onAddManagementNote,
 }: {
   row: FunnelRow
+  editable: boolean
+  onEdit: (opportunityId: string, field: FunnelCellField, value: string | null) => Promise<void>
   canAddManagementNote: boolean
   onAddManagementNote: (opportunityId: string, body: string) => Promise<void>
 }) {
@@ -66,8 +95,65 @@ export function FunnelRowDetail({
     }
   }
 
+  const save = (field: FunnelCellField) => (value: string | null) => onEdit(row.opportunityId, field, value)
+  const label = "text-xs font-medium uppercase tracking-wide text-[#5F6B7C]"
+
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        <div>
+          <h4 className={label}>Quotes</h4>
+          {row.quotes.length === 0 ? (
+            <p className={cn("mt-2 text-sm", TONE.muted)}>
+              Quote missing. Add the quote on the Opportunity so the Funnel and targets show the right amount.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {row.quotes.map((q, i) => (
+                <li key={q.id} className="rounded-md bg-white px-3 py-2 ring-1 ring-[#E4E9EF]">
+                  <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                    <span className="font-medium text-[#1B2733]">{quoteTitle(i, row.quotes.length)}</span>
+                    <span className="tabular-nums">{taka(q.amount)}</span>
+                    <span className={cn("text-xs", TONE.muted)}>
+                      {[longDay(q.quotedOn), q.reference, STAGE_LABEL[q.stage] ?? q.stage].filter(Boolean).join(" · ")}
+                    </span>
+                  </div>
+                  {q.note ? <p className={cn("mt-1 text-xs", TONE.muted)}>{q.note}</p> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <dl className="grid grid-cols-[8rem_1fr] items-start gap-x-3 gap-y-1.5 text-sm">
+          <dt className={label}>Stage</dt>
+          <dd>{STAGE_LABEL[row.stage] ?? row.stage}</dd>
+          <dt className={label}>Use Case</dt>
+          <dd><FunnelCell value={row.useCase} editable={editable} placeholder="Add" onSave={save("useCase")} /></dd>
+          <dt className={label}>Next Step</dt>
+          <dd><FunnelCell value={row.nextStep} editable={editable} placeholder="Add" onSave={save("nextStep")} /></dd>
+          {/* Asked for only when the Opportunity is lost (§27.4). */}
+          {row.status === "LOST" ? (
+            <>
+              <dt className={label}>Lost To</dt>
+              <dd className="space-y-0.5">
+                <FunnelCell value={row.lostTo.partner} editable={editable} placeholder="Who won it" onSave={save("lostToPartner")} />
+                <FunnelCell
+                  value={row.lostTo.amount}
+                  display={row.lostTo.amount ? taka(row.lostTo.amount) : ""}
+                  editable={editable}
+                  type="money"
+                  placeholder="At what price"
+                  onSave={save("lostToAmount")}
+                />
+                <FunnelCell value={row.lostTo.product} editable={editable} placeholder="With what" onSave={save("lostToProduct")} />
+              </dd>
+            </>
+          ) : null}
+        </dl>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
       <div>
         <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
           Remarks on this Opportunity
@@ -187,6 +273,7 @@ export function FunnelRowDetail({
           <RiArrowRightLine className="size-4" aria-hidden />
         </Link>
       </div>
+    </div>
     </div>
   )
 }

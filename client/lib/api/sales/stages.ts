@@ -46,3 +46,31 @@ export const STAGE_LINK_FIELDS: Partial<
     namePlaceholder: "Quotation v1",
   },
 }
+
+/**
+ * The stages at which a quote has gone out (hand copy of the server's
+ * `QUOTED_STAGES`). Reaching one the first time puts the Opportunity on the
+ * Funnel.
+ */
+export const QUOTED_STAGES: ReadonlySet<OpportunityStage> = new Set<OpportunityStage>([
+  "COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED",
+  "PROPOSAL_SUBMITTED", "PROPOSAL_REVISION", "NEGOTIATION", "AWAITING_DECISION",
+])
+
+/** Where the price is talked over again: Proposal revision and Negotiation ("Quotation Revision"). */
+export const REVISION_STAGES: ReadonlySet<OpportunityStage> = new Set<OpportunityStage>(["PROPOSAL_REVISION", "NEGOTIATION"])
+
+/**
+ * What the stage change asks for (owner, 2026-10-13). REQUIRED: the first
+ * move into a quote stage needs Quote 1, or "Move without a quote". OPTIONAL:
+ * a revision stage offers a new quote. Null: nothing to ask. The server
+ * checks the same rule.
+ */
+export function quoteAskFor(
+  stage: OpportunityStage,
+  opp: { offeredOn: string | null }
+): "REQUIRED" | "OPTIONAL" | null {
+  if (QUOTED_STAGES.has(stage) && !opp.offeredOn) return "REQUIRED"
+  if (REVISION_STAGES.has(stage)) return "OPTIONAL"
+  return null
+}

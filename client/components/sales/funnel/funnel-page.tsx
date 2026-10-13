@@ -42,6 +42,8 @@ import { FunnelFilters } from "./funnel-filters"
 import { FunnelGridTable } from "./funnel-grid"
 import { FunnelMeetingPanel } from "./funnel-meeting"
 import { FunnelTeamList } from "./funnel-team"
+import { quarterOptions } from "./funnel-labels"
+import { FunnelSummaryStrip, QuarterPicker } from "./funnel-summary"
 
 /** Sorted and nothing else: the filters every open grid starts from. */
 const DEFAULT_FILTERS: FunnelQueryOptions = { sort: "offeredOn", direction: "desc" }
@@ -74,6 +76,9 @@ export function FunnelPage() {
   const [openEmployeeId, setOpenEmployeeId] = useState<string | null>(null)
   const [filters, setFilters] = useState<FunnelQueryOptions>(DEFAULT_FILTERS)
   const [seen, setSeen] = useState<SeenAccounts>({ owner: null, names: {} })
+  // The quarter the strip and the team figures measure (owner, 2026-10-13).
+  const quarters = useMemo(() => quarterOptions(new Date()), [])
+  const [teamQuarter, setTeamQuarter] = useState(quarters[0].value)
 
   // An admin starts on the team list; everyone else on their own grid.
   const showingTeam = canTeam && openEmployeeId === null
@@ -99,8 +104,9 @@ export function FunnelPage() {
   })
 
   const teamQuery = useQuery({
-    queryKey: funnelKeys.team(),
-    queryFn: () => getFunnelTeam(accessToken!),
+    queryKey: funnelKeys.team(teamQuarter),
+    queryFn: () => getFunnelTeam(accessToken!, teamQuarter),
+    placeholderData: (previous) => previous,
     enabled: isAuthed && canTeam,
   })
 
@@ -240,7 +246,7 @@ export function FunnelPage() {
     seen.owner !== null && (openEmployeeId === null || seen.owner === openEmployeeId)
 
   const filtersActive = Boolean(
-    filters.status || filters.salesAccountId || filters.hideClosed || filters.changedLastWeek
+    filters.status || filters.salesAccountId || filters.hideClosed || filters.changedLastWeek || filters.inQuarter
   )
 
   // Opening or leaving a person's grid starts it afresh: an account picked on
@@ -308,6 +314,7 @@ export function FunnelPage() {
                 onCreateAction={(body) => funnelAction.mutateAsync(body)}
               />
             )}
+            <QuarterPicker value={teamQuarter} options={quarters} onChange={setTeamQuarter} />
             <FunnelTeamList team={teamQuery.data} onOpen={goTo} />
           </>
         ) : teamQuery.isError ? null : (
@@ -388,6 +395,30 @@ export function FunnelPage() {
           (and the focus in it). Only the very first page hides it. The totals
           go while a new view is loading: the old view's figure beside the new
           view's spinner would read as its answer. */}
+      {/* The quarter strip (owner, 2026-10-13). Hidden while a new view loads,
+          for the same reason as the totals. */}
+      {firstPageSeen ? (
+        <div className="space-y-3 rounded-lg border border-[#E4E9EF] bg-[#F9FAFB] px-4 py-3">
+          <div className="flex flex-wrap items-end gap-4">
+            <QuarterPicker
+              value={filters.quarter ?? quarters[0].value}
+              options={quarters}
+              onChange={(quarter) => setFilters((prev) => ({ ...prev, quarter }))}
+            />
+            <label className="flex items-center gap-2 pb-1.5 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(filters.inQuarter)}
+                onChange={(e) => setFilters((prev) => ({ ...prev, inQuarter: e.target.checked || undefined }))}
+                className="size-4 rounded border-[#C9D2DC]"
+              />
+              Only rows closing in this quarter
+            </label>
+          </div>
+          {grid && !gridQuery.isPlaceholderData ? <FunnelSummaryStrip summary={grid.summary} /> : null}
+        </div>
+      ) : null}
+
       {firstPageSeen ? (
         <FunnelFilters
           value={filters}
@@ -417,12 +448,12 @@ export function FunnelPage() {
                 await managementNote.mutateAsync({ opportunityId, body })
               }}
               filtersActive={filtersActive}
-              onClearFilters={() => setFilters({ sort: filters.sort, direction: filters.direction })}
+              onClearFilters={() => setFilters({ sort: filters.sort, direction: filters.direction, quarter: filters.quarter })}
             />
           </div>
           <p className={cn("text-xs", TONE.muted)}>
-            Brand, model, quantity and the Opportunity&apos;s status are changed on the Opportunity
-            itself. Open a row to reach it.
+            Open a row to see every quote, the stage, the products and the remarks. Quotes, products
+            and the status change on the Opportunity itself.
           </p>
         </>
       ) : gridQuery.isError ? null : (

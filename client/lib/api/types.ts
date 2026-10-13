@@ -2817,6 +2817,26 @@ export interface OpportunityLineSummary {
   updatedAt: string
 }
 
+/** One price we sent the customer (owner, 2026-10-13). Mirrors server. */
+export interface OpportunityQuoteView {
+  id: string
+  amount: string
+  /** YYYY-MM-DD. */
+  quotedOn: string
+  reference: string | null
+  note: string | null
+  /** The stage the Opportunity was at when this quote was given. */
+  stage: OpportunityStage
+}
+
+/** What a new quote sends. */
+export interface QuoteBody {
+  amount: string
+  quotedOn: string
+  reference?: string | null
+  note?: string | null
+}
+
 export interface OpportunitySummary {
   id: string
   serial: string
@@ -2850,6 +2870,8 @@ export interface OpportunitySummary {
   updatedAt: string
   lines: OpportunityLineSummary[]
   /** Sum of the priced lines only. */
+  /** Every price we sent, newest first. Once there is one, `amount` is the first one's amount. */
+  quotes: OpportunityQuoteView[]
   lineTotal: string
   unpricedLineCount: number
   /**
@@ -2869,6 +2891,8 @@ export interface OpportunitySummary {
   /** Whether this viewer may change the deal. Decided by the server: the
       directory is shared, so seeing one and working it are different. */
   canManage: boolean
+  /** May this viewer edit or delete the latest quote: the owner or a Sales Admin. */
+  canEditQuotes: boolean
 }
 
 export interface OpportunityPage {
@@ -3535,6 +3559,43 @@ export interface FunnelRow {
   /** Composed per read and never stored (§27.8). */
   offerLine: string | null
   remarks: FunnelRemark[]
+  // ── quotes and quarters (owner, 2026-10-13) ──
+  /** The latest quote, or null ("Quote missing"). */
+  latestQuote: { amount: string; quotedOn: string; reference: string | null } | null
+  /** Every quote, newest first. */
+  quotes: FunnelQuote[]
+  quoteCount: number
+  /** quoteCount - 1, never below 0. */
+  quoteChanges: number
+  quoteMissing: boolean
+  /** "Q4 2026", from the closing date. */
+  quarterLabel: string | null
+  ownerName: string
+  daysSinceQuoted: number | null
+  /** Negative means overdue. */
+  daysLeft: number | null
+}
+
+export interface FunnelQuote {
+  id: string
+  amount: string
+  quotedOn: string
+  reference: string | null
+  note: string | null
+  stage: OpportunityStage
+}
+
+/** The quarter strip: one person's quarter against their target. Unknown is null, never zero. */
+export interface FunnelSummary {
+  quarterLabel: string
+  target: string | null
+  won: string
+  gap: string | null
+  openQuoted: string | null
+  /** Like "2.1". */
+  coverage: string | null
+  targetMet: boolean
+  quoteMissingCount: number
 }
 
 /** Two labelled figures, never one (§27.10). */
@@ -3559,6 +3620,7 @@ export interface FunnelGrid {
    */
   truncated: boolean
   totals: FunnelTotals
+  summary: FunnelSummary
 }
 
 export interface FunnelTeamRow {
@@ -3569,11 +3631,14 @@ export interface FunnelTeamRow {
   quoted: string | null
   stillOpen: string | null
   reviewed: boolean
+  summary: FunnelSummary
 }
 
 export interface FunnelTeam {
   /** The Sunday of the week under review. */
   weekStart: string
+  /** "Q4 2026": the quarter the figures are for. */
+  quarterLabel: string
   rows: FunnelTeamRow[]
 }
 
@@ -3589,6 +3654,10 @@ export interface FunnelQueryOptions {
   changedLastWeek?: boolean
   sort?: FunnelSort
   direction?: "asc" | "desc"
+  /** "2026-Q4". Absent means this quarter. */
+  quarter?: string
+  /** Only rows closing in that quarter. */
+  inQuarter?: boolean
 }
 
 /**
@@ -3597,9 +3666,7 @@ export interface FunnelQueryOptions {
  */
 export type FunnelCellField =
   | "useCase"
-  | "offeredOn"
   | "expectedCloseDate"
-  | "amount"
   | "nextStep"
   | "lostToPartner"
   | "lostToAmount"

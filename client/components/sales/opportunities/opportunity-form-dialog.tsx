@@ -241,6 +241,7 @@ function OpportunityFields({
 
   const [name, setName] = useState(deal?.name ?? fromMeeting?.title ?? suggestedName ?? "")
   const [amount, setAmount] = useState(deal?.amount ?? "")
+  const quoted = (deal?.quotes.length ?? 0) > 0
   const [closeDate, setCloseDate] = useState(deal?.expectedCloseDate?.slice(0, 10) ?? "")
   const [oemContact, setOemContact] = useState(deal?.oemAccountManager ?? "")
   const [ownerId, setOwnerId] = useState(
@@ -365,7 +366,8 @@ function OpportunityFields({
       nextAmount === null
         ? deal.amount !== null
         : deal.amount === null || Number(nextAmount) !== Number(deal.amount)
-    if (amountChanged) body.amount = nextAmount
+    // Once there is a quote, the value is the latest quote (owner, 2026-10-13).
+    if (amountChanged && !quoted) body.amount = nextAmount
     const nextClose = closeDate || null
     if (nextClose !== (deal.expectedCloseDate?.slice(0, 10) ?? null)) body.expectedCloseDate = nextClose
     const nextOem = oemContact.trim() || null
@@ -432,7 +434,7 @@ function OpportunityFields({
         <Field
           label="Value (৳)"
           htmlFor="opp-amount"
-          hint={deal ? undefined : "Optional."}
+          hint={quoted ? "This comes from the latest quote. To change it, add a new quote." : deal ? undefined : "Optional."}
           help={
             deal
               ? "The Opportunity value. Clear it if there is no price yet. The products list never changes it."
@@ -443,6 +445,7 @@ function OpportunityFields({
             id="opp-amount"
             inputMode="decimal"
             value={amount}
+            readOnly={quoted}
             onChange={(e) => setAmount(e.target.value)}
           />
         </Field>

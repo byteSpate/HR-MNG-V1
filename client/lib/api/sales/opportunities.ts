@@ -9,6 +9,7 @@ import type {
   OpportunityStage,
   OpportunityStatus,
   OpportunitySummary,
+  QuoteBody,
   UpdateOpportunityBody,
   UpdateOpportunityLineBody,
   TimelineItem,
@@ -72,15 +73,20 @@ export function updateOpportunity(
   })
 }
 
+/**
+ * Moving into a quote stage may carry the quote, or a reason to move without
+ * one (owner, 2026-10-13). `quoteAskFor` in `stages.ts` says which.
+ */
 export function changeOpportunityStage(
   accessToken: string,
   id: string,
-  stage: OpportunityStage
+  stage: OpportunityStage,
+  extra?: { quote?: QuoteBody; skipQuoteReason?: string }
 ): Promise<OpportunitySummary> {
   return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/stage`, {
     method: "PATCH",
     accessToken,
-    body: JSON.stringify({ stage }),
+    body: JSON.stringify({ stage, ...extra }),
   })
 }
 
@@ -230,5 +236,35 @@ export function handOverToSoftware(
 ): Promise<OpportunitySummary> {
   return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/handover`, {
     method: "POST", accessToken, body: JSON.stringify(body),
+  })
+}
+
+// ── Quotes (owner, 2026-10-13). Each returns the Opportunity, whose amount follows the latest quote.
+
+export function addQuote(accessToken: string, opportunityId: string, body: QuoteBody): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${opportunityId}/quotes`, {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function editQuote(
+  accessToken: string,
+  opportunityId: string,
+  quoteId: string,
+  body: QuoteBody
+): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${opportunityId}/quotes/${quoteId}`, {
+    method: "PATCH",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+export function deleteQuote(accessToken: string, opportunityId: string, quoteId: string): Promise<OpportunitySummary> {
+  return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${opportunityId}/quotes/${quoteId}`, {
+    method: "DELETE",
+    accessToken,
   })
 }

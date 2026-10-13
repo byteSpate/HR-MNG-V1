@@ -33,6 +33,8 @@ function toQuery(options: FunnelQueryOptions): string {
   if (options.changedLastWeek) params.set("changedLastWeek", "true")
   if (options.sort) params.set("sort", options.sort)
   if (options.direction) params.set("direction", options.direction)
+  if (options.quarter) params.set("quarter", options.quarter)
+  if (options.inQuarter) params.set("inQuarter", "true")
   const query = params.toString()
   return query ? `?${query}` : ""
 }
@@ -41,8 +43,10 @@ export function getFunnel(options: FunnelQueryOptions, accessToken: string): Pro
   return apiFetch<FunnelGrid>(`/api/sales/funnel${toQuery(options)}`, { accessToken })
 }
 
-export function getFunnelTeam(accessToken: string): Promise<FunnelTeam> {
-  return apiFetch<FunnelTeam>("/api/sales/funnel/team", { accessToken })
+/** `quarter` is "2026-Q4"; absent means this quarter. */
+export function getFunnelTeam(accessToken: string, quarter?: string): Promise<FunnelTeam> {
+  const query = quarter ? `?quarter=${encodeURIComponent(quarter)}` : ""
+  return apiFetch<FunnelTeam>(`/api/sales/funnel/team${query}`, { accessToken })
 }
 
 export function editFunnelCell(
