@@ -681,12 +681,15 @@ export function ConfirmDialog({
 export function ConfirmDeleteDialog({
   open,
   what,
+  detail,
   pending,
   onCancel,
   onConfirm,
 }: {
   open: boolean
   what: string
+  /** One more sentence, said before the usual warning. Like "This also deletes everything inside it." */
+  detail?: string | null
   pending: boolean
   onCancel: () => void
   onConfirm: () => void
@@ -700,7 +703,7 @@ export function ConfirmDeleteDialog({
           </span>
           <AlertDialogTitle>Delete {what}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This cannot be undone. If anything still references it, the delete is refused and
+            {detail ? `${detail} ` : null}This cannot be undone. If anything still references it, the delete is refused and
             nothing changes.
           </AlertDialogDescription>
         </AlertDialogHeader>

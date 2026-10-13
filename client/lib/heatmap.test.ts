@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import type { HeatmapProductView } from "./api/types"
-import { closedLine, COLOUR, COLOUR_ORDER } from "./heatmap"
+import { closedLine, COLOUR, COLOUR_ORDER, deleteWarning, usedByText } from "./heatmap"
 
 const product = (o: Partial<HeatmapProductView> = {}): HeatmapProductView => ({
   id: "p", title: "Router", colour: "GREY", reason: null, pickedByName: null, pickedAt: null,
@@ -32,4 +32,16 @@ test("a Red row shows its reason instead", () => {
 
 test("a product with no parts says nothing about scope", () => {
   assert.equal(closedLine(product({ parts: [], inScopeCount: 0 })), "")
+})
+
+test("the list editor says who uses a row, in plain words", () => {
+  assert.equal(usedByText(0), "")
+  assert.equal(usedByText(1), "Used by 1 account")
+  assert.equal(usedByText(12), "Used by 12 accounts")
+})
+
+test("deleting a group or product warns that what is inside goes too", () => {
+  assert.equal(deleteWarning("parts"), null)
+  assert.equal(deleteWarning("products"), "This also deletes everything inside it.")
+  assert.equal(deleteWarning("groups"), "This also deletes everything inside it.")
 })
