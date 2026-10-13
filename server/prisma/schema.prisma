@@ -2719,8 +2719,8 @@ model SalesAccount {
   meetings             SalesMeeting[]
   tasks                SalesTask[]
   answers              SalesAccountAnswer[]
-  heatmapNeeds         SalesAccountHeatmapNeed[]
-  heatmapItems         SalesAccountHeatmapItem[]
+  heatmapPicks         SalesAccountHeatmapPick[]
+  heatmapScopes        SalesAccountHeatmapScope[]
   weeklyNotes          WeeklyAccountNote[]
   /// The delivery work on this account's Won Opportunities (ADR 0005).
   projects             Project[]
@@ -2775,55 +2775,87 @@ model SalesAccountAnswer {
   @@index([salesAccountId])
 }
 
-/// "Do they need it?" for one card on an account's Heatmap tab (owner,
-/// 2026-10-07). No row means "Not asked yet". The card list lives in code
-/// (`heatmap.cards.ts`), so `card` is its key, like "switch".
-enum HeatmapNeed {
-  NEED
-  NO_NEED
+/// The Heatmap list (owner, 2026-10-13): groups hold products, products hold
+/// parts. Sales Admins edit it in Sales Settings. Something in use is hidden,
+/// never deleted, so an account's answers are never lost. `position` orders
+/// siblings; Move up / Move down swaps two neighbours.
+model HeatmapGroup {
+  id        String           @id @default(uuid())
+  title     String
+  position  Int
+  hidden    Boolean          @default(false)
+  products  HeatmapProduct[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
 
-model SalesAccountHeatmapNeed {
-  id             String       @id @default(uuid())
+model HeatmapProduct {
+  id        String                    @id @default(uuid())
+  groupId   String
+  group     HeatmapGroup              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  title     String
+  position  Int
+  hidden    Boolean                   @default(false)
+  parts     HeatmapPart[]
+  picks     SalesAccountHeatmapPick[]
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  @@index([groupId])
+}
+
+model HeatmapPart {
+  id        String                     @id @default(uuid())
+  productId String
+  product   HeatmapProduct             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title     String
+  /// The short grey line under the part, like "Up to 3 Gbps".
+  note      String?
+  position  Int
+  hidden    Boolean                    @default(false)
+  scopes    SalesAccountHeatmapScope[]
+  createdAt DateTime                   @default(now())
+  updatedAt DateTime                   @updatedAt
+
+  @@index([productId])
+}
+
+/// Picked by a person, never by dates. No row means Grey (not picked).
+enum HeatmapPickColour {
+  GREEN
+  RED
+}
+
+model SalesAccountHeatmapPick {
+  id             String            @id @default(uuid())
   salesAccountId String
-  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-  card           String
-  need           HeatmapNeed
-  /// Why there is no need. Kept only with NO_NEED.
+  salesAccount   SalesAccount      @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  productId      String
+  /// Restrict: a product with answers is hidden, not deleted.
+  product        HeatmapProduct    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  colour         HeatmapPickColour
+  /// Why there is no chance. Kept only with RED, and required there.
   reason         String?
-  /// The user id that set it last.
   updatedBy      String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  @@unique([salesAccountId, card])
+  @@unique([salesAccountId, productId])
+  @@index([productId])
 }
 
-/// One thing the company has on a Heatmap card, like "24 Cisco switches".
-/// The dates are calendar days. `details` holds the card's own fields as
-/// short text, checked against the card list in code.
-model SalesAccountHeatmapItem {
+/// One ticked part: "this is in our working scope for this company".
+model SalesAccountHeatmapScope {
   id             String       @id @default(uuid())
   salesAccountId String
   salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-  card           String
-  brand          String
-  model          String?
-  quantity       Int
-  site           String?
-  boughtFrom     String?
-  boughtOn       DateTime?    @db.Date
-  supportEndsOn  DateTime?    @db.Date
-  endOfLifeOn    DateTime?    @db.Date
-  supportBy      String?
-  notes          String?
-  details        Json         @default("{}")
+  partId         String
+  part           HeatmapPart  @relation(fields: [partId], references: [id], onDelete: Restrict)
   createdBy      String
-  updatedBy      String
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
 
-  @@index([salesAccountId, card])
+  @@unique([salesAccountId, partId])
+  @@index([partId])
 }
 
 enum SalesContactStatus {
