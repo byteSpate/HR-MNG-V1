@@ -12,6 +12,7 @@
 import { formatDateOnly } from "../../../utils/dates"
 import { dec, sum, toMoneyString, type Money } from "../../payroll/payroll.money"
 import { monthYearOf } from "./funnel.dates"
+import { daysBetween, quarterLabel, quarterOfDay } from "./funnel.summary"
 import type {
   FunnelCloseChange,
   FunnelCommentInput,
@@ -21,6 +22,7 @@ import type {
   FunnelLineInput,
   FunnelRemark,
   FunnelRow,
+  FunnelSummary,
   FunnelTotals,
 } from "./funnel.types"
 
@@ -218,6 +220,9 @@ export interface ComposeFunnelInput {
    */
   totals?: FunnelTotals
   truncated?: boolean
+  /** The office's today, date-only. Days since quoted and days left count from it. */
+  today: Date
+  summary: FunnelSummary
 }
 
 /**
@@ -269,6 +274,7 @@ export function composeFunnel(input: ComposeFunnelInput): FunnelGrid {
       nextStep: deal.nextStep,
       offerLine: offerLineFor(deal),
       remarks,
+      ...quoteFieldsOf(deal, input.today),
     }
   })
 
@@ -278,5 +284,33 @@ export function composeFunnel(input: ComposeFunnelInput): FunnelGrid {
     rows,
     truncated: input.truncated ?? false,
     totals: input.totals ?? totalsFor(input.deals),
+    summary: input.summary,
+  }
+}
+
+/** The quote, quarter and day columns of one row (owner, 2026-10-13). */
+function quoteFieldsOf(deal: FunnelDealInput, today: Date) {
+  const quotes = deal.quotes.map((q) => ({
+    id: q.id,
+    amount: toMoneyString(dec(q.amount as never)),
+    quotedOn: formatDateOnly(q.quotedOn),
+    reference: q.reference,
+    note: q.note,
+    stage: q.stage,
+  }))
+  const latest = quotes[0] ?? null
+  const quotedDay = deal.quotes[0]?.quotedOn ?? deal.offeredOn
+  const close = deal.expectedCloseDate
+  const quarter = close ? quarterOfDay(close) : null
+  return {
+    latestQuote: latest ? { amount: latest.amount, quotedOn: latest.quotedOn, reference: latest.reference } : null,
+    quotes,
+    quoteCount: quotes.length,
+    quoteChanges: Math.max(quotes.length - 1, 0),
+    quoteMissing: quotes.length === 0,
+    quarterLabel: quarter ? quarterLabel(quarter.year, quarter.quarter) : null,
+    ownerName: deal.ownerName,
+    daysSinceQuoted: quotedDay ? daysBetween(quotedDay, today) : null,
+    daysLeft: close ? daysBetween(today, close) : null,
   }
 }

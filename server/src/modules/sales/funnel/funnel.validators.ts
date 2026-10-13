@@ -63,6 +63,16 @@ export const funnelQuerySchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
+  /**
+   * The quarter the strip measures, like "2026-Q4" (owner, 2026-10-13).
+   * Absent means the office's current quarter.
+   */
+  quarter: z.string().regex(/^\d{4}-Q[1-4]$/, "Pick a quarter.").optional(),
+  /** Only rows whose closing date falls in that quarter. */
+  inQuarter: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
   /** Given to employees as well as admins (§27.9). */
   sort: z
     .enum(["offeredOn", "status", "amount", "expectedCloseDate", "account"])
@@ -162,4 +172,9 @@ export const funnelActionSchema = z.object({
   priority: z.enum(["LOW", "NORMAL", "HIGH"]).optional().default("NORMAL"),
   salesAccountId: z.string().uuid().nullable().optional(),
   opportunityId: z.string().uuid().nullable().optional(),
+})
+
+/** The team view's quarter (owner, 2026-10-13). Absent means this quarter. */
+export const teamQuerySchema = z.object({
+  quarter: z.string().regex(/^\d{4}-Q[1-4]$/, "Pick a quarter.").optional(),
 })

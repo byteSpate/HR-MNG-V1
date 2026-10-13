@@ -17,11 +17,14 @@ import { commentKindScopeFor, employeeIdFor } from "../sales.access"
 import { canDo } from "../sales.permissions"
 import { recentChangeSince, weekReviewedBy } from "./funnel.dates"
 import { composeFunnel } from "./funnel.rows"
+import { readQuarterSummaries } from "./funnel.quarter"
+import { parseQuarter, quarterDays, quarterLabel, quarterOfDay } from "./funnel.summary"
 import type {
   FunnelCloseChange,
   FunnelCommentInput,
   FunnelDealInput,
   FunnelGrid,
+  FunnelSummary,
   FunnelTotals,
 } from "./funnel.types"
 import type { FunnelQuery } from "./funnel.validators"
@@ -67,6 +70,11 @@ async function subjectOf(
 }
 
 /** The grid's filters, as a `where` (§27.9). */
+/** The quarter asked for, or the office's current one. */
+function quarterFor(raw: string | undefined, now: Date): { year: number; quarter: number } {
+  return raw ? parseQuarter(raw) : quarterOfDay(officeDateOf(now))
+}
+
 function whereFor(employeeId: string, query: FunnelQuery, now: Date): Prisma.OpportunityWhereInput {
   const where: Prisma.OpportunityWhereInput = {
     ownerEmployeeId: employeeId,
@@ -82,6 +90,10 @@ function whereFor(employeeId: string, query: FunnelQuery, now: Date): Prisma.Opp
   // narrower answer is the safer one.
   if (query.hideClosed) where.status = { notIn: [...CLOSED_OUT] }
   if (query.changedLastWeek) where.lastActivityAt = { gte: recentChangeSince(now) }
+  if (query.inQuarter) {
+    const { year, quarter } = quarterFor(query.quarter, now)
+    where.expectedCloseDate = quarterDays(year, quarter)
+  }
 
   return where
 }
@@ -127,6 +139,12 @@ const DEAL_SELECT = {
   lines: {
     select: { product: true, oemBrand: true, model: true, quantity: true, order: true },
     orderBy: { order: "asc" },
+  },
+  owner: { select: { fullName: true } },
+  // Newest first: the first is the latest (owner, 2026-10-13).
+  quotes: {
+    select: { id: true, amount: true, quotedOn: true, reference: true, note: true, stage: true },
+    orderBy: [{ quotedOn: "desc" }, { createdAt: "desc" }] as Prisma.OpportunityQuoteOrderByWithRelationInput[],
   },
 } as const
 
@@ -214,6 +232,8 @@ export async function getFunnel(
     lostToProduct: deal.lostToProduct,
     nextStep: deal.nextStep,
     lines: deal.lines,
+    ownerName: deal.owner.fullName,
+    quotes: deal.quotes,
   }))
 
   const commentInputs: FunnelCommentInput[] = comments.map((c) => ({
@@ -228,9 +248,16 @@ export async function getFunnel(
     funnelMeetingId: c.funnelMeetingId,
   }))
 
+  const { year, quarter } = quarterFor(query.quarter, now)
+  const summaries = await readQuarterSummaries(
+    [{ id: subject.employeeId, fullName: subject.employeeName }], year, quarter, now,
+  )
+
   return composeFunnel({
     employeeId: subject.employeeId,
     employeeName: subject.employeeName,
+    today: officeDateOf(now),
+    summary: summaries.get(subject.employeeId)!,
     deals: dealInputs,
     comments: commentInputs,
     closeChanges: closeChangesFrom(auditRows),
@@ -332,6 +359,8 @@ export interface FunnelTeamRow {
   stillOpen: string | null
   /** Whether this person's funnel has been walked in the week under review. */
   reviewed: boolean
+  /** Their quarter against their target (owner, 2026-10-13). */
+  summary: FunnelSummary
 }
 
 /**
@@ -345,8 +374,9 @@ export interface FunnelTeamRow {
  */
 export async function listFunnelTeam(
   actor: AccessTokenPayload,
-  now: Date = new Date()
-): Promise<{ weekStart: string; rows: FunnelTeamRow[] }> {
+  now: Date = new Date(),
+  quarterQuery?: string
+): Promise<{ weekStart: string; quarterLabel: string; rows: FunnelTeamRow[] }> {
   if (!(await canDo(actor, "team.funnel"))) throw new AppError(403, FUNNEL_NOT_YOURS)
 
   // The office's Saturday, not the UTC one: between midnight and 06:00 in
@@ -383,6 +413,9 @@ export async function listFunnelTeam(
   const asMoney = (value: unknown): string | null =>
     value === null || value === undefined ? null : toMoneyString(dec(value as never))
 
+  const { year, quarter } = quarterFor(quarterQuery, now)
+  const summaries = await readQuarterSummaries(people, year, quarter, now)
+
   const rows: FunnelTeamRow[] = people.map((person) => ({
     employeeId: person.id,
     employeeName: person.fullName,
@@ -390,7 +423,8 @@ export async function listFunnelTeam(
     quoted: asMoney(quotedBy.get(person.id)?._sum.amount),
     stillOpen: asMoney(openBy.get(person.id)?._sum.amount),
     reviewed: reviewed.has(person.id),
+    summary: summaries.get(person.id)!,
   }))
 
-  return { weekStart: weekStart.toISOString().slice(0, 10), rows }
+  return { weekStart: weekStart.toISOString().slice(0, 10), quarterLabel: quarterLabel(year, quarter), rows }
 }
