@@ -3896,6 +3896,7 @@ export type SalesPermissionKey =
   | "account.edit"
   | "opportunity.create"
   | "opportunity.change_stage"
+  | "opportunity.skip_quote"
   | "opportunity.change_status"
   | "opportunity.hand_over"
   | "opportunity.edit_products"

@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { dateOnly, money } from "../sales.primitives"
+import { quoteSchema, skipReasonSchema } from "./quote.validators"
 
 // The profit on a deal, as a percentage of its value. Negative is a deal sold
 // at a loss; beyond 100 either way is a typing mistake, not a margin.
@@ -57,7 +58,14 @@ export const updateOpportunitySchema = z.object({
 }).refine((body) => Object.keys(body).some((key) => key !== "addAssignment"), { message: "Nothing was changed" })
 export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
 
-export const changeOpportunityStageSchema = z.object({ stage: opportunityStage })
+/**
+ * A stage change. Moving into a quote stage for the first time also carries
+ * Quote 1, or a reason to move without one (owner, 2026-10-13). A revision
+ * stage may carry a new quote.
+ */
+export const changeOpportunityStageSchema = z
+  .object({ stage: opportunityStage, quote: quoteSchema.optional(), skipQuoteReason: skipReasonSchema.optional() })
+  .refine((b) => !(b.quote && b.skipQuoteReason), "Add a quote or move without one, not both.")
 
 /** Handing the software part to the Software team (spec §2.5). */
 export const handOverSchema = z.object({

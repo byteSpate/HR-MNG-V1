@@ -18,18 +18,16 @@ import { parseDateOnly } from "../../../utils/dates"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
 import { accountScopeFor, employeeIdFor, isSalesAdmin, OPPORTUNITY_NOT_VISIBLE } from "../sales.access"
-import { QUOTED_STAGES } from "../sales.stages"
 import type { EditFunnelCell } from "./funnel.validators"
 
 export const MEETING_NOT_OPEN = "That funnel meeting is not open"
 export const MEETING_ADMIN_ONLY = "Only a Sales Admin can make a change on behalf of a funnel meeting"
-export const OFFER_DATE_REQUIRED = "A quoted Opportunity keeps its offer date. You can change it, but you cannot clear it"
 
 /** The columns the grid may write. */
 type Writable = EditFunnelCell["field"]
 
-const DATE_FIELDS = new Set<Writable>(["offeredOn", "expectedCloseDate"])
-const MONEY_FIELDS = new Set<Writable>(["amount", "lostToAmount"])
+const DATE_FIELDS = new Set<Writable>(["expectedCloseDate"])
+const MONEY_FIELDS = new Set<Writable>(["lostToAmount"])
 
 /**
  * Turns the validated wire value into what Prisma stores.
@@ -73,9 +71,7 @@ function unchanged(
 
 const LABEL: Record<Writable, string> = {
   useCase: "use case",
-  offeredOn: "offer date",
   expectedCloseDate: "closing date",
-  amount: "amount",
   nextStep: "next step",
   lostToPartner: "lost-to partner",
   lostToAmount: "lost-to amount",
@@ -101,11 +97,6 @@ export async function editFunnelCell(
 ): Promise<{ opportunityId: string; field: Writable; value: string | null }> {
   const { opportunityId, edit } = input
 
-  // Belt and braces with the validator: membership is `offeredOn` being set
-  // (§27.2), so nothing that reaches this function may take it off.
-  if (edit.field === "offeredOn" && (edit.value === null || edit.value === "")) {
-    throw new AppError(400, OFFER_DATE_REQUIRED)
-  }
   // Attributing a change to a meeting is the review's own act. A Sales User
   // holding a meeting's id must not be able to stamp their edits as having
   // been made in it.
@@ -123,9 +114,7 @@ export async function editFunnelCell(
         salesAccountId: true,
         ownerEmployeeId: true,
         useCase: true,
-        offeredOn: true,
         expectedCloseDate: true,
-        amount: true,
         nextStep: true,
         lostToPartner: true,
         lostToAmount: true,
@@ -190,29 +179,4 @@ export async function editFunnelCell(
 
     return { opportunityId, field: edit.field, value: edit.value }
   })
-}
-
-/**
- * Stamps the offer date the first time a deal reaches a quoted stage (§27.4),
- * which is also the moment it joins the funnel (§27.2).
- *
- * Only ever fills a blank. A deal that drops back to an earlier stage and
- * comes forward again keeps the date it was really quoted on, and a date
- * somebody has corrected by hand is never overwritten.
- */
-export async function stampOfferedOn(
-  tx: Prisma.TransactionClient,
-  opportunityId: string,
-  stage: string,
-  currentOfferedOn: Date | null,
-  today: Date
-): Promise<boolean> {
-  if (!QUOTED_STAGES.has(stage)) return false
-  if (currentOfferedOn) return false
-
-  await tx.opportunity.update({
-    where: { id: opportunityId },
-    data: { offeredOn: today },
-  })
-  return true
 }

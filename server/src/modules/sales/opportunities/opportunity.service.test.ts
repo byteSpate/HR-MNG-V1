@@ -20,7 +20,13 @@ vi.mock("../../../config/prisma", () => ({
     customerPo: { count: vi.fn() },
     supplierBill: { count: vi.fn() },
     project: { count: vi.fn() },
+    opportunityQuote: { create: vi.fn(), findFirst: vi.fn(), count: vi.fn() },
   },
+}))
+
+vi.mock("../sales.permissions", async () => ({
+  ...(await vi.importActual<object>("../sales.permissions")),
+  canDo: vi.fn().mockResolvedValue(true),
 }))
 
 vi.mock("../../customer/customer.link", () => ({ ensureCustomerForAccount: vi.fn() }))
@@ -43,6 +49,7 @@ import {
   updateOpportunity,
 } from "./opportunity.service"
 import { nextOpportunitySerial } from "../sales.serial"
+import { canDo } from "../sales.permissions"
 
 const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "sales@example.com",
@@ -390,30 +397,94 @@ describe("stage, status, and next step", () => {
     expect(prisma.event.create).toHaveBeenCalledTimes(1)
   })
 
-  it("stamps the offer date once when a deal first reaches Commercial Proposal & Negotiation", async () => {
-    await changeOpportunityStage("opp-1", { stage: "COMMERCIAL_NEGOTIATION" }, USER)
-
-    expect(prisma.opportunity.update).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      where: { id: "opp-1" },
-      data: { offeredOn: new Date("2026-09-09T00:00:00.000Z") },
-    }))
-    expect(prisma.auditLog.create).toHaveBeenCalledTimes(2)
+  it("will not move into the first quote stage without the quote, and moves nothing", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "TECHNICAL_VALIDATION", offeredOn: null }) as any)
+    await expect(changeOpportunityStage("opp-1", { stage: "COMMERCIAL_NEGOTIATION" }, USER)).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Add the quote amount and date to move to this stage. Or click Move without a quote.",
+    })
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
   })
 
-  it("stamps a deal moved straight past stage 4, so it still joins the funnel", async () => {
-    // Stage changes are free-form: nothing makes a deal pass through stage 4.
-    for (const stage of ["CUSTOMER_PROCUREMENT", "PO_RECEIVED"] as const) {
-      vi.clearAllMocks()
-      vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
-        stage: "DISCOVERY_DESIGN", offeredOn: null,
-      }) as any)
+  it("saves Quote 1 at the new stage; its date becomes the Funnel date and its amount the value", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "TECHNICAL_VALIDATION", offeredOn: null }) as any)
+    vi.mocked(prisma.opportunityQuote.create).mockImplementation((async (a: any) => ({ id: "q-1", ...a.data })) as any)
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue({ id: "q-1", amount: dec("1200000"), quotedOn: new Date("2026-09-05T00:00:00.000Z") } as any)
 
-      await changeOpportunityStage("opp-1", { stage }, USER)
+    await changeOpportunityStage("opp-1", {
+      stage: "COMMERCIAL_NEGOTIATION",
+      quote: { amount: "1200000", quotedOn: "2026-09-05", reference: null, note: null },
+    }, USER)
 
-      expect(prisma.opportunity.update).toHaveBeenNthCalledWith(1, expect.objectContaining({
-        data: { offeredOn: new Date("2026-09-09T00:00:00.000Z") },
-      }))
-    }
+    expect(prisma.opportunityQuote.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ stage: "COMMERCIAL_NEGOTIATION", amount: dec("1200000") }),
+    })
+    expect(prisma.opportunity.update).toHaveBeenCalledWith({
+      where: { id: "opp-1" }, data: { offeredOn: new Date("2026-09-05T00:00:00.000Z") },
+    })
+    expect(prisma.opportunity.update).toHaveBeenCalledWith({
+      where: { id: "opp-1" }, data: expect.objectContaining({ amount: dec("1200000") }),
+    })
+  })
+
+  it("moves without a quote when given a reason, sets today as the Funnel date and writes the reason to History", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "DISCOVERY_DESIGN", offeredOn: null }) as any)
+
+    await changeOpportunityStage("opp-1", { stage: "CUSTOMER_PROCUREMENT", skipQuoteReason: "OEM price next week" }, USER)
+
+    expect(prisma.opportunityQuote.create).not.toHaveBeenCalled()
+    expect(prisma.opportunity.update).toHaveBeenCalledWith({
+      where: { id: "opp-1" }, data: { offeredOn: new Date("2026-09-09T00:00:00.000Z") },
+    })
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ note: "Moved without a quote: OEM price next week" }),
+    })
+  })
+
+  it("refuses to move without a quote when a Sales Admin has turned that off", async () => {
+    vi.mocked(canDo).mockResolvedValueOnce(false)
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "TECHNICAL_VALIDATION", offeredOn: null }) as any)
+    await expect(changeOpportunityStage("opp-1", { stage: "COMMERCIAL_NEGOTIATION", skipQuoteReason: "later" }, USER))
+      .rejects.toMatchObject({
+        statusCode: 403,
+        message: "A Sales Admin has turned off moving without a quote. Add the quote to move to this stage.",
+      })
+    expect(canDo).toHaveBeenCalledWith(USER, "opportunity.skip_quote")
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+  })
+
+  it("lets a revision stage move with or without a new quote", async () => {
+    const offeredOn = new Date("2026-08-21T00:00:00.000Z")
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      track: "SOFTWARE_DEVELOPMENT", stage: "PROPOSAL_SUBMITTED", offeredOn,
+    }) as any)
+    await changeOpportunityStage("opp-1", { stage: "PROPOSAL_REVISION" }, USER)
+    expect(prisma.opportunityQuote.create).not.toHaveBeenCalled()
+
+    vi.mocked(prisma.opportunityQuote.create).mockImplementation((async (a: any) => ({ id: "q-2", ...a.data })) as any)
+    await changeOpportunityStage("opp-1", {
+      stage: "PROPOSAL_REVISION", quote: { amount: "900000", quotedOn: "2026-09-08", reference: null, note: null },
+    }, USER)
+    expect(prisma.opportunityQuote.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ stage: "PROPOSAL_REVISION" }),
+    })
+  })
+
+  it("refuses a quote sent with a stage that is not a quote stage, and a skip that is not needed", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "ASSIGNED_QUALIFIED", offeredOn: null }) as any)
+    await expect(changeOpportunityStage("opp-1", {
+      stage: "DISCOVERY_DESIGN", quote: { amount: "5", quotedOn: "2026-09-08", reference: null, note: null },
+    }, USER)).rejects.toMatchObject({ statusCode: 400, message: "Quotes are added from a quote stage." })
+    await expect(changeOpportunityStage("opp-1", { stage: "DISCOVERY_DESIGN", skipQuoteReason: "x" }, USER))
+      .rejects.toMatchObject({ statusCode: 400, message: "Only the first move to a quote stage can skip the quote." })
+  })
+
+  it("moves an Opportunity already on the Funnel with no quote without asking again", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({
+      stage: "COMMERCIAL_NEGOTIATION", offeredOn: new Date("2026-08-21T00:00:00.000Z"),
+    }) as any)
+    await changeOpportunityStage("opp-1", { stage: "CUSTOMER_PROCUREMENT" }, USER)
+    expect(prisma.opportunity.update).toHaveBeenCalledTimes(1)
   })
 
   it("does not stamp a stage that comes before the proposal", async () => {
@@ -681,6 +752,18 @@ describe("Software Development track", () => {
       .rejects.toThrow("That stage is for Networking Opportunities. Pick a Software Development stage.")
   })
 
+  it("will not change the value by hand once there is a quote", async () => {
+    vi.mocked(prisma.opportunityQuote.count).mockResolvedValueOnce(2)
+    await expect(updateOpportunity("opp-1", { amount: "5000" } as any, USER)).rejects.toMatchObject({
+      statusCode: 409, message: "This Opportunity has quotes. To change the amount, add a new quote.",
+    })
+    vi.mocked(prisma.opportunityQuote.count).mockResolvedValueOnce(0)
+    await updateOpportunity("opp-1", { amount: "5000" } as any, USER)
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ amount: dec("5000") }),
+    }))
+  })
+
   it("changes track while there are no lines, and resets the stage", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opportunity({ stage: "TECHNICAL_VALIDATION" }) as any)
     await updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER)
@@ -775,15 +858,13 @@ describe("Networking stages", () => {
     }))
   })
 
-  it("stamps the offer date at stage 4 and at a later stage a deal skips to", async () => {
+  it("asks for the quote at stage 4 and at a later stage an Opportunity skips to", async () => {
     for (const stage of ["COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED"] as const) {
       vi.clearAllMocks()
       vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(
         opportunity({ stage: "ASSIGNED_QUALIFIED", offeredOn: null }) as any)
-      await changeOpportunityStage("opp-1", { stage }, USER)
-      expect(prisma.opportunity.update).toHaveBeenNthCalledWith(1, expect.objectContaining({
-        data: { offeredOn: new Date("2026-09-09T00:00:00.000Z") },
-      }))
+      await expect(changeOpportunityStage("opp-1", { stage }, USER)).rejects.toMatchObject({ statusCode: 400 })
+      expect(prisma.opportunity.update).not.toHaveBeenCalled()
     }
   })
 

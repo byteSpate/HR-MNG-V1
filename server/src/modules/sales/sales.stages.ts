@@ -51,3 +51,24 @@ export const QUOTED_STAGES: ReadonlySet<string> = new Set([
   "NEGOTIATION",
   "AWAITING_DECISION",
 ])
+
+/**
+ * The stages where the price is talked over again (owner, 2026-10-13):
+ * Software's Proposal revision and Negotiation (the team's "Quotation
+ * Revision"). Moving into one offers a new quote, with Skip.
+ */
+export const REVISION_STAGES: ReadonlySet<string> = new Set(["PROPOSAL_REVISION", "NEGOTIATION"])
+
+/**
+ * What the stage change asks for. REQUIRED: the first move into a quote
+ * stage needs Quote 1 (or "Move without a quote" with a reason). OPTIONAL:
+ * a revision stage offers a new quote. Null: nothing to ask.
+ */
+export function quoteAskFor(
+  stage: OpportunityStage,
+  opp: { offeredOn: Date | string | null },
+): "REQUIRED" | "OPTIONAL" | null {
+  if (QUOTED_STAGES.has(stage) && !opp.offeredOn) return "REQUIRED"
+  if (REVISION_STAGES.has(stage)) return "OPTIONAL"
+  return null
+}
