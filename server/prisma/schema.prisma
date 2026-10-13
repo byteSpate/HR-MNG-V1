@@ -3136,6 +3136,8 @@ model Opportunity {
   updatedAt      DateTime @updatedAt
 
   lines    OpportunityLine[]
+  /// Every price we sent (owner, 2026-10-13). See OpportunityQuote.
+  quotes   OpportunityQuote[]
   /// Meetings about this deal (SalesMeeting.opportunityId).
   meetings SalesMeeting[]    @relation("MeetingOpportunity")
   tasks    SalesTask[]
@@ -3169,6 +3171,31 @@ model Opportunity {
 
 /// Products, models, quantities and values. An Opportunity may hold several,
 /// which is why one text field could not carry it.
+/// One price we sent the customer (owner, 2026-10-13). The Opportunity's
+/// `amount` is always the latest quote's amount once one exists; the quote
+/// service keeps the two in step inside one transaction. Only the latest
+/// quote can be edited or deleted; older ones are history. "Latest" is the
+/// highest `quotedOn`, then the latest `createdAt`.
+model OpportunityQuote {
+  id            String           @id @default(uuid())
+  opportunityId String
+  opportunity   Opportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  amount        Decimal          @db.Decimal(14, 2)
+  /// Date only, at UTC midnight. Never in the future.
+  quotedOn      DateTime         @db.Date
+  /// Our own quote number, like "BS-Q-0012". Free text.
+  reference     String?
+  note          String?
+  /// The stage the Opportunity was at when this quote was given.
+  stage         OpportunityStage
+  createdBy     String
+  updatedBy     String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([opportunityId, quotedOn])
+}
+
 model OpportunityLine {
   id            String      @id @default(uuid())
   opportunityId String

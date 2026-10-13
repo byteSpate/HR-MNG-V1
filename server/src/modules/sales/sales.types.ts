@@ -35,6 +35,18 @@ export interface OpportunityLineSummary {
   updatedAt: string
 }
 
+/** One price we sent the customer (owner, 2026-10-13). */
+export interface OpportunityQuoteView {
+  id: string
+  amount: string
+  /** YYYY-MM-DD. */
+  quotedOn: string
+  reference: string | null
+  note: string | null
+  /** The stage the Opportunity was at when this quote was given. */
+  stage: OpportunityStage
+}
+
 export interface OpportunitySummary {
   id: string
   serial: string
@@ -67,6 +79,8 @@ export interface OpportunitySummary {
   createdAt: string
   updatedAt: string
   lines: OpportunityLineSummary[]
+  /** Every price we sent, newest first (owner, 2026-10-13). Once there is one, `amount` is the first one's amount. */
+  quotes: OpportunityQuoteView[]
   lineTotal: string
   unpricedLineCount: number
   amountDiffersFromLines: boolean

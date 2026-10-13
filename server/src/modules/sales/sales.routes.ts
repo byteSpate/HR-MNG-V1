@@ -17,6 +17,7 @@ import heatmapRouter from "./heatmap/heatmap.routes"
 import meetingRouter from "./meetings/meeting.routes"
 import minutesRouter from "./minutes/minutes.routes"
 import opportunityRouter from "./opportunities/opportunity.routes"
+import quoteRouter from "./opportunities/quote.routes"
 import permissionRouter from "./permissions/permission.routes"
 import projectRouter from "./projects/project.routes"
 import targetRouter from "./targets/target.routes"
@@ -35,6 +36,9 @@ router.use(collaboratorRouter)
 router.use(heatmapRouter)
 
 router.use(opportunityRouter)
+// Quotes (owner, 2026-10-13). Only `/opportunities/:id/quotes...`, which no
+// router above uses, so nothing is shadowed in either direction.
+router.use(quoteRouter)
 // After the Opportunity router, which has no `POST /opportunities/:id/project`,
 // so mounting it here cannot shadow an existing path.
 router.use(projectRouter)

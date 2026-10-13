@@ -55,6 +55,12 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     // be handed over twice, and the index says so.
     handedOverFrom: row.handedOverFrom ?? null,
     handedOverTo: row.handedOverTo ?? null,
+    // Every price we sent, newest first (owner, 2026-10-13). Once there is
+    // one, `amount` above is the first one's amount.
+    quotes: (row.quotes ?? []).map((q: any) => ({
+      id: q.id, amount: toMoneyString(dec(q.amount)), quotedOn: q.quotedOn.toISOString().slice(0, 10),
+      reference: q.reference ?? null, note: q.note ?? null, stage: q.stage,
+    })),
     lineTotal: toMoneyString(total), unpricedLineCount: rows.length - priced.length,
     // `priced.length`, not `rows.length`. Lines nobody has costed are not
     // summed as zero, so when none of them carries a value there is no line

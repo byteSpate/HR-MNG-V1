@@ -60,6 +60,8 @@ export const INCLUDE = {
     },
   },
   lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
+  // Every quote, newest first (owner, 2026-10-13). The first is the latest.
+  quotes: { orderBy: [{ quotedOn: "desc" }, { createdAt: "desc" }] as Prisma.OpportunityQuoteOrderByWithRelationInput[] },
   // The delivery work started from this Won Opportunity (ADR 0005), at most one.
   project: { select: { id: true, serial: true, name: true, status: true } },
   // The Hand-over link, so a page can show "handed over from" and "handed to"
