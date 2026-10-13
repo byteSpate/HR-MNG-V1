@@ -77,7 +77,7 @@ export function OpportunityFormDialog({
   /** A new deal made from a meeting's minutes (revision §25.6): the name
       starts as the meeting's title, and the meeting is its origin. */
   fromMeeting?: { id: string; title: string }
-  /** A new deal started from somewhere else, like a green Heatmap card: the
+  /** A new deal started from somewhere else, like a green Heatmap row: the
       name starts as this. A meeting's title wins if both are given. */
   suggestedName?: string
   /** Called with the new deal instead of going to it, so an editor with its
