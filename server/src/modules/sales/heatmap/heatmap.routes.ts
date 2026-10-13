@@ -1,9 +1,19 @@
 import { Router } from "express"
 
+import { SalesRole } from "../../../generated/prisma/client"
 import { requireAuth } from "../../../middleware/requireAuth"
 import { requireSales } from "../../../middleware/requireSales"
 import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import { getHeatmapHandler, setPartScopeHandler, setProductColourHandler } from "./heatmap.controller"
+import {
+  addGroupHandler,
+  addPartHandler,
+  addProductHandler,
+  deleteListRowHandler,
+  editListRowHandler,
+  getHeatmapListHandler,
+  moveListRowHandler,
+} from "./heatmap.list.controller"
 
 const router = Router()
 
@@ -14,5 +24,17 @@ const router = Router()
 router.get("/accounts/:id/heatmap", requireAuth, requireSales(), getHeatmapHandler)
 router.put("/accounts/:id/heatmap/products/:productId/colour", requireAuth, requireSales(), requireSalesPermission("account.edit"), setProductColourHandler)
 router.put("/accounts/:id/heatmap/parts/:partId/scope", requireAuth, requireSales(), requireSalesPermission("account.edit"), setPartScopeHandler)
+
+// The list behind the Heatmap, in Sales Settings (owner, 2026-10-13). Sales
+// Admins only. The three literal POST paths come before `:level/:id/move`;
+// `levelOf` refuses anything that is not groups, products or parts.
+const admin = [requireAuth, requireSales(SalesRole.SALES_ADMIN)]
+router.get("/settings/heatmap-list", ...admin, getHeatmapListHandler)
+router.post("/settings/heatmap-list/groups", ...admin, addGroupHandler)
+router.post("/settings/heatmap-list/groups/:id/products", ...admin, addProductHandler)
+router.post("/settings/heatmap-list/products/:id/parts", ...admin, addPartHandler)
+router.patch("/settings/heatmap-list/:level/:id", ...admin, editListRowHandler)
+router.post("/settings/heatmap-list/:level/:id/move", ...admin, moveListRowHandler)
+router.delete("/settings/heatmap-list/:level/:id", ...admin, deleteListRowHandler)
 
 export default router
