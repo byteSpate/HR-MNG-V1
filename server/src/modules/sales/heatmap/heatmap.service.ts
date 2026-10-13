@@ -1,58 +1,31 @@
 import prisma from "../../../config/prisma"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
-import { formatDateOnly, parseDateOnly } from "../../../utils/dates"
-import { officeToday } from "../../attendance/attendance.time"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { ACCOUNT_NOT_VISIBLE, canManageAccount, employeeIdFor, requireAccountVisible } from "../sales.access"
-import type { AccountHeatmap, HeatmapCardView, HeatmapColourValue, HeatmapItemView } from "../sales.types"
-import { CARD_BY_KEY, checkDetails, HEATMAP_CARDS, HEATMAP_GROUPS, itemText, type HeatmapCardSpec } from "./heatmap.cards"
-import { cardColour, colourDateOf, type HeatmapNeed } from "./heatmap.colour"
-import { NO_SUCH_ITEM, type HeatmapItemBody, type SetNeedBody } from "./heatmap.validators"
+import type { AccountHeatmap, HeatmapColour, HeatmapProductView } from "../sales.types"
+import { NOT_ON_HEATMAP, type SetColourBody, type SetScopeBody } from "./heatmap.validators"
+
+/**
+ * The Heatmap tab (owner, 2026-10-13). Each product row has a colour a
+ * person picks (Green: we can sell here; Red: no chance, with a reason; no
+ * pick: Grey) and parts a person ticks as "in our working scope". The list
+ * itself lives in the database and is edited in Sales Settings
+ * (`heatmap.list.service.ts`). Hidden things are left out here; their
+ * answers stay saved and come back if an admin shows them again.
+ */
 
 const CANNOT_CHANGE =
   "You can view this Sales Account, but only its owner, collaborators, or a Sales Admin can change its heatmap."
-const NO_SUCH_CARD = "That card is not on the heatmap. Reload the page and try again."
+const RED_NO_TICKS = "This product is marked Red. Mark it Green or clear it before you tick its parts."
 
-type Client = Pick<typeof prisma, "salesAccount" | "salesAccountHeatmapNeed" | "salesAccountHeatmapItem">
+type Client = Pick<
+  typeof prisma,
+  "salesAccount" | "heatmapProduct" | "heatmapPart" | "salesAccountHeatmapPick" | "salesAccountHeatmapScope"
+>
 
-type ItemRow = {
-  id: string
-  card: string
-  brand: string
-  model: string | null
-  quantity: number
-  site: string | null
-  boughtFrom: string | null
-  boughtOn: Date | null
-  supportEndsOn: Date | null
-  endOfLifeOn: Date | null
-  supportBy: string | null
-  notes: string | null
-  details: unknown
-  updatedBy: string
-  updatedAt: Date
-}
-
-const day = (d: Date | null) => (d ? formatDateOnly(d) : null)
-const toDate = (s: string | null) => (s ? parseDateOnly(s) : null)
-const detailsOf = (raw: unknown): Record<string, string> =>
-  raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, string>) : {}
-
-/** The History label: "Heatmap, Switch: item". */
-const label = (card: HeatmapCardSpec, what: "need" | "item") => `Heatmap, ${card.title}: ${what}`
-
-const needText = (need: HeatmapNeed | null, reason: string | null) =>
-  need === "NEED" ? "Need it" : need === "NO_NEED" ? `No need: ${reason ?? ""}`.trim() : "Not asked yet"
-
-const rowText = (card: HeatmapCardSpec, row: ItemRow) =>
-  itemText(card, { brand: row.brand, model: row.model, quantity: row.quantity, supportEndsOn: day(row.supportEndsOn) })
-
-function cardFor(key: string): HeatmapCardSpec {
-  const card = CARD_BY_KEY.get(key)
-  if (!card) throw new AppError(404, NO_SUCH_CARD)
-  return card
-}
+const colourText = (colour: "GREEN" | "RED" | null, reason: string | null) =>
+  colour === "GREEN" ? "Green" : colour === "RED" ? `Red: ${reason ?? ""}`.trim() : "Not picked"
 
 async function namesFor(userIds: string[]): Promise<Map<string, string>> {
   if (userIds.length === 0) return new Map()
@@ -72,92 +45,67 @@ async function accountFor(client: Pick<typeof prisma, "salesAccount">, accountId
   return account
 }
 
-function itemView(row: ItemRow, names: Map<string, string>): HeatmapItemView {
-  return {
-    id: row.id,
-    brand: row.brand,
-    model: row.model,
-    quantity: row.quantity,
-    site: row.site,
-    boughtFrom: row.boughtFrom,
-    boughtOn: day(row.boughtOn),
-    supportEndsOn: day(row.supportEndsOn),
-    endOfLifeOn: day(row.endOfLifeOn),
-    supportBy: row.supportBy,
-    notes: row.notes,
-    details: detailsOf(row.details),
-    recordedByName: names.get(row.updatedBy) ?? null,
-    recordedAt: row.updatedAt.toISOString(),
-  }
+const VISIBLE_LIST = {
+  where: { hidden: false },
+  orderBy: [{ position: "asc" as const }, { id: "asc" as const }],
+  select: {
+    id: true,
+    title: true,
+    products: {
+      where: { hidden: false },
+      orderBy: [{ position: "asc" as const }, { id: "asc" as const }],
+      select: {
+        id: true,
+        title: true,
+        parts: { where: { hidden: false }, orderBy: [{ position: "asc" as const }, { id: "asc" as const }], select: { id: true, title: true, note: true } },
+      },
+    },
+  },
 }
 
-/**
- * The Heatmap tab: every card with its need, its items and its colour, and
- * how many cards have each colour. Anyone who may see the account may read
- * it. Rows for a card no longer on the list are left out, not shown as
- * something nobody can name.
- */
 export async function getHeatmap(accountId: string, actor: AccessTokenPayload): Promise<AccountHeatmap> {
   const [, employeeId] = await Promise.all([requireAccountVisible(accountId, actor), employeeIdFor(actor)])
   const account = await accountFor(prisma, accountId)
-  const [needs, items] = await Promise.all([
-    prisma.salesAccountHeatmapNeed.findMany({ where: { salesAccountId: accountId } }),
-    prisma.salesAccountHeatmapItem.findMany({
-      where: { salesAccountId: accountId },
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    }) as Promise<ItemRow[]>,
+  const [groups, picks, scopes] = await Promise.all([
+    prisma.heatmapGroup.findMany(VISIBLE_LIST),
+    prisma.salesAccountHeatmapPick.findMany({ where: { salesAccountId: accountId } }),
+    prisma.salesAccountHeatmapScope.findMany({ where: { salesAccountId: accountId }, select: { partId: true } }),
   ])
-  const names = await namesFor([...needs.map((n) => n.updatedBy), ...items.map((i) => i.updatedBy)])
-  const today = formatDateOnly(officeToday())
-  const needByCard = new Map(needs.map((n) => [n.card, n]))
-  const counts: Record<HeatmapColourValue, number> = { GREEN: 0, YELLOW: 0, RED: 0, GREY: 0 }
+  const names = await namesFor(picks.map((p) => p.updatedBy))
+  const pickBy = new Map(picks.map((p) => [p.productId, p]))
+  const ticked = new Set(scopes.map((s) => s.partId))
+  const counts: Record<HeatmapColour, number> = { GREEN: 0, RED: 0, GREY: 0 }
 
-  const cards = HEATMAP_CARDS.map((card): HeatmapCardView => {
-    const need = needByCard.get(card.key)
-    const rows = items.filter((i) => i.card === card.key)
-    const shown = rows.map((r) => itemView(r, names))
-    const result = cardColour(
-      {
-        need: (need?.need as HeatmapNeed | undefined) ?? null,
-        needReason: need?.reason ?? null,
-        dates: shown.map((i) => colourDateOf(card, i)),
-      },
-      today,
-    )
-    counts[result.colour] += 1
-    return {
-      key: card.key,
-      group: card.group,
-      title: card.title,
-      quantityLabel: card.quantityLabel,
-      endsLabel: card.endsLabel,
-      extras: card.extras.map((f) => ({ key: f.key, label: f.label, type: f.type, options: f.options ? [...f.options] : null })),
-      need: (need?.need as HeatmapNeed | undefined) ?? "NOT_ASKED",
-      needReason: need?.reason ?? null,
-      needByName: need ? (names.get(need.updatedBy) ?? null) : null,
-      needAt: need ? need.updatedAt.toISOString() : null,
-      ...result,
-      items: shown,
-    }
-  })
+  const view = groups.map((g) => ({
+    id: g.id,
+    title: g.title,
+    products: g.products.map((p): HeatmapProductView => {
+      const pick = pickBy.get(p.id)
+      const colour: HeatmapColour = pick ? pick.colour : "GREY"
+      counts[colour] += 1
+      const parts = p.parts.map((part) => ({ ...part, inScope: ticked.has(part.id) }))
+      return {
+        id: p.id,
+        title: p.title,
+        colour,
+        reason: pick?.colour === "RED" ? pick.reason : null,
+        pickedByName: pick ? (names.get(pick.updatedBy) ?? null) : null,
+        pickedAt: pick ? pick.updatedAt.toISOString() : null,
+        parts,
+        inScopeCount: parts.filter((x) => x.inScope).length,
+      }
+    }),
+  }))
 
   return {
-    groups: HEATMAP_GROUPS.map((g) => ({ key: g.key, title: g.title })),
-    cards,
+    groups: view,
     counts,
     canManage: canManageAccount(actor, employeeId, account.ownerEmployeeId, account.assignments.map((a) => a.employeeId)),
   }
 }
 
-/**
- * Runs one heatmap write in a transaction, after the write gate. The gate is
- * read fresh inside the transaction, so a stale page cannot get past it.
- */
-async function withWriteGate(
-  accountId: string,
-  actor: AccessTokenPayload,
-  write: (tx: Client) => Promise<void>,
-): Promise<void> {
+/** One write, inside a transaction, after a fresh write gate. */
+async function withWriteGate(accountId: string, actor: AccessTokenPayload, write: (tx: Client) => Promise<void>) {
   const employeeId = await employeeIdFor(actor)
   await prisma.$transaction(async (tx) => {
     const account = await accountFor(tx, accountId)
@@ -168,117 +116,81 @@ async function withWriteGate(
   })
 }
 
-/** Sets "Do they need it?" on one card. A change that is no change writes nothing. */
-export async function setCardNeed(
+export async function setProductColour(
   accountId: string,
-  cardKey: string,
-  body: SetNeedBody,
+  productId: string,
+  body: SetColourBody,
   actor: AccessTokenPayload,
 ): Promise<AccountHeatmap> {
-  const card = cardFor(cardKey)
   await withWriteGate(accountId, actor, async (tx) => {
-    const existing = await tx.salesAccountHeatmapNeed.findUnique({
-      where: { salesAccountId_card: { salesAccountId: accountId, card: card.key } },
+    const product = await tx.heatmapProduct.findFirst({
+      where: { id: productId, hidden: false, group: { hidden: false } },
+      select: { id: true, title: true },
     })
-    const beforeNeed = (existing?.need as HeatmapNeed | undefined) ?? null
-    const afterNeed = body.need === "NOT_ASKED" ? null : body.need
-    if (beforeNeed === afterNeed && (existing?.reason ?? null) === body.reason) return
+    if (!product) throw new AppError(404, NOT_ON_HEATMAP)
+    const key = { salesAccountId_productId: { salesAccountId: accountId, productId } }
+    const existing = await tx.salesAccountHeatmapPick.findUnique({ where: key })
+    const before = existing?.colour ?? null
+    const after = body.colour === "NONE" ? null : body.colour
+    if (before === after && (existing?.reason ?? null) === body.reason) return
 
-    if (afterNeed === null) {
-      await tx.salesAccountHeatmapNeed.delete({ where: { id: existing!.id } })
+    if (after === null) {
+      await tx.salesAccountHeatmapPick.delete({ where: { id: existing!.id } })
     } else {
-      await tx.salesAccountHeatmapNeed.upsert({
-        where: { salesAccountId_card: { salesAccountId: accountId, card: card.key } },
-        create: { salesAccountId: accountId, card: card.key, need: afterNeed, reason: body.reason, updatedBy: actor.sub },
-        update: { need: afterNeed, reason: body.reason, updatedBy: actor.sub },
+      await tx.salesAccountHeatmapPick.upsert({
+        where: key,
+        create: { salesAccountId: accountId, productId, colour: after, reason: body.reason, updatedBy: actor.sub },
+        update: { colour: after, reason: body.reason, updatedBy: actor.sub },
       })
     }
+    const label = `Heatmap, ${product.title}`
     await writeAudit(tx as never, {
       entity: "SALES_ACCOUNT", entityId: accountId, action: "UPDATE", changedBy: actor.sub,
-      before: { [label(card, "need")]: needText(beforeNeed, existing?.reason ?? null) },
-      after: { [label(card, "need")]: needText(afterNeed, body.reason) },
+      before: { [label]: colourText(before, existing?.reason ?? null) },
+      after: { [label]: colourText(after, body.reason) },
     })
   })
   return getHeatmap(accountId, actor)
 }
 
-function itemData(card: HeatmapCardSpec, body: HeatmapItemBody) {
-  return {
-    brand: body.brand,
-    model: body.model,
-    quantity: body.quantity,
-    site: body.site,
-    boughtFrom: body.boughtFrom,
-    boughtOn: toDate(body.boughtOn),
-    supportEndsOn: toDate(body.supportEndsOn),
-    endOfLifeOn: toDate(body.endOfLifeOn),
-    supportBy: body.supportBy,
-    notes: body.notes,
-    details: checkDetails(card, body.details),
-  }
-}
-
-export async function addHeatmapItem(
+export async function setPartScope(
   accountId: string,
-  cardKey: string,
-  body: HeatmapItemBody,
-  actor: AccessTokenPayload,
-): Promise<AccountHeatmap> {
-  const card = cardFor(cardKey)
-  const data = itemData(card, body)
-  await withWriteGate(accountId, actor, async (tx) => {
-    await tx.salesAccountHeatmapItem.create({
-      data: { salesAccountId: accountId, card: card.key, ...data, createdBy: actor.sub, updatedBy: actor.sub },
-    })
-    await writeAudit(tx as never, {
-      entity: "SALES_ACCOUNT", entityId: accountId, action: "UPDATE", changedBy: actor.sub,
-      after: { [label(card, "item")]: itemText(card, body) },
-    })
-  })
-  return getHeatmap(accountId, actor)
-}
-
-/** The item, only if it is on this account. Its card comes from the row, not from the page. */
-async function itemOn(tx: Client, accountId: string, itemId: string): Promise<{ row: ItemRow; card: HeatmapCardSpec }> {
-  const row = (await tx.salesAccountHeatmapItem.findFirst({ where: { id: itemId, salesAccountId: accountId } })) as ItemRow | null
-  const card = row ? CARD_BY_KEY.get(row.card) : undefined
-  if (!row || !card) throw new AppError(404, NO_SUCH_ITEM)
-  return { row, card }
-}
-
-export async function updateHeatmapItem(
-  accountId: string,
-  itemId: string,
-  body: HeatmapItemBody,
+  partId: string,
+  body: SetScopeBody,
   actor: AccessTokenPayload,
 ): Promise<AccountHeatmap> {
   await withWriteGate(accountId, actor, async (tx) => {
-    const { row, card } = await itemOn(tx, accountId, itemId)
-    await tx.salesAccountHeatmapItem.update({
-      where: { id: itemId },
-      data: { ...itemData(card, body), updatedBy: actor.sub },
+    const part = await tx.heatmapPart.findFirst({
+      where: { id: partId, hidden: false, product: { hidden: false, group: { hidden: false } } },
+      select: { id: true, title: true, product: { select: { id: true, title: true } } },
     })
+    if (!part) throw new AppError(404, NOT_ON_HEATMAP)
+    if (body.inScope) {
+      const pick = await tx.salesAccountHeatmapPick.findUnique({
+        where: { salesAccountId_productId: { salesAccountId: accountId, productId: part.product.id } },
+      })
+      if (pick?.colour === "RED") throw new AppError(409, RED_NO_TICKS)
+    }
+    const existing = await tx.salesAccountHeatmapScope.findUnique({
+      where: { salesAccountId_partId: { salesAccountId: accountId, partId } },
+    })
+    if (!!existing === body.inScope) return
+    if (body.inScope) {
+      // Two people can tick the same part at once. ON CONFLICT DO NOTHING lets
+      // the second one find it done, with no error and no second History line.
+      const { count } = await tx.salesAccountHeatmapScope.createMany({
+        data: [{ salesAccountId: accountId, partId, createdBy: actor.sub }],
+        skipDuplicates: true,
+      })
+      if (count === 0) return
+    } else {
+      await tx.salesAccountHeatmapScope.delete({ where: { id: existing!.id } })
+    }
+    const label = `Heatmap, ${part.product.title}: ${part.title}`
     await writeAudit(tx as never, {
       entity: "SALES_ACCOUNT", entityId: accountId, action: "UPDATE", changedBy: actor.sub,
-      before: { [label(card, "item")]: rowText(card, row) },
-      after: { [label(card, "item")]: itemText(card, body) },
-    })
-  })
-  return getHeatmap(accountId, actor)
-}
-
-export async function removeHeatmapItem(
-  accountId: string,
-  itemId: string,
-  actor: AccessTokenPayload,
-): Promise<AccountHeatmap> {
-  await withWriteGate(accountId, actor, async (tx) => {
-    const { row, card } = await itemOn(tx, accountId, itemId)
-    await tx.salesAccountHeatmapItem.delete({ where: { id: itemId } })
-    await writeAudit(tx as never, {
-      entity: "SALES_ACCOUNT", entityId: accountId, action: "UPDATE", changedBy: actor.sub,
-      before: { [label(card, "item")]: rowText(card, row) },
-      after: { [label(card, "item")]: null },
+      before: { [label]: body.inScope ? "Not in scope" : "In scope" },
+      after: { [label]: body.inScope ? "In scope" : "Not in scope" },
     })
   })
   return getHeatmap(accountId, actor)

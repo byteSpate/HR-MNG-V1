@@ -632,60 +632,71 @@ export interface AccountProfile {
   canManage: boolean
 }
 
-// ── Heatmap (owner, 2026-10-07) ────────────────────────────────────────────
-export type HeatmapColourValue = "GREEN" | "YELLOW" | "RED" | "GREY"
-export type HeatmapNeedValue = "NEED" | "NO_NEED" | "NOT_ASKED"
+// ── Heatmap (owner, 2026-10-13) ────────────────────────────────────────────
+export type HeatmapColour = "GREEN" | "RED" | "GREY"
 
-export interface HeatmapFieldView {
-  key: string
-  label: string
-  type: "TEXT" | "NUMBER" | "YES_NO" | "CHOICE" | "DATE"
-  /** Pick list only. */
-  options: string[] | null
-}
-
-export interface HeatmapItemView {
+export interface HeatmapPartView {
   id: string
-  brand: string
-  model: string | null
-  quantity: number
-  site: string | null
-  boughtFrom: string | null
-  /** Calendar days, YYYY-MM-DD. */
-  boughtOn: string | null
-  supportEndsOn: string | null
-  endOfLifeOn: string | null
-  supportBy: string | null
-  notes: string | null
-  /** The card's own fields, by key. Only what was filled in. */
-  details: Record<string, string>
-  recordedByName: string | null
-  recordedAt: string
+  title: string
+  note: string | null
+  inScope: boolean
 }
 
-export interface HeatmapCardView {
-  key: string
-  group: string
+export interface HeatmapProductView {
+  id: string
   title: string
-  quantityLabel: string
-  endsLabel: string
-  extras: HeatmapFieldView[]
-  need: HeatmapNeedValue
-  needReason: string | null
-  needByName: string | null
-  needAt: string | null
-  colour: HeatmapColourValue
-  /** The sentence that explains the colour, like "Ends on 3 March 2027." */
-  reason: string
-  /** The day the chance opens: 12 months before the earliest end date. */
-  chanceFrom: string | null
-  items: HeatmapItemView[]
+  colour: HeatmapColour
+  /** Only with RED. */
+  reason: string | null
+  pickedByName: string | null
+  pickedAt: string | null
+  /** Visible parts only, in order. */
+  parts: HeatmapPartView[]
+  inScopeCount: number
+}
+
+export interface HeatmapGroupView {
+  id: string
+  title: string
+  products: HeatmapProductView[]
 }
 
 export interface AccountHeatmap {
-  groups: { key: string; title: string }[]
-  cards: HeatmapCardView[]
-  counts: Record<HeatmapColourValue, number>
+  groups: HeatmapGroupView[]
+  counts: Record<HeatmapColour, number>
   /** Whether the viewer may change it: the owner, a collaborator, or a Sales Admin. */
   canManage: boolean
+}
+
+// The list editor in Sales Settings. Hidden things are included here.
+export type HeatmapListLevel = "groups" | "products" | "parts"
+
+export interface HeatmapListPart {
+  id: string
+  title: string
+  note: string | null
+  hidden: boolean
+  /** How many accounts ticked it. 0 means it can be deleted. */
+  usedBy: number
+}
+
+export interface HeatmapListProduct {
+  id: string
+  title: string
+  hidden: boolean
+  /** Accounts with a colour on it or a tick on any of its parts. */
+  usedBy: number
+  parts: HeatmapListPart[]
+}
+
+export interface HeatmapListGroup {
+  id: string
+  title: string
+  hidden: boolean
+  usedBy: number
+  products: HeatmapListProduct[]
+}
+
+export interface HeatmapList {
+  groups: HeatmapListGroup[]
 }
