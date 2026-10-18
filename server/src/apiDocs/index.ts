@@ -14,6 +14,25 @@ import { env } from "../config/env"
 import funnelRouter from "../modules/sales/funnel/funnel.routes"
 import { buildOpenApi, type Layer, type OpenApiDocument } from "./openapi"
 
+/**
+ * The Servers dropdown on the page. The address the page was opened from is
+ * listed first, so "Try it out" goes to the same server by default.
+ *
+ * Calling the other one is a cross-site request, and the browser only allows
+ * it when that server's CORS list (`CORS_ORIGINS`) names the page's address.
+ */
+const DEPLOYED_URL = "https://hr-payroll-server-06ee1f4f0f0f.herokuapp.com"
+
+export function serversFor(current: string): { url: string; description: string }[] {
+  const known = [
+    { url: `http://localhost:${env.PORT}`, description: "Local" },
+    { url: DEPLOYED_URL, description: "Deployed (Heroku)" },
+  ]
+  const here = known.find((s) => s.url === current)
+  if (!here) return [{ url: current, description: "This server" }, ...known]
+  return [here, ...known.filter((s) => s !== here)]
+}
+
 /** Routers mounted under a path inside another router, not in `app.ts`. */
 const NESTED_PREFIXES: [Router, string][] = [[funnelRouter, "/funnel"]]
 
@@ -36,8 +55,8 @@ export function mountApiDocs(app: Express, mounts: [string, Router][]): void {
   const getSpec = () =>
     (spec ??= buildOpenApi((app as unknown as { router: { stack: Layer[] } }).router.stack, prefixes))
 
-  app.get("/api-docs/openapi.json", (_req, res) => {
-    res.json(getSpec())
+  app.get("/api-docs/openapi.json", (req, res) => {
+    res.json({ ...getSpec(), servers: serversFor(`${req.protocol}://${req.get("host")}`) })
   })
   app.use(
     "/api-docs",
