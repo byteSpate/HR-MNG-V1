@@ -6,24 +6,33 @@ export function getAccountHeatmap(accessToken: string, accountId: string): Promi
   return apiFetch<AccountHeatmap>(`/api/sales/accounts/${accountId}/heatmap`, { accessToken })
 }
 
-export function setHeatmapColour(
-  accessToken: string,
-  accountId: string,
-  productId: string,
-  body: { colour: "GREEN" | "RED" | "NONE"; reason: string | null }
-): Promise<AccountHeatmap> {
-  return apiFetch<AccountHeatmap>(`/api/sales/accounts/${accountId}/heatmap/products/${productId}/colour`, {
+/** GREEN is a tick, RED is a cross, NONE clears it back to not checked. */
+export type HeatmapMarkBody = "GREEN" | "RED" | "NONE"
+
+/** One part. */
+export function setPartMark(accessToken: string, accountId: string, partId: string, mark: HeatmapMarkBody): Promise<AccountHeatmap> {
+  return apiFetch<AccountHeatmap>(`/api/sales/accounts/${accountId}/heatmap/parts/${partId}/mark`, {
     method: "PUT",
     accessToken,
-    body: JSON.stringify(body),
+    body: JSON.stringify({ mark }),
   })
 }
 
-export function setHeatmapScope(accessToken: string, accountId: string, partId: string, inScope: boolean): Promise<AccountHeatmap> {
-  return apiFetch<AccountHeatmap>(`/api/sales/accounts/${accountId}/heatmap/parts/${partId}/scope`, {
+/** Every shown part of a product at once: "All ticks", "All crosses", or clear all. */
+export function setProductMarks(accessToken: string, accountId: string, productId: string, mark: HeatmapMarkBody): Promise<AccountHeatmap> {
+  return apiFetch<AccountHeatmap>(`/api/sales/accounts/${accountId}/heatmap/products/${productId}/marks`, {
     method: "PUT",
     accessToken,
-    body: JSON.stringify({ inScope }),
+    body: JSON.stringify({ mark }),
+  })
+}
+
+/** The optional note on a Red product. An empty note removes it. */
+export function setProductNote(accessToken: string, accountId: string, productId: string, note: string | null): Promise<AccountHeatmap> {
+  return apiFetch<AccountHeatmap>(`/api/sales/accounts/${accountId}/heatmap/products/${productId}/note`, {
+    method: "PUT",
+    accessToken,
+    body: JSON.stringify({ note }),
   })
 }
 

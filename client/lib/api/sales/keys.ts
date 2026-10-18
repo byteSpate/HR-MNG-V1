@@ -81,6 +81,10 @@ export const salesKeys = {
   targets: (calendarYear: number, employeeId?: string) =>
     ["sales", "targets", calendarYear, employeeId ?? "me"] as const,
   dashboard: (employeeId?: string) => ["sales", "dashboard", employeeId ?? "me"] as const,
+  /** The Heatmap band. Under the dashboard prefix, so refreshing the dashboard refreshes it. */
+  heatmapOverview: (employeeId?: string) => ["sales", "dashboard", "heatmap", employeeId ?? "me"] as const,
+  /** Every Heatmap band, for a Heatmap tab write to refresh. */
+  heatmapOverviewAll: () => ["sales", "dashboard", "heatmap"] as const,
 
   // ── meetings and tasks ──────────────────────────────────────────────────
   meetings: (filters: Record<string, unknown> = {}) => ["sales", "meetings", filters] as const,

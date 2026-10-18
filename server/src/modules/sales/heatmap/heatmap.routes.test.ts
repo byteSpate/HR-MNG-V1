@@ -9,8 +9,9 @@ vi.mock("../../../config/prisma", () => ({
 // The services are tested on their own; here only the door is under test.
 vi.mock("./heatmap.service", () => ({
   getHeatmap: vi.fn(),
-  setProductColour: vi.fn(),
-  setPartScope: vi.fn(),
+  setPartMark: vi.fn(),
+  setProductMarks: vi.fn(),
+  setProductNote: vi.fn(),
 }))
 vi.mock("./heatmap.list.service", () => ({
   getHeatmapList: vi.fn(),
@@ -23,7 +24,7 @@ vi.mock("./heatmap.list.service", () => ({
 import app from "../../../app"
 import { signAccessToken } from "../../auth/auth.utils"
 import { addListRow, deleteListRow, editListRow, getHeatmapList, moveListRow } from "./heatmap.list.service"
-import { getHeatmap, setPartScope, setProductColour } from "./heatmap.service"
+import { getHeatmap, setPartMark, setProductMarks, setProductNote } from "./heatmap.service"
 
 const ID = "11111111-1111-4111-8111-111111111111"
 const PRODUCT = "33333333-3333-4333-8333-333333333333"
@@ -34,7 +35,7 @@ const VIEW = { groups: [], counts: { GREEN: 0, RED: 0, GREY: 0 }, canManage: tru
 
 beforeEach(() => {
   vi.clearAllMocks()
-  for (const fn of [getHeatmap, setProductColour, setPartScope]) vi.mocked(fn).mockResolvedValue(VIEW as any)
+  for (const fn of [getHeatmap, setPartMark, setProductMarks, setProductNote]) vi.mocked(fn).mockResolvedValue(VIEW as any)
   for (const fn of [getHeatmapList, addListRow, editListRow, moveListRow, deleteListRow]) vi.mocked(fn).mockResolvedValue({ groups: [] } as any)
 })
 
@@ -42,8 +43,8 @@ describe("the heatmap routes", () => {
   it("need a signed-in person in the Sales Hub", async () => {
     await request(app).get(BASE).expect(401)
     await request(app).get(BASE).set("Authorization", token(null)).expect(403)
-    await request(app).put(`${BASE}/products/${PRODUCT}/colour`).set("Authorization", token(null)).send({ colour: "GREEN" }).expect(403)
-    expect(setProductColour).not.toHaveBeenCalled()
+    await request(app).put(`${BASE}/products/${PRODUCT}/marks`).set("Authorization", token(null)).send({ mark: "GREEN" }).expect(403)
+    expect(setProductMarks).not.toHaveBeenCalled()
   })
 
   it("read the heatmap for the account and the caller", async () => {
@@ -53,28 +54,39 @@ describe("the heatmap routes", () => {
     expect(vi.mocked(getHeatmap).mock.calls[0][1].sub).toBe("user-1")
   })
 
-  it("set a colour and a tick", async () => {
-    await request(app).put(`${BASE}/products/${PRODUCT}/colour`).set("Authorization", token("SALES_USER"))
-      .send({ colour: "RED", reason: "No budget" }).expect(200)
-    expect(setProductColour).toHaveBeenCalledWith(ID, PRODUCT, { colour: "RED", reason: "No budget" }, expect.anything())
-    await request(app).put(`${BASE}/parts/${PRODUCT}/scope`).set("Authorization", token("SALES_USER"))
-      .send({ inScope: true }).expect(200)
-    expect(setPartScope).toHaveBeenCalledWith(ID, PRODUCT, { inScope: true }, expect.anything())
+  it("set a tick or cross on a part, on every part, and a note", async () => {
+    await request(app).put(`${BASE}/parts/${PRODUCT}/mark`).set("Authorization", token("SALES_USER"))
+      .send({ mark: "GREEN" }).expect(200)
+    expect(setPartMark).toHaveBeenCalledWith(ID, PRODUCT, { mark: "GREEN" }, expect.anything())
+    await request(app).put(`${BASE}/products/${PRODUCT}/marks`).set("Authorization", token("SALES_USER"))
+      .send({ mark: "RED" }).expect(200)
+    expect(setProductMarks).toHaveBeenCalledWith(ID, PRODUCT, { mark: "RED" }, expect.anything())
+    await request(app).put(`${BASE}/products/${PRODUCT}/note`).set("Authorization", token("SALES_USER"))
+      .send({ note: " No budget " }).expect(200)
+    expect(setProductNote).toHaveBeenCalledWith(ID, PRODUCT, { note: "No budget" }, expect.anything())
+  })
+
+  it("no longer has the old colour and scope routes", async () => {
+    await request(app).put(`${BASE}/products/${PRODUCT}/colour`).set("Authorization", token("SALES_USER")).send({ colour: "GREEN" }).expect(404)
+    await request(app).put(`${BASE}/parts/${PRODUCT}/scope`).set("Authorization", token("SALES_USER")).send({ inScope: true }).expect(404)
   })
 
   it("refuse a bad body with the sentence alone", async () => {
-    const res = await request(app).put(`${BASE}/products/${PRODUCT}/colour`).set("Authorization", token("SALES_USER"))
-      .send({ colour: "RED" }).expect(400)
-    expect(res.body.error).toBe("Write why there is no chance here.")
-    expect(setProductColour).not.toHaveBeenCalled()
+    const res = await request(app).put(`${BASE}/parts/${PRODUCT}/mark`).set("Authorization", token("SALES_USER"))
+      .send({ mark: "YELLOW" }).expect(400)
+    expect(res.body.error).toBe("Choose a tick, a cross, or clear it.")
+    expect(setPartMark).not.toHaveBeenCalled()
   })
 
     it("turn away an id that is not an id with the reload sentence", async () => {
-      const res = await request(app).put(`${BASE}/products/nope/colour`).set("Authorization", token("SALES_USER"))
-        .send({ colour: "GREEN" }).expect(404)
+      const res = await request(app).put(`${BASE}/products/nope/marks`).set("Authorization", token("SALES_USER"))
+        .send({ mark: "GREEN" }).expect(404)
       expect(res.body.error).toBe("That is no longer on the heatmap. Reload the page and try again.")
-      await request(app).put(`${BASE}/parts/nope/scope`).set("Authorization", token("SALES_USER")).send({ inScope: true }).expect(404)
-      expect(setPartScope).not.toHaveBeenCalled()
+      await request(app).put(`${BASE}/parts/nope/mark`).set("Authorization", token("SALES_USER")).send({ mark: "GREEN" }).expect(404)
+      await request(app).put(`${BASE}/products/nope/note`).set("Authorization", token("SALES_USER")).send({ note: "x" }).expect(404)
+      expect(setPartMark).not.toHaveBeenCalled()
+      expect(setProductMarks).not.toHaveBeenCalled()
+      expect(setProductNote).not.toHaveBeenCalled()
     })
 
     describe("the list in Sales Settings", () => {

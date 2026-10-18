@@ -2,8 +2,8 @@ import type { NextFunction, Request, Response } from "express"
 import { z } from "zod"
 
 import { AppError } from "../../../middleware/errorHandler"
-import { getHeatmap, setPartScope, setProductColour } from "./heatmap.service"
-import { NOT_ON_HEATMAP, setColourSchema, setScopeSchema } from "./heatmap.validators"
+import { getHeatmap, setPartMark, setProductMarks, setProductNote } from "./heatmap.service"
+import { NOT_ON_HEATMAP, setMarkSchema, setNoteSchema } from "./heatmap.validators"
 
 /**
  * The refusal is the sentence alone. The shared error handler prefixes a Zod
@@ -33,21 +33,31 @@ export async function getHeatmapHandler(req: Request<AccountParams>, res: Respon
   }
 }
 
-export async function setProductColourHandler(req: Request<ProductParams>, res: Response, next: NextFunction) {
+export async function setProductMarksHandler(req: Request<ProductParams>, res: Response, next: NextFunction) {
   try {
     const id = rowId(req.params.productId)
-    const body = parse(setColourSchema, req.body)
-    return res.status(200).json(await setProductColour(req.params.id, id, body, req.user!))
+    const body = parse(setMarkSchema, req.body)
+    return res.status(200).json(await setProductMarks(req.params.id, id, body, req.user!))
   } catch (err) {
     return next(err)
   }
 }
 
-export async function setPartScopeHandler(req: Request<PartParams>, res: Response, next: NextFunction) {
+export async function setProductNoteHandler(req: Request<ProductParams>, res: Response, next: NextFunction) {
+  try {
+    const id = rowId(req.params.productId)
+    const body = parse(setNoteSchema, req.body)
+    return res.status(200).json(await setProductNote(req.params.id, id, body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function setPartMarkHandler(req: Request<PartParams>, res: Response, next: NextFunction) {
   try {
     const id = rowId(req.params.partId)
-    const body = parse(setScopeSchema, req.body)
-    return res.status(200).json(await setPartScope(req.params.id, id, body, req.user!))
+    const body = parse(setMarkSchema, req.body)
+    return res.status(200).json(await setPartMark(req.params.id, id, body, req.user!))
   } catch (err) {
     return next(err)
   }

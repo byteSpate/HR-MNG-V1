@@ -1,35 +1,34 @@
 import { describe, expect, it } from "vitest"
 
-import { levelOf, listEditSchema, listRowSchema, moveSchema, setColourSchema, setScopeSchema } from "./heatmap.validators"
+import { levelOf, listEditSchema, listRowSchema, moveSchema, setMarkSchema, setNoteSchema } from "./heatmap.validators"
 
-describe("setColourSchema", () => {
-  it("takes Green and drops any reason", () => {
-    expect(setColourSchema.parse({ colour: "GREEN", reason: "old" })).toEqual({ colour: "GREEN", reason: null })
+describe("setMarkSchema", () => {
+  it("takes a tick, a cross, or clear", () => {
+    expect(setMarkSchema.parse({ mark: "GREEN" })).toEqual({ mark: "GREEN" })
+    expect(setMarkSchema.parse({ mark: "RED" })).toEqual({ mark: "RED" })
+    expect(setMarkSchema.parse({ mark: "NONE" })).toEqual({ mark: "NONE" })
   })
-  it("needs a reason for Red, trimmed", () => {
-    expect(setColourSchema.safeParse({ colour: "RED", reason: "  " }).error?.issues[0].message).toBe(
-      "Write why there is no chance here.",
+  it("refuses anything else with a plain sentence", () => {
+    expect(setMarkSchema.safeParse({ mark: "YELLOW" }).error?.issues[0].message).toBe(
+      "Choose a tick, a cross, or clear it.",
     )
-    expect(setColourSchema.parse({ colour: "RED", reason: " Uses another vendor " })).toEqual({
-      colour: "RED",
-      reason: "Uses another vendor",
-    })
-  })
-  it("takes NONE to clear the colour", () => {
-    expect(setColourSchema.parse({ colour: "NONE" })).toEqual({ colour: "NONE", reason: null })
-  })
-  it("refuses Yellow and long reasons", () => {
-    expect(setColourSchema.safeParse({ colour: "YELLOW" }).success).toBe(false)
-    expect(setColourSchema.safeParse({ colour: "RED", reason: "x".repeat(301) }).error?.issues[0].message).toBe(
-      "Keep the reason under 300 characters.",
-    )
+    expect(setMarkSchema.safeParse({}).success).toBe(false)
   })
 })
 
-describe("setScopeSchema", () => {
-  it("takes true or false only", () => {
-    expect(setScopeSchema.parse({ inScope: true })).toEqual({ inScope: true })
-    expect(setScopeSchema.safeParse({ inScope: "yes" }).error?.issues[0].message).toBe("Tick or untick the part.")
+describe("setNoteSchema", () => {
+  it("trims the note and keeps it optional", () => {
+    expect(setNoteSchema.parse({ note: " Uses another vendor " })).toEqual({ note: "Uses another vendor" })
+  })
+  it("turns an empty or missing note into null, which removes it", () => {
+    expect(setNoteSchema.parse({ note: "  " })).toEqual({ note: null })
+    expect(setNoteSchema.parse({ note: null })).toEqual({ note: null })
+    expect(setNoteSchema.parse({})).toEqual({ note: null })
+  })
+  it("refuses a long note", () => {
+    expect(setNoteSchema.safeParse({ note: "x".repeat(301) }).error?.issues[0].message).toBe(
+      "Keep the note under 300 characters.",
+    )
   })
 })
 

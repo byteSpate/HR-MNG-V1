@@ -2719,8 +2719,8 @@ model SalesAccount {
   meetings             SalesMeeting[]
   tasks                SalesTask[]
   answers              SalesAccountAnswer[]
-  heatmapPicks         SalesAccountHeatmapPick[]
-  heatmapScopes        SalesAccountHeatmapScope[]
+  heatmapMarks         SalesAccountHeatmapMark[]
+  heatmapNotes         SalesAccountHeatmapNote[]
   weeklyNotes          WeeklyAccountNote[]
   /// The delivery work on this account's Won Opportunities (ADR 0005).
   projects             Project[]
@@ -2797,7 +2797,7 @@ model HeatmapProduct {
   position  Int
   hidden    Boolean                   @default(false)
   parts     HeatmapPart[]
-  picks     SalesAccountHeatmapPick[]
+  notes     SalesAccountHeatmapNote[]
   createdAt DateTime                  @default(now())
   updatedAt DateTime                  @updatedAt
 
@@ -2813,7 +2813,7 @@ model HeatmapPart {
   note      String?
   position  Int
   hidden    Boolean                    @default(false)
-  scopes    SalesAccountHeatmapScope[]
+  marks     SalesAccountHeatmapMark[]
   createdAt DateTime                   @default(now())
   updatedAt DateTime                   @updatedAt
 
@@ -2821,41 +2821,48 @@ model HeatmapPart {
 }
 
 /// Picked by a person, never by dates. No row means Grey (not picked).
-enum HeatmapPickColour {
+/// A tick or a cross on one part of a product.
+enum HeatmapMarkState {
+  /// Tick: they do not have it, so we can offer it.
   GREEN
+  /// Cross: they already have it, or we cannot go there.
   RED
 }
 
-model SalesAccountHeatmapPick {
-  id             String            @id @default(uuid())
+/// One tick or cross for one part. No row means nobody has checked yet. A
+/// product's colour is worked out from its parts (`heatmap.colour.ts`), never
+/// stored.
+model SalesAccountHeatmapMark {
+  id             String           @id @default(uuid())
   salesAccountId String
-  salesAccount   SalesAccount      @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-  productId      String
-  /// Restrict: a product with answers is hidden, not deleted.
-  product        HeatmapProduct    @relation(fields: [productId], references: [id], onDelete: Restrict)
-  colour         HeatmapPickColour
-  /// Why there is no chance. Kept only with RED, and required there.
-  reason         String?
-  updatedBy      String
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-
-  @@unique([salesAccountId, productId])
-  @@index([productId])
-}
-
-/// One ticked part: "this is in our working scope for this company".
-model SalesAccountHeatmapScope {
-  id             String       @id @default(uuid())
-  salesAccountId String
-  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  salesAccount   SalesAccount     @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
   partId         String
-  part           HeatmapPart  @relation(fields: [partId], references: [id], onDelete: Restrict)
-  createdBy      String
-  createdAt      DateTime     @default(now())
+  /// Restrict: a part with marks is hidden, not deleted.
+  part           HeatmapPart      @relation(fields: [partId], references: [id], onDelete: Restrict)
+  state          HeatmapMarkState
+  updatedBy      String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@unique([salesAccountId, partId])
   @@index([partId])
+}
+
+/// The optional short note on a Red product. Removed when the product stops
+/// being Red.
+model SalesAccountHeatmapNote {
+  id             String          @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount    @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  productId      String
+  product        HeatmapProduct  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  note           String
+  updatedBy      String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([salesAccountId, productId])
+  @@index([productId])
 }
 
 enum SalesContactStatus {

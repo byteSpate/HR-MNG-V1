@@ -655,20 +655,25 @@ export interface HeatmapPartView {
   id: string
   title: string
   note: string | null
-  inScope: boolean
+  /** A tick, a cross, or null when nobody has checked this part. */
+  mark: "GREEN" | "RED" | null
 }
 
 export interface HeatmapProductView {
   id: string
   title: string
+  /** Worked out from the parts (`heatmap.colour.ts`). Nobody picks it. */
   colour: HeatmapColour
-  /** Only with RED. */
-  reason: string | null
-  pickedByName: string | null
-  pickedAt: string | null
+  /** The optional short note. Only with RED. */
+  note: string | null
+  /** Who last ticked or crossed a part, and when. Null while the product is Grey. */
+  markedByName: string | null
+  markedAt: string | null
   /** Visible parts only, in order. */
   parts: HeatmapPartView[]
-  inScopeCount: number
+  tickedCount: number
+  /** Parts with a tick or a cross. */
+  checkedCount: number
 }
 
 export interface HeatmapGroupView {
@@ -682,6 +687,34 @@ export interface AccountHeatmap {
   counts: Record<HeatmapColour, number>
   /** Whether the viewer may change it: the owner, a collaborator, or a Sales Admin. */
   canManage: boolean
+}
+
+/** The Heatmap band on the Sales dashboard (owner, 2026-10-18): every account against each product. */
+export interface HeatmapOverviewAccount {
+  id: string
+  name: string
+}
+
+export interface HeatmapOverviewProduct {
+  id: string
+  title: string
+  groupTitle: string
+  green: number
+  red: number
+  /** Accounts in scope with no tick and not all parts crossed. */
+  notChecked: number
+  /** Who is Green and who is Red, so a click can open the account. */
+  greenAccounts: HeatmapOverviewAccount[]
+  redAccounts: HeatmapOverviewAccount[]
+}
+
+export interface HeatmapOverview {
+  employeeName: string
+  /** Active accounts in scope. */
+  accounts: number
+  /** Accounts where somebody has ticked or crossed at least one part. */
+  checkedAccounts: number
+  products: HeatmapOverviewProduct[]
 }
 
 // The list editor in Sales Settings. Hidden things are included here.

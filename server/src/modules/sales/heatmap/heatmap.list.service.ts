@@ -20,6 +20,8 @@ type Db = typeof prisma | Tx
 const WORD = { groups: "group", products: "product", parts: "part" } as const
 const PARENT_FIELD = { groups: null, products: "groupId", parts: "productId" } as const
 const usesText = (n: number) => (n === 1 ? "1 account uses" : `${n} accounts use`)
+/** The part every new product starts with. The migration gave the same name to products that had none. */
+const WHOLE_PRODUCT = "Whole product"
 
 /** One shape for the three Prisma delegates, so each action is written once. */
 type Delegate = {
@@ -38,7 +40,7 @@ const siblingsOf = (level: HeatmapListLevel, parentId: string | null) =>
   PARENT_FIELD[level] ? { [PARENT_FIELD[level]!]: parentId } : {}
 
 async function buildList(db: Db): Promise<HeatmapList> {
-  const [groups, picks, scopes] = await Promise.all([
+  const [groups, marks] = await Promise.all([
     db.heatmapGroup.findMany({
       orderBy: [{ position: "asc" }, { id: "asc" }],
       select: {
@@ -52,20 +54,18 @@ async function buildList(db: Db): Promise<HeatmapList> {
         },
       },
     }),
-    db.salesAccountHeatmapPick.findMany({ select: { salesAccountId: true, productId: true } }),
-    db.salesAccountHeatmapScope.findMany({ select: { salesAccountId: true, partId: true } }),
+    db.salesAccountHeatmapMark.findMany({ select: { salesAccountId: true, partId: true } }),
   ])
-  const add = (m: Map<string, Set<string>>, k: string, v: string) => m.set(k, (m.get(k) ?? new Set()).add(v))
+  // A product is used when any of its parts has a tick or a cross. Its note
+  // only ever sits on a product whose parts are all crossed.
   const byPart = new Map<string, Set<string>>()
-  for (const s of scopes) add(byPart, s.partId, s.salesAccountId)
-  const byProduct = new Map<string, Set<string>>()
-  for (const p of picks) add(byProduct, p.productId, p.salesAccountId)
+  for (const m of marks) byPart.set(m.partId, (byPart.get(m.partId) ?? new Set()).add(m.salesAccountId))
 
   return {
     groups: groups.map((g) => {
       const groupAccounts = new Set<string>()
       const products = g.products.map((pr) => {
-        const productAccounts = new Set(byProduct.get(pr.id) ?? [])
+        const productAccounts = new Set<string>()
         const parts = pr.parts.map((pa) => {
           const used = byPart.get(pa.id) ?? new Set<string>()
           used.forEach((a) => productAccounts.add(a))
@@ -133,6 +133,11 @@ export async function addListRow(level: HeatmapListLevel, parentId: string | nul
     data.position = (max._max.position ?? 0) + 1
     const created = await d.create({ data, select: { id: true } })
     await audit(tx, created.id, "CREATE", actor, undefined, { [WORD[level]]: body.title, ...(inTitle ? { in: inTitle } : {}) })
+    // A product with no parts cannot be ticked or crossed, so it starts with
+    // one. An admin can rename it, or delete it once real parts are added.
+    if (level === "products") {
+      await tx.heatmapPart.create({ data: { productId: created.id, title: WHOLE_PRODUCT, position: 1 } })
+    }
   })
   return getHeatmapList()
 }

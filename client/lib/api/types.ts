@@ -3884,20 +3884,25 @@ export interface HeatmapPartView {
   id: string
   title: string
   note: string | null
-  inScope: boolean
+  /** A tick, a cross, or null when nobody has checked this part. */
+  mark: "GREEN" | "RED" | null
 }
 
 export interface HeatmapProductView {
   id: string
   title: string
+  /** Worked out by the server from the parts. Nobody picks it. */
   colour: HeatmapColour
-  /** Only with RED. */
-  reason: string | null
-  pickedByName: string | null
-  pickedAt: string | null
+  /** The optional short note. Only with RED. */
+  note: string | null
+  /** Who last ticked or crossed a part, and when. Null while the product is Grey. */
+  markedByName: string | null
+  markedAt: string | null
   /** Visible parts only, in order. */
   parts: HeatmapPartView[]
-  inScopeCount: number
+  tickedCount: number
+  /** Parts with a tick or a cross. */
+  checkedCount: number
 }
 
 export interface HeatmapGroupView {
@@ -3911,6 +3916,30 @@ export interface AccountHeatmap {
   counts: Record<HeatmapColour, number>
   /** Whether the viewer may change it: the owner, a collaborator, or a Sales Admin. */
   canManage: boolean
+}
+
+/** The Heatmap band on the Sales dashboard. Mirrors server sales.types.ts. */
+export interface HeatmapOverviewAccount {
+  id: string
+  name: string
+}
+
+export interface HeatmapOverviewProduct {
+  id: string
+  title: string
+  groupTitle: string
+  green: number
+  red: number
+  notChecked: number
+  greenAccounts: HeatmapOverviewAccount[]
+  redAccounts: HeatmapOverviewAccount[]
+}
+
+export interface HeatmapOverview {
+  employeeName: string
+  accounts: number
+  checkedAccounts: number
+  products: HeatmapOverviewProduct[]
 }
 
 // The list editor in Sales Settings. Hidden things are included here.

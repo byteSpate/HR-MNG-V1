@@ -11,21 +11,21 @@ import type { HeatmapListLevel } from "../sales.types"
 /** A product or part that is hidden, deleted, or never existed. */
 export const NOT_ON_HEATMAP = "That is no longer on the heatmap. Reload the page and try again."
 
-export const setColourSchema = z
-  .object({
-    colour: z.enum(["GREEN", "RED", "NONE"], { error: "Pick Green or Red." }),
-    reason: z.string().trim().max(300, "Keep the reason under 300 characters.").nullable().optional(),
-  })
-  .transform((b) => ({ colour: b.colour, reason: b.colour === "RED" ? b.reason || null : null }))
-  .refine((b) => b.colour !== "RED" || b.reason !== null, "Write why there is no chance here.")
-
-export type SetColourBody = z.infer<typeof setColourSchema>
-
-export const setScopeSchema = z.object({
-  inScope: z.boolean({ error: "Tick or untick the part." }),
+/** GREEN is a tick, RED is a cross, NONE clears it back to not checked. */
+export const setMarkSchema = z.object({
+  mark: z.enum(["GREEN", "RED", "NONE"], { error: "Choose a tick, a cross, or clear it." }),
 })
 
-export type SetScopeBody = z.infer<typeof setScopeSchema>
+export type SetMarkBody = z.infer<typeof setMarkSchema>
+
+/** The note on a Red product is optional. An empty one removes it. */
+export const setNoteSchema = z
+  .object({
+    note: z.string().trim().max(300, "Keep the note under 300 characters.").nullable().optional(),
+  })
+  .transform((b) => ({ note: b.note ? b.note : null }))
+
+export type SetNoteBody = z.infer<typeof setNoteSchema>
 
 const title = z.string({ error: "Write a name." }).trim().min(1, "Write a name.").max(80, "Keep the name under 80 characters.")
 const note = z

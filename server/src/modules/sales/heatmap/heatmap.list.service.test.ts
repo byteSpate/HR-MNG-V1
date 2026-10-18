@@ -8,8 +8,7 @@ vi.mock("../../../config/prisma", () => {
       heatmapGroup: model(),
       heatmapProduct: model(),
       heatmapPart: model(),
-      salesAccountHeatmapPick: { findMany: vi.fn() },
-      salesAccountHeatmapScope: { findMany: vi.fn() },
+      salesAccountHeatmapMark: { findMany: vi.fn() },
       auditLog: { create: vi.fn() },
     },
   }
@@ -32,8 +31,7 @@ beforeEach(() => {
       ] },
     ] },
   ] as any)
-  vi.mocked(prisma.salesAccountHeatmapPick.findMany).mockResolvedValue([{ salesAccountId: "acc-1", productId: "pr1" }] as any)
-  vi.mocked(prisma.salesAccountHeatmapScope.findMany).mockResolvedValue([
+  vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([
     { salesAccountId: "acc-1", partId: "pa1" }, { salesAccountId: "acc-2", partId: "pa1" },
   ] as any)
 })
@@ -43,8 +41,17 @@ describe("reading the list", () => {
     const list = await getHeatmapList()
     const router = list.groups[0].products[0]
     expect(router.parts.map((p) => p.usedBy)).toEqual([2, 0])
-    expect(router.usedBy).toBe(2) // acc-1 (a pick and a tick, counted once) and acc-2
+    expect(router.usedBy).toBe(2)
     expect(list.groups[0].usedBy).toBe(2)
+  })
+
+  it("counts an account once when two of a product's parts are marked", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([
+      { salesAccountId: "acc-1", partId: "pa1" }, { salesAccountId: "acc-1", partId: "pa2" },
+    ] as any)
+    const router = (await getHeatmapList()).groups[0].products[0]
+    expect(router.parts.map((p) => p.usedBy)).toEqual([1, 1])
+    expect(router.usedBy).toBe(1)
   })
 })
 
@@ -60,6 +67,26 @@ describe("adding", () => {
       select: { id: true },
     })
     expect(auditData()).toMatchObject({ entity: "HEATMAP_LIST", entityId: "pa9", action: "CREATE", after: { part: "SD-WAN", in: "Router" } })
+  })
+
+  it("gives a new product one part called Whole product, so it can be ticked", async () => {
+    vi.mocked(prisma.heatmapGroup.findUnique).mockResolvedValue({ id: "g1", title: "Network" } as any)
+    vi.mocked(prisma.heatmapProduct.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.heatmapProduct.aggregate).mockResolvedValue({ _max: { position: 2 } } as any)
+    vi.mocked(prisma.heatmapProduct.create).mockResolvedValue({ id: "pr9" } as any)
+    await addListRow("products", "g1", { title: "SD-WAN", note: null }, ADMIN)
+    expect(prisma.heatmapPart.create).toHaveBeenCalledWith({
+      data: { productId: "pr9", title: "Whole product", position: 1 },
+    })
+  })
+
+  it("does not add a part when the new row is a group or a part", async () => {
+    vi.mocked(prisma.heatmapProduct.findUnique).mockResolvedValue({ id: "pr1", title: "Router" } as any)
+    vi.mocked(prisma.heatmapPart.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.heatmapPart.aggregate).mockResolvedValue({ _max: { position: 0 } } as any)
+    vi.mocked(prisma.heatmapPart.create).mockResolvedValue({ id: "pa9" } as any)
+    await addListRow("parts", "pr1", { title: "SD-WAN", note: null }, ADMIN)
+    expect(prisma.heatmapPart.create).toHaveBeenCalledTimes(1)
   })
 
   it("refuses a name already used next to it, ignoring case and spaces", async () => {
@@ -107,7 +134,7 @@ describe("moving", () => {
 })
 
 describe("deleting", () => {
-  it("deletes a part nobody ticked", async () => {
+  it("deletes a part nobody has marked", async () => {
     vi.mocked(prisma.heatmapPart.findUnique).mockResolvedValue({ id: "pa2", productId: "pr1", title: "Mid range router", position: 2 } as any)
     await deleteListRow("parts", "pa2", ADMIN)
     expect(prisma.heatmapPart.delete).toHaveBeenCalledWith({ where: { id: "pa2" } })
@@ -123,8 +150,7 @@ describe("deleting", () => {
   })
 
   it("says 1 account, not 1 accounts", async () => {
-    vi.mocked(prisma.salesAccountHeatmapScope.findMany).mockResolvedValue([{ salesAccountId: "acc-1", partId: "pa1" }] as any)
-    vi.mocked(prisma.salesAccountHeatmapPick.findMany).mockResolvedValue([] as any)
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([{ salesAccountId: "acc-1", partId: "pa1" }] as any)
     vi.mocked(prisma.heatmapPart.findUnique).mockResolvedValue({ id: "pa1", productId: "pr1", title: "Small range router", position: 1 } as any)
     await expect(deleteListRow("parts", "pa1", ADMIN)).rejects.toMatchObject({ message: "1 account uses Small range router. Hide it instead." })
   })

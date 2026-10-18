@@ -18,6 +18,7 @@ import {
 import { getSalesTargetYear, setSalesTarget } from "@/lib/api/sales/targets"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { getSalesDashboard } from "@/lib/api/sales/dashboard"
+import { HeatmapBand } from "@/components/sales/dashboard/heatmap-band"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
@@ -667,6 +668,9 @@ export function SalesDashboard() {
               </div>
             ) : null}
           </Band>
+
+          {/* Follows the scope picker above: `employeeId` is the person, "all", or nothing for me. */}
+          <HeatmapBand employeeId={employeeId} />
 
           {/* Hidden from a Sales User rather than disabled: a target somebody
               sets for themselves is not a target, so the control is not theirs
