@@ -8,6 +8,9 @@ services:
       # Set here so it wins over server/.env. Needed only when the browser
       # opens the app from a different address than localhost.
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
+      # The container runs with NODE_ENV=production, which hides the Swagger
+      # page. This is a local setup, so show it at http://localhost:4000/api-docs.
+      API_DOCS: "on"
     ports:
       - "4000:4000"
     volumes:

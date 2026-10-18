@@ -12,7 +12,7 @@ import { AppError } from "./errorHandler"
  * treated as a Sales Admin so the first sales role can be granted.
  */
 export function requireSales(...roles: SalesRole[]) {
-  return (req: Request, _res: Response, next: NextFunction) => {
+  const guard = (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new AppError(401, "Authentication required"))
     }
@@ -28,4 +28,6 @@ export function requireSales(...roles: SalesRole[]) {
     }
     return next()
   }
+  // Read by the API docs page (`apiDocs/openapi.ts`) to list who may call a route.
+  return Object.assign(guard, { salesRoles: roles })
 }
