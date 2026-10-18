@@ -43,7 +43,6 @@ export interface OpenApiDocument {
   openapi: "3.0.3"
   info: { title: string; version: string; description: string }
   tags: { name: string }[]
-  servers?: { url: string; description: string }[]
   components: {
     securitySchemes: Record<string, { type: "http"; scheme: "bearer"; bearerFormat: "JWT" }>
   }
