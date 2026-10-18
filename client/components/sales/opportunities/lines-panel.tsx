@@ -17,6 +17,8 @@ import {
 import { taka } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { lineTotal } from "@/lib/line-total"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { SupplierPicker } from "@/components/sales/opportunities/supplier-picker"
 
@@ -81,9 +83,8 @@ export function marginPreview(totalPrice: string, percent: string): string | nul
   const rate = Number(percent.trim())
   if (!percent.trim() || !Number.isFinite(rate) || Math.abs(rate) > 100) return null
   const value = Number(totalPrice.replace(/[,\s]/g, ""))
-  // Total price is never worked out from quantity and price per unit, so a
-  // margin has nothing to be a percentage of until one is typed.
-  if (!totalPrice.trim() || !Number.isFinite(value)) return "Add the Total price to see it in taka."
+  // No price yet means no Total, so the margin has nothing to be a percentage of.
+  if (!totalPrice.trim() || !Number.isFinite(value)) return "Add a price to see it in taka."
   const margin = Math.round(value * rate) / 100
   return margin < 0 ? `A loss of ${taka(String(-margin))}.` : `${taka(String(margin))} on this product.`
 }
@@ -96,11 +97,11 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
   const [oemBrand, setOemBrand] = useState("")
   const [model, setModel] = useState("")
   const [partNo, setPartNo] = useState("")
-  const [quantity, setQuantity] = useState("")
+  const [quantity, setQuantity] = useState("1")
   const [unitValue, setUnitValue] = useState("")
   const [lineValue, setLineValue] = useState("")
   const [marginPercent, setMarginPercent] = useState("")
-  const [note, setNote] = useState("")
+  const [description, setDescription] = useState("")
   const [supplierId, setSupplierId] = useState("")
   const [editing, setEditing] = useState<OpportunityLineSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -108,7 +109,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
 
   const clearLineForm = () => {
     setEditing(null); setProduct(""); setOemBrand(""); setModel(""); setPartNo("")
-    setQuantity(""); setUnitValue(""); setLineValue(""); setMarginPercent(""); setNote("")
+    setQuantity("1"); setUnitValue(""); setLineValue(""); setMarginPercent(""); setDescription("")
     setSupplierId(""); setError(null)
   }
 
@@ -125,18 +126,21 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
             product: product.trim(), oemBrand: oemBrand.trim() || null,
             model: model.trim() || null, partNo: partNo.trim() || null,
             quantity: quantity.trim() ? Number(quantity) : null,
-            unitValue: unitValue.trim() || null, lineValue: lineValue.trim() || null,
+            unitValue: unitValue.trim() || null,
+            // A module's Price is typed. A product's Total is worked out by the server.
+            ...(modules ? { lineValue: lineValue.trim() || null } : {}),
             marginPercent: marginPercent.trim() || null,
-            note: note.trim() || null,
+            description: description.trim() || null,
             supplierId: supplierId || null,
           })
         : addOpportunityLine(accessToken!, deal.id, {
             product: product.trim(), oemBrand: oemBrand.trim() || undefined,
             model: model.trim() || undefined, partNo: partNo.trim() || undefined,
             quantity: quantity.trim() ? Number(quantity) : undefined,
-            unitValue: unitValue.trim() || undefined, lineValue: lineValue.trim() || undefined,
+            unitValue: unitValue.trim() || undefined,
+            ...(modules ? { lineValue: lineValue.trim() || undefined } : {}),
             marginPercent: marginPercent.trim() || undefined,
-            note: note.trim() || undefined,
+            description: description.trim() || undefined,
             supplierId: supplierId || undefined,
           }),
     onSuccess: () => {
@@ -157,8 +161,8 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
 
   const beginEdit = (line: OpportunityLineSummary) => {
     setEditing(line); setAdding(true); setProduct(line.product); setOemBrand(line.oemBrand ?? "")
-    setModel(line.model ?? ""); setPartNo(line.partNo ?? ""); setQuantity(line.quantity?.toString() ?? "")
-    setUnitValue(line.unitValue ?? ""); setLineValue(line.lineValue ?? ""); setNote(line.note ?? "")
+    setModel(line.model ?? ""); setPartNo(line.partNo ?? ""); setQuantity(line.quantity?.toString() ?? "1")
+    setUnitValue(line.unitValue ?? ""); setLineValue(line.lineValue ?? ""); setDescription(line.description ?? "")
     setSupplierId(line.supplier?.id ?? "")
     // "12.00" from the server reads as 12 in the field.
     setMarginPercent(line.marginPercent ? String(Number(line.marginPercent)) : "")
@@ -194,6 +198,8 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
   // price. The OEM, model, quantity, unit price, margin and supplier fields
   // are for bought goods, and a control that cannot be used is a defect.
   const modules = deal.track === "SOFTWARE_DEVELOPMENT"
+  // What the server will store as the Total, shown while typing.
+  const productTotal = lineTotal(quantity, unitValue)
 
   return (
     <Panel>
@@ -266,7 +272,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                       .filter(Boolean)
                       .join(" · ") || "No further detail"}
                   </div>
-                  {line.note ? <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>{line.note}</div> : null}
+                  {line.description ? <div className={`mt-0.5 text-[11.5px] whitespace-pre-line ${TONE.muted}`}>{line.description}</div> : null}
                 </div>
                 <div className="text-right">
                   {/* No price yet, never ৳0 — a product nobody has priced is not a
@@ -361,7 +367,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             {modules ? null : (
-            <Field label="Quantity" htmlFor="line-qty" hint="Optional." help="Leave it empty for a service, like installation.">
+            <Field label="Quantity" htmlFor="line-qty" hint="Starts at 1." help="How many. A service, like installation, is 1.">
               <Input
                 id="line-qty"
                 inputMode="numeric"
@@ -371,27 +377,29 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
             </Field>
             )}
             {modules ? null : (
-            <Field label="Price per unit" htmlFor="line-unit-value" hint="Optional." help="The price of one piece, kept for reference. It is not added up anywhere.">
+            <Field label="Price per unit" htmlFor="line-unit-value" hint="Optional." help="The price of one piece. Total price is Quantity × Price per unit. Leave it empty if there is no price yet.">
               <Input id="line-unit-value" inputMode="decimal" value={unitValue} onChange={(e) => setUnitValue(e.target.value)} />
             </Field>
             )}
-            <Field
-              label={modules ? "Price" : "Total price"}
-              htmlFor="line-value"
-              hint="Optional." help="The price for all of them together, typed by you — it is not worked out from the price per unit. Leave it empty if there is no price yet."
-            >
-              <Input
-                id="line-value"
-                inputMode="decimal"
-                value={lineValue}
-                onChange={(e) => setLineValue(e.target.value)}
-              />
-            </Field>
+            {modules ? (
+              <Field label="Price" htmlFor="line-value" hint="Optional." help="The price of this module. Leave it empty if there is no price yet.">
+                <Input id="line-value" inputMode="decimal" value={lineValue} onChange={(e) => setLineValue(e.target.value)} />
+              </Field>
+            ) : (
+              <Field label="Total price" htmlFor="line-total" help="Quantity × Price per unit. It is worked out for you.">
+                <output
+                  id="line-total"
+                  className={`flex h-9 items-center rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 text-[13px] ${productTotal === null ? TONE.muted : "font-semibold"}`}
+                >
+                  {productTotal === null ? "Not set" : taka(String(productTotal))}
+                </output>
+              </Field>
+            )}
             {modules ? null : (
             <Field
               label="Margin (%)"
               htmlFor="line-margin"
-              hint={["Optional.", marginPreview(lineValue, marginPercent)].filter(Boolean).join(" ")}
+              hint={["Optional.", marginPreview(productTotal === null ? "" : String(productTotal), marginPercent)].filter(Boolean).join(" ")}
               help="The profit on this product, as a percentage of its Total price. Type a minus sign for a product sold at a loss, like -5. The Opportunity's margin is its products' margins added up."
             >
               <Input
@@ -403,8 +411,8 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
             </Field>
             )}
           </div>
-          <Field label={modules ? "What it covers" : "Note"} htmlFor="line-note" hint="Optional." help={modules ? "What this part of the software does." : "Anything else about this product."}>
-            <Input id="line-note" value={note} onChange={(e) => setNote(e.target.value)} />
+          <Field label="Description" htmlFor="line-description" hint="Optional." help={modules ? "What this part of the software does." : "What this product is, and anything else about it."}>
+            <Textarea id="line-description" rows={3} maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
           </Field>
           <div className="flex gap-2">
             <Button

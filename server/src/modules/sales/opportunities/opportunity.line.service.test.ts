@@ -50,12 +50,14 @@ beforeEach(() => {
 })
 
 describe("opportunity lines", () => {
-  it("assigns max order plus one and never derives lineValue", async () => {
+  it("assigns max order plus one and works the Total out from quantity × price", async () => {
     await addOpportunityLine("opp-1", {
       product: "Switch", quantity: 2, unitValue: "100",
     }, USER)
+    const created = vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data as any
+    expect(created.lineValue.toFixed(2)).toBe("200.00")
     expect(prisma.opportunityLine.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
-      opportunityId: "opp-1", order: 2, unitValue: expect.anything(), lineValue: null,
+      opportunityId: "opp-1", order: 2, unitValue: expect.anything(),
       // No margin typed is "no margin yet", not 0%.
       marginPercent: null,
     }) }))
@@ -78,7 +80,7 @@ describe("opportunity lines", () => {
     vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({
       ...LINE, unitValue: dec("100"), lineValue: dec("200"),
     } as any)
-    await updateOpportunityLine("line-1", { unitValue: null, lineValue: null } as any, USER)
+    await updateOpportunityLine("line-1", { unitValue: null } as any, USER)
     expect(prisma.opportunityLine.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ unitValue: null, lineValue: null }),
     }))
@@ -90,7 +92,7 @@ describe("opportunity lines", () => {
     } as any)
 
     const created = await addOpportunityLine("opp-1", {
-      product: "Switch", lineValue: "10000", marginPercent: "12",
+      product: "Switch", quantity: 1, unitValue: "10000", marginPercent: "12",
     }, USER)
 
     const data = vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data as any
@@ -273,5 +275,58 @@ describe("a product's part number", () => {
     expect(createOpportunityLineSchema.safeParse({ product: "Firewall", partNo: "x".repeat(81) }).success).toBe(false)
     expect(createOpportunityLineSchema.safeParse({ product: "Firewall", partNo: "x".repeat(80) }).success).toBe(true)
     expect(updateOpportunityLineSchema.safeParse({ partNo: null }).success).toBe(true)
+  })
+})
+
+describe("the Total price is Quantity × Price per unit (owner, 2026-10-18)", () => {
+  const createdData = () => vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data as any
+  const updatedData = () => vi.mocked(prisma.opportunityLine.update).mock.calls[0][0].data as any
+
+  it("works out 3 × 1000.50 as 3001.50", async () => {
+    await addOpportunityLine("opp-1", { product: "Switch", quantity: 3, unitValue: "1000.50" }, USER)
+    expect(createdData().lineValue.toFixed(2)).toBe("3001.50")
+  })
+
+  it("takes quantity 1 when none is given, so a service is one item", async () => {
+    await addOpportunityLine("opp-1", { product: "Installation", unitValue: "500" }, USER)
+    expect(createdData().quantity).toBe(1)
+    expect(createdData().lineValue.toFixed(2)).toBe("500.00")
+  })
+
+  it("leaves the Total empty when there is no price yet, never 0", async () => {
+    await addOpportunityLine("opp-1", { product: "Switch", quantity: 2 }, USER)
+    expect(createdData().lineValue).toBeNull()
+  })
+
+  it("works the Total out again when only the quantity changes, and History shows it", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, quantity: 2, unitValue: dec("100"), lineValue: dec("200") } as any)
+    await updateOpportunityLine("line-1", { quantity: 5 } as any, USER)
+    expect(updatedData().lineValue.toFixed(2)).toBe("500.00")
+    expect(vi.mocked(prisma.auditLog.create).mock.calls[0][0].data).toMatchObject({
+      before: { quantity: 2, lineValue: "200.00" }, after: { quantity: 5, lineValue: "500.00" },
+    })
+  })
+
+  it("works the Total out again when only the price changes", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, quantity: 2, unitValue: dec("100"), lineValue: dec("200") } as any)
+    await updateOpportunityLine("line-1", { unitValue: "150" } as any, USER)
+    expect(updatedData().lineValue.toFixed(2)).toBe("300.00")
+  })
+
+  it("clears the Total when the price is cleared", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, quantity: 2, unitValue: dec("100"), lineValue: dec("200") } as any)
+    await updateOpportunityLine("line-1", { unitValue: null } as any, USER)
+    expect(updatedData()).toMatchObject({ unitValue: null, lineValue: null })
+  })
+
+  it("refuses a typed Total on a product, on add and on edit", async () => {
+    const message = "The Total price is worked out from Quantity and Price per unit. Leave it out."
+    await expect(addOpportunityLine("opp-1", { product: "Switch", lineValue: "10" } as any, USER)).rejects.toThrow(message)
+    await expect(updateOpportunityLine("line-1", { lineValue: "10" } as any, USER)).rejects.toThrow(message)
+  })
+
+  it("saves the description", async () => {
+    await addOpportunityLine("opp-1", { product: "Switch", description: "Two units for the head office." }, USER)
+    expect(createdData().description).toBe("Two units for the head office.")
   })
 })

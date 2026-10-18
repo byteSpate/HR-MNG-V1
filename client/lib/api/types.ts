@@ -2808,7 +2808,7 @@ export interface OpportunityLineSummary {
   marginPercent: string | null
   /** `lineValue` times `marginPercent`, worked out by the server. Null when either is missing — never "0.00". */
   marginAmount: string | null
-  note: string | null
+  description: string | null
   order: number
   /** Who we will buy this product from. Optional while the deal is open,
       required on every line before it can be marked Won. */
@@ -2934,7 +2934,7 @@ export interface OpportunityLineBody {
   lineValue?: string
   /** A percentage of the Total price, -100 to 100. Negative is a product sold at a loss. */
   marginPercent?: string
-  note?: string
+  description?: string
   /** Who we will buy this product from. Optional while the deal is open. */
   supplierId?: string | null
 }
@@ -2949,7 +2949,7 @@ export interface UpdateOpportunityLineBody {
   unitValue?: string | null
   lineValue?: string | null
   marginPercent?: string | null
-  note?: string | null
+  description?: string | null
   supplierId?: string | null
 }
 
@@ -3737,7 +3737,7 @@ export interface ProjectLineSummary {
   lineValue: string | null
   marginPercent: string | null
   /** "What it covers", on a Software Opportunity's Modules (spec §2.4). */
-  note: string | null
+  description: string | null
   done: { at: string; byName: string | null } | null
 }
 
