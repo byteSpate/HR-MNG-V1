@@ -2,7 +2,6 @@ import request from "supertest"
 import { describe, expect, it } from "vitest"
 
 import app from "../app"
-import { env } from "../config/env"
 import { serversFor } from "./index"
 
 describe("api docs", () => {
@@ -38,13 +37,17 @@ describe("api docs", () => {
   })
 
   describe("servers dropdown", () => {
-    const local = `http://localhost:${env.PORT}`
+    const local = "http://localhost:4000"
 
     it("lists the server the page was opened from first", () => {
       expect(serversFor(local).map((s) => s.description)).toEqual(["Local", "Deployed (Heroku)"])
 
       const deployed = serversFor(serversFor(local)[1].url)
       expect(deployed.map((s) => s.description)).toEqual(["Deployed (Heroku)", "Local"])
+    })
+
+    it("offers localhost:4000 even when the server runs on another port, as on Heroku", () => {
+      expect(serversFor("https://example.com")[1].url).toBe("http://localhost:4000")
     })
 
     it("adds an unknown address, such as Docker on another host, ahead of the two", () => {

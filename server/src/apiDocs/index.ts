@@ -25,7 +25,9 @@ const DEPLOYED_URL = "https://hr-payroll-server-06ee1f4f0f0f.herokuapp.com"
 
 export function serversFor(current: string): { url: string; description: string }[] {
   const known = [
-    { url: `http://localhost:${env.PORT}`, description: "Local" },
+    // Fixed, not `env.PORT`: Heroku gives the app a random port, and the
+    // deployed page would then offer an address nothing listens on.
+    { url: "http://localhost:4000", description: "Local" },
     { url: DEPLOYED_URL, description: "Deployed (Heroku)" },
   ]
   const here = known.find((s) => s.url === current)
