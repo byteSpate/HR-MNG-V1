@@ -20,6 +20,8 @@ export const salesKeys = {
   // ── accounts ────────────────────────────────────────────────────────────
   /** The list. `scope` is "mine" or "all", matching the page that reads it. */
   accounts: (scope: string) => ["sales", "accounts", scope] as const,
+  /** The Contacts page: every visible contact, searched, sorted and paged. */
+  contactDirectory: (q: string, page: number, sort: string, dir: string) => ["sales", "contacts", q, page, sort, dir] as const,
   account: (id: string) => ["sales", "accounts", id] as const,
   accountContacts: (id: string) => ["sales", "accounts", id, "contacts"] as const,
   accountTimeline: (id: string) => ["sales", "accounts", id, "timeline"] as const,

@@ -3925,6 +3925,26 @@ export interface AccountHeatmap {
   canManage: boolean
 }
 
+/** One row of the Contacts page (owner, 2026-10-18). Mirrors server sales.types.ts. */
+export interface ContactDirectoryRow {
+  id: string
+  name: string
+  designation: string | null
+  phone: string | null
+  email: string | null
+  status: SalesContactStatus
+  isPrimary: boolean
+  accountId: string
+  accountName: string
+}
+
+export interface ContactDirectoryPage {
+  rows: ContactDirectoryRow[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 /** The Heatmap band on the Sales dashboard. Mirrors server sales.types.ts. */
 export interface HeatmapOverviewAccount {
   id: string

@@ -33,7 +33,10 @@ export function ExportMenu({
   disabled = false,
   note,
   onError,
+  formats,
 }: {
+  /** Which file types to offer. All three when left out. The Sales Hub lists offer CSV and PDF only. */
+  formats?: ExportFormat[]
   /** The module path, like `/api/suppliers`. The file comes from `${basePath}/export`. */
   basePath: string
   /** `suppliers` gives `suppliers-2026-10-04.xlsx`. */
@@ -80,7 +83,7 @@ export function ExportMenu({
           <RiArrowDownSLine className="size-4" aria-hidden />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          {FORMATS.map(({ format, label }) => (
+          {FORMATS.filter((f) => !formats || formats.includes(f.format)).map(({ format, label }) => (
             <DropdownMenuItem key={format} onClick={() => run(format)}>
               {label}
             </DropdownMenuItem>

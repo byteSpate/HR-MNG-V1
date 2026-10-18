@@ -11,6 +11,7 @@ import { Router } from "express"
 import accountRouter from "./accounts/account.routes"
 import collaboratorRouter from "./accounts/collaborator.routes"
 import commentRouter from "./comments/comment.routes"
+import contactsRouter from "./contacts/contacts.routes"
 import dashboardRouter from "./dashboard/dashboard.routes"
 import funnelRouter from "./funnel/funnel.routes"
 import heatmapRouter from "./heatmap/heatmap.routes"
@@ -34,6 +35,9 @@ router.use(collaboratorRouter)
 // The Heatmap tab. Its paths all sit under `/accounts/:id/heatmap`, which no
 // router above uses, so nothing is shadowed in either direction.
 router.use(heatmapRouter)
+// The Contacts page (owner, 2026-10-18). Only GET /contacts and
+// /contacts/export, which no router above uses.
+router.use(contactsRouter)
 
 router.use(opportunityRouter)
 // Quotes (owner, 2026-10-13). Only `/opportunities/:id/quotes...`, which no

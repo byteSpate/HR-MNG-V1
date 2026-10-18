@@ -698,6 +698,27 @@ export interface AccountHeatmap {
   canManage: boolean
 }
 
+/** One row of the Contacts page (owner, 2026-10-18). */
+export interface ContactDirectoryRow {
+  id: string
+  name: string
+  designation: string | null
+  phone: string | null
+  email: string | null
+  status: "UNVERIFIED" | "VERIFIED" | "UNREACHABLE" | "INVALID"
+  isPrimary: boolean
+  accountId: string
+  accountName: string
+}
+
+export interface ContactDirectoryPage {
+  rows: ContactDirectoryRow[]
+  /** Every match, for the page count. */
+  total: number
+  page: number
+  pageSize: number
+}
+
 /** The Heatmap band on the Sales dashboard (owner, 2026-10-18): every account against each product. */
 export interface HeatmapOverviewAccount {
   id: string
