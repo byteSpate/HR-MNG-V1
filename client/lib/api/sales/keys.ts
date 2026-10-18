@@ -20,6 +20,9 @@ export const salesKeys = {
   // ── accounts ────────────────────────────────────────────────────────────
   /** The list. `scope` is "mine" or "all", matching the page that reads it. */
   accounts: (scope: string) => ["sales", "accounts", scope] as const,
+  /** A Payments table (Sales Admins): one account, one Opportunity, or every open invoice. */
+  payments: (filter: { accountId?: string; opportunityId?: string; open?: boolean }) =>
+    ["sales", "payments", filter.accountId ?? "", filter.opportunityId ?? "", filter.open ? "open" : "all"] as const,
   /** The Contacts page: every visible contact, searched, sorted and paged. */
   contactDirectory: (q: string, page: number, sort: string, dir: string) => ["sales", "contacts", q, page, sort, dir] as const,
   account: (id: string) => ["sales", "accounts", id] as const,

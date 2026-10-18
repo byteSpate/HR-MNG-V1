@@ -18,6 +18,7 @@ import heatmapRouter from "./heatmap/heatmap.routes"
 import meetingRouter from "./meetings/meeting.routes"
 import minutesRouter from "./minutes/minutes.routes"
 import opportunityRouter from "./opportunities/opportunity.routes"
+import paymentsRouter from "./payments/payments.routes"
 import quoteRouter from "./opportunities/quote.routes"
 import permissionRouter from "./permissions/permission.routes"
 import projectRouter from "./projects/project.routes"
@@ -38,6 +39,8 @@ router.use(heatmapRouter)
 // The Contacts page (owner, 2026-10-18). Only GET /contacts and
 // /contacts/export, which no router above uses.
 router.use(contactsRouter)
+// Payments for Sales Admins (owner, 2026-10-18). Only /payments paths.
+router.use(paymentsRouter)
 
 router.use(opportunityRouter)
 // Quotes (owner, 2026-10-13). Only `/opportunities/:id/quotes...`, which no

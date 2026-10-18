@@ -698,6 +698,32 @@ export interface AccountHeatmap {
   canManage: boolean
 }
 
+/** One approved invoice in a Payments table (owner, 2026-10-18). Money as strings. */
+export interface PaymentRow {
+  invoiceId: string
+  invoiceNumber: string
+  /** YYYY-MM-DD. */
+  date: string
+  dueDate: string
+  opportunityId: string
+  opportunityName: string
+  accountId: string
+  accountName: string
+  /** With VAT, less approved credit notes. */
+  invoiceTotal: string
+  received: string
+  balance: string
+  /** Received ÷ Invoice total, one decimal. Null when the total is 0. */
+  percentPaid: number | null
+  status: "PAID" | "PART_PAID" | "UNPAID" | "OVERDUE"
+  receipts: { number: string; date: string; method: string | null; amount: string }[]
+}
+
+export interface PaymentsTable {
+  rows: PaymentRow[]
+  totals: { invoiceTotal: string; received: string; balance: string }
+}
+
 /** One row of the Contacts page (owner, 2026-10-18). */
 export interface ContactDirectoryRow {
   id: string
