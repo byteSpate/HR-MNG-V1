@@ -1,11 +1,12 @@
 import cookieParser from "cookie-parser"
 import cors from "cors"
-import express from "express"
+import express, { type Router } from "express"
 import helmet from "helmet"
 import morgan from "morgan"
 
 import { parseOrigins } from "./config/cors"
 import { env } from "./config/env"
+import { mountApiDocs } from "./apiDocs"
 import { compressResponses } from "./middleware/compress"
 import { errorHandler } from "./middleware/errorHandler"
 import { requestMetrics } from "./observability/request-metrics"
@@ -74,38 +75,47 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" })
 })
 
-app.use("/api/auth", authRoutes)
-app.use("/api/users", userRoutes)
-app.use("/api/employees", employeeRoutes)
-app.use("/api/departments", departmentRoutes)
-app.use("/api/leave", leaveRoutes)
-app.use("/api/attendance", attendanceRoutes)
-app.use("/api/payroll", payrollRoutes)
-app.use("/api/expenses", expenseRoutes)
-app.use("/api/settlements", settlementRoutes)
-app.use("/api/announcements", announcementRoutes)
-app.use("/api/assets", assetRoutes)
-app.use("/api/depreciation", depreciationRoutes)
-app.use("/api/costs", costRoutes)
-app.use("/api/accounting", accountingRoutes)
-app.use("/api/statements", statementRoutes)
-app.use("/api/posting-rules", postingRoutes)
-app.use("/api/events", eventRoutes)
-app.use("/api/dashboard", dashboardRoutes)
-app.use("/api/emails", notificationRoutes)
-app.use("/api/sales", salesRoutes)
-app.use("/api/customers", customerRoutes)
-app.use("/api/vat-codes", vatCodeRoutes)
-app.use("/api/supplier-bills", supplierBillRoutes)
-app.use("/api/supplier-payments", supplierPaymentRoutes)
-app.use("/api/supplier-credit-notes", supplierCreditNoteRoutes)
-app.use("/api/customer-pos", customerPoRoutes)
-app.use("/api/invoices", invoiceRoutes)
-app.use("/api/receipts", receiptRoutes)
-app.use("/api/customer-credit-notes", customerCreditNoteRoutes)
-app.use("/api/receivables", receivablesReportsRoutes)
-app.use("/api/suppliers", supplierRoutes)
-app.use("/api/deal-money", dealMoneyRoutes)
+// One table, so the API docs page can read each router's prefix back.
+// Express 5 does not keep it. The order is the order routes are matched in.
+export const apiMounts: [string, Router][] = [
+  ["/api/auth", authRoutes],
+  ["/api/users", userRoutes],
+  ["/api/employees", employeeRoutes],
+  ["/api/departments", departmentRoutes],
+  ["/api/leave", leaveRoutes],
+  ["/api/attendance", attendanceRoutes],
+  ["/api/payroll", payrollRoutes],
+  ["/api/expenses", expenseRoutes],
+  ["/api/settlements", settlementRoutes],
+  ["/api/announcements", announcementRoutes],
+  ["/api/assets", assetRoutes],
+  ["/api/depreciation", depreciationRoutes],
+  ["/api/costs", costRoutes],
+  ["/api/accounting", accountingRoutes],
+  ["/api/statements", statementRoutes],
+  ["/api/posting-rules", postingRoutes],
+  ["/api/events", eventRoutes],
+  ["/api/dashboard", dashboardRoutes],
+  ["/api/emails", notificationRoutes],
+  ["/api/sales", salesRoutes],
+  ["/api/customers", customerRoutes],
+  ["/api/vat-codes", vatCodeRoutes],
+  ["/api/supplier-bills", supplierBillRoutes],
+  ["/api/supplier-payments", supplierPaymentRoutes],
+  ["/api/supplier-credit-notes", supplierCreditNoteRoutes],
+  ["/api/customer-pos", customerPoRoutes],
+  ["/api/invoices", invoiceRoutes],
+  ["/api/receipts", receiptRoutes],
+  ["/api/customer-credit-notes", customerCreditNoteRoutes],
+  ["/api/receivables", receivablesReportsRoutes],
+  ["/api/suppliers", supplierRoutes],
+  ["/api/deal-money", dealMoneyRoutes],
+]
+for (const [prefix, router] of apiMounts) {
+  app.use(prefix, router)
+}
+
+mountApiDocs(app, apiMounts)
 
 app.use(errorHandler)
 

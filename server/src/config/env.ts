@@ -22,6 +22,9 @@ const envSchema = z.object({
   // console. Off by default so tests and local runs stay quiet. Heroku can set
   // it to "on" later. Needed because a Basic dyno has no metrics page.
   PERF_LOG: z.enum(["on", "off"]).default("off"),
+  // The Swagger page at /api-docs. Unset means on, except in production.
+  // Set "on" on Heroku to see it there, "off" to hide it anywhere.
+  API_DOCS: z.enum(["on", "off"]).optional(),
   // The date attendance became the record of truth. Required with no default
   // on purpose: without a floor, every working day before the system existed
   // derives as ABSENT for every employee who joined earlier, and the first

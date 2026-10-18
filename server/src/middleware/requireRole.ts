@@ -4,7 +4,7 @@ import type { Role } from "../generated/prisma/client"
 import { AppError } from "./errorHandler"
 
 export function requireRole(...roles: Role[]) {
-  return (req: Request, _res: Response, next: NextFunction) => {
+  const guard = (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new AppError(401, "Authentication required"))
     }
@@ -13,4 +13,6 @@ export function requireRole(...roles: Role[]) {
     }
     return next()
   }
+  // Read by the API docs page (`apiDocs/openapi.ts`) to list who may call a route.
+  return Object.assign(guard, { roles })
 }
