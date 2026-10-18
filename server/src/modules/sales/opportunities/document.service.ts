@@ -7,6 +7,7 @@ import type { DocumentLinkSummary } from "../sales.types"
 import type { AddDocumentLinkBody } from "./opportunity.validators"
 
 const NOT_FOUND = "That link does not exist, or is not yours"
+const QUOTE_NOT_HERE = "That quote is not on this Opportunity. Reload the page and try again."
 
 async function namesFor(userIds: string[]): Promise<Map<string, string>> {
   if (userIds.length === 0) return new Map()
@@ -17,9 +18,16 @@ async function namesFor(userIds: string[]): Promise<Map<string, string>> {
   return new Map(users.map((u) => [u.id, u.employee?.fullName ?? u.displayName ?? u.email]))
 }
 
+/**
+ * A Costing and BOQ link may show what we pay suppliers, so only a Sales
+ * Admin or Super Admin gets its address (owner, 2026-10-18). Everyone else
+ * still sees that it exists, so nobody adds it twice.
+ */
 function present(row: any, names: Map<string, string>, actor: AccessTokenPayload): DocumentLinkSummary {
+  const locked = row.kind === "COSTING_BOQ" && !isSalesAdmin(actor)
   return {
-    id: row.id, opportunityId: row.opportunityId, name: row.name, url: row.url, stage: row.stage,
+    id: row.id, opportunityId: row.opportunityId, name: row.name, url: locked ? null : row.url, stage: row.stage,
+    kind: row.kind ?? "GENERAL", quoteId: row.quoteId ?? null, locked,
     createdBy: row.createdBy, createdByName: names.get(row.createdBy) ?? null,
     createdAt: row.createdAt.toISOString(),
     canRemove: row.createdBy === actor.sub || isSalesAdmin(actor),
@@ -43,12 +51,18 @@ export async function addDocumentLink(opportunityId: string, body: AddDocumentLi
   return prisma.$transaction(async (tx) => {
     await requireOpportunityAccess(opportunityId, actor, tx as unknown as typeof prisma)
     const opp = await tx.opportunity.findFirst({ where: { id: opportunityId }, select: { stage: true } })
+    const quoteId = body.quoteId ?? null
+    if (quoteId) {
+      const quote = await tx.opportunityQuote.findFirst({ where: { id: quoteId, opportunityId }, select: { id: true } })
+      if (!quote) throw new AppError(400, QUOTE_NOT_HERE)
+    }
+    const kind = body.kind ?? "GENERAL"
     const row = await tx.opportunityDocumentLink.create({
-      data: { opportunityId, name: body.name, url: body.url, stage: body.stage ?? opp!.stage, createdBy: actor.sub },
+      data: { opportunityId, name: body.name, url: body.url, stage: body.stage ?? opp!.stage, kind, quoteId, createdBy: actor.sub },
     })
     await writeAudit(tx, {
       entity: "OPPORTUNITY_DOCUMENT_LINK", entityId: row.id, action: "CREATE", changedBy: actor.sub,
-      after: { opportunityId, name: row.name, url: row.url, stage: row.stage },
+      after: { opportunityId, name: row.name, url: row.url, stage: row.stage, kind, quoteId },
     })
     return present(row, await namesFor([actor.sub]), actor)
   })

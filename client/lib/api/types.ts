@@ -3835,8 +3835,12 @@ export interface DocumentLinkSummary {
   id: string
   opportunityId: string
   name: string
-  url: string
+  /** Null when `locked`: a Costing and BOQ link seen by someone who is not an admin. */
+  url: string | null
   stage: OpportunityStage
+  kind: "GENERAL" | "COSTING_BOQ"
+  quoteId: string | null
+  locked: boolean
   createdBy: string
   createdByName: string | null
   createdAt: string

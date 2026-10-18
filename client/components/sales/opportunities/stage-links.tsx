@@ -9,14 +9,20 @@ import { salesKeys } from "@/lib/api/sales/keys"
 import { STAGE_LINK_FIELDS } from "@/lib/api/sales/stages"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunitySummary } from "@/lib/api/types"
+import { costingLinks } from "@/lib/costing-links"
+import { longDay, quoteTitle } from "@/lib/quotes"
 import { Field, PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
+import { CostingLinkList } from "@/components/sales/opportunities/costing-link-list"
+import { taka } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 
 /**
  * The link box a stage asks for: "Design files" at Discovery & Solution
- * Design, "Quotation documents" at Commercial Proposal & Negotiation.
+ * Design, "Costing and BOQ link" at Commercial Proposal & Negotiation. A
+ * Costing and BOQ link belongs to a quote (the newest is picked for you), and
+ * only Sales Admins and Super Admins can open it (owner, 2026-10-18).
  *
  * It lists the links added at the stage the deal is at now, and says so
  * plainly when there are none. It is a reminder and never a gate: the stage
@@ -29,7 +35,10 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
   const config = STAGE_LINK_FIELDS[deal.stage]
   const [name, setName] = useState("")
   const [url, setUrl] = useState("")
+  // Newest quote first, so the newest is picked for you.
+  const [quoteId, setQuoteId] = useState(deal.quotes[0]?.id ?? "")
   const [error, setError] = useState<string | null>(null)
+  const costing = config?.kind === "COSTING_BOQ"
 
   const key = salesKeys.opportunityDocuments(deal.id)
   const query = useQuery({
@@ -38,7 +47,12 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
     enabled: !!accessToken && !!config,
   })
   const add = useMutation({
-    mutationFn: () => addDocumentLink(accessToken!, deal.id, { name: name.trim(), url: url.trim() }),
+    mutationFn: () =>
+      addDocumentLink(accessToken!, deal.id, {
+        name: name.trim(),
+        url: url.trim(),
+        ...(costing ? { kind: "COSTING_BOQ" as const, quoteId: quoteId || null } : {}),
+      }),
     onSuccess: () => {
       setName("")
       setUrl("")
@@ -51,7 +65,9 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
   // After the hooks: a stage with no link box renders nothing.
   if (!config) return null
 
-  const links = (query.data ?? []).filter((d) => d.stage === deal.stage)
+  const links = costing
+    ? costingLinks(query.data ?? [])
+    : (query.data ?? []).filter((d) => d.stage === deal.stage && d.kind === "GENERAL")
   const badAddress = url.trim() !== "" && !url.trim().startsWith("https://")
   const canAdd = name.trim() !== "" && url.trim().startsWith("https://") && !add.isPending
 
@@ -75,12 +91,16 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
         </div>
       ) : links.length === 0 ? (
         <p className={`mt-1 text-[12.5px] ${TONE.muted}`}>{config.empty}</p>
+      ) : costing ? (
+        <div className="mt-1">
+          <CostingLinkList links={links} quotes={deal.quotes} />
+        </div>
       ) : (
         <ul className="mt-1 divide-y divide-[#E4E9EF]">
           {links.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-2 py-2">
               <a
-                href={d.url}
+                href={d.url ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-[13px] font-semibold hover:underline"
@@ -96,7 +116,7 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
       )}
 
       {canManage ? (
-        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
+        <div className={`mt-3 grid gap-2 sm:items-end ${costing ? "sm:grid-cols-[1fr_1.4fr_1fr_auto]" : "sm:grid-cols-[1fr_2fr_auto]"}`}>
           <Field label="Name" htmlFor="stage-link-name">
             <Input
               id="stage-link-name"
@@ -113,6 +133,23 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
               placeholder="https://drive.google.com/..."
             />
           </Field>
+          {costing ? (
+            <Field label="For quote" htmlFor="stage-link-quote">
+              <select
+                id="stage-link-quote"
+                value={quoteId}
+                onChange={(e) => setQuoteId(e.target.value)}
+                className="h-9 w-full rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:ring-2 focus:ring-[#17191C]/20 focus:outline-none"
+              >
+                {deal.quotes.map((q, i) => (
+                  <option key={q.id} value={q.id}>
+                    {quoteTitle(i, deal.quotes.length)} ({longDay(q.quotedOn)}, {taka(q.amount)})
+                  </option>
+                ))}
+                <option value="">No quote</option>
+              </select>
+            </Field>
+          ) : null}
           <Button
             type="button"
             disabled={!canAdd}
@@ -122,7 +159,7 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
             {add.isPending ? "Saving…" : "Add link"}
           </Button>
           {badAddress ? (
-            <p role="alert" className="text-[11.5px] font-semibold text-[#B03A3A] sm:col-span-3">
+            <p role="alert" className="text-[11.5px] font-semibold text-[#B03A3A] sm:col-span-full">
               The web address must start with https://
             </p>
           ) : null}

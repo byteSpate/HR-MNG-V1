@@ -156,5 +156,10 @@ export const addDocumentLinkSchema = z.object({
   url: z.string().trim().max(2000).url("Paste the full web address")
     .refine((v) => v.startsWith("https://"), "The web address must start with https://"),
   stage: opportunityStage.optional(),
+  /** COSTING_BOQ links sit in the "Costing and BOQ link" box (owner, 2026-10-18). */
+  kind: z.enum(["GENERAL", "COSTING_BOQ"]).default("GENERAL"),
+  /** The quote a costing or BOQ belongs to. */
+  quoteId: z.string().uuid().nullable().optional(),
 })
-export type AddDocumentLinkBody = z.infer<typeof addDocumentLinkSchema>
+// The input type: `kind` may be left out, and the service reads it as GENERAL.
+export type AddDocumentLinkBody = z.input<typeof addDocumentLinkSchema>

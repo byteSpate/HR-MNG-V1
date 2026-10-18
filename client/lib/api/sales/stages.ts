@@ -33,17 +33,20 @@ export const TRACKS: SalesTrack[] = ["NETWORKING", "SOFTWARE_DEVELOPMENT"]
  * stage they were added at.
  */
 export const STAGE_LINK_FIELDS: Partial<
-  Record<OpportunityStage, { title: string; empty: string; namePlaceholder: string }>
+  Record<OpportunityStage, { title: string; empty: string; namePlaceholder: string; kind?: "COSTING_BOQ" }>
 > = {
   DISCOVERY_DESIGN: {
     title: "Design files",
     empty: "No design file link added yet.",
     namePlaceholder: "Design v1",
   },
+  // Was "Quotation documents" (owner, 2026-10-18). Each link may belong to a
+  // quote, and only Sales Admins and Super Admins can open them.
   COMMERCIAL_NEGOTIATION: {
-    title: "Quotation documents",
-    empty: "No quotation link added yet.",
-    namePlaceholder: "Quotation v1",
+    title: "Costing and BOQ link",
+    empty: "No costing or BOQ link added yet.",
+    namePlaceholder: "Costing v1",
+    kind: "COSTING_BOQ",
   },
 }
 

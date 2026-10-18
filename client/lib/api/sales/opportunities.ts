@@ -212,7 +212,7 @@ export function listDocumentLinks(accessToken: string, opportunityId: string): P
 export function addDocumentLink(
   accessToken: string,
   opportunityId: string,
-  body: { name: string; url: string; stage?: OpportunityStage }
+  body: { name: string; url: string; stage?: OpportunityStage; kind?: "GENERAL" | "COSTING_BOQ"; quoteId?: string | null }
 ): Promise<DocumentLinkSummary> {
   return apiFetch<DocumentLinkSummary>(`/api/sales/opportunities/${opportunityId}/documents`, {
     method: "POST", accessToken, body: JSON.stringify(body),

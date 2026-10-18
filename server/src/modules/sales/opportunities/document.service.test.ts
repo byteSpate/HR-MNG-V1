@@ -6,6 +6,7 @@ vi.mock("../../../config/prisma", () => ({
     user: { findUnique: vi.fn(), findMany: vi.fn() },
     opportunity: { findFirst: vi.fn() },
     opportunityDocumentLink: { findMany: vi.fn(), create: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
+    opportunityQuote: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -99,5 +100,56 @@ describe("document links", () => {
     await expect(removeDocumentLink("doc-1", OTHER)).rejects.toThrow()
     expect(prisma.opportunityDocumentLink.delete).not.toHaveBeenCalled()
     expect(prisma.auditLog.create).not.toHaveBeenCalled()
+  })
+})
+
+describe("Costing and BOQ links (owner, 2026-10-18)", () => {
+  const QUOTE = "11111111-1111-4111-8111-111111111111"
+  const costing = link({ id: "doc-9", name: "Costing v1", url: "https://drive.google.com/costing", stage: "COMMERCIAL_NEGOTIATION", kind: "COSTING_BOQ", quoteId: QUOTE })
+
+  it("takes a kind and a quote, and is GENERAL with no quote by default", () => {
+    expect(addDocumentLinkSchema.parse({ name: "SRS", url: "https://x.com/a" })).toMatchObject({ kind: "GENERAL" })
+    expect(addDocumentLinkSchema.parse({ name: "Costing v1", url: "https://x.com/a", kind: "COSTING_BOQ", quoteId: QUOTE }))
+      .toMatchObject({ kind: "COSTING_BOQ", quoteId: QUOTE })
+  })
+
+  it("shows a Sales User the name but never the address", async () => {
+    vi.mocked(prisma.opportunityDocumentLink.findMany).mockResolvedValue([costing] as any)
+    const [row] = await listDocumentLinks("opp-1", USER)
+    expect(row).toMatchObject({ name: "Costing v1", url: null, locked: true, kind: "COSTING_BOQ", quoteId: QUOTE })
+  })
+
+  it("lets a Sales Admin open it", async () => {
+    vi.mocked(prisma.opportunityDocumentLink.findMany).mockResolvedValue([costing] as any)
+    const [row] = await listDocumentLinks("opp-1", ADMIN)
+    expect(row).toMatchObject({ url: "https://drive.google.com/costing", locked: false })
+  })
+
+  it("never locks an ordinary link", async () => {
+    vi.mocked(prisma.opportunityDocumentLink.findMany).mockResolvedValue([link({ kind: "GENERAL", quoteId: null })] as any)
+    const [row] = await listDocumentLinks("opp-1", USER)
+    expect(row).toMatchObject({ url: "https://drive.google.com/x", locked: false })
+  })
+
+  it("saves the kind and the quote", async () => {
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue({ id: QUOTE } as any)
+    await addDocumentLink("opp-1", { name: "Costing v1", url: "https://drive.google.com/costing", kind: "COSTING_BOQ", quoteId: QUOTE }, USER)
+    expect(prisma.opportunityQuote.findFirst).toHaveBeenCalledWith({ where: { id: QUOTE, opportunityId: "opp-1" }, select: { id: true } })
+    expect(prisma.opportunityDocumentLink.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ kind: "COSTING_BOQ", quoteId: QUOTE }),
+    }))
+  })
+
+  it("refuses a quote that is not on this Opportunity", async () => {
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue(null)
+    await expect(addDocumentLink("opp-1", { name: "Costing v1", url: "https://drive.google.com/c", kind: "COSTING_BOQ", quoteId: QUOTE }, USER))
+      .rejects.toMatchObject({ statusCode: 400, message: "That quote is not on this Opportunity. Reload the page and try again." })
+    expect(prisma.opportunityDocumentLink.create).not.toHaveBeenCalled()
+  })
+
+  it("hides the address from the Sales User who added it, too", async () => {
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue({ id: QUOTE } as any)
+    const row = await addDocumentLink("opp-1", { name: "Costing v1", url: "https://drive.google.com/costing", kind: "COSTING_BOQ", quoteId: QUOTE }, USER)
+    expect(row).toMatchObject({ url: null, locked: true })
   })
 })

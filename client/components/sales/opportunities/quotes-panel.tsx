@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { RiAddLine } from "@remixicon/react"
 
-import { addQuote, deleteQuote, editQuote } from "@/lib/api/sales/opportunities"
+import { addQuote, deleteQuote, editQuote, listDocumentLinks } from "@/lib/api/sales/opportunities"
 import { funnelKeys } from "@/lib/api/sales/funnel-keys"
-import { opportunityWriteKeys } from "@/lib/api/sales/keys"
+import { opportunityWriteKeys, salesKeys } from "@/lib/api/sales/keys"
+import { costingLinks } from "@/lib/costing-links"
 import { QUOTED_STAGES } from "@/lib/api/sales/stages"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityQuoteView, OpportunitySummary, QuoteBody } from "@/lib/api/types"
@@ -15,6 +16,7 @@ import { ConfirmDeleteDialog, PanelAlert, PanelNotice, TONE, toMessage } from "@
 import { STAGE_LABEL, taka } from "@/components/sales/shared/sales-shared"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { QuoteFields } from "@/components/sales/opportunities/quote-fields"
+import { CostingLinkList } from "@/components/sales/opportunities/costing-link-list"
 import { Button } from "@/components/ui/button"
 
 const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
@@ -38,6 +40,13 @@ export function QuotesPanel({ deal, canManage }: { deal: OpportunitySummary; can
   const [error, setError] = useState<string | null>(null)
 
   const open = deal.status === "ONGOING"
+  // Each quote shows its Costing and BOQ links (owner, 2026-10-18). The same
+  // list the Documents tab reads, so they stay in step.
+  const documents = useQuery({
+    queryKey: salesKeys.opportunityDocuments(deal.id),
+    queryFn: () => listDocumentLinks(accessToken!, deal.id),
+    enabled: !!accessToken && deal.quotes.length > 0,
+  })
   const inQuoteStage = QUOTED_STAGES.has(deal.stage) || deal.offeredOn !== null
   const done = () => {
     for (const key of opportunityWriteKeys(deal.id)) queryClient.invalidateQueries({ queryKey: key })
@@ -116,6 +125,12 @@ export function QuotesPanel({ deal, canManage }: { deal: OpportunitySummary; can
                 ) : null}
               </div>
               {q.note ? <p className={`mt-1 text-[12px] [overflow-wrap:anywhere] ${TONE.muted}`}>{q.note}</p> : null}
+              {costingLinks(documents.data ?? [], q.id).length > 0 ? (
+                <div className="mt-1.5 border-t border-[#EEF1F5] pt-1.5">
+                  <div className={`text-[11.5px] font-bold ${TONE.muted}`}>Costing and BOQ</div>
+                  <CostingLinkList links={costingLinks(documents.data ?? [], q.id)} quotes={deal.quotes} showQuote={false} />
+                </div>
+              ) : null}
               {form?.mode === "edit" && form.id === q.id ? formBlock : null}
             </li>
           ))}
