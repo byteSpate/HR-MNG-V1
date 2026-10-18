@@ -26,7 +26,8 @@ export interface OpportunityLineSummary {
   marginPercent: string | null
   /** `lineValue` times `marginPercent`, worked out when read. Null when either is missing — never "0.00". */
   marginAmount: string | null
-  note: string | null
+  /** "Description" on screen ("What it covers" was its old name on a Module). */
+  description: string | null
   order: number
   /** Who we will buy this product from. Optional while the deal is open,
    *  required on every line before it can be marked Won. */
@@ -514,8 +515,8 @@ export interface ProjectLineSummary {
   supplierName: string | null
   lineValue: string | null
   marginPercent: string | null
-  /** "What it covers", on a Software Opportunity's Modules (spec §2.4). */
-  note: string | null
+  /** "Description" on screen, for products and Modules alike. */
+  description: string | null
   done: { at: string; byName: string | null } | null
 }
 

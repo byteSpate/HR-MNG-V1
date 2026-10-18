@@ -31,7 +31,7 @@ const OPP = { id: "opp-1", salesAccountId: "account-1", track: "NETWORKING", sal
 const LINE = {
   id: "line-1", opportunityId: "opp-1", product: "Switch", oemBrand: "Cisco",
   model: null, partNo: null, quantity: 2, unitValue: dec("100"), lineValue: null,
-  note: null, order: 0, createdAt: new Date("2026-09-09"), updatedAt: new Date("2026-09-09"),
+  description: null, order: 0, createdAt: new Date("2026-09-09"), updatedAt: new Date("2026-09-09"),
   // The parent Opportunity's track, which decides whether this line is a
   // Networking product or a Software module.
   opportunity: { track: "NETWORKING" },
@@ -196,9 +196,9 @@ describe("modules on a Software Opportunity", () => {
 
   it("adds a module with a name, what it covers and a price", async () => {
     SOFTWARE()
-    await addOpportunityLine("opp-1", { product: "HR module", note: "Leave and attendance", lineValue: "250000" } as any, USER)
+    await addOpportunityLine("opp-1", { product: "HR module", description: "Leave and attendance", lineValue: "250000" } as any, USER)
     expect(prisma.opportunityLine.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ product: "HR module", note: "Leave and attendance" }),
+      data: expect.objectContaining({ product: "HR module", description: "Leave and attendance" }),
     }))
   })
 

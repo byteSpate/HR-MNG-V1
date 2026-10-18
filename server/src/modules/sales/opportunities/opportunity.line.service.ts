@@ -78,7 +78,7 @@ export async function addOpportunityLine(
         lineValue: body.lineValue === undefined ? null : dec(body.lineValue),
         // No margin typed is "no margin yet", not 0%.
         marginPercent: body.marginPercent === undefined ? null : dec(body.marginPercent),
-        note: nullable(body.note), order, supplierId,
+        description: nullable(body.description), order, supplierId,
       },
       include: SUPPLIER_INCLUDE,
     })
@@ -105,7 +105,7 @@ export async function updateOpportunityLine(
         data[field] = body[field]; before[field] = current[field]; after[field] = body[field]
       }
     }
-    for (const field of ["oemBrand", "model", "partNo", "note"] as const) {
+    for (const field of ["oemBrand", "model", "partNo", "description"] as const) {
       if (body[field] !== undefined) {
         const next = nullable(body[field])
         if (next !== current[field]) { data[field] = next; before[field] = current[field]; after[field] = next }

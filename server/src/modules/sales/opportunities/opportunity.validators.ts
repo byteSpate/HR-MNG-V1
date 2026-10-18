@@ -101,7 +101,7 @@ export const createOpportunityLineSchema = z.object({
   unitValue: money.optional(),
   lineValue: money.optional(),
   marginPercent: marginPercent.optional(),
-  note: z.string().trim().max(500).optional(),
+  description: z.string().trim().max(1000, "Keep the description under 1000 characters.").optional(),
   // Who we will buy this product from (spec: Sales Hub changes). Optional
   // while the deal is open; required on every line before the deal is Won.
   supplierId: z.string().uuid().nullable().optional(),
@@ -123,7 +123,7 @@ export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
     unitValue: money.nullable().optional(),
     lineValue: money.nullable().optional(),
     marginPercent: marginPercent.nullable().optional(),
-    note: z.string().trim().max(500).nullable().optional(),
+    description: z.string().trim().max(1000, "Keep the description under 1000 characters.").nullable().optional(),
   })
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
 export const reorderOpportunityLinesSchema = z.object({

@@ -76,7 +76,7 @@ export function presentProject(
       return {
         id: l.id, product: l.product, oemBrand: l.oemBrand, model: l.model, partNo: l.partNo ?? null, quantity: l.quantity,
         // "What it covers" on a Software Opportunity's Modules (spec §2.4).
-        note: l.note ?? null,
+        description: l.description ?? null,
         supplierName: l.supplier?.name ?? null,
         lineValue: moneyOrNull(l.lineValue),
         marginPercent: l.marginPercent == null ? null : dec(l.marginPercent).toFixed(2),

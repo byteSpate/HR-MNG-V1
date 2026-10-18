@@ -169,11 +169,11 @@ describe("getProject", () => {
     vi.mocked(prisma.project.findFirst).mockResolvedValue(projectRow({
       opportunity: {
         ...projectRow().opportunity,
-        lines: [{ ...projectRow().opportunity.lines[0], note: "Leave and attendance" }],
+        lines: [{ ...projectRow().opportunity.lines[0], description: "Leave and attendance" }],
       },
     }) as any)
     const p = await getProject("prj-1", USER)
-    expect(p.lines[0].note).toBe("Leave and attendance")
+    expect(p.lines[0].description).toBe("Leave and attendance")
   })
 
   it("says the Project is not visible rather than leaking that it exists", async () => {

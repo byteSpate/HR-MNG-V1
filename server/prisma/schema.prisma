@@ -3200,6 +3200,8 @@ model OpportunityQuote {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
+  documentLinks OpportunityDocumentLink[]
+
   @@index([opportunityId, quotedOn])
 }
 
@@ -3229,7 +3231,9 @@ model OpportunityLine {
   /// worked out when read (sales.margin.ts), so it follows the Total price;
   /// the deal's margin is these added up. Null is "no margin yet", never 0%.
   marginPercent Decimal? @db.Decimal(5, 2)
-  note          String?
+  /// "Description" on screen (owner, 2026-10-18). The column keeps its old
+  /// name, so no data moved when the field was renamed.
+  description   String?  @map("note")
   order         Int      @default(0)
 
   /// Who we will buy this from (spec: Sales Hub changes). Optional while the
@@ -3277,6 +3281,8 @@ model Project {
   /// Date only, UTC midnight.
   startOn  DateTime?
   dueOn    DateTime?
+  /// Optional, for projects that are subscription only. Date only, UTC midnight.
+  nextRenewalOn DateTime?
   priority SalesTaskPriority @default(NORMAL)
   /// Null is "no budget", never ৳0.
   budget   Decimal?          @db.Decimal(14, 2)
@@ -3353,11 +3359,24 @@ model OpportunityDocumentLink {
   name          String
   url           String
   stage         OpportunityStage
+  /// COSTING_BOQ links sit in the "Costing and BOQ link" box and only Sales
+  /// Admins and Super Admins can open them (owner, 2026-10-18).
+  kind          DocumentLinkKind @default(GENERAL)
+  /// The quote this costing or BOQ belongs to. SetNull: removing a quote
+  /// keeps the link.
+  quoteId       String?
+  quote         OpportunityQuote? @relation(fields: [quoteId], references: [id], onDelete: SetNull)
   /// The user id that added it.
   createdBy     String
   createdAt     DateTime         @default(now())
 
   @@index([opportunityId, createdAt])
+  @@index([quoteId])
+}
+
+enum DocumentLinkKind {
+  GENERAL
+  COSTING_BOQ
 }
 
 /// The same rows render as **Remarks** on a Sales Account and **Comments** on
