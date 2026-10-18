@@ -35,14 +35,18 @@ export function AccountProjectsPanel({ accountId }: { accountId: string }) {
           No Projects yet. A Project starts from a Won Opportunity, on its Project tab.
         </p>
       ) : (
-        <ul className="divide-y divide-[#E4E9EF]">
+        <ul className="-mx-2 divide-y divide-[#E4E9EF]">
           {query.data.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center gap-2 py-2.5">
-              <Link href={`/sales/projects/${p.id}`} className="text-[13px] font-semibold hover:underline">
-                {p.name}
+            <li key={p.id}>
+              {/* The whole row opens the project (owner, 2026-10-18), like the Opportunities tab. */}
+              <Link
+                href={`/sales/projects/${p.id}`}
+                className="flex flex-wrap items-center gap-2 rounded-md px-2 py-2.5 transition-colors hover:bg-[#F7F9FB] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+              >
+                <span className="text-[13px] font-semibold">{p.name}</span>
+                <span className={`text-[12px] ${TONE.muted}`}>{p.serial} · {p.opportunitySerial} · {p.managerName}</span>
+                <Tag label={PROJECT_STATUS_LABEL[p.status]} tone={PROJECT_STATUS_TONE[p.status]} />
               </Link>
-              <span className={`text-[12px] ${TONE.muted}`}>{p.serial} · {p.opportunitySerial} · {p.managerName}</span>
-              <Tag label={PROJECT_STATUS_LABEL[p.status]} tone={PROJECT_STATUS_TONE[p.status]} />
             </li>
           ))}
         </ul>

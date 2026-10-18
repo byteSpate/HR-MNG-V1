@@ -10,7 +10,6 @@ import {
   RiArrowRightLine,
   RiBuilding2Line,
   RiCheckboxCircleLine,
-  RiEyeLine,
   RiGroupLine,
   RiPauseCircleLine,
 } from "@remixicon/react"
@@ -36,7 +35,6 @@ import {
   FormError,
   PanelAlert,
   PanelTable,
-  RowActions,
   TONE,
   toMessage,
 } from "@/components/dashboard/record-kit"
@@ -116,20 +114,6 @@ function toRows(accounts: SalesAccountSummary[], animate: boolean): TableCell[][
       ),
     },
     { tag: ACCOUNT_STATUS_LABEL[a.status], tone: ACCOUNT_STATUS_TONE[a.status] },
-    {
-      node: (
-        <RowActions
-          actions={[
-            {
-              kind: "link",
-              label: a.canManage ? "Open" : "View",
-              href: `/sales/accounts/${a.id}`,
-              icon: a.canManage ? undefined : <RiEyeLine className="size-3.5" aria-hidden />,
-            },
-          ]}
-        />
-      ),
-    },
   ])
 }
 
@@ -364,9 +348,11 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
       <PanelTable
         title={scope === "all" ? "All accounts" : "My accounts"}
         emptyIcon={RiBuilding2Line}
-        cols="minmax(0,2fr) 1fr 1fr auto"
-        headers={["Sales Account", "Owner", "Status", ""]}
+        cols="minmax(0,2fr) 1fr 1fr"
+        headers={["Sales Account", "Owner", "Status"]}
         rows={rows}
+        // A click anywhere on a row opens the account (owner, 2026-10-18).
+        rowHrefs={accounts.map((a) => `/sales/accounts/${a.id}`)}
         isLoading={isLoading}
         isError={accountsQuery.isError}
         onRetry={() => accountsQuery.refetch()}

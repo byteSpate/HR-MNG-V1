@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import {
   RiAlarmWarningLine,
@@ -34,17 +33,16 @@ import {
 const HEALTHS: ProjectHealth[] = ["ON_TRACK", "AT_RISK", "LATE"]
 
 function rowCells(p: ProjectListRow): TableCell[] {
-  const href = `/sales/projects/${p.id}`
   const quiet = quietText(p.quietDays)
   return [
     {
       node: (
-        <Link href={href} className="block w-full cursor-pointer">
+        <span className="block w-full">
           <span className="block truncate font-semibold">{p.name}</span>
           <span className="block truncate font-mono text-[11.5px] text-[#6B7789]">
             {p.serial} · {p.opportunitySerial} · {TRACK_LABEL[p.track] ?? p.track}
           </span>
-        </Link>
+        </span>
       ),
     },
     { node: <span className="block truncate">{p.salesAccountName}</span> },
@@ -206,6 +204,8 @@ export function ProjectsPage() {
         cols="minmax(0,2.2fr) minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,0.9fr)"
         headers={["Project", "Account", "Project Manager", "Status", "Health", "Progress", "Days left", "Open tasks", "Milestones", "Next renewal"]}
         rows={projects.map((p) => rowCells(p).map(sized))}
+        // A click anywhere on a row opens the project (owner, 2026-10-18).
+        rowHrefs={projects.map((p) => `/sales/projects/${p.id}`)}
         isLoading={query.isPending}
         isError={query.isError}
         onRetry={() => query.refetch()}
