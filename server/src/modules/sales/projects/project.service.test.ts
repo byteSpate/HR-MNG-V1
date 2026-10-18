@@ -247,6 +247,11 @@ describe("listProjects", () => {
       status, dueOn: new Date(`${dueOn}T00:00:00.000Z`), updatedAt: new Date("2026-09-27T10:00:00.000Z"),
     })
 
+    it("shows the next renewal date, or null", async () => {
+      expect((await one({ nextRenewalOn: new Date("2027-01-31T00:00:00.000Z") })).nextRenewalOn).toBe("2027-01-31")
+      expect((await one({ nextRenewalOn: null })).nextRenewalOn).toBeNull()
+    })
+
     it("counts done and total milestones per row", async () => {
       const row = await one({
         milestones: [{ doneAt: new Date("2026-09-26T00:00:00.000Z") }, { doneAt: null }],

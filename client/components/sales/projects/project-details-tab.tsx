@@ -25,6 +25,7 @@ interface Draft {
   managerEmployeeId: string
   startOn: string
   dueOn: string
+  nextRenewalOn: string
   priority: (typeof PRIORITIES)[number]
   budget: string
 }
@@ -35,6 +36,7 @@ function draftOf(p: ProjectSummary): Draft {
     managerEmployeeId: p.manager.employeeId,
     startOn: p.startOn ?? "",
     dueOn: p.dueOn ?? "",
+    nextRenewalOn: p.nextRenewalOn ?? "",
     priority: p.priority,
     budget: p.budget ?? "",
   }
@@ -83,6 +85,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
       if (draft.managerEmployeeId !== start.managerEmployeeId) body.managerEmployeeId = draft.managerEmployeeId
       if (draft.startOn !== start.startOn) body.startOn = draft.startOn || null
       if (draft.dueOn !== start.dueOn) body.dueOn = draft.dueOn || null
+      if (draft.nextRenewalOn !== start.nextRenewalOn) body.nextRenewalOn = draft.nextRenewalOn || null
       if (draft.priority !== start.priority) body.priority = draft.priority
       const budget = draft.budget.trim()
       if (budget !== start.budget) body.budget = budget === "" ? null : budget
@@ -96,6 +99,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
     || draft.managerEmployeeId !== project.manager.employeeId
     || draft.startOn !== (project.startOn ?? "")
     || draft.dueOn !== (project.dueOn ?? "")
+    || draft.nextRenewalOn !== (project.nextRenewalOn ?? "")
     || draft.priority !== project.priority
     || draft.budget.trim() !== (project.budget ?? "")
 
@@ -127,6 +131,9 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
             </Field>
             <Field label="Finish date" htmlFor="prj-due">
               <Input id="prj-due" type="date" value={draft.dueOn} onChange={(e) => setDraft({ ...draft, dueOn: e.target.value })} />
+            </Field>
+            <Field label="Next renewal" htmlFor="prj-renewal" hint="Optional." help="Only for projects that are subscription only.">
+              <Input id="prj-renewal" type="date" value={draft.nextRenewalOn} onChange={(e) => setDraft({ ...draft, nextRenewalOn: e.target.value })} />
             </Field>
             <Field label="Priority" htmlFor="prj-priority">
               <select
@@ -160,6 +167,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
             <div><dt className={TONE.muted}>Project Manager</dt><dd>{project.manager.fullName}</dd></div>
             <div><dt className={TONE.muted}>Start date</dt><dd>{onDate(project.startOn)}</dd></div>
             <div><dt className={TONE.muted}>Finish date</dt><dd>{onDate(project.dueOn)}</dd></div>
+            <div><dt className={TONE.muted}>Next renewal</dt><dd>{onDate(project.nextRenewalOn)}</dd></div>
             <div><dt className={TONE.muted}>Priority</dt><dd>{PRIORITY_LABEL[project.priority]}</dd></div>
           </dl>
         )}

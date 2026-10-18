@@ -16,6 +16,8 @@ export const updateProjectSchema = z.object({
   managerEmployeeId: z.string().uuid().optional(),
   startOn: dateOnly.nullable().optional(),
   dueOn: dateOnly.nullable().optional(),
+  /** Only for projects that are subscription only (owner, 2026-10-18). */
+  nextRenewalOn: dateOnly.nullable().optional(),
   priority: z.enum(["LOW", "NORMAL", "HIGH"]).optional(),
   budget: money.nullable().optional(),
 }).refine((b) => Object.keys(b).length > 0, { message: "Nothing was changed" })

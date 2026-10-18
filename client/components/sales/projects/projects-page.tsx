@@ -92,7 +92,15 @@ function rowCells(p: ProjectListRow): TableCell[] {
         </span>
       ),
     },
+    // Only subscription projects have one (owner, 2026-10-18).
+    { node: <span className={p.nextRenewalOn ? undefined : TONE.muted}>{renewalText(p.nextRenewalOn)}</span> },
   ]
+}
+
+/** "31 Jan 2027", or a dash when the project has no renewal. */
+function renewalText(day: string | null): string {
+  if (!day) return "-"
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
 }
 
 /**
@@ -195,8 +203,8 @@ export function ProjectsPage() {
       <PanelTable
         title="Delivery work"
         emptyIcon={RiFolder3Line}
-        cols="minmax(0,2.2fr) minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.8fr)"
-        headers={["Project", "Account", "Project Manager", "Status", "Health", "Progress", "Days left", "Open tasks", "Milestones"]}
+        cols="minmax(0,2.2fr) minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,0.9fr)"
+        headers={["Project", "Account", "Project Manager", "Status", "Health", "Progress", "Days left", "Open tasks", "Milestones", "Next renewal"]}
         rows={projects.map((p) => rowCells(p).map(sized))}
         isLoading={query.isPending}
         isError={query.isError}

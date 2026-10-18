@@ -51,7 +51,7 @@ export function presentProject(
     team: row.team.map((m) => ({
       employeeId: m.employeeId, fullName: m.employee.fullName, responsibility: m.responsibility, onAccount: people.has(m.employeeId),
     })),
-    startOn: day(row.startOn), dueOn: day(row.dueOn), priority: row.priority,
+    startOn: day(row.startOn), dueOn: day(row.dueOn), nextRenewalOn: day(row.nextRenewalOn), priority: row.priority,
     budget: moneyOrNull(row.budget),
     value: moneyOrNull(row.opportunity.amount),
     plannedCost: plannedCostOf(row.opportunity.lines),

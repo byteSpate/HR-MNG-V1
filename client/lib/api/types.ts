@@ -3751,6 +3751,8 @@ export interface ProjectSummary {
   team: ProjectTeamMemberSummary[]
   startOn: string | null
   dueOn: string | null
+  /** Optional, for projects that are subscription only. */
+  nextRenewalOn: string | null
   priority: "LOW" | "NORMAL" | "HIGH"
   budget: string | null
   value: string | null
@@ -3794,6 +3796,7 @@ export interface ProjectListRow {
   managerName: string
   status: ProjectStatus
   dueOn: string | null
+  nextRenewalOn: string | null
   milestonesDone: number
   milestonesTotal: number
   health: "ON_TRACK" | "AT_RISK" | "LATE" | null
