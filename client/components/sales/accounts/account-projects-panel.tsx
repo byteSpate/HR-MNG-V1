@@ -22,7 +22,7 @@ export function AccountProjectsPanel({ accountId }: { accountId: string }) {
   })
   return (
     <Panel>
-      <PanelHeading title="Projects" />
+      <PanelHeading title="Won Projects" />
       {query.isPending ? (
         <div className="space-y-2">
           <Skeleton className="h-10 w-full" />

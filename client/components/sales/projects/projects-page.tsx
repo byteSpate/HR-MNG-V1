@@ -145,7 +145,7 @@ export function ProjectsPage() {
 
   return (
     <>
-      <PageHeader kicker="Sales" title="Projects" sub="Delivery work for Won Opportunities." />
+      <PageHeader kicker="Sales" title="Post Activities" sub="Delivery work for Won Opportunities." />
 
       <SalesStatRow stats={stats} isLoading={query.isPending} isError={query.isError} />
 

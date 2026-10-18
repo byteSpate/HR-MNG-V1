@@ -200,25 +200,6 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
           tabs={[
             { value: "about", icon: RiInformationLine, label: "About", content: <AccountAboutPanel account={accountQuery.data} /> },
             {
-              value: "remarks",
-              icon: RiMessage2Line,
-              label: "Remarks",
-              // "Remarks" here and "Comments" on an Opportunity, from one
-              // component. That is the business's own vocabulary and the two
-              // labels must not be made consistent with each other.
-              content: (
-                <CommentPanel
-                  entity="SALES_ACCOUNT"
-                  entityId={accountQuery.data.id}
-                  label="Remarks"
-                  // Customer feedback is offered on an Opportunity only: it is
-                  // always about a specific Opportunity.
-                  kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
-                  canWrite={accountQuery.data.canManage}
-                />
-              ),
-            },
-            {
               value: "contacts",
               icon: RiContactsLine,
               label: "Contacts",
@@ -233,7 +214,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
               ),
             },
             { value: "opportunities", icon: RiFlashlightLine, label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
-            { value: "projects", icon: RiFolder3Line, label: "Projects", content: <AccountProjectsPanel accountId={accountId} /> },
+            { value: "projects", icon: RiFolder3Line, label: "Won Projects", content: <AccountProjectsPanel accountId={accountId} /> },
             { value: "heatmap", icon: RiGridLine, label: "Heatmap", content: <AccountHeatmapPanel accountId={accountId} /> },
             {
               value: "timeline",
@@ -252,6 +233,26 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
             },
             { value: "meetings", icon: RiCalendar2Line, label: "Meetings", content: <MeetingsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
             { value: "tasks", icon: RiTaskLine, label: "Tasks", content: <TasksPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
+            // Last, by the owner's wish (2026-10-18).
+            {
+              value: "remarks",
+              icon: RiMessage2Line,
+              label: "Remarks",
+              // "Remarks" here and "Comments" on an Opportunity, from one
+              // component. That is the business's own vocabulary and the two
+              // labels must not be made consistent with each other.
+              content: (
+                <CommentPanel
+                  entity="SALES_ACCOUNT"
+                  entityId={accountQuery.data.id}
+                  label="Remarks"
+                  // Customer feedback is offered on an Opportunity only: it is
+                  // always about a specific Opportunity.
+                  kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
+                  canWrite={accountQuery.data.canManage}
+                />
+              ),
+            },
           ]}
         />
       ) : null}

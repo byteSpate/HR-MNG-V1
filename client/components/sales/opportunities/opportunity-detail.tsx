@@ -107,7 +107,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
           <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className={`font-mono text-[12px] ${TONE.muted}`}>{deal.serial}</span>
-              <h1 className="font-heading text-[21px] font-bold tracking-tight">{deal.name}</h1>
+              <h1 className="font-heading text-[22px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">{deal.name}</h1>
               <Tag
                 label={OPPORTUNITY_STATUS_LABEL[deal.status]}
                 tone={OPPORTUNITY_STATUS_TONE[deal.status]}
