@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import Link from "next/link"
 import {
   RiArchiveLine,
@@ -63,6 +64,22 @@ function CellBody({ cell }: { cell: TableCell }) {
 /** A cell carrying nothing at all — rendered, it would be an orphan label. */
 const isEmpty = (cell: TableCell) => !cell.text && !cell.tag && !cell.node
 
+/**
+ * A link stretched over the whole row or card (owner, 2026-10-18), so a click
+ * anywhere opens the record. It is a real link, so a right-click or Ctrl+click
+ * still opens a new tab. Buttons inside the row sit above it (`relative z-10`,
+ * as RowActions does), so they keep their own job.
+ */
+function RowLink({ href, row }: { href: string; row: TableCell[] }) {
+  return (
+    <Link
+      href={href}
+      aria-label={`Open ${row[0]?.text ?? "this row"}`}
+      className="absolute inset-0 rounded-md focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+    />
+  )
+}
+
 export function DataTable({
   title,
   cols,
@@ -70,7 +87,13 @@ export function DataTable({
   rows,
   action = "Export",
   actionHref,
+  rowHrefs,
+  headerNodes,
 }: Pick<SubpageData, "cols" | "headers" | "rows"> & {
+  /** Rich headers for the wide table, like sort buttons. `headers` still labels the phone cards. */
+  headerNodes?: ReactNode[]
+  /** One link per row, the same length as `rows`. Given, the whole row opens it. */
+  rowHrefs?: (string | null)[]
   title: string
   action?: string
   /** Makes the action label navigate. Without it the label stays inert text,
@@ -116,16 +139,31 @@ export function DataTable({
             key={`${header}-${i}`}
             className="flex items-end border-b border-[#E4E9EF] py-2.5 text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase"
           >
-            {header}
+            {headerNodes?.[i] ?? header}
           </div>
         ))}
-        {rows.flat().map((cell, i) => (
-          <div key={i} className="flex min-w-0 items-center border-b border-[#EEF1F5] py-3">
-            <div className="min-w-0 flex-1">
-              <CellBody cell={cell} />
-            </div>
-          </div>
-        ))}
+        {rowHrefs
+          ? rows.map((row, r) => (
+              // A subgrid row, so the row has a box to hover and to link,
+              // while its cells still line up with the header tracks.
+              <div key={r} className="relative col-span-full grid grid-cols-subgrid hover:bg-[#F7F9FB]">
+                {rowHrefs[r] ? <RowLink href={rowHrefs[r]!} row={row} /> : null}
+                {row.map((cell, c) => (
+                  <div key={c} className="flex min-w-0 items-center border-b border-[#EEF1F5] py-3">
+                    <div className="min-w-0 flex-1">
+                      <CellBody cell={cell} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))
+          : rows.flat().map((cell, i) => (
+              <div key={i} className="flex min-w-0 items-center border-b border-[#EEF1F5] py-3">
+                <div className="min-w-0 flex-1">
+                  <CellBody cell={cell} />
+                </div>
+              </div>
+            ))}
       </div>
 
       {/* Below md: one card per row, so nobody swipes sideways to read a
@@ -134,7 +172,8 @@ export function DataTable({
           pairs, the label coming from the header at the same index. */}
       <div className="flex flex-col gap-2.5 md:hidden">
         {rows.map((row, r) => (
-          <div key={r} className="rounded-md border border-[#EEF1F5] p-3">
+          <div key={r} className={`relative rounded-md border border-[#EEF1F5] p-3 ${rowHrefs?.[r] ? "hover:bg-[#F7F9FB]" : ""}`}>
+            {rowHrefs?.[r] ? <RowLink href={rowHrefs[r]!} row={row} /> : null}
             {row[0] && !isEmpty(row[0]) ? (
               <div className="mb-2 border-b border-[#EEF1F5] pb-2">
                 <CellBody cell={row[0]} />

@@ -33,6 +33,7 @@ export const SALES_PERMISSIONS = [
   { key: "account.edit", label: "Edit a Sales Account", group: "Sales Accounts", default: true, phase: 1 },
   { key: "opportunity.create", label: "Create an Opportunity", group: "Opportunities", default: true, phase: 1 },
   { key: "opportunity.change_stage", label: "Change the Stage of an Opportunity", group: "Opportunities", default: true, phase: 1 },
+  { key: "opportunity.skip_quote", label: "Move to a quote stage without a quote", group: "Opportunities", default: true, phase: 1 },
   { key: "opportunity.change_status", label: "Mark an Opportunity Won, Lost or Canceled", group: "Opportunities", default: true, phase: 1 },
   { key: "opportunity.hand_over", label: "Hand an Opportunity over to the Software team", group: "Opportunities", default: true, phase: 1 },
   { key: "opportunity.edit_products", label: "Add, change or remove Line Items", group: "Opportunities", default: true, phase: 1 },

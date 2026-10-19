@@ -7,12 +7,15 @@
  * person at a time, which is how the meeting is actually run (§27.17).
  */
 
-import { RiArrowRightLine, RiCheckLine } from "@remixicon/react"
+import { RiCheckLine } from "@remixicon/react"
 
 import { TONE } from "@/components/dashboard/record-kit"
 import { taka } from "@/components/sales/shared/sales-shared"
 import type { FunnelTeam } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
+
+import { coverageText } from "./funnel-labels"
+import { nothingWon } from "./funnel-summary"
 
 interface FunnelTeamListProps {
   team: FunnelTeam
@@ -45,12 +48,13 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
   return (
     <div className="space-y-3">
       <p className={cn("text-sm", TONE.muted)}>
-        Reviewing the week of {team.weekStart}. {walked} of {team.rows.length} walked so far.
+        Reviewing the week of {team.weekStart}. {walked} of {team.rows.length} walked so far. Targets are for {team.quarterLabel}.
       </p>
 
       <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-sm">
+          {/* One line per value, so rows stay one height (owner, 2026-10-19). */}
+          <table className="w-full min-w-[1200px] border-collapse text-sm [&_td]:whitespace-nowrap">
             <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
@@ -65,22 +69,71 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                 <th scope="col" className="px-4 py-2 text-right font-medium">
                   Still open
                 </th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Target</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Won</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Gap</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Open quoted</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Coverage</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Quotes missing</th>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
                   Reviewed
                 </th>
-                <th scope="col" className="w-24 px-4 py-2" />
               </tr>
             </thead>
             <tbody>
               {team.rows.map((row) => (
-                <tr key={row.employeeId} className="border-t border-[#EEF1F5] hover:bg-[#FAFBFC]">
-                  <td className="px-4 py-2.5 font-medium text-[#1B2733]">{row.employeeName}</td>
+                // A click anywhere on the row opens this person's funnel; the
+                // name is the button, so the keyboard reaches it too.
+                <tr
+                  key={row.employeeId}
+                  onClick={() => onOpen(row.employeeId)}
+                  className="cursor-pointer border-t border-[#EEF1F5] hover:bg-[#F5F7FA]"
+                >
+                  <td className="px-4 py-2.5 font-medium text-[#1B2733]">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onOpen(row.employeeId)
+                      }}
+                      className="text-left hover:underline focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                    >
+                      {row.employeeName}
+                    </button>
+                  </td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{row.dealCount}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">
                     <Money amount={row.quoted} />
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums text-[#0B7A3B]">
                     <Money amount={row.stillOpen} />
+                  </td>
+                  {/* The quarter against the target (owner, 2026-10-13). A missing
+                      target is said in words, never as ৳0. */}
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {row.summary.target === null ? <span className={cn("text-xs", TONE.muted)}>No target set</span> : taka(row.summary.target)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {nothingWon(row.summary.won) ? <span className={cn("text-xs", TONE.muted)}>Nothing won yet</span> : taka(row.summary.won)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {row.summary.gap === null ? (
+                      <span className={cn("text-xs", TONE.muted)}>—</span>
+                    ) : row.summary.targetMet ? (
+                      "Target met"
+                    ) : (
+                      taka(row.summary.gap)
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    <Money amount={row.summary.openQuoted} />
+                  </td>
+                  {/* The small muted text sits in a span, as in the cells beside it, so it shares their baseline. */}
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    <span className={cn(row.summary.coverage === null && "text-xs " + TONE.muted)}>{coverageText(row.summary)}</span>
+                  </td>
+                  <td className={cn("px-4 py-2.5 text-right tabular-nums", row.summary.quoteMissingCount > 0 && "font-medium text-[#8A5E0C]")}>
+                    {row.summary.quoteMissingCount}
                   </td>
                   <td className="px-4 py-2.5">
                     {row.reviewed ? (
@@ -93,16 +146,6 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                       // morning is the normal state, not a failure.
                       <span className={cn("text-xs", TONE.muted)}>Not yet</span>
                     )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onOpen(row.employeeId)}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-[#1F4E79] hover:underline"
-                    >
-                      Open
-                      <RiArrowRightLine className="size-4" aria-hidden />
-                    </button>
                   </td>
                 </tr>
               ))}

@@ -102,6 +102,34 @@ export interface FunnelRow {
   offerLine: string | null
 
   remarks: FunnelRemark[]
+
+  // ── quotes and quarters (owner, 2026-10-13) ──
+
+  /** The latest quote, or null when there is none ("Quote missing" on the Funnel). */
+  latestQuote: { amount: string; quotedOn: string; reference: string | null } | null
+  /** Every quote, newest first, for the row detail. */
+  quotes: FunnelQuote[]
+  quoteCount: number
+  /** quoteCount - 1, never below 0. */
+  quoteChanges: number
+  quoteMissing: boolean
+  /** "Q4 2026", from the expected closing date. Null with no date. */
+  quarterLabel: string | null
+  ownerName: string
+  /** Office today minus the latest quote date (or the Funnel date with no quote). */
+  daysSinceQuoted: number | null
+  /** Closing date minus office today. Negative means overdue. Null with no date. */
+  daysLeft: number | null
+}
+
+/** One quote, for the row detail. */
+export interface FunnelQuote {
+  id: string
+  amount: string
+  quotedOn: string
+  reference: string | null
+  note: string | null
+  stage: OpportunityStage
 }
 
 /**
@@ -123,6 +151,27 @@ export interface FunnelTotals {
   unpricedCount: number
 }
 
+/**
+ * The strip above the grid (owner, 2026-10-13): one person's quarter against
+ * their target. Every figure that is not known is null, never zero.
+ */
+export interface FunnelSummary {
+  /** "Q4 2026". */
+  quarterLabel: string
+  /** Null when no target covers the quarter. */
+  target: string | null
+  won: string
+  /** Target minus won. Null with no target. */
+  gap: string | null
+  /** Open quoted Opportunities closing in the quarter. Null when none is priced. */
+  openQuoted: string | null
+  /** openQuoted / gap, to one decimal, like "2.1". */
+  coverage: string | null
+  targetMet: boolean
+  /** Open Funnel Opportunities with no quote yet, any quarter. */
+  quoteMissingCount: number
+}
+
 export interface FunnelGrid {
   employeeId: string
   employeeName: string
@@ -131,6 +180,8 @@ export interface FunnelGrid {
       cover every deal in view, so the two can differ and the screen says so. */
   truncated: boolean
   totals: FunnelTotals
+  /** The quarter strip for this person. */
+  summary: FunnelSummary
 }
 
 // ── what the composer is fed ──
@@ -160,6 +211,9 @@ export interface FunnelDealInput {
   lostToProduct: string | null
   nextStep: string | null
   lines: FunnelLineInput[]
+  ownerName: string
+  /** Newest first. */
+  quotes: { id: string; amount: unknown; quotedOn: Date; reference: string | null; note: string | null; stage: OpportunityStage }[]
 }
 
 export interface FunnelCommentInput {

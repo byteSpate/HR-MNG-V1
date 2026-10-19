@@ -148,13 +148,14 @@ describe("a bad date is a 400, not a 500", () => {
 })
 
 describe("a cell edit", () => {
-  it("cannot clear the offer date, which is what keeps a deal in the funnel", async () => {
-    const res = await request(app)
-      .patch("/api/sales/funnel/cell")
-      .set("Authorization", auth(USER))
-      .send({ opportunityId: ID, edit: { field: "offeredOn", value: null } })
-    expect(res.status).toBe(400)
-    expect(res.body.error).toMatch(/cannot be cleared/)
+  it("cannot change the offer date or the amount: they come from quotes", async () => {
+    for (const edit of [{ field: "offeredOn", value: "2026-09-01" }, { field: "amount", value: "100.00" }]) {
+      const res = await request(app)
+        .patch("/api/sales/funnel/cell")
+        .set("Authorization", auth(USER))
+        .send({ opportunityId: ID, edit })
+      expect(res.status).toBe(400)
+    }
     expect(prisma.opportunity.findFirst).not.toHaveBeenCalled()
   })
 

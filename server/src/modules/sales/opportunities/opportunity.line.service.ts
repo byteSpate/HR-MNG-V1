@@ -18,6 +18,25 @@ const nullable = (value: string | null | undefined) =>
 export const MODULE_FIELDS_REFUSED =
   "A module has a name, what it covers, and a price. OEM, model, part number, quantity, unit price, margin and supplier are for Networking products."
 
+export const TOTAL_IS_WORKED_OUT =
+  "The Total price is worked out from Quantity and Price per unit. Leave it out."
+
+/**
+ * A Networking product's Total price is Quantity × Price per unit (owner,
+ * 2026-10-18), so the three can never disagree. No price yet means no Total,
+ * never 0. No quantity means one item, as for a service.
+ */
+function productTotal(quantity: number | null, unitValue: Prisma.Decimal | null): Prisma.Decimal | null {
+  if (unitValue === null) return null
+  return unitValue.times(quantity ?? 1).toDecimalPlaces(2)
+}
+
+/** A Total typed for a Networking product would fight the one worked out from its price. */
+function assertProductShape(track: string, body: Record<string, unknown>) {
+  if (track === "SOFTWARE_DEVELOPMENT") return
+  if (body.lineValue !== undefined) throw new AppError(400, TOTAL_IS_WORKED_OUT)
+}
+
 const NETWORKING_ONLY = ["oemBrand", "model", "partNo", "quantity", "unitValue", "marginPercent", "supplierId"] as const
 
 /**
@@ -64,6 +83,10 @@ export async function addOpportunityLine(
   return prisma.$transaction(async (tx) => {
     const access = await requireOpportunityAccess(opportunityId, actor, asClient(tx))
     assertModuleShape(access.track, body)
+    assertProductShape(access.track, body)
+    const isModule = access.track === "SOFTWARE_DEVELOPMENT"
+    const quantity = isModule ? null : (body.quantity ?? 1)
+    const unitValue = body.unitValue === undefined ? null : dec(body.unitValue)
     const supplierId = body.supplierId ?? null
     await assertSupplierUsable(tx, supplierId)
     const order = ((await tx.opportunityLine.aggregate({
@@ -72,13 +95,14 @@ export async function addOpportunityLine(
     const created = await tx.opportunityLine.create({
       data: {
         opportunityId, product: body.product, oemBrand: nullable(body.oemBrand),
-        model: nullable(body.model), partNo: nullable(body.partNo), quantity: body.quantity ?? null,
-        unitValue: body.unitValue === undefined ? null : dec(body.unitValue),
-        // Deliberately not quantity × unitValue. Only an explicitly submitted value is stored.
-        lineValue: body.lineValue === undefined ? null : dec(body.lineValue),
+        model: nullable(body.model), partNo: nullable(body.partNo), quantity, unitValue,
+        // A module's Price is typed; a product's Total is worked out.
+        lineValue: isModule
+          ? (body.lineValue === undefined ? null : dec(body.lineValue))
+          : productTotal(quantity, unitValue),
         // No margin typed is "no margin yet", not 0%.
         marginPercent: body.marginPercent === undefined ? null : dec(body.marginPercent),
-        note: nullable(body.note), order, supplierId,
+        description: nullable(body.description), order, supplierId,
       },
       include: SUPPLIER_INCLUDE,
     })
@@ -97,6 +121,8 @@ export async function updateOpportunityLine(
   return prisma.$transaction(async (tx) => {
     const current = await lineForWrite(tx, lineId, actor)
     assertModuleShape(current.opportunity.track, body)
+    assertProductShape(current.opportunity.track, body)
+    const isModule = current.opportunity.track === "SOFTWARE_DEVELOPMENT"
     const data: Record<string, unknown> = {}
     const before: Record<string, unknown> = {}
     const after: Record<string, unknown> = {}
@@ -105,13 +131,13 @@ export async function updateOpportunityLine(
         data[field] = body[field]; before[field] = current[field]; after[field] = body[field]
       }
     }
-    for (const field of ["oemBrand", "model", "partNo", "note"] as const) {
+    for (const field of ["oemBrand", "model", "partNo", "description"] as const) {
       if (body[field] !== undefined) {
         const next = nullable(body[field])
         if (next !== current[field]) { data[field] = next; before[field] = current[field]; after[field] = next }
       }
     }
-    for (const field of ["unitValue", "lineValue"] as const) {
+    for (const field of isModule ? (["lineValue"] as const) : (["unitValue"] as const)) {
       if (body[field] === undefined) continue
       const submitted = body[field]
       const stored = current[field] == null ? null : toMoneyString(dec(current[field]!))
@@ -130,6 +156,20 @@ export async function updateOpportunityLine(
         data[field] = next
         before[field] = stored
         after[field] = toMoneyString(next)
+      }
+    }
+    // On every save of a product, not only when quantity or price change: a
+    // Total typed before the rule existed (2 × 100 saved as 999) is put right
+    // the next time anyone saves the line (review of PR #99).
+    if (!isModule) {
+      const nextQuantity = ("quantity" in data ? data.quantity : current.quantity) as number | null
+      const nextUnit = ("unitValue" in data ? data.unitValue : current.unitValue) as Prisma.Decimal | null
+      const total = productTotal(nextQuantity, nextUnit === null ? null : dec(nextUnit))
+      const storedTotal = current.lineValue == null ? null : dec(current.lineValue)
+      if ((total === null) !== (storedTotal === null) || (total !== null && !total.equals(storedTotal!))) {
+        data.lineValue = total
+        before.lineValue = storedTotal === null ? null : toMoneyString(storedTotal)
+        after.lineValue = total === null ? null : toMoneyString(total)
       }
     }
     if (body.marginPercent !== undefined) {

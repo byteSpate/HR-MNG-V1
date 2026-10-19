@@ -14,13 +14,13 @@ export function presentLine(row: any): OpportunityLineSummary {
     // Worked out here, never stored, so it follows the Total price. Null when
     // the price or the percentage is missing: "no margin yet", never ৳0.
     marginAmount: moneyOrNull(marginAmount(row.lineValue, row.marginPercent)),
-    note: row.note ?? null, order: row.order,
+    description: row.description ?? null, order: row.order,
     supplier: row.supplier ? { id: row.supplier.id, name: row.supplier.name } : null,
     createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(),
   }
 }
 
-export function presentOpportunity(row: any, canManage = true): OpportunitySummary {
+export function presentOpportunity(row: any, canManage = true, canEditQuotes = canManage): OpportunitySummary {
   const rows = row.lines ?? []
   const priced = rows.filter((line: any) => line.lineValue != null)
   const total = sum(priced.map((line: any) => dec(line.lineValue)))
@@ -55,6 +55,12 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     // be handed over twice, and the index says so.
     handedOverFrom: row.handedOverFrom ?? null,
     handedOverTo: row.handedOverTo ?? null,
+    // Every price we sent, newest first (owner, 2026-10-13). Once there is
+    // one, `amount` above is the first one's amount.
+    quotes: (row.quotes ?? []).map((q: any) => ({
+      id: q.id, amount: toMoneyString(dec(q.amount)), quotedOn: q.quotedOn.toISOString().slice(0, 10),
+      reference: q.reference ?? null, note: q.note ?? null, stage: q.stage,
+    })),
     lineTotal: toMoneyString(total), unpricedLineCount: rows.length - priced.length,
     // `priced.length`, not `rows.length`. Lines nobody has costed are not
     // summed as zero, so when none of them carries a value there is no line
@@ -66,5 +72,8 @@ export function presentOpportunity(row: any, canManage = true): OpportunitySumma
     // Decided by the caller, which knows the actor. Defaults to true because
     // every other call site is a write the actor just made.
     canManage,
+    // Edit or Delete the latest quote: the owner or a Sales Admin (owner,
+    // 2026-10-13). Decided by the caller, like canManage.
+    canEditQuotes,
   }
 }

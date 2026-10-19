@@ -6,52 +6,23 @@ import { useQuery } from "@tanstack/react-query"
 import { getAccountHeatmap } from "@/lib/api/sales/heatmap"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
-import type { HeatmapCardView } from "@/lib/api/types"
-import { COLOUR, COLOUR_ORDER, itemTitle } from "@/lib/heatmap"
+import { COLOUR, COLOUR_ORDER } from "@/lib/heatmap"
 import { TONE } from "@/components/dashboard/record-kit"
-import { HeatmapCardDialog } from "@/components/sales/accounts/heatmap-card-dialog"
+import { HeatmapBoard } from "@/components/sales/accounts/heatmap-board"
+import { HeatmapProductRow } from "@/components/sales/accounts/heatmap-product-row"
 import { Panel, PanelError, PanelHeading, PanelSkeleton } from "@/components/sales/shared/panel"
 import { cn } from "@/lib/utils"
 
-/** What a card shows under its name: what they have, or why nothing is shown. */
-function summaryOf(card: HeatmapCardView): string {
-  if (card.items.length === 0) return card.need === "NO_NEED" ? "No need" : card.need === "NEED" ? "Needed, none yet" : "Nothing recorded"
-  const total = card.items.reduce((n, i) => n + i.quantity, 0)
-  const brands = [...new Set(card.items.map((i) => i.brand))]
-  return `${total} · ${brands.length === 1 ? itemTitle(card.items[0]) : brands.slice(0, 2).join(", ") + (brands.length > 2 ? ` +${brands.length - 2}` : "")}`
-}
-
-function HeatmapCard({ card, onOpen }: { card: HeatmapCardView; onOpen: () => void }) {
-  const tone = COLOUR[card.colour]
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={cn(
-        "flex min-h-24 flex-col gap-1 rounded-md border p-3 text-left transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-sm focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none motion-reduce:transition-none motion-reduce:hover:translate-y-0",
-        tone.card,
-      )}
-    >
-      <span className="flex items-start justify-between gap-2">
-        <span className="text-[13px] font-bold [overflow-wrap:anywhere]">{card.title}</span>
-        <span className={cn("mt-1 size-2.5 shrink-0 rounded-full", tone.dot)} aria-hidden />
-      </span>
-      <span className={cn("text-[11.5px] font-bold", tone.text)}>{tone.word}</span>
-      <span className="text-[12px] leading-snug [overflow-wrap:anywhere]">{summaryOf(card)}</span>
-      <span className={`text-[11.5px] leading-snug ${TONE.muted}`}>{card.reason}</span>
-    </button>
-  )
-}
-
 /**
- * The Heatmap tab (owner, 2026-10-07): one card for each kind of IT system the
- * company may have, coloured by the sales chance on it. The server decides the
- * colour and says why in a sentence on each card, so this only draws it. Click
- * a card to see and change what is behind it.
+ * The Heatmap tab (owner, 2026-10-18). At the top, a board: Green products on
+ * the left, Red products on the right. Below it, every product in its group.
+ * Open one to put a ✓ or a ✗ on each part. The colour follows the parts, so
+ * nobody picks it. Grey means nobody has checked yet. Sales Admins change the
+ * list in Sales Settings.
  */
 export function AccountHeatmapPanel({ accountId }: { accountId: string }) {
   const { accessToken } = useSession()
-  const [openKey, setOpenKey] = useState<string | null>(null)
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
   const query = useQuery({
     queryKey: salesKeys.accountHeatmap(accountId),
     queryFn: () => getAccountHeatmap(accessToken!, accountId),
@@ -61,15 +32,38 @@ export function AccountHeatmapPanel({ accountId }: { accountId: string }) {
   if (query.isPending) return <PanelSkeleton />
   if (query.isError) return <PanelError onRetry={() => query.refetch()} />
   const heatmap = query.data
-  const openCard = heatmap.cards.find((c) => c.key === openKey) ?? null
+  const toggle = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  // A card on the board opens its product in the list and brings it into view.
+  const openFromBoard = (id: string) => {
+    setOpenIds((prev) => new Set(prev).add(id))
+    requestAnimationFrame(() => {
+      const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      document.getElementById(`heatmap-product-${id}`)?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "center" })
+    })
+  }
+
+  if (heatmap.groups.length === 0) {
+    return (
+      <Panel>
+        <PanelHeading title="Heatmap" />
+        <p className={`text-[12.5px] ${TONE.muted}`}>The heatmap list is empty. A Sales Admin can add products in Sales Settings.</p>
+      </Panel>
+    )
+  }
 
   return (
     <div className="grid gap-4">
       <Panel>
         <PanelHeading title="Heatmap" />
         <p className={`-mt-1 mb-3 text-[12.5px] leading-relaxed ${TONE.muted}`}>
-          Each card is one kind of IT system. The colour shows if we may sell there. Click a card to see what the
-          company has and to change it.
+          Open a product below. Press ✓ on a part when they do not have it, so we can offer it. Press ✗ when they have it,
+          or we cannot go. The colour of the product follows its parts.
         </p>
         <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]">
           {COLOUR_ORDER.map((c) => (
@@ -82,28 +76,32 @@ export function AccountHeatmapPanel({ accountId }: { accountId: string }) {
         </ul>
       </Panel>
 
+      <Panel>
+        <PanelHeading title="Summary" />
+        <HeatmapBoard accountId={accountId} groups={heatmap.groups} canManage={heatmap.canManage} onOpen={openFromBoard} />
+      </Panel>
+
       {heatmap.groups.map((group) => (
-        <Panel key={group.key}>
+        <Panel key={group.id}>
           <PanelHeading title={group.title} />
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {heatmap.cards
-              .filter((c) => c.group === group.key)
-              .map((card) => (
-                <HeatmapCard key={card.key} card={card} onOpen={() => setOpenKey(card.key)} />
+          {group.products.length === 0 ? (
+            <p className={`text-[12.5px] ${TONE.muted}`}>No products in this group yet.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {group.products.map((product) => (
+                <HeatmapProductRow
+                  key={product.id}
+                  accountId={accountId}
+                  product={product}
+                  canManage={heatmap.canManage}
+                  open={openIds.has(product.id)}
+                  onToggle={() => toggle(product.id)}
+                />
               ))}
-          </div>
+            </ul>
+          )}
         </Panel>
       ))}
-
-      {openCard ? (
-        <HeatmapCardDialog
-          accountId={accountId}
-          card={openCard}
-          canManage={heatmap.canManage}
-          open
-          onOpenChange={(next) => !next && setOpenKey(null)}
-        />
-      ) : null}
     </div>
   )
 }

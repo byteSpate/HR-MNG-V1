@@ -129,7 +129,7 @@ export async function listProjects(query: ListProjectQuery, actor: AccessTokenPa
       ...(query.track ? { opportunity: { track: query.track } } : {}),
     },
     select: {
-      id: true, serial: true, name: true, status: true, dueOn: true, updatedAt: true,
+      id: true, serial: true, name: true, status: true, dueOn: true, nextRenewalOn: true, updatedAt: true,
       salesAccount: { select: { name: true } },
       opportunity: { select: { serial: true, track: true } },
       manager: { select: { fullName: true } },
@@ -157,6 +157,7 @@ export async function listProjects(query: ListProjectQuery, actor: AccessTokenPa
       id: r.id, serial: r.serial, name: r.name, salesAccountName: r.salesAccount.name,
       opportunitySerial: r.opportunity.serial, track: r.opportunity.track, managerName: r.manager.fullName, status: r.status,
       dueOn: r.dueOn ? r.dueOn.toISOString().slice(0, 10) : null,
+      nextRenewalOn: r.nextRenewalOn ? r.nextRenewalOn.toISOString().slice(0, 10) : null,
       milestonesDone: r.milestones.filter((m) => m.doneAt !== null).length,
       milestonesTotal: r.milestones.length,
       health: healthOf(r, r.tasks, today),
@@ -220,6 +221,7 @@ export async function updateProject(id: string, body: UpdateProjectBody, actor: 
     set("managerEmployeeId", body.managerEmployeeId, row.managerEmployeeId)
     if (body.startOn !== undefined) set("startOn", toDay(body.startOn), row.startOn)
     if (body.dueOn !== undefined) set("dueOn", toDay(body.dueOn), row.dueOn)
+    if (body.nextRenewalOn !== undefined) set("nextRenewalOn", toDay(body.nextRenewalOn), row.nextRenewalOn)
     set("priority", body.priority, row.priority)
     if (body.budget !== undefined) set("budget", body.budget === null ? null : dec(body.budget), row.budget)
     const start = ("startOn" in data ? data.startOn : row.startOn) as Date | null

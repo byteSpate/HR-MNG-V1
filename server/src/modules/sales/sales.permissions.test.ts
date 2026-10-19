@@ -48,7 +48,7 @@ describe("the catalog", () => {
     expect([...off].sort()).toEqual(
       ["account.create", "target.set", "team.dashboard", "team.funnel", "team.weekly"].sort()
     )
-    expect(SALES_PERMISSIONS.filter((p) => p.phase === 1)).toHaveLength(20)
+    expect(SALES_PERMISSIONS.filter((p) => p.phase === 1)).toHaveLength(21)
   })
 })
 

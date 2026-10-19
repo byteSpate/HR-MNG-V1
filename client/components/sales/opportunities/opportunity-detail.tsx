@@ -27,11 +27,13 @@ import { TONE, toMessage } from "@/components/dashboard/record-kit"
 import { OPPORTUNITY_STATUS_LABEL, OPPORTUNITY_STATUS_TONE, stageSentence, taka } from "@/components/sales/shared/sales-shared"
 import { MeetingsPanel, TasksPanel } from "@/components/sales/shared/plan-panels"
 import { MoneySection } from "@/components/money/money-section"
+import { PaymentsTable } from "@/components/sales/payments/payments-table"
 import { CommentPanel } from "@/components/sales/shared/comment-panel"
 import { OpportunityFormDialog } from "@/components/sales/opportunities/opportunity-form-dialog"
 import { HandOverDialog } from "@/components/sales/opportunities/handover-dialog"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
 import { WorkflowPanel } from "@/components/sales/opportunities/workflow-panel"
+import { QuotesPanel } from "@/components/sales/opportunities/quotes-panel"
 import { StatusPanel } from "@/components/sales/opportunities/status-panel"
 import { LinesPanel, marginWords, onDate } from "@/components/sales/opportunities/lines-panel"
 import { OpportunityProjectPanel } from "@/components/sales/opportunities/opportunity-project-panel"
@@ -106,7 +108,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
           <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className={`font-mono text-[12px] ${TONE.muted}`}>{deal.serial}</span>
-              <h1 className="font-heading text-[21px] font-bold tracking-tight">{deal.name}</h1>
+              <h1 className="font-heading text-[22px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">{deal.name}</h1>
               <Tag
                 label={OPPORTUNITY_STATUS_LABEL[deal.status]}
                 tone={OPPORTUNITY_STATUS_TONE[deal.status]}
@@ -218,10 +220,29 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
           <RecordTabs<DealTab>
             initialTab={initialTab}
             tabs={[
-              { value: "workflow", icon: RiRouteLine, label: "Workflow", content: <WorkflowPanel deal={deal} canManage={canManage} canChangeStage={can("opportunity.change_stage")} /> },
+              { value: "workflow", icon: RiRouteLine, label: "Workflow", content: (
+                <div className="grid gap-4">
+                  <WorkflowPanel deal={deal} canManage={canManage} canChangeStage={can("opportunity.change_stage")} canSkipQuote={can("opportunity.skip_quote")} />
+                  <QuotesPanel deal={deal} canManage={canManage} />
+                </div>
+              ) },
               { value: "status", icon: RiFlagLine, label: "Status", content: <StatusPanel deal={deal} canManage={canManage && can("opportunity.change_status")} isSalesAdmin={isSalesAdmin} /> },
               { value: "products", icon: RiBox3Line, label: deal.track === "SOFTWARE_DEVELOPMENT" ? "Modules" : "Products", content: <LinesPanel deal={deal} canManage={canManage && can("opportunity.edit_products")} /> },
-              ...(deal.status === "WON" ? [{ value: "money" as const, icon: RiMoneyDollarCircleLine, label: "Money", content: <MoneySection opportunityId={deal.id} /> }] : []),
+              // "Payments", once "Money" (owner, 2026-10-18). Sales Admins and
+              // Super Admins also get the payments table above the money section.
+              ...(deal.status === "WON"
+                ? [{
+                    value: "money" as const,
+                    icon: RiMoneyDollarCircleLine,
+                    label: "Payments",
+                    content: (
+                      <div className="grid gap-4">
+                        {isSalesAdmin ? <PaymentsTable filter={{ opportunityId: deal.id }} /> : null}
+                        <MoneySection opportunityId={deal.id} />
+                      </div>
+                    ),
+                  }]
+                : []),
               { value: "project", icon: RiFolder3Line, label: "Project", content: <OpportunityProjectPanel deal={deal} canStart={canStart} /> },
               { value: "documents", icon: RiFileTextLine, label: "Documents", content: <DocumentsPanel deal={deal} canManage={canManage} canRemoveLinks={can("opportunity.remove_document")} /> },
               { value: "meetings", icon: RiCalendar2Line, label: "Meetings", content: <MeetingsPanel accountId={deal.salesAccountId} opportunityId={deal.id} canManage={canManage} /> },

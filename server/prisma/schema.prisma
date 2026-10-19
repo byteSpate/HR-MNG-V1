@@ -2719,8 +2719,8 @@ model SalesAccount {
   meetings             SalesMeeting[]
   tasks                SalesTask[]
   answers              SalesAccountAnswer[]
-  heatmapNeeds         SalesAccountHeatmapNeed[]
-  heatmapItems         SalesAccountHeatmapItem[]
+  heatmapMarks         SalesAccountHeatmapMark[]
+  heatmapNotes         SalesAccountHeatmapNote[]
   weeklyNotes          WeeklyAccountNote[]
   /// The delivery work on this account's Won Opportunities (ADR 0005).
   projects             Project[]
@@ -2775,55 +2775,94 @@ model SalesAccountAnswer {
   @@index([salesAccountId])
 }
 
-/// "Do they need it?" for one card on an account's Heatmap tab (owner,
-/// 2026-10-07). No row means "Not asked yet". The card list lives in code
-/// (`heatmap.cards.ts`), so `card` is its key, like "switch".
-enum HeatmapNeed {
-  NEED
-  NO_NEED
+/// The Heatmap list (owner, 2026-10-13): groups hold products, products hold
+/// parts. Sales Admins edit it in Sales Settings. Something in use is hidden,
+/// never deleted, so an account's answers are never lost. `position` orders
+/// siblings; Move up / Move down swaps two neighbours.
+model HeatmapGroup {
+  id        String           @id @default(uuid())
+  title     String
+  position  Int
+  hidden    Boolean          @default(false)
+  products  HeatmapProduct[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
 
-model SalesAccountHeatmapNeed {
-  id             String       @id @default(uuid())
-  salesAccountId String
-  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-  card           String
-  need           HeatmapNeed
-  /// Why there is no need. Kept only with NO_NEED.
-  reason         String?
-  /// The user id that set it last.
-  updatedBy      String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+model HeatmapProduct {
+  id        String                    @id @default(uuid())
+  groupId   String
+  group     HeatmapGroup              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  title     String
+  position  Int
+  hidden    Boolean                   @default(false)
+  parts     HeatmapPart[]
+  notes     SalesAccountHeatmapNote[]
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
 
-  @@unique([salesAccountId, card])
+  @@index([groupId])
 }
 
-/// One thing the company has on a Heatmap card, like "24 Cisco switches".
-/// The dates are calendar days. `details` holds the card's own fields as
-/// short text, checked against the card list in code.
-model SalesAccountHeatmapItem {
-  id             String       @id @default(uuid())
-  salesAccountId String
-  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-  card           String
-  brand          String
-  model          String?
-  quantity       Int
-  site           String?
-  boughtFrom     String?
-  boughtOn       DateTime?    @db.Date
-  supportEndsOn  DateTime?    @db.Date
-  endOfLifeOn    DateTime?    @db.Date
-  supportBy      String?
-  notes          String?
-  details        Json         @default("{}")
-  createdBy      String
-  updatedBy      String
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+model HeatmapPart {
+  id        String                     @id @default(uuid())
+  productId String
+  product   HeatmapProduct             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title     String
+  /// The short grey line under the part, like "Up to 3 Gbps".
+  note      String?
+  position  Int
+  hidden    Boolean                    @default(false)
+  marks     SalesAccountHeatmapMark[]
+  createdAt DateTime                   @default(now())
+  updatedAt DateTime                   @updatedAt
 
-  @@index([salesAccountId, card])
+  @@index([productId])
+}
+
+/// Picked by a person, never by dates. No row means Grey (not picked).
+/// A tick or a cross on one part of a product.
+enum HeatmapMarkState {
+  /// Tick: they do not have it, so we can offer it.
+  GREEN
+  /// Cross: they already have it, or we cannot go there.
+  RED
+}
+
+/// One tick or cross for one part. No row means nobody has checked yet. A
+/// product's colour is worked out from its parts (`heatmap.colour.ts`), never
+/// stored.
+model SalesAccountHeatmapMark {
+  id             String           @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount     @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  partId         String
+  /// Restrict: a part with marks is hidden, not deleted.
+  part           HeatmapPart      @relation(fields: [partId], references: [id], onDelete: Restrict)
+  state          HeatmapMarkState
+  updatedBy      String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([salesAccountId, partId])
+  @@index([partId])
+}
+
+/// The optional short note on a Red product. Removed when the product stops
+/// being Red.
+model SalesAccountHeatmapNote {
+  id             String          @id @default(uuid())
+  salesAccountId String
+  salesAccount   SalesAccount    @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
+  productId      String
+  product        HeatmapProduct  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  note           String
+  updatedBy      String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([salesAccountId, productId])
+  @@index([productId])
 }
 
 enum SalesContactStatus {
@@ -3104,6 +3143,8 @@ model Opportunity {
   updatedAt      DateTime @updatedAt
 
   lines    OpportunityLine[]
+  /// Every price we sent (owner, 2026-10-13). See OpportunityQuote.
+  quotes   OpportunityQuote[]
   /// Meetings about this deal (SalesMeeting.opportunityId).
   meetings SalesMeeting[]    @relation("MeetingOpportunity")
   tasks    SalesTask[]
@@ -3137,6 +3178,33 @@ model Opportunity {
 
 /// Products, models, quantities and values. An Opportunity may hold several,
 /// which is why one text field could not carry it.
+/// One price we sent the customer (owner, 2026-10-13). The Opportunity's
+/// `amount` is always the latest quote's amount once one exists; the quote
+/// service keeps the two in step inside one transaction. Only the latest
+/// quote can be edited or deleted; older ones are history. "Latest" is the
+/// highest `quotedOn`, then the latest `createdAt`.
+model OpportunityQuote {
+  id            String           @id @default(uuid())
+  opportunityId String
+  opportunity   Opportunity      @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  amount        Decimal          @db.Decimal(14, 2)
+  /// Date only, at UTC midnight. Never in the future.
+  quotedOn      DateTime         @db.Date
+  /// Our own quote number, like "BS-Q-0012". Free text.
+  reference     String?
+  note          String?
+  /// The stage the Opportunity was at when this quote was given.
+  stage         OpportunityStage
+  createdBy     String
+  updatedBy     String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  documentLinks OpportunityDocumentLink[]
+
+  @@index([opportunityId, quotedOn])
+}
+
 model OpportunityLine {
   id            String      @id @default(uuid())
   opportunityId String
@@ -3163,7 +3231,9 @@ model OpportunityLine {
   /// worked out when read (sales.margin.ts), so it follows the Total price;
   /// the deal's margin is these added up. Null is "no margin yet", never 0%.
   marginPercent Decimal? @db.Decimal(5, 2)
-  note          String?
+  /// "Description" on screen (owner, 2026-10-18). The column keeps its old
+  /// name, so no data moved when the field was renamed.
+  description   String?  @map("note")
   order         Int      @default(0)
 
   /// Who we will buy this from (spec: Sales Hub changes). Optional while the
@@ -3211,6 +3281,8 @@ model Project {
   /// Date only, UTC midnight.
   startOn  DateTime?
   dueOn    DateTime?
+  /// Optional, for projects that are subscription only. Date only, UTC midnight.
+  nextRenewalOn DateTime?
   priority SalesTaskPriority @default(NORMAL)
   /// Null is "no budget", never ৳0.
   budget   Decimal?          @db.Decimal(14, 2)
@@ -3287,11 +3359,24 @@ model OpportunityDocumentLink {
   name          String
   url           String
   stage         OpportunityStage
+  /// COSTING_BOQ links sit in the "Costing and BOQ link" box and only Sales
+  /// Admins and Super Admins can open them (owner, 2026-10-18).
+  kind          DocumentLinkKind @default(GENERAL)
+  /// The quote this costing or BOQ belongs to. SetNull: removing a quote
+  /// keeps the link.
+  quoteId       String?
+  quote         OpportunityQuote? @relation(fields: [quoteId], references: [id], onDelete: SetNull)
   /// The user id that added it.
   createdBy     String
   createdAt     DateTime         @default(now())
 
   @@index([opportunityId, createdAt])
+  @@index([quoteId])
+}
+
+enum DocumentLinkKind {
+  GENERAL
+  COSTING_BOQ
 }
 
 /// The same rows render as **Remarks** on a Sales Account and **Comments** on

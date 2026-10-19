@@ -33,8 +33,15 @@ const deal = (over: Partial<FunnelDealInput> = {}): FunnelDealInput => ({
   lostToProduct: null,
   nextStep: "Chase the CFO",
   lines: [line()],
+  ownerName: "Rahim Uddin",
+  quotes: [],
   ...over,
 })
+
+const SUMMARY = {
+  quarterLabel: "Q4 2026", target: null, won: "0.00", gap: null, openQuoted: null,
+  coverage: null, targetMet: false, quoteMissingCount: 0,
+}
 
 const grid = (
   over: {
@@ -49,6 +56,8 @@ const grid = (
     deals: over.deals ?? [deal()],
     comments: over.comments ?? [],
     closeChanges: over.closeChanges ?? [],
+    today: day("2026-10-13"),
+    summary: SUMMARY,
   })
 
 describe("summariseLines", () => {
@@ -333,6 +342,8 @@ describe("composeFunnel: two totals, both labelled", () => {
       deals: [deal()],
       comments: [],
       closeChanges: [],
+      today: day("2026-10-13"),
+      summary: SUMMARY,
       totals,
       truncated: true,
     })
@@ -363,5 +374,39 @@ describe("composeFunnel: two totals, both labelled", () => {
     const result = grid()
     expect(result.employeeId).toBe("emp-1")
     expect(result.employeeName).toBe("Rahim Uddin")
+  })
+})
+
+describe("quotes, quarter and days on a row (owner, 2026-10-13)", () => {
+  const q = (id: string, amount: string, on: string) => ({
+    id, amount, quotedOn: day(on), reference: id === "q-2" ? "BS-Q-0012" : null, note: null, stage: "COMMERCIAL_NEGOTIATION" as const,
+  })
+
+  it("shows the latest quote, every quote, and how many times the quote changed", () => {
+    const row = grid({ deals: [deal({ quotes: [q("q-2", "1150000.00", "2026-10-08"), q("q-1", "1200000.00", "2026-10-03")] })] }).rows[0]
+    expect(row.latestQuote).toEqual({ amount: "1150000.00", quotedOn: "2026-10-08", reference: "BS-Q-0012" })
+    expect(row.quotes.map((x) => x.id)).toEqual(["q-2", "q-1"])
+    expect(row).toMatchObject({ quoteCount: 2, quoteChanges: 1, quoteMissing: false })
+  })
+
+  it("marks a row with no quote as Quote missing", () => {
+    expect(grid().rows[0]).toMatchObject({ latestQuote: null, quoteCount: 0, quoteChanges: 0, quoteMissing: true })
+  })
+
+  it("puts the row in the quarter of its closing date, and says how many days are left", () => {
+    expect(grid().rows[0]).toMatchObject({ quarterLabel: "Q4 2026", daysLeft: 2 })
+    expect(grid({ deals: [deal({ expectedCloseDate: day("2026-10-08") })] }).rows[0].daysLeft).toBe(-5)
+    expect(grid({ deals: [deal({ expectedCloseDate: null })] }).rows[0]).toMatchObject({ quarterLabel: null, daysLeft: null })
+  })
+
+  it("counts days since the latest quote, or since the Funnel date when there is none", () => {
+    expect(grid({ deals: [deal({ quotes: [q("q-1", "5.00", "2026-10-03")] })] }).rows[0].daysSinceQuoted).toBe(10)
+    expect(grid().rows[0].daysSinceQuoted).toBe(38)
+  })
+
+  it("names the owner and passes the strip through", () => {
+    const g = grid()
+    expect(g.rows[0].ownerName).toBe("Rahim Uddin")
+    expect(g.summary).toEqual(SUMMARY)
   })
 })

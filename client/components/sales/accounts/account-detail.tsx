@@ -19,6 +19,7 @@ import {
   RiMapPinLine,
   RiMessage2Line,
   RiTaskLine,
+  RiMoneyDollarCircleLine,
 } from "@remixicon/react"
 
 import { getSalesAccount } from "@/lib/api/sales/accounts"
@@ -29,6 +30,7 @@ import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "@/components/sales/sh
 import { MeetingsPanel, TasksPanel } from "@/components/sales/shared/plan-panels"
 import { Button } from "@/components/ui/button"
 import { AccountHeatmapPanel } from "@/components/sales/accounts/account-heatmap-panel"
+import { PaymentsTable } from "@/components/sales/payments/payments-table"
 import { AccountEditDialog } from "@/components/sales/accounts/account-edit-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RecordTabs } from "@/components/sales/shared/record-tabs"
@@ -200,25 +202,6 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
           tabs={[
             { value: "about", icon: RiInformationLine, label: "About", content: <AccountAboutPanel account={accountQuery.data} /> },
             {
-              value: "remarks",
-              icon: RiMessage2Line,
-              label: "Remarks",
-              // "Remarks" here and "Comments" on an Opportunity, from one
-              // component. That is the business's own vocabulary and the two
-              // labels must not be made consistent with each other.
-              content: (
-                <CommentPanel
-                  entity="SALES_ACCOUNT"
-                  entityId={accountQuery.data.id}
-                  label="Remarks"
-                  // Customer feedback is offered on an Opportunity only: it is
-                  // always about a specific Opportunity.
-                  kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
-                  canWrite={accountQuery.data.canManage}
-                />
-              ),
-            },
-            {
               value: "contacts",
               icon: RiContactsLine,
               label: "Contacts",
@@ -233,7 +216,11 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
               ),
             },
             { value: "opportunities", icon: RiFlashlightLine, label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
-            { value: "projects", icon: RiFolder3Line, label: "Projects", content: <AccountProjectsPanel accountId={accountId} /> },
+            { value: "projects", icon: RiFolder3Line, label: "Post Activities", content: <AccountProjectsPanel accountId={accountId} /> },
+            // Sales Admins and Super Admins only (owner, 2026-10-18).
+            ...(isSalesAdmin
+              ? [{ value: "payments", icon: RiMoneyDollarCircleLine, label: "Payments", content: <PaymentsTable filter={{ accountId }} showOpportunity /> }]
+              : []),
             { value: "heatmap", icon: RiGridLine, label: "Heatmap", content: <AccountHeatmapPanel accountId={accountId} /> },
             {
               value: "timeline",
@@ -252,6 +239,26 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
             },
             { value: "meetings", icon: RiCalendar2Line, label: "Meetings", content: <MeetingsPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
             { value: "tasks", icon: RiTaskLine, label: "Tasks", content: <TasksPanel accountId={accountId} canManage={accountQuery.data.canManage} /> },
+            // Last, by the owner's wish (2026-10-18).
+            {
+              value: "remarks",
+              icon: RiMessage2Line,
+              label: "Remarks",
+              // "Remarks" here and "Comments" on an Opportunity, from one
+              // component. That is the business's own vocabulary and the two
+              // labels must not be made consistent with each other.
+              content: (
+                <CommentPanel
+                  entity="SALES_ACCOUNT"
+                  entityId={accountQuery.data.id}
+                  label="Remarks"
+                  // Customer feedback is offered on an Opportunity only: it is
+                  // always about a specific Opportunity.
+                  kinds={isSalesAdmin ? ["GENERAL", "MANAGEMENT_NOTE"] : ["GENERAL"]}
+                  canWrite={accountQuery.data.canManage}
+                />
+              ),
+            },
           ]}
         />
       ) : null}

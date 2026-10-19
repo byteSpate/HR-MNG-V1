@@ -43,6 +43,8 @@ const FIELD_LABEL: Record<string, string> = {
   order: "Position",
   track: "Track",
   amount: "Opportunity value",
+  quote: "Quote",
+  offeredOn: "Funnel date",
   marginPercent: "Margin (%)",
   expectedCloseDate: "Expected close date",
   oemAccountManager: "OEM account manager",

@@ -19,7 +19,7 @@ import { useSession } from "@/lib/auth/session-context"
 import type { SalesMeetingSummary, SalesMinutesStatus } from "@/lib/api/types"
 import type { TableCell } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/dashboard/page-header"
-import { PanelAlert, PanelTable, RowActions, TONE, toMessage } from "@/components/dashboard/record-kit"
+import { PanelAlert, PanelTable, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { useStartMinutes } from "@/components/sales/meetings/meeting-dialogs"
 import {
   MINUTES_ICON,
@@ -77,7 +77,8 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
     { node: <span className="block truncate font-semibold">{item.meetingTitle}</span> },
     {
       node: (
-        <Link href={`/sales/accounts/${item.salesAccountId}`} className="block truncate hover:underline">
+        // Above the whole-row link, so it still opens the account.
+        <Link href={`/sales/accounts/${item.salesAccountId}`} className="relative z-10 block truncate hover:underline">
           {item.salesAccountName}
         </Link>
       ),
@@ -96,9 +97,6 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
           ? `Sent ${shortDay(item.lastSentAt)}`
           : MINUTES_STATUS_LABEL[item.status],
       tone: MINUTES_STATUS_TONE[item.status],
-    },
-    {
-      node: <RowActions actions={[{ kind: "link", label: "Open", href: `/sales/meetings/minutes/${item.id}` }]} />,
     },
   ])
 
@@ -157,9 +155,11 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
       ) : null}
 
       <PanelTable
-        cols="110px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 150px 90px"
-        headers={["Meeting date", "Meeting", "Account", "Prepared by", "Status", ""]}
+        cols="110px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 150px"
+        headers={["Meeting date", "Meeting", "Account", "Prepared by", "Status"]}
         rows={rows}
+        // A click anywhere on a row opens the minutes (owner, 2026-10-18).
+        rowHrefs={(list.data?.items ?? []).map((item) => `/sales/meetings/minutes/${item.id}`)}
         isLoading={isLoading}
         isError={list.isError}
         onRetry={() => list.refetch()}

@@ -217,7 +217,13 @@ export function PanelTable({
   onEmptyAction,
   title = "",
   emptyIcon: EmptyIcon,
+  rowHrefs,
+  headerNodes,
 }: {
+  /** Rich headers for the wide table, like sort buttons. */
+  headerNodes?: ReactNode[]
+  /** One link per row. Given, a click anywhere on a row opens it. */
+  rowHrefs?: (string | null)[]
   cols: string
   headers: string[]
   rows: TableCell[][]
@@ -299,7 +305,7 @@ export function PanelTable({
     )
   }
 
-  return <DataTable title={title} action="" cols={cols} headers={headers} rows={rows} />
+  return <DataTable title={title} action="" cols={cols} headers={headers} rows={rows} rowHrefs={rowHrefs} headerNodes={headerNodes} />
 }
 
 /** The bordered white surface every panel state is drawn on. */
@@ -377,7 +383,8 @@ const ROW_ACTION =
  */
 export function RowActions({ actions }: { actions: RowAction[] }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-0.5">
+    // Above a whole-row link (DataTable `rowHrefs`), so these keep their own job.
+    <div className="relative z-10 flex flex-wrap items-center justify-end gap-0.5">
       {actions.map((action) => {
         if (action.kind === "link") {
           return (
@@ -681,12 +688,15 @@ export function ConfirmDialog({
 export function ConfirmDeleteDialog({
   open,
   what,
+  detail,
   pending,
   onCancel,
   onConfirm,
 }: {
   open: boolean
   what: string
+  /** One more sentence, said before the usual warning. Like "This also deletes everything inside it." */
+  detail?: string | null
   pending: boolean
   onCancel: () => void
   onConfirm: () => void
@@ -700,7 +710,7 @@ export function ConfirmDeleteDialog({
           </span>
           <AlertDialogTitle>Delete {what}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This cannot be undone. If anything still references it, the delete is refused and
+            {detail ? `${detail} ` : null}This cannot be undone. If anything still references it, the delete is refused and
             nothing changes.
           </AlertDialogDescription>
         </AlertDialogHeader>

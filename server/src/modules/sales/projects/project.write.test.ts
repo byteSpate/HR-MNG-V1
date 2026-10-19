@@ -23,6 +23,7 @@ vi.mock("../../dealMoney/dealMoney.cost", () => ({ dealCostLineWhere: vi.fn().mo
 import prisma from "../../../config/prisma"
 import { Prisma } from "../../../generated/prisma/client"
 import { changeProjectStatus, setProjectTeam, updateProject } from "./project.service"
+import { updateProjectSchema } from "./project.validators"
 import { addMilestone, removeMilestone, tickLine, untickLine, updateMilestone } from "./project.milestone.service"
 
 const USER = { sub: "user-1", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
@@ -32,7 +33,7 @@ const d = (v: string) => new Prisma.Decimal(v)
 
 const projectRow = (o: Record<string, unknown> = {}) => ({
   id: "prj-1", serial: "BS-PRJ-00001", name: "Core refresh", opportunityId: "opp-1", salesAccountId: "acc-1",
-  managerEmployeeId: "emp-1", startOn: null, dueOn: null, priority: "NORMAL", budget: null,
+  managerEmployeeId: "emp-1", startOn: null, dueOn: null, nextRenewalOn: null, priority: "NORMAL", budget: null,
   status: "NOT_STARTED", statusReason: null, completedAt: null, createdBy: "user-1", createdAt: NOW, updatedAt: NOW,
   manager: { id: "emp-1", fullName: "Rahim" },
   salesAccount: { id: "acc-1", name: "Rising Group", ownerEmployeeId: "emp-1", assignments: [{ employeeId: "emp-2" }] },
@@ -281,5 +282,35 @@ describe("project writes", () => {
     vi.mocked(prisma.projectMilestone.findUnique).mockResolvedValue({ id: "m1", projectId: "prj-1", title: "Delivery" } as any)
     await expect(removeMilestone("m1", USER)).rejects.toThrow("Only the Project Manager or a Sales Admin can change this Project.")
     expect(prisma.projectMilestone.delete).not.toHaveBeenCalled()
+  })
+})
+
+describe("next renewal date (owner, 2026-10-18)", () => {
+  it("takes a date or null, and only a date", () => {
+    expect(updateProjectSchema.parse({ nextRenewalOn: "2027-01-31" })).toEqual({ nextRenewalOn: "2027-01-31" })
+    expect(updateProjectSchema.parse({ nextRenewalOn: null })).toEqual({ nextRenewalOn: null })
+    expect(updateProjectSchema.safeParse({ nextRenewalOn: "next year" }).success).toBe(false)
+  })
+
+  it("saves the date at UTC midnight and writes History", async () => {
+    await updateProject("prj-1", { nextRenewalOn: "2027-01-31" }, USER)
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: { id: "prj-1" }, data: { nextRenewalOn: new Date("2027-01-31T00:00:00.000Z") },
+    })
+    expect(vi.mocked(prisma.auditLog.create).mock.calls[0][0].data).toMatchObject({
+      before: { nextRenewalOn: null }, after: { nextRenewalOn: new Date("2027-01-31T00:00:00.000Z") },
+    })
+  })
+
+  it("clears it with null", async () => {
+    vi.mocked(prisma.project.findFirst).mockResolvedValue(projectRow({ nextRenewalOn: new Date("2027-01-31T00:00:00.000Z") }) as any)
+    await updateProject("prj-1", { nextRenewalOn: null }, USER)
+    expect(prisma.project.update).toHaveBeenCalledWith({ where: { id: "prj-1" }, data: { nextRenewalOn: null } })
+  })
+
+  it("shows the date on the project", async () => {
+    vi.mocked(prisma.project.findFirst).mockResolvedValue(projectRow({ nextRenewalOn: new Date("2027-01-31T00:00:00.000Z") }) as any)
+    const p = await updateProject("prj-1", { name: "Core refresh 2" }, USER)
+    expect(p.nextRenewalOn).toBe("2027-01-31")
   })
 })

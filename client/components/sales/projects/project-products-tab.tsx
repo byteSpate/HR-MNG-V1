@@ -49,7 +49,7 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
       ),
     },
     ...(modules
-      ? [{ node: <span className={l.note ? undefined : TONE.muted}>{l.note ?? "Not set"}</span> }]
+      ? [{ node: <span className={l.description ? undefined : TONE.muted}>{l.description ?? "Not set"}</span> }]
       : [
           { node: <span className={l.oemBrand ? undefined : TONE.muted}>{l.oemBrand ?? "Not set"}</span> },
           { node: <span className={l.quantity === null ? TONE.muted : undefined}>{l.quantity ?? "Not set"}</span> },

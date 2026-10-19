@@ -5,8 +5,11 @@ vi.mock("../../../config/prisma", () => ({
     $transaction: vi.fn(),
     user: { findUnique: vi.fn(), findMany: vi.fn() },
     salesAccount: { findUnique: vi.fn() },
-    salesAccountHeatmapNeed: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(), delete: vi.fn() },
-    salesAccountHeatmapItem: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    heatmapGroup: { findMany: vi.fn() },
+    heatmapProduct: { findFirst: vi.fn() },
+    heatmapPart: { findFirst: vi.fn() },
+    salesAccountHeatmapMark: { findMany: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() },
+    salesAccountHeatmapNote: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }))
@@ -14,195 +17,233 @@ vi.mock("../sales.access", async () => ({
   ...(await vi.importActual<object>("../sales.access")),
   requireAccountVisible: vi.fn(),
 }))
-vi.mock("../../attendance/attendance.time", () => ({ officeToday: () => new Date("2026-10-07T00:00:00.000Z") }))
 
 import prisma from "../../../config/prisma"
-import { requireAccountVisible } from "../sales.access"
-import {
-  addHeatmapItem, getHeatmap, removeHeatmapItem, setCardNeed, updateHeatmapItem,
-} from "./heatmap.service"
+import { getHeatmap, setPartMark, setProductMarks, setProductNote } from "./heatmap.service"
 
 const ID = "11111111-1111-4111-8111-111111111111"
-const ITEM_ID = "22222222-2222-4222-8222-222222222222"
 const OWNER = { sub: "user-1", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
 const OTHER = { sub: "user-3", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
 
-const d = (s: string) => new Date(`${s}T00:00:00.000Z`)
-const itemRow = (o: Record<string, unknown> = {}) => ({
-  id: ITEM_ID, salesAccountId: ID, card: "switch", brand: "Cisco", model: "C9200-24P", quantity: 24,
-  site: "Head office", boughtFrom: "Smart Technologies", boughtOn: d("2022-01-10"), supportEndsOn: d("2027-03-03"),
-  endOfLifeOn: null, supportBy: null, notes: null, details: { ports: "24", poe: "YES" },
-  createdBy: "user-1", updatedBy: "user-1",
-  createdAt: new Date("2026-09-20T00:00:00.000Z"), updatedAt: new Date("2026-09-21T00:00:00.000Z"), ...o,
-})
-const ITEM_BODY = {
-  brand: "HP", model: null, quantity: 6, site: null, boughtFrom: null, boughtOn: null,
-  supportEndsOn: "2029-01-01", endOfLifeOn: null, supportBy: null, notes: null, details: { managed: "YES" },
+// The service asks Prisma for visible rows only (`where: { hidden: false }`),
+// so the mock returns what Prisma would: no hidden rows.
+const ROUTER = {
+  id: "prod-router", title: "Router",
+  parts: [{ id: "p-small", title: "Small range router", note: "Up to 1 Gbps." }, { id: "p-mid", title: "Mid range router", note: null }],
 }
+const LIST = [{ id: "g-net", title: "Network", products: [ROUTER] }]
 const auditData = () => vi.mocked(prisma.auditLog.create).mock.calls[0][0].data as any
+const mark = (partId: string, state: "GREEN" | "RED", at = "2026-10-18T05:00:00Z") =>
+  ({ partId, state, updatedBy: "user-1", updatedAt: new Date(at) })
 
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
-  // user-1 is the owner (emp-1). Anyone else is an employee with no part in the account.
   vi.mocked(prisma.user.findUnique).mockImplementation((async (args: any) =>
     ({ employee: { id: args.where.id === "user-1" ? "emp-1" : "emp-9" } })) as any)
-  vi.mocked(prisma.user.findMany).mockResolvedValue([
-    { id: "user-1", displayName: null, email: "a@b.c", employee: { fullName: "Rahim" } },
-  ] as any)
+  vi.mocked(prisma.user.findMany).mockResolvedValue([{ id: "user-1", displayName: null, email: "a@b.c", employee: { fullName: "Rahim" } }] as any)
   vi.mocked(prisma.salesAccount.findUnique).mockResolvedValue({ ownerEmployeeId: "emp-1", assignments: [] } as any)
-  vi.mocked(prisma.salesAccountHeatmapNeed.findMany).mockResolvedValue([] as any)
-  vi.mocked(prisma.salesAccountHeatmapNeed.findUnique).mockResolvedValue(null)
-  vi.mocked(prisma.salesAccountHeatmapItem.findMany).mockResolvedValue([] as any)
-  vi.mocked(prisma.salesAccountHeatmapItem.findFirst).mockResolvedValue(itemRow() as any)
+  vi.mocked(prisma.heatmapGroup.findMany).mockResolvedValue(LIST as any)
+  vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([] as any)
+  vi.mocked(prisma.salesAccountHeatmapNote.findMany).mockResolvedValue([] as any)
+  vi.mocked(prisma.salesAccountHeatmapNote.findUnique).mockResolvedValue(null)
+  vi.mocked(prisma.heatmapProduct.findFirst).mockResolvedValue({ id: "prod-router", title: "Router", parts: [{ id: "p-small" }, { id: "p-mid" }] } as any)
+  vi.mocked(prisma.heatmapPart.findFirst).mockResolvedValue({
+    id: "p-mid", title: "Mid range router",
+    product: { id: "prod-router", title: "Router", parts: [{ id: "p-small" }, { id: "p-mid" }] },
+  } as any)
 })
 
 describe("reading the heatmap", () => {
-  it("checks the person may see the account first", async () => {
-    await getHeatmap(ID, OWNER)
-    expect(requireAccountVisible).toHaveBeenCalledWith(ID, OWNER)
-  })
-
-  it("shows all 14 cards, grey when nothing is known, with the counts", async () => {
+  it("asks for visible rows only and shows Grey when nothing is checked", async () => {
     const view = await getHeatmap(ID, OWNER)
-    expect(view.cards).toHaveLength(14)
-    expect(view.cards[0]).toMatchObject({ key: "router", title: "Router", need: "NOT_ASKED", colour: "GREY", items: [] })
-    expect(view.counts).toEqual({ GREEN: 0, YELLOW: 0, RED: 0, GREY: 14 })
-    expect(view.groups.map((g) => g.title)).toEqual(["Network", "Servers and data", "Phones and security", "Software and safety"])
+    expect(vi.mocked(prisma.heatmapGroup.findMany).mock.calls[0][0]).toMatchObject({
+      where: { hidden: false },
+      select: { products: { where: { hidden: false }, select: { parts: { where: { hidden: false } } } } },
+    })
+    expect(view.groups[0].products[0]).toMatchObject({ colour: "GREY", note: null, tickedCount: 0, checkedCount: 0, markedByName: null })
+    expect(view.groups[0].products[0].parts.map((p) => p.id)).toEqual(["p-small", "p-mid"])
+    expect(view.counts).toEqual({ GREEN: 0, RED: 0, GREY: 1 })
     expect(view.canManage).toBe(true)
   })
 
-  it("colours each card from its need and its items, and names who recorded them", async () => {
-    vi.mocked(prisma.salesAccountHeatmapNeed.findMany).mockResolvedValue([
-      { card: "server", need: "NO_NEED", reason: "All in the cloud", updatedBy: "user-1", updatedAt: new Date("2026-09-22T00:00:00.000Z") },
-      { card: "cctv", need: "NEED", reason: null, updatedBy: "user-1", updatedAt: new Date("2026-09-22T00:00:00.000Z") },
-    ] as any)
-    vi.mocked(prisma.salesAccountHeatmapItem.findMany).mockResolvedValue([itemRow()] as any)
-
-    const view = await getHeatmap(ID, OWNER)
-    const byKey = new Map(view.cards.map((c) => [c.key, c]))
-    expect(byKey.get("switch")).toMatchObject({ colour: "GREEN", reason: "Ends on 3 March 2027.", chanceFrom: "2026-03-03" })
-    expect(byKey.get("switch")!.items[0]).toEqual({
-      id: ITEM_ID, brand: "Cisco", model: "C9200-24P", quantity: 24, site: "Head office", boughtFrom: "Smart Technologies",
-      boughtOn: "2022-01-10", supportEndsOn: "2027-03-03", endOfLifeOn: null, supportBy: null, notes: null,
-      details: { ports: "24", poe: "YES" }, recordedByName: "Rahim", recordedAt: "2026-09-21T00:00:00.000Z",
-    })
-    expect(byKey.get("server")).toMatchObject({ need: "NO_NEED", needReason: "All in the cloud", needByName: "Rahim", colour: "RED" })
-    expect(byKey.get("cctv")).toMatchObject({ need: "NEED", colour: "GREEN" })
-    expect(view.counts).toEqual({ GREEN: 2, YELLOW: 0, RED: 1, GREY: 11 })
+  it("is Green with one tick, and names who marked it last", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-mid", "GREEN")] as any)
+    const product = (await getHeatmap(ID, OWNER)).groups[0].products[0]
+    expect(product).toMatchObject({ colour: "GREEN", tickedCount: 1, checkedCount: 1, markedByName: "Rahim", markedAt: "2026-10-18T05:00:00.000Z" })
+    expect(product.parts.find((p) => p.id === "p-mid")!.mark).toBe("GREEN")
+    expect(product.parts.find((p) => p.id === "p-small")!.mark).toBeNull()
   })
 
-  it("ignores rows for a card that is no longer on the list", async () => {
-    vi.mocked(prisma.salesAccountHeatmapItem.findMany).mockResolvedValue([itemRow({ card: "fax" })] as any)
+  it("ignores a mark on a hidden part", async () => {
+    // p-old is a hidden part: its mark stays saved but never decides a colour.
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-old", "GREEN")] as any)
     const view = await getHeatmap(ID, OWNER)
-    expect(view.cards.every((c) => c.items.length === 0)).toBe(true)
+    expect(view.groups[0].products[0]).toMatchObject({ colour: "GREY", checkedCount: 0 })
+    expect(view.counts.GREEN).toBe(0)
   })
 
-  it("tells a viewer who cannot change the account", async () => {
+  it("is Red only when every part is crossed, and then carries the note", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED"), mark("p-mid", "RED")] as any)
+    vi.mocked(prisma.salesAccountHeatmapNote.findMany).mockResolvedValue([{ productId: "prod-router", note: "Uses another vendor" }] as any)
+    const view = await getHeatmap(ID, OWNER)
+    expect(view.groups[0].products[0]).toMatchObject({ colour: "RED", note: "Uses another vendor", checkedCount: 2, tickedCount: 0 })
+    expect(view.counts).toEqual({ GREEN: 0, RED: 1, GREY: 0 })
+  })
+
+  it("keeps a half-crossed product Grey and shows no note or maker", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED")] as any)
+    vi.mocked(prisma.salesAccountHeatmapNote.findMany).mockResolvedValue([{ productId: "prod-router", note: "left over" }] as any)
+    const product = (await getHeatmap(ID, OWNER)).groups[0].products[0]
+    expect(product).toMatchObject({ colour: "GREY", note: null, markedByName: null, markedAt: null, checkedCount: 1 })
+  })
+
+  it("lets a viewer with no part in the account read but not change", async () => {
     expect((await getHeatmap(ID, OTHER)).canManage).toBe(false)
   })
 })
 
-describe("setting the need", () => {
-  it("refuses someone who cannot change the account, and writes nothing", async () => {
-    await expect(setCardNeed(ID, "server", { need: "NEED", reason: null }, OTHER)).rejects.toMatchObject({
-      statusCode: 403,
-      message: "You can view this Sales Account, but only its owner, collaborators, or a Sales Admin can change its heatmap.",
-    })
-    expect(prisma.salesAccountHeatmapNeed.upsert).not.toHaveBeenCalled()
-  })
-
-  it("refuses a card that is not on the heatmap", async () => {
-    await expect(setCardNeed(ID, "fax", { need: "NEED", reason: null }, OWNER)).rejects.toMatchObject({
-      statusCode: 404, message: "That card is not on the heatmap. Reload the page and try again.",
-    })
-  })
-
-  it("saves No need with its reason and writes it to History", async () => {
-    await setCardNeed(ID, "server", { need: "NO_NEED", reason: "All in the cloud" }, OWNER)
-    expect(vi.mocked(prisma.salesAccountHeatmapNeed.upsert).mock.calls[0][0]).toMatchObject({
-      where: { salesAccountId_card: { salesAccountId: ID, card: "server" } },
-      create: { salesAccountId: ID, card: "server", need: "NO_NEED", reason: "All in the cloud", updatedBy: "user-1" },
-      update: { need: "NO_NEED", reason: "All in the cloud", updatedBy: "user-1" },
+describe("a tick or cross on one part", () => {
+  it("saves a tick and writes History with the part name", async () => {
+    await setPartMark(ID, "p-mid", { mark: "GREEN" }, OWNER)
+    expect(prisma.salesAccountHeatmapMark.upsert).toHaveBeenCalledWith({
+      where: { salesAccountId_partId: { salesAccountId: ID, partId: "p-mid" } },
+      create: { salesAccountId: ID, partId: "p-mid", state: "GREEN", updatedBy: "user-1" },
+      update: { state: "GREEN", updatedBy: "user-1" },
     })
     expect(auditData()).toMatchObject({
-      entity: "SALES_ACCOUNT", entityId: ID, action: "UPDATE",
-      before: { "Heatmap, Server: need": "Not asked yet" },
-      after: { "Heatmap, Server: need": "No need: All in the cloud" },
+      entity: "SALES_ACCOUNT", entityId: ID,
+      before: { "Heatmap, Router: Mid range router": "Not checked" },
+      after: { "Heatmap, Router: Mid range router": "Tick" },
     })
   })
 
-  it("clears the need when set back to Not asked yet", async () => {
-    vi.mocked(prisma.salesAccountHeatmapNeed.findUnique).mockResolvedValue({ id: "n-1", need: "NEED", reason: null } as any)
-    await setCardNeed(ID, "server", { need: "NOT_ASKED", reason: null }, OWNER)
-    expect(prisma.salesAccountHeatmapNeed.delete).toHaveBeenCalledWith({ where: { id: "n-1" } })
-    expect(auditData().after).toEqual({ "Heatmap, Server: need": "Not asked yet" })
-  })
-
-  it("writes nothing when nothing changed", async () => {
-    vi.mocked(prisma.salesAccountHeatmapNeed.findUnique).mockResolvedValue({ id: "n-1", need: "NEED", reason: null } as any)
-    await setCardNeed(ID, "server", { need: "NEED", reason: null }, OWNER)
-    vi.mocked(prisma.salesAccountHeatmapNeed.findUnique).mockResolvedValue(null)
-    await setCardNeed(ID, "router", { need: "NOT_ASKED", reason: null }, OWNER)
-    expect(prisma.salesAccountHeatmapNeed.upsert).not.toHaveBeenCalled()
+  it("writes nothing when the part already has that mark", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-mid", "GREEN")] as any)
+    await setPartMark(ID, "p-mid", { mark: "GREEN" }, OWNER)
+    expect(prisma.salesAccountHeatmapMark.upsert).not.toHaveBeenCalled()
     expect(prisma.auditLog.create).not.toHaveBeenCalled()
   })
+
+  it("clears a mark with NONE", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-mid", "RED")] as any)
+    await setPartMark(ID, "p-mid", { mark: "NONE" }, OWNER)
+    expect(prisma.salesAccountHeatmapMark.deleteMany).toHaveBeenCalledWith({ where: { salesAccountId: ID, partId: "p-mid" } })
+    expect(auditData()).toMatchObject({
+      before: { "Heatmap, Router: Mid range router": "Cross" },
+      after: { "Heatmap, Router: Mid range router": "Not checked" },
+    })
+  })
+
+  it("removes the note when the product stops being Red", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED"), mark("p-mid", "RED")] as any)
+    await setPartMark(ID, "p-mid", { mark: "GREEN" }, OWNER)
+    expect(prisma.salesAccountHeatmapNote.deleteMany).toHaveBeenCalledWith({ where: { salesAccountId: ID, productId: "prod-router" } })
+  })
+
+  it("keeps the note when the last cross keeps the product Red", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED")] as any)
+    await setPartMark(ID, "p-mid", { mark: "RED" }, OWNER)
+    expect(prisma.salesAccountHeatmapNote.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it("refuses a hidden or deleted part with a reload sentence", async () => {
+    vi.mocked(prisma.heatmapPart.findFirst).mockResolvedValue(null)
+    await expect(setPartMark(ID, "p-gone", { mark: "GREEN" }, OWNER)).rejects.toMatchObject({
+      statusCode: 404, message: "That is no longer on the heatmap. Reload the page and try again.",
+    })
+  })
+
+  it("refuses someone who may only view", async () => {
+    await expect(setPartMark(ID, "p-mid", { mark: "GREEN" }, OTHER)).rejects.toMatchObject({ statusCode: 403 })
+  })
 })
 
-describe("adding an item", () => {
-  it("checks the extra fields against the card", async () => {
-    await expect(addHeatmapItem(ID, "switch", { ...ITEM_BODY, details: { cameras: "4" } }, OWNER)).rejects.toMatchObject({
-      statusCode: 400,
+describe("all ticks or all crosses on a product", () => {
+  it("marks every shown part and writes one History line", async () => {
+    await setProductMarks(ID, "prod-router", { mark: "GREEN" }, OWNER)
+    expect(prisma.salesAccountHeatmapMark.upsert).toHaveBeenCalledTimes(2)
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1)
+    expect(auditData()).toMatchObject({
+      before: { "Heatmap, Router": "0 ticked, 0 crossed, 2 not checked" },
+      after: { "Heatmap, Router": "2 ticked, 0 crossed, 0 not checked" },
     })
-    expect(prisma.salesAccountHeatmapItem.create).not.toHaveBeenCalled()
   })
 
-  it("saves the item with real dates and writes it to History", async () => {
-    await addHeatmapItem(ID, "switch", ITEM_BODY, OWNER)
-    expect(vi.mocked(prisma.salesAccountHeatmapItem.create).mock.calls[0][0].data).toEqual({
-      salesAccountId: ID, card: "switch", brand: "HP", model: null, quantity: 6, site: null, boughtFrom: null,
-      boughtOn: null, supportEndsOn: d("2029-01-01"), endOfLifeOn: null, supportBy: null, notes: null,
-      details: { managed: "YES" }, createdBy: "user-1", updatedBy: "user-1",
-    })
-    expect(auditData().after).toEqual({ "Heatmap, Switch: item": "HP, 6, Warranty or support ends 1 January 2029" })
-    expect(auditData().before).toBeUndefined()
+  it("only writes the parts that differ", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "GREEN")] as any)
+    await setProductMarks(ID, "prod-router", { mark: "GREEN" }, OWNER)
+    expect(prisma.salesAccountHeatmapMark.upsert).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(prisma.salesAccountHeatmapMark.upsert).mock.calls[0][0].create).toMatchObject({ partId: "p-mid" })
   })
 
-  it("refuses someone who cannot change the account", async () => {
-    await expect(addHeatmapItem(ID, "switch", ITEM_BODY, OTHER)).rejects.toMatchObject({ statusCode: 403 })
-    expect(prisma.salesAccountHeatmapItem.create).not.toHaveBeenCalled()
+  it("does nothing when every part already has that mark", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED"), mark("p-mid", "RED")] as any)
+    await setProductMarks(ID, "prod-router", { mark: "RED" }, OWNER)
+    expect(prisma.salesAccountHeatmapMark.upsert).not.toHaveBeenCalled()
+    expect(prisma.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it("clears every part with NONE, and drops the note", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED"), mark("p-mid", "RED")] as any)
+    await setProductMarks(ID, "prod-router", { mark: "NONE" }, OWNER)
+    expect(prisma.salesAccountHeatmapMark.deleteMany).toHaveBeenCalledWith({
+      where: { salesAccountId: ID, partId: { in: ["p-small", "p-mid"] } },
+    })
+    expect(prisma.salesAccountHeatmapNote.deleteMany).toHaveBeenCalled()
+  })
+
+  it("keeps the note when it makes the product Red", async () => {
+    await setProductMarks(ID, "prod-router", { mark: "RED" }, OWNER)
+    expect(prisma.salesAccountHeatmapNote.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it("refuses a product with no parts, and a hidden product", async () => {
+    vi.mocked(prisma.heatmapProduct.findFirst).mockResolvedValue({ id: "prod-router", title: "Router", parts: [] } as any)
+    await expect(setProductMarks(ID, "prod-router", { mark: "GREEN" }, OWNER)).rejects.toMatchObject({
+      statusCode: 409, message: "This product has no parts yet. Ask a Sales Admin to add one in Sales Settings.",
+    })
+    vi.mocked(prisma.heatmapProduct.findFirst).mockResolvedValue(null)
+    await expect(setProductMarks(ID, "prod-x", { mark: "GREEN" }, OWNER)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it("refuses someone who may only view", async () => {
+    await expect(setProductMarks(ID, "prod-router", { mark: "GREEN" }, OTHER)).rejects.toMatchObject({ statusCode: 403 })
   })
 })
 
-describe("changing and removing an item", () => {
-  it("refuses an item that is not on this account", async () => {
-    vi.mocked(prisma.salesAccountHeatmapItem.findFirst).mockResolvedValue(null)
-    await expect(updateHeatmapItem(ID, ITEM_ID, ITEM_BODY, OWNER)).rejects.toMatchObject({
-      statusCode: 404, message: "That item is not on this account. Reload the page and try again.",
-    })
-    await expect(removeHeatmapItem(ID, ITEM_ID, OWNER)).rejects.toMatchObject({ statusCode: 404 })
-    expect(vi.mocked(prisma.salesAccountHeatmapItem.findFirst).mock.calls[0][0]).toMatchObject({
-      where: { id: ITEM_ID, salesAccountId: ID },
+describe("the note on a Red product", () => {
+  beforeEach(() => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED"), mark("p-mid", "RED")] as any)
+  })
+
+  it("saves a trimmed note and writes History", async () => {
+    await setProductNote(ID, "prod-router", { note: "Uses another vendor" }, OWNER)
+    expect(prisma.salesAccountHeatmapNote.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: { salesAccountId: ID, productId: "prod-router", note: "Uses another vendor", updatedBy: "user-1" },
+    }))
+    expect(auditData()).toMatchObject({
+      before: { "Heatmap, Router: note": "No note" },
+      after: { "Heatmap, Router: note": "Uses another vendor" },
     })
   })
 
-  it("saves a change and writes before and after to History", async () => {
-    await updateHeatmapItem(ID, ITEM_ID, ITEM_BODY, OWNER)
-    expect(vi.mocked(prisma.salesAccountHeatmapItem.update).mock.calls[0][0]).toMatchObject({
-      where: { id: ITEM_ID }, data: { brand: "HP", quantity: 6, updatedBy: "user-1" },
+  it("removes the note when it is emptied", async () => {
+    vi.mocked(prisma.salesAccountHeatmapNote.findUnique).mockResolvedValue({ id: "n-1", note: "old" } as any)
+    await setProductNote(ID, "prod-router", { note: null }, OWNER)
+    expect(prisma.salesAccountHeatmapNote.delete).toHaveBeenCalledWith({ where: { id: "n-1" } })
+  })
+
+  it("writes nothing when the note is unchanged", async () => {
+    vi.mocked(prisma.salesAccountHeatmapNote.findUnique).mockResolvedValue({ id: "n-1", note: "same" } as any)
+    await setProductNote(ID, "prod-router", { note: "same" }, OWNER)
+    expect(prisma.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a note on a product that is not Red", async () => {
+    vi.mocked(prisma.salesAccountHeatmapMark.findMany).mockResolvedValue([mark("p-small", "RED")] as any)
+    await expect(setProductNote(ID, "prod-router", { note: "x" }, OWNER)).rejects.toMatchObject({
+      statusCode: 409, message: "Only a Red product can have a note. Put a cross on every part first.",
     })
-    expect(auditData().before).toEqual({ "Heatmap, Switch: item": "Cisco C9200-24P, 24, Warranty or support ends 3 March 2027" })
-    expect(auditData().after).toEqual({ "Heatmap, Switch: item": "HP, 6, Warranty or support ends 1 January 2029" })
-  })
-
-  it("removes an item and writes it to History", async () => {
-    await removeHeatmapItem(ID, ITEM_ID, OWNER)
-    expect(prisma.salesAccountHeatmapItem.delete).toHaveBeenCalledWith({ where: { id: ITEM_ID } })
-    expect(auditData().after).toEqual({ "Heatmap, Switch: item": null })
-  })
-
-  it("refuses someone who cannot change the account", async () => {
-    await expect(removeHeatmapItem(ID, ITEM_ID, OTHER)).rejects.toMatchObject({ statusCode: 403 })
-    expect(prisma.salesAccountHeatmapItem.delete).not.toHaveBeenCalled()
   })
 })

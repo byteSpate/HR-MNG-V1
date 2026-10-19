@@ -63,6 +63,16 @@ export const funnelQuerySchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
+  /**
+   * The quarter the strip measures, like "2026-Q4" (owner, 2026-10-13).
+   * Absent means the office's current quarter.
+   */
+  quarter: z.string().regex(/^\d{4}-Q[1-4]$/, "Pick a quarter.").optional(),
+  /** Only rows whose closing date falls in that quarter. */
+  inQuarter: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
   /** Given to employees as well as admins (§27.9). */
   sort: z
     .enum(["offeredOn", "status", "amount", "expectedCloseDate", "account"])
@@ -86,6 +96,10 @@ export type FunnelQuery = z.infer<typeof funnelQuerySchema>
  * real deal, so what the grid may change is a decision, not whatever the
  * client happens to send.
  *
+ * `amount` and `offeredOn` are absent too (owner, 2026-10-13): the amount is
+ * the latest quote's and the offer date is Quote 1's, so both change through
+ * quotes on the Opportunity, never in a cell.
+ *
  * `status` is absent on purpose. Changing a deal's status has its own rules —
  * a reason is required, `closedAt` is stamped, the winner is frozen — and they
  * live in `opportunity.service.ts`. The grid links to that rather than
@@ -93,16 +107,7 @@ export type FunnelQuery = z.infer<typeof funnelQuerySchema>
  */
 export const editFunnelCellSchema = z.discriminatedUnion("field", [
   z.object({ field: z.literal("useCase"), value: z.string().trim().max(200).nullable() }),
-  // Not nullable, unlike its neighbours: funnel membership is `offeredOn`
-  // being set and it never comes off (§27.2), so clearing it would silently
-  // remove a quoted deal, and its amount, from the funnel. It can be corrected,
-  // not erased.
-  z.object({
-    field: z.literal("offeredOn"),
-    value: z.string({ error: "A quoted Opportunity keeps its offer date. Change it, but it cannot be cleared" }).pipe(dateOnly),
-  }),
   z.object({ field: z.literal("expectedCloseDate"), value: dateOnly.nullable() }),
-  z.object({ field: z.literal("amount"), value: money.nullable() }),
   z.object({ field: z.literal("nextStep"), value: z.string().trim().max(500).nullable() }),
   z.object({ field: z.literal("lostToPartner"), value: z.string().trim().max(200).nullable() }),
   z.object({ field: z.literal("lostToAmount"), value: money.nullable() }),
@@ -167,4 +172,9 @@ export const funnelActionSchema = z.object({
   priority: z.enum(["LOW", "NORMAL", "HIGH"]).optional().default("NORMAL"),
   salesAccountId: z.string().uuid().nullable().optional(),
   opportunityId: z.string().uuid().nullable().optional(),
+})
+
+/** The team view's quarter (owner, 2026-10-13). Absent means this quarter. */
+export const teamQuerySchema = z.object({
+  quarter: z.string().regex(/^\d{4}-Q[1-4]$/, "Pick a quarter.").optional(),
 })

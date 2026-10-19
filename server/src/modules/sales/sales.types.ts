@@ -26,13 +26,26 @@ export interface OpportunityLineSummary {
   marginPercent: string | null
   /** `lineValue` times `marginPercent`, worked out when read. Null when either is missing — never "0.00". */
   marginAmount: string | null
-  note: string | null
+  /** "Description" on screen ("What it covers" was its old name on a Module). */
+  description: string | null
   order: number
   /** Who we will buy this product from. Optional while the deal is open,
    *  required on every line before it can be marked Won. */
   supplier: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
+}
+
+/** One price we sent the customer (owner, 2026-10-13). */
+export interface OpportunityQuoteView {
+  id: string
+  amount: string
+  /** YYYY-MM-DD. */
+  quotedOn: string
+  reference: string | null
+  note: string | null
+  /** The stage the Opportunity was at when this quote was given. */
+  stage: OpportunityStage
 }
 
 export interface OpportunitySummary {
@@ -67,6 +80,8 @@ export interface OpportunitySummary {
   createdAt: string
   updatedAt: string
   lines: OpportunityLineSummary[]
+  /** Every price we sent, newest first (owner, 2026-10-13). Once there is one, `amount` is the first one's amount. */
+  quotes: OpportunityQuoteView[]
   lineTotal: string
   unpricedLineCount: number
   amountDiffersFromLines: boolean
@@ -78,6 +93,8 @@ export interface OpportunitySummary {
   /** Whether this viewer may change the deal. The directory is shared, so
       seeing one and being able to work it are different questions. */
   canManage: boolean
+  /** May the viewer edit or delete the latest quote: the owner or a Sales Admin. */
+  canEditQuotes: boolean
 }
 
 export interface SalesCommentSummary {
@@ -460,8 +477,12 @@ export interface DocumentLinkSummary {
   id: string
   opportunityId: string
   name: string
-  url: string
+  /** Null when `locked`: a Costing and BOQ link seen by someone who is not an admin. */
+  url: string | null
   stage: string
+  kind: "GENERAL" | "COSTING_BOQ"
+  quoteId: string | null
+  locked: boolean
   createdBy: string
   createdByName: string | null
   createdAt: string
@@ -498,8 +519,8 @@ export interface ProjectLineSummary {
   supplierName: string | null
   lineValue: string | null
   marginPercent: string | null
-  /** "What it covers", on a Software Opportunity's Modules (spec §2.4). */
-  note: string | null
+  /** "Description" on screen, for products and Modules alike. */
+  description: string | null
   done: { at: string; byName: string | null } | null
 }
 
@@ -513,6 +534,8 @@ export interface ProjectSummary {
   team: ProjectTeamMemberSummary[]
   startOn: string | null
   dueOn: string | null
+  /** Optional, for projects that are subscription only. */
+  nextRenewalOn: string | null
   priority: "LOW" | "NORMAL" | "HIGH"
   budget: string | null
   value: string | null
@@ -575,6 +598,8 @@ export interface ProjectListRow {
   managerName: string
   status: ProjectStatusValue
   dueOn: string | null
+  /** Optional, for projects that are subscription only. */
+  nextRenewalOn: string | null
   milestonesDone: number
   milestonesTotal: number
   /** On track, At risk or Late. Null when there is nothing honest to say (finished, cancelled, not started). */
@@ -632,60 +657,151 @@ export interface AccountProfile {
   canManage: boolean
 }
 
-// ── Heatmap (owner, 2026-10-07) ────────────────────────────────────────────
-export type HeatmapColourValue = "GREEN" | "YELLOW" | "RED" | "GREY"
-export type HeatmapNeedValue = "NEED" | "NO_NEED" | "NOT_ASKED"
+// ── Heatmap (owner, 2026-10-13) ────────────────────────────────────────────
+export type HeatmapColour = "GREEN" | "RED" | "GREY"
 
-export interface HeatmapFieldView {
-  key: string
-  label: string
-  type: "TEXT" | "NUMBER" | "YES_NO" | "CHOICE" | "DATE"
-  /** Pick list only. */
-  options: string[] | null
-}
-
-export interface HeatmapItemView {
+export interface HeatmapPartView {
   id: string
-  brand: string
-  model: string | null
-  quantity: number
-  site: string | null
-  boughtFrom: string | null
-  /** Calendar days, YYYY-MM-DD. */
-  boughtOn: string | null
-  supportEndsOn: string | null
-  endOfLifeOn: string | null
-  supportBy: string | null
-  notes: string | null
-  /** The card's own fields, by key. Only what was filled in. */
-  details: Record<string, string>
-  recordedByName: string | null
-  recordedAt: string
+  title: string
+  note: string | null
+  /** A tick, a cross, or null when nobody has checked this part. */
+  mark: "GREEN" | "RED" | null
 }
 
-export interface HeatmapCardView {
-  key: string
-  group: string
+export interface HeatmapProductView {
+  id: string
   title: string
-  quantityLabel: string
-  endsLabel: string
-  extras: HeatmapFieldView[]
-  need: HeatmapNeedValue
-  needReason: string | null
-  needByName: string | null
-  needAt: string | null
-  colour: HeatmapColourValue
-  /** The sentence that explains the colour, like "Ends on 3 March 2027." */
-  reason: string
-  /** The day the chance opens: 12 months before the earliest end date. */
-  chanceFrom: string | null
-  items: HeatmapItemView[]
+  /** Worked out from the parts (`heatmap.colour.ts`). Nobody picks it. */
+  colour: HeatmapColour
+  /** The optional short note. Only with RED. */
+  note: string | null
+  /** Who last ticked or crossed a part, and when. Null while the product is Grey. */
+  markedByName: string | null
+  markedAt: string | null
+  /** Visible parts only, in order. */
+  parts: HeatmapPartView[]
+  tickedCount: number
+  /** Parts with a tick or a cross. */
+  checkedCount: number
+}
+
+export interface HeatmapGroupView {
+  id: string
+  title: string
+  products: HeatmapProductView[]
 }
 
 export interface AccountHeatmap {
-  groups: { key: string; title: string }[]
-  cards: HeatmapCardView[]
-  counts: Record<HeatmapColourValue, number>
+  groups: HeatmapGroupView[]
+  counts: Record<HeatmapColour, number>
   /** Whether the viewer may change it: the owner, a collaborator, or a Sales Admin. */
   canManage: boolean
+}
+
+/** One approved invoice in a Payments table (owner, 2026-10-18). Money as strings. */
+export interface PaymentRow {
+  invoiceId: string
+  invoiceNumber: string
+  /** YYYY-MM-DD. */
+  date: string
+  dueDate: string
+  opportunityId: string
+  opportunityName: string
+  accountId: string
+  accountName: string
+  /** With VAT, less approved credit notes. */
+  invoiceTotal: string
+  received: string
+  balance: string
+  /** Received ÷ Invoice total, one decimal. Null when the total is 0. */
+  percentPaid: number | null
+  status: "PAID" | "PART_PAID" | "UNPAID" | "OVERDUE"
+  receipts: { number: string; date: string; method: string | null; amount: string }[]
+}
+
+export interface PaymentsTable {
+  rows: PaymentRow[]
+  totals: { invoiceTotal: string; received: string; balance: string }
+}
+
+/** One row of the Contacts page (owner, 2026-10-18). */
+export interface ContactDirectoryRow {
+  id: string
+  name: string
+  designation: string | null
+  phone: string | null
+  email: string | null
+  status: "UNVERIFIED" | "VERIFIED" | "UNREACHABLE" | "INVALID"
+  isPrimary: boolean
+  accountId: string
+  accountName: string
+}
+
+export interface ContactDirectoryPage {
+  rows: ContactDirectoryRow[]
+  /** Every match, for the page count. */
+  total: number
+  page: number
+  pageSize: number
+}
+
+/** The Heatmap band on the Sales dashboard (owner, 2026-10-18): every account against each product. */
+export interface HeatmapOverviewAccount {
+  id: string
+  name: string
+}
+
+export interface HeatmapOverviewProduct {
+  id: string
+  title: string
+  groupTitle: string
+  green: number
+  red: number
+  /** Accounts in scope with no tick and not all parts crossed. */
+  notChecked: number
+  /** Who is Green and who is Red, so a click can open the account. */
+  greenAccounts: HeatmapOverviewAccount[]
+  redAccounts: HeatmapOverviewAccount[]
+}
+
+export interface HeatmapOverview {
+  employeeName: string
+  /** Active accounts in scope. */
+  accounts: number
+  /** Accounts where somebody has ticked or crossed at least one part. */
+  checkedAccounts: number
+  products: HeatmapOverviewProduct[]
+}
+
+// The list editor in Sales Settings. Hidden things are included here.
+export type HeatmapListLevel = "groups" | "products" | "parts"
+
+export interface HeatmapListPart {
+  id: string
+  title: string
+  note: string | null
+  hidden: boolean
+  /** How many accounts ticked it. 0 means it can be deleted. */
+  usedBy: number
+}
+
+export interface HeatmapListProduct {
+  id: string
+  title: string
+  hidden: boolean
+  /** Accounts with a colour on it or a tick on any of its parts. */
+  usedBy: number
+  parts: HeatmapListPart[]
+}
+
+export interface HeatmapListGroup {
+  id: string
+  title: string
+  hidden: boolean
+  usedBy: number
+  products: HeatmapListProduct[]
+}
+
+export interface HeatmapList {
+  groups: HeatmapListGroup[]
 }

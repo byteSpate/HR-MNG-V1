@@ -1,64 +1,55 @@
 import { describe, expect, it } from "vitest"
 
-import { heatmapItemSchema, setNeedSchema } from "./heatmap.validators"
+import { levelOf, listEditSchema, listRowSchema, moveSchema, setMarkSchema, setNoteSchema } from "./heatmap.validators"
 
-const firstError = (r: { success: boolean; error?: { issues: { message: string }[] } }) => r.error?.issues[0]?.message
-
-describe("setting the need on a card", () => {
-  it("takes Need it, No need with a reason, or Not asked yet", () => {
-    expect(setNeedSchema.parse({ need: "NEED" })).toEqual({ need: "NEED", reason: null })
-    expect(setNeedSchema.parse({ need: "NO_NEED", reason: " All in the cloud " })).toEqual({ need: "NO_NEED", reason: "All in the cloud" })
-    expect(setNeedSchema.parse({ need: "NOT_ASKED" })).toEqual({ need: "NOT_ASKED", reason: null })
+describe("setMarkSchema", () => {
+  it("takes a tick, a cross, or clear", () => {
+    expect(setMarkSchema.parse({ mark: "GREEN" })).toEqual({ mark: "GREEN" })
+    expect(setMarkSchema.parse({ mark: "RED" })).toEqual({ mark: "RED" })
+    expect(setMarkSchema.parse({ mark: "NONE" })).toEqual({ mark: "NONE" })
   })
-
-  it("asks for a reason with No need", () => {
-    expect(firstError(setNeedSchema.safeParse({ need: "NO_NEED", reason: "  " }))).toBe("Write why they do not need it.")
-    expect(firstError(setNeedSchema.safeParse({ need: "NO_NEED" }))).toBe("Write why they do not need it.")
-  })
-
-  it("drops a reason sent with anything but No need", () => {
-    expect(setNeedSchema.parse({ need: "NEED", reason: "x" })).toEqual({ need: "NEED", reason: null })
-  })
-
-  it("refuses an unknown need in plain words", () => {
-    expect(firstError(setNeedSchema.safeParse({ need: "MAYBE" }))).toBe("Pick Need it, No need, or Not asked yet.")
+  it("refuses anything else with a plain sentence", () => {
+    expect(setMarkSchema.safeParse({ mark: "YELLOW" }).error?.issues[0].message).toBe(
+      "Choose a tick, a cross, or clear it.",
+    )
+    expect(setMarkSchema.safeParse({}).success).toBe(false)
   })
 })
 
-describe("an item on a card", () => {
-  const good = { brand: " Cisco ", quantity: 24 }
-
-  it("needs only a brand and how many, and turns blanks into nothing", () => {
-    expect(heatmapItemSchema.parse({ ...good, model: " ", site: "", supportEndsOn: null })).toEqual({
-      brand: "Cisco", model: null, quantity: 24, site: null, boughtFrom: null, boughtOn: null,
-      supportEndsOn: null, endOfLifeOn: null, supportBy: null, notes: null, details: {},
-    })
+describe("setNoteSchema", () => {
+  it("trims the note and keeps it optional", () => {
+    expect(setNoteSchema.parse({ note: " Uses another vendor " })).toEqual({ note: "Uses another vendor" })
   })
-
-  it("asks for the brand", () => {
-    expect(firstError(heatmapItemSchema.safeParse({ quantity: 1, brand: "  " }))).toBe("Write the brand.")
+  it("turns an empty or missing note into null, which removes it", () => {
+    expect(setNoteSchema.parse({ note: "  " })).toEqual({ note: null })
+    expect(setNoteSchema.parse({ note: null })).toEqual({ note: null })
+    expect(setNoteSchema.parse({})).toEqual({ note: null })
   })
-
-  it("takes a whole number of at least 1 for how many", () => {
-    expect(firstError(heatmapItemSchema.safeParse({ brand: "HP", quantity: 0 }))).toBe("How many must be at least 1.")
-    expect(firstError(heatmapItemSchema.safeParse({ brand: "HP", quantity: 2.5 }))).toBe("How many must be a whole number.")
-    expect(firstError(heatmapItemSchema.safeParse({ brand: "HP" }))).toBe("Write how many they have.")
-  })
-
-  it("takes real dates only", () => {
-    expect(heatmapItemSchema.parse({ ...good, supportEndsOn: "2027-03-03" }).supportEndsOn).toBe("2027-03-03")
-    expect(firstError(heatmapItemSchema.safeParse({ ...good, boughtOn: "2027-02-30" }))).toBe("Pick a real date.")
-    expect(firstError(heatmapItemSchema.safeParse({ ...good, boughtOn: "03/03/2027" }))).toBe("Pick a real date.")
-  })
-
-  it("keeps the notes short", () => {
-    expect(firstError(heatmapItemSchema.safeParse({ ...good, notes: "x".repeat(501) }))).toBe("Keep the notes under 500 characters.")
-  })
-
-  it("takes the extra fields as words, and leaves the card to check them", () => {
-    expect(heatmapItemSchema.parse({ ...good, details: { ports: "24" } }).details).toEqual({ ports: "24" })
-    expect(firstError(heatmapItemSchema.safeParse({ ...good, details: { ports: "x".repeat(201) } }))).toBe(
-      "Keep each field under 200 characters.",
+  it("refuses a long note", () => {
+    expect(setNoteSchema.safeParse({ note: "x".repeat(301) }).error?.issues[0].message).toBe(
+      "Keep the note under 300 characters.",
     )
+  })
+})
+
+describe("list editor bodies", () => {
+  it("trims the name and needs one", () => {
+    expect(listRowSchema.parse({ title: "  SD-WAN ", note: " " })).toEqual({ title: "SD-WAN", note: null })
+    expect(listRowSchema.safeParse({ title: " " }).error?.issues[0].message).toBe("Write a name.")
+    expect(listRowSchema.safeParse({ title: "x".repeat(81) }).error?.issues[0].message).toBe("Keep the name under 80 characters.")
+    expect(listRowSchema.safeParse({ title: "A", note: "x".repeat(161) }).error?.issues[0].message).toBe("Keep the short line under 160 characters.")
+  })
+  it("edits only what is sent, keeps an explicit empty line as null, and needs something", () => {
+    expect(listEditSchema.parse({ hidden: true })).toEqual({ hidden: true })
+    expect(listEditSchema.parse({ title: "Router" })).toEqual({ title: "Router" })
+    expect(listEditSchema.parse({ note: "" })).toEqual({ note: null })
+    expect(listEditSchema.safeParse({}).error?.issues[0].message).toBe("Nothing to change.")
+  })
+  it("moves up or down only", () => {
+    expect(moveSchema.safeParse({ direction: "LEFT" }).error?.issues[0].message).toBe("Move up or down.")
+  })
+  it("knows the three levels", () => {
+    expect(levelOf("parts")).toBe("parts")
+    expect(() => levelOf("cards")).toThrow("That is no longer on the heatmap. Reload the page and try again.")
   })
 })

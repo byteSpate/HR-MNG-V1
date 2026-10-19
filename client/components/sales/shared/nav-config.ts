@@ -5,8 +5,8 @@ import type { SalesRole } from "@/lib/api/types"
  * A function rather than a constant: the tree can grow by `salesRole` (an
  * admin-only Setup group, eventually) without a branch anywhere else.
  *
- * Deliberately thin for now. "Contacts" and "Communication Log" have no
- * route of their own — they live inside the account detail page — and a
+ * Deliberately thin for now. "Communication Log" has no route of its own
+ * (it lives inside the account detail page), and a
  * Sales Admin "Hub Access" screen is not built either (access is still
  * granted with a direct PATCH). A nav item pointing at a page that says
  * nothing is exactly what this rule exists to stop, so only the two account
@@ -49,12 +49,16 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // both — which is the bug this arrangement removes rather than
         // special-cases.
         { label: "All Accounts", href: "/sales/accounts", icon: "RiApps2Line" },
+        // Every contact of every account the viewer may see, with search
+        // (owner, 2026-10-18). Right after the accounts it belongs to.
+        { label: "Contacts", href: "/sales/contacts", icon: "RiContactsBook2Line" },
         // Every live deal. Sits beside the account lists rather than under
         // one: a deal belongs to an account, but the funnel is read across
         // all of them at once.
         { label: "Opportunities", href: "/sales/opportunities", icon: "RiBriefcaseLine" },
-        // Delivery work for Won Opportunities (spec 2026-09-28 §1.8).
-        { label: "Projects", href: "/sales/projects", icon: "RiFolderChartLine" },
+        // Delivery work for Won Opportunities (spec 2026-09-28 §1.8). Named
+        // "Won Projects" by the owner (2026-10-18, corrected 2026-10-19); the route stays.
+        { label: "Won Projects", href: "/sales/projects", icon: "RiFolderChartLine" },
         // Meetings and follow-up tasks across every account (revision §24.21).
         // Each carries a count badge from the overview's own figures.
         { label: "Meetings", href: "/sales/meetings", icon: "RiCalendar2Line" },

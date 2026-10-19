@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { dateOnly, money } from "../sales.primitives"
+import { quoteSchema, skipReasonSchema } from "./quote.validators"
 
 // The profit on a deal, as a percentage of its value. Negative is a deal sold
 // at a loss; beyond 100 either way is a typing mistake, not a margin.
@@ -57,7 +58,14 @@ export const updateOpportunitySchema = z.object({
 }).refine((body) => Object.keys(body).some((key) => key !== "addAssignment"), { message: "Nothing was changed" })
 export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
 
-export const changeOpportunityStageSchema = z.object({ stage: opportunityStage })
+/**
+ * A stage change. Moving into a quote stage for the first time also carries
+ * Quote 1, or a reason to move without one (owner, 2026-10-13). A revision
+ * stage may carry a new quote.
+ */
+export const changeOpportunityStageSchema = z
+  .object({ stage: opportunityStage, quote: quoteSchema.optional(), skipQuoteReason: skipReasonSchema.optional() })
+  .refine((b) => !(b.quote && b.skipQuoteReason), "Add a quote or move without one, not both.")
 
 /** Handing the software part to the Software team (spec §2.5). */
 export const handOverSchema = z.object({
@@ -93,7 +101,7 @@ export const createOpportunityLineSchema = z.object({
   unitValue: money.optional(),
   lineValue: money.optional(),
   marginPercent: marginPercent.optional(),
-  note: z.string().trim().max(500).optional(),
+  description: z.string().trim().max(1000, "Keep the description under 1000 characters.").optional(),
   // Who we will buy this product from (spec: Sales Hub changes). Optional
   // while the deal is open; required on every line before the deal is Won.
   supplierId: z.string().uuid().nullable().optional(),
@@ -115,7 +123,7 @@ export const updateOpportunityLineSchema = createOpportunityLineSchema.partial()
     unitValue: money.nullable().optional(),
     lineValue: money.nullable().optional(),
     marginPercent: marginPercent.nullable().optional(),
-    note: z.string().trim().max(500).nullable().optional(),
+    description: z.string().trim().max(1000, "Keep the description under 1000 characters.").nullable().optional(),
   })
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
 export const reorderOpportunityLinesSchema = z.object({
@@ -148,5 +156,10 @@ export const addDocumentLinkSchema = z.object({
   url: z.string().trim().max(2000).url("Paste the full web address")
     .refine((v) => v.startsWith("https://"), "The web address must start with https://"),
   stage: opportunityStage.optional(),
+  /** COSTING_BOQ links sit in the "Costing and BOQ link" box (owner, 2026-10-18). */
+  kind: z.enum(["GENERAL", "COSTING_BOQ"]).default("GENERAL"),
+  /** The quote a costing or BOQ belongs to. */
+  quoteId: z.string().uuid().nullable().optional(),
 })
-export type AddDocumentLinkBody = z.infer<typeof addDocumentLinkSchema>
+// The input type: `kind` may be left out, and the service reads it as GENERAL.
+export type AddDocumentLinkBody = z.input<typeof addDocumentLinkSchema>

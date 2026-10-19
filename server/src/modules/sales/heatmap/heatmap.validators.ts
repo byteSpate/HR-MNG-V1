@@ -1,76 +1,66 @@
 import { z } from "zod"
 
-import { parseDateOnly } from "../../../utils/dates"
+import { AppError } from "../../../middleware/errorHandler"
+import type { HeatmapListLevel } from "../sales.types"
 
 /**
- * The bodies for the Heatmap tab. Every message is the sentence a person
- * reads on the form, so it is plain and says what to do.
+ * The bodies for the Heatmap tab and its list in Sales Settings. Every
+ * message is the sentence a person reads, so it is plain and says what to do.
  */
 
-/** Said for an item id that is not on the account, or is not an id at all. */
-export const NO_SUCH_ITEM = "That item is not on this account. Reload the page and try again."
+/** A product or part that is hidden, deleted, or never existed. */
+export const NOT_ON_HEATMAP = "That is no longer on the heatmap. Reload the page and try again."
 
-const isRealDate = (value: string) => {
-  try {
-    parseDateOnly(value)
-    return true
-  } catch {
-    return false
-  }
-}
+/** GREEN is a tick, RED is a cross, NONE clears it back to not checked. */
+export const setMarkSchema = z.object({
+  mark: z.enum(["GREEN", "RED", "NONE"], { error: "Choose a tick, a cross, or clear it." }),
+})
 
-/** Optional text: blank means "not recorded", stored as null. */
-const optText = (max: number, what: string) =>
-  z
-    .string()
-    .trim()
-    .max(max, `Keep the ${what} under ${max} characters.`)
-    .nullable()
-    .optional()
-    .transform((v) => (v ? v : null))
+export type SetMarkBody = z.infer<typeof setMarkSchema>
 
-const optDate = z
+/** The note on a Red product is optional. An empty one removes it. */
+export const setNoteSchema = z
+  .object({
+    note: z.string().trim().max(300, "Keep the note under 300 characters.").nullable().optional(),
+  })
+  .transform((b) => ({ note: b.note ? b.note : null }))
+
+export type SetNoteBody = z.infer<typeof setNoteSchema>
+
+const title = z.string({ error: "Write a name." }).trim().min(1, "Write a name.").max(80, "Keep the name under 80 characters.")
+const note = z
   .string()
+  .trim()
+  .max(160, "Keep the short line under 160 characters.")
   .nullable()
   .optional()
   .transform((v) => (v ? v : null))
-  .refine((v) => v === null || isRealDate(v), "Pick a real date.")
 
-export const setNeedSchema = z
+export const listRowSchema = z.object({ title, note })
+export type ListRowBody = z.infer<typeof listRowSchema>
+
+/** Only what is sent changes. An empty short line is sent as "" and clears it. */
+export const listEditSchema = z
   .object({
-    need: z.enum(["NEED", "NO_NEED", "NOT_ASKED"], { error: "Pick Need it, No need, or Not asked yet." }),
-    reason: z.string().trim().max(300, "Keep the reason under 300 characters.").nullable().optional(),
+    title: title.optional(),
+    note: z.string().trim().max(160, "Keep the short line under 160 characters.").nullable().optional(),
+    hidden: z.boolean().optional(),
   })
-  .transform((b) => ({ need: b.need, reason: b.need === "NO_NEED" ? b.reason || null : null }))
-  .refine((b) => b.need !== "NO_NEED" || b.reason !== null, "Write why they do not need it.")
+  .transform((b) => {
+    const out: { title?: string; note?: string | null; hidden?: boolean } = {}
+    if (b.title !== undefined) out.title = b.title
+    if (b.note !== undefined) out.note = b.note ? b.note : null
+    if (b.hidden !== undefined) out.hidden = b.hidden
+    return out
+  })
+  .refine((b) => Object.keys(b).length > 0, "Nothing to change.")
+export type ListEditBody = z.infer<typeof listEditSchema>
 
-export type SetNeedBody = z.infer<typeof setNeedSchema>
+export const moveSchema = z.object({ direction: z.enum(["UP", "DOWN"], { error: "Move up or down." }) })
 
-/**
- * One item on a card. Only the brand and how many are needed. The extra
- * fields come as short text; what each may hold depends on the card, so that
- * is checked in `checkDetails`, not here.
- */
-export const heatmapItemSchema = z.object({
-  brand: z.string({ error: "Write the brand." }).trim().min(1, "Write the brand.").max(100, "Keep the brand under 100 characters."),
-  model: optText(100, "model"),
-  quantity: z
-    .number({ error: "Write how many they have." })
-    .int("How many must be a whole number.")
-    .min(1, "How many must be at least 1.")
-    .max(1_000_000, "How many must be under 1,000,000."),
-  site: optText(100, "site"),
-  boughtFrom: optText(100, "seller name"),
-  boughtOn: optDate,
-  supportEndsOn: optDate,
-  endOfLifeOn: optDate,
-  supportBy: optText(100, "support company name"),
-  notes: optText(500, "notes"),
-  details: z
-    .record(z.string().max(40), z.string().max(200, "Keep each field under 200 characters."))
-    .refine((d) => Object.keys(d).length <= 20, "An item has up to 20 extra fields.")
-    .optional()
-    .transform((d) => d ?? {}),
-})
+const LEVELS: readonly HeatmapListLevel[] = ["groups", "products", "parts"]
 
-export type HeatmapItemBody = z.infer<typeof heatmapItemSchema>
+export function levelOf(raw: string): HeatmapListLevel {
+  if (!(LEVELS as readonly string[]).includes(raw)) throw new AppError(404, NOT_ON_HEATMAP)
+  return raw as HeatmapListLevel
+}

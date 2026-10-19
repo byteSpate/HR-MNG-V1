@@ -111,7 +111,7 @@ describe("opportunity routes", () => {
   // saving an edit with any of them blank failed with a raw Zod message
   // ("oemBrand: Invalid input: expected string, received null") instead of
   // clearing the field.
-  it("allows OEM brand, model and note to each be cleared", async () => {
+  it("allows OEM brand, model and description to each be cleared", async () => {
     await request(app).patch("/api/sales/lines/line-1")
       .set("Authorization", auth("SALES_USER"))
       .send({ oemBrand: null }).expect(200)
@@ -120,11 +120,11 @@ describe("opportunity routes", () => {
       .send({ model: null }).expect(200)
     await request(app).patch("/api/sales/lines/line-1")
       .set("Authorization", auth("SALES_USER"))
-      .send({ note: null }).expect(200)
+      .send({ description: null }).expect(200)
 
     expect(lines.updateOpportunityLine).toHaveBeenCalledWith("line-1", { oemBrand: null }, expect.anything())
     expect(lines.updateOpportunityLine).toHaveBeenCalledWith("line-1", { model: null }, expect.anything())
-    expect(lines.updateOpportunityLine).toHaveBeenCalledWith("line-1", { note: null }, expect.anything())
+    expect(lines.updateOpportunityLine).toHaveBeenCalledWith("line-1", { description: null }, expect.anything())
   })
 })
 

@@ -11,12 +11,15 @@ import { Router } from "express"
 import accountRouter from "./accounts/account.routes"
 import collaboratorRouter from "./accounts/collaborator.routes"
 import commentRouter from "./comments/comment.routes"
+import contactsRouter from "./contacts/contacts.routes"
 import dashboardRouter from "./dashboard/dashboard.routes"
 import funnelRouter from "./funnel/funnel.routes"
 import heatmapRouter from "./heatmap/heatmap.routes"
 import meetingRouter from "./meetings/meeting.routes"
 import minutesRouter from "./minutes/minutes.routes"
 import opportunityRouter from "./opportunities/opportunity.routes"
+import paymentsRouter from "./payments/payments.routes"
+import quoteRouter from "./opportunities/quote.routes"
 import permissionRouter from "./permissions/permission.routes"
 import projectRouter from "./projects/project.routes"
 import targetRouter from "./targets/target.routes"
@@ -33,8 +36,16 @@ router.use(collaboratorRouter)
 // The Heatmap tab. Its paths all sit under `/accounts/:id/heatmap`, which no
 // router above uses, so nothing is shadowed in either direction.
 router.use(heatmapRouter)
+// The Contacts page (owner, 2026-10-18). Only GET /contacts and
+// /contacts/export, which no router above uses.
+router.use(contactsRouter)
+// Payments for Sales Admins (owner, 2026-10-18). Only /payments paths.
+router.use(paymentsRouter)
 
 router.use(opportunityRouter)
+// Quotes (owner, 2026-10-13). Only `/opportunities/:id/quotes...`, which no
+// router above uses, so nothing is shadowed in either direction.
+router.use(quoteRouter)
 // After the Opportunity router, which has no `POST /opportunities/:id/project`,
 // so mounting it here cannot shadow an existing path.
 router.use(projectRouter)

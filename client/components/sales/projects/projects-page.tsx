@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import {
   RiAlarmWarningLine,
@@ -34,17 +33,16 @@ import {
 const HEALTHS: ProjectHealth[] = ["ON_TRACK", "AT_RISK", "LATE"]
 
 function rowCells(p: ProjectListRow): TableCell[] {
-  const href = `/sales/projects/${p.id}`
   const quiet = quietText(p.quietDays)
   return [
     {
       node: (
-        <Link href={href} className="block w-full cursor-pointer">
+        <span className="block w-full">
           <span className="block truncate font-semibold">{p.name}</span>
           <span className="block truncate font-mono text-[11.5px] text-[#6B7789]">
             {p.serial} · {p.opportunitySerial} · {TRACK_LABEL[p.track] ?? p.track}
           </span>
-        </Link>
+        </span>
       ),
     },
     { node: <span className="block truncate">{p.salesAccountName}</span> },
@@ -53,7 +51,8 @@ function rowCells(p: ProjectListRow): TableCell[] {
       node: (
         <div className="min-w-0">
           <Tag label={PROJECT_STATUS_LABEL[p.status]} tone={PROJECT_STATUS_TONE[p.status]} />
-          {quiet ? <div className="mt-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">{quiet}</div> : null}
+          {/* One line, so every row keeps the same height (owner, 2026-10-19). */}
+          {quiet ? <div title={quiet} className="mt-0.5 truncate text-[11.5px] font-semibold text-[#8A5E0C]">{quiet}</div> : null}
         </div>
       ),
     },
@@ -92,7 +91,15 @@ function rowCells(p: ProjectListRow): TableCell[] {
         </span>
       ),
     },
+    // Only subscription projects have one (owner, 2026-10-18).
+    { node: <span className={p.nextRenewalOn ? undefined : TONE.muted}>{renewalText(p.nextRenewalOn)}</span> },
   ]
+}
+
+/** "31 Jan 2027", or a dash when the project has no renewal. */
+function renewalText(day: string | null): string {
+  if (!day) return "-"
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
 }
 
 /**
@@ -145,7 +152,7 @@ export function ProjectsPage() {
 
   return (
     <>
-      <PageHeader kicker="Sales" title="Projects" sub="Delivery work for Won Opportunities." />
+      <PageHeader kicker="Sales" title="Won Projects" sub="Delivery work for Won Opportunities." />
 
       <SalesStatRow stats={stats} isLoading={query.isPending} isError={query.isError} />
 
@@ -195,9 +202,11 @@ export function ProjectsPage() {
       <PanelTable
         title="Delivery work"
         emptyIcon={RiFolder3Line}
-        cols="minmax(0,2.2fr) minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.8fr)"
-        headers={["Project", "Account", "Project Manager", "Status", "Health", "Progress", "Days left", "Open tasks", "Milestones"]}
+        cols="minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1.45fr) minmax(0,0.85fr) minmax(0,0.85fr) minmax(0,1fr) minmax(0,0.75fr) minmax(0,0.8fr) minmax(0,0.9fr)"
+        headers={["Project", "Account", "Project Manager", "Status", "Health", "Progress", "Days left", "Open tasks", "Milestones", "Next renewal"]}
         rows={projects.map((p) => rowCells(p).map(sized))}
+        // A click anywhere on a row opens the project (owner, 2026-10-18).
+        rowHrefs={projects.map((p) => `/sales/projects/${p.id}`)}
         isLoading={query.isPending}
         isError={query.isError}
         onRetry={() => query.refetch()}

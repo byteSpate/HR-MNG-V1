@@ -60,7 +60,7 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
     <>
       <div className="pt-7 pb-4">
         <Link href="/sales/projects" className="text-[12.5px] font-semibold text-[#5F6B7C] hover:underline">
-          ← Projects
+          ← Won Projects
         </Link>
       </div>
 

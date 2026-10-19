@@ -61,3 +61,13 @@ const SHORT_MONTHS = [
 export function formatShortDate(date: Date): string {
   return `${SHORT_MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}`
 }
+
+const LONG_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+]
+
+/** "3 October 2026", read in UTC so the day never shifts. For text people read, like History. */
+export function longDate(date: Date): string {
+  return `${date.getUTCDate()} ${LONG_MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`
+}

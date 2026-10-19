@@ -27,6 +27,7 @@ import {
   editFunnelCellBodySchema,
   funnelActionSchema,
   funnelQuerySchema,
+  teamQuerySchema,
   managementNoteSchema,
   meetingAttendeesSchema,
   meetingQuerySchema,
@@ -62,7 +63,8 @@ export async function getFunnelHandler(req: Request, res: Response, next: NextFu
 
 export async function listFunnelTeamHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    return res.status(200).json(await listFunnelTeam(req.user!))
+    const { quarter } = teamQuerySchema.parse(req.query)
+    return res.status(200).json(await listFunnelTeam(req.user!, new Date(), quarter))
   } catch (err) {
     return next(err)
   }

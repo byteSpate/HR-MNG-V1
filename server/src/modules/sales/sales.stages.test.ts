@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  firstStageFor, NETWORKING_STAGES, QUOTED_STAGES, SOFTWARE_STAGES, stageFitsTrack, stagesFor,
+  firstStageFor, NETWORKING_STAGES, QUOTED_STAGES, SOFTWARE_STAGES, stageFitsTrack, stagesFor, quoteAskFor, REVISION_STAGES,
 } from "./sales.stages"
 
 describe("stages per track", () => {
@@ -44,5 +44,24 @@ describe("stages per track", () => {
     expect(QUOTED_STAGES.has("PROPOSAL_SUBMITTED")).toBe(true)
     expect(QUOTED_STAGES.has("PROPOSAL_REVISION")).toBe(true)
     expect(QUOTED_STAGES.has("SRS_SENT")).toBe(false)
+  })
+})
+
+describe("when the stage change asks for a quote (owner, 2026-10-13)", () => {
+  it("requires Quote 1 on the first move into a quote stage", () => {
+    expect(quoteAskFor("COMMERCIAL_NEGOTIATION", { offeredOn: null })).toBe("REQUIRED")
+    expect(quoteAskFor("PO_RECEIVED", { offeredOn: null })).toBe("REQUIRED")
+    expect(quoteAskFor("PROPOSAL_SUBMITTED", { offeredOn: null })).toBe("REQUIRED")
+  })
+
+  it("offers a new quote on the revision stages once on the Funnel", () => {
+    expect(quoteAskFor("PROPOSAL_REVISION", { offeredOn: new Date() })).toBe("OPTIONAL")
+    expect(quoteAskFor("NEGOTIATION", { offeredOn: "2026-10-01" })).toBe("OPTIONAL")
+    expect(REVISION_STAGES.has("NEGOTIATION")).toBe(true)
+  })
+
+  it("asks nothing before the quote stages, or on other quote stages once on the Funnel", () => {
+    expect(quoteAskFor("TECHNICAL_VALIDATION", { offeredOn: null })).toBeNull()
+    expect(quoteAskFor("CUSTOMER_PROCUREMENT", { offeredOn: new Date() })).toBeNull()
   })
 })

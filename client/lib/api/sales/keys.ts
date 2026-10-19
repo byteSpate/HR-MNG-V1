@@ -20,6 +20,11 @@ export const salesKeys = {
   // ── accounts ────────────────────────────────────────────────────────────
   /** The list. `scope` is "mine" or "all", matching the page that reads it. */
   accounts: (scope: string) => ["sales", "accounts", scope] as const,
+  /** A Payments table (Sales Admins): one account, one Opportunity, or every open invoice. */
+  payments: (filter: { accountId?: string; opportunityId?: string; open?: boolean }) =>
+    ["sales", "payments", filter.accountId ?? "", filter.opportunityId ?? "", filter.open ? "open" : "all"] as const,
+  /** The Contacts page: every visible contact, searched, sorted and paged. */
+  contactDirectory: (q: string, page: number, sort: string, dir: string) => ["sales", "contacts", q, page, sort, dir] as const,
   account: (id: string) => ["sales", "accounts", id] as const,
   accountContacts: (id: string) => ["sales", "accounts", id, "contacts"] as const,
   accountTimeline: (id: string) => ["sales", "accounts", id, "timeline"] as const,
@@ -28,6 +33,7 @@ export const salesKeys = {
   accountProfile: (id: string) => ["sales", "accounts", id, "profile"] as const,
   /** Under the account's prefix, like the profile. */
   accountHeatmap: (id: string) => ["sales", "accounts", id, "heatmap"] as const,
+  heatmapList: () => ["sales", "settings", "heatmap-list"] as const,
   /**
    * Under its own prefix rather than the account's: it moves when a deal on
    * the account is won or its value or margin changes, so every deal write
@@ -80,6 +86,10 @@ export const salesKeys = {
   targets: (calendarYear: number, employeeId?: string) =>
     ["sales", "targets", calendarYear, employeeId ?? "me"] as const,
   dashboard: (employeeId?: string) => ["sales", "dashboard", employeeId ?? "me"] as const,
+  /** The Heatmap band. Under the dashboard prefix, so refreshing the dashboard refreshes it. */
+  heatmapOverview: (employeeId?: string) => ["sales", "dashboard", "heatmap", employeeId ?? "me"] as const,
+  /** Every Heatmap band, for a Heatmap tab write to refresh. */
+  heatmapOverviewAll: () => ["sales", "dashboard", "heatmap"] as const,
 
   // ── meetings and tasks ──────────────────────────────────────────────────
   meetings: (filters: Record<string, unknown> = {}) => ["sales", "meetings", filters] as const,

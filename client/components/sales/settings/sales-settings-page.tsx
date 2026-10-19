@@ -6,8 +6,8 @@
  * The minutes template is its first section, open to Sales Users as well as
  * Sales Admins since 2026-09-15: the format changes often, and waiting for an
  * admin slowed people down. The server records who made each change. The
- * Permission switches join it as "Who can do what". Each section says who may
- * change it.
+ * Permission switches join it as "Who can do what", and the Heatmap list
+ * (owner, 2026-10-13) after that. Each section says who may change it.
  */
 
 import { useState } from "react"
@@ -30,6 +30,7 @@ import { CheckboxField, FormError, PanelAlert, PanelNotice, TONE, toMessage } fr
 import { MINUTES_KIND_LABEL, shortDay } from "@/components/sales/shared/sales-shared"
 import { SWITCHED_OFF_HINT } from "@/components/sales/shared/permission-state"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
+import { HeatmapListPanel } from "./heatmap-list-panel"
 import { PermissionsPanel } from "./permissions-panel"
 import { RemovalRequestsPanel } from "./removal-requests-panel"
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,8 @@ export function SalesSettingsPage() {
           <RemovalRequestsPanel />
           <MinutesTemplatePanel />
           <PermissionsPanel />
+          {/* Sales Admins only. It renders nothing for a Sales User. */}
+          <HeatmapListPanel />
         </div>
       )}
     </>

@@ -11,6 +11,7 @@ import {
   canManageAccount,
   commentKindScopeFor,
   employeeIdFor,
+  isSalesAdmin,
   OPPORTUNITY_NOT_VISIBLE,
   requireAccountAccess,
 } from "../sales.access"
@@ -20,8 +21,9 @@ import { presentOpportunity } from "./opportunity.present"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.present"
 import { presentChanges, resolveNames } from "../accounts/history.present"
 import { createTaskIn } from "../tasks/task.service"
-import { stampOfferedOn } from "../funnel/funnel.edit"
-import { firstStageFor, stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
+import { firstStageFor, quoteAskFor, stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
+import { canDo } from "../sales.permissions"
+import { createQuoteIn } from "./quote.write"
 import { ensureCustomerForAccount } from "../../customer/customer.link"
 import type {
   ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
@@ -41,6 +43,9 @@ export const STATUS_WORD: Record<string, string> = {
 export const TRACK_CLOSED = "This Opportunity is closed, so its track cannot change."
 export const TRACK_HANDED_OVER = "This Opportunity is linked by a Hand-over, so its track cannot change."
 export const TRACK_IN_FUNNEL = "This Opportunity is already in the funnel, so its track cannot change."
+export const QUOTE_REQUIRED = "Add the quote amount and date to move to this stage. Or click Move without a quote."
+export const SKIP_OFF = "A Sales Admin has turned off moving without a quote. Add the quote to move to this stage."
+export const AMOUNT_FROM_QUOTES = "This Opportunity has quotes. To change the amount, add a new quote."
 export const TRACK_LOCKED = "Remove the products first. The track can only change while the Opportunity has no products or modules."
 
 /** The supplier-before-Won rule is for bought goods; a Software Opportunity buys nothing. */
@@ -60,6 +65,8 @@ export const INCLUDE = {
     },
   },
   lines: { orderBy: { order: "asc" as const }, include: { supplier: { select: { id: true, name: true } } } },
+  // Every quote, newest first (owner, 2026-10-13). The first is the latest.
+  quotes: { orderBy: [{ quotedOn: "desc" }, { createdAt: "desc" }] as Prisma.OpportunityQuoteOrderByWithRelationInput[] },
   // The delivery work started from this Won Opportunity (ADR 0005), at most one.
   project: { select: { id: true, serial: true, name: true, status: true } },
   // The Hand-over link, so a page can show "handed over from" and "handed to"
@@ -292,7 +299,8 @@ export async function getOpportunity(id: string, actor: AccessTokenPayload) {
     include: INCLUDE,
   })
   if (!row) throw new AppError(404, OPPORTUNITY_NOT_VISIBLE)
-  return presentOpportunity(row, canManageDeal(row, actor, employeeId))
+  const canManage = canManageDeal(row, actor, employeeId)
+  return presentOpportunity(row, canManage, canManage && (isSalesAdmin(actor) || employeeId === row.ownerEmployeeId))
 }
 
 export async function loadForWrite(tx: Prisma.TransactionClient, id: string, actor: AccessTokenPayload) {
@@ -345,6 +353,9 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
       after.stage = first
     }
     stage("track", body.track, current.track)
+    if (body.amount !== undefined && (await tx.opportunityQuote.count({ where: { opportunityId: id } })) > 0) {
+      throw new AppError(409, AMOUNT_FROM_QUOTES)
+    }
     if (body.amount !== undefined) stage("amount", body.amount === null ? null : dec(body.amount), current.amount)
     if (body.expectedCloseDate !== undefined) stage("expectedCloseDate", day(body.expectedCloseDate), current.expectedCloseDate)
     if (body.oemAccountManager !== undefined) stage("oemAccountManager", body.oemAccountManager, current.oemAccountManager)
@@ -372,26 +383,34 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
       throw new AppError(400, WRONG_TRACK_STAGE[current.track])
     }
     if (current.stage === body.stage) return presentOpportunity(current)
+    // Moving into a quote stage for the first time needs Quote 1, or a
+    // reason to move without one (owner, 2026-10-13). The quote's date is the
+    // Funnel date, so the Opportunity joins the Funnel here either way. A
+    // revision stage may carry a new quote. Every check comes before any write.
+    const ask = quoteAskFor(body.stage, current)
+    if (body.quote && ask === null) throw new AppError(400, "Quotes are added from a quote stage.")
+    if (body.skipQuoteReason && ask !== "REQUIRED") {
+      throw new AppError(400, "Only the first move to a quote stage can skip the quote.")
+    }
+    if (ask === "REQUIRED" && !body.quote && !body.skipQuoteReason) throw new AppError(400, QUOTE_REQUIRED)
+    if (body.skipQuoteReason && !(await canDo(actor, "opportunity.skip_quote"))) throw new AppError(403, SKIP_OFF)
+
     const now = new Date()
-    // Reaching stage 4 (Commercial Proposal & Negotiation) or, for Software,
-    // Proposal submitted is the moment a deal joins the funnel, and the
-    // moment its offer date is known (revision §27.2, §27.4). Only ever
-    // fills a blank: a deal that drops back a stage and comes forward again
-    // keeps the date it was really quoted on, and a date somebody has
-    // corrected by hand is never overwritten.
-    const stamped = await stampOfferedOn(tx, id, body.stage, current.offeredOn, officeDateOf(now))
-    const updated = await tx.opportunity.update({
-      where: { id }, data: { stage: body.stage, stageChangedAt: now, lastActivityAt: now }, include: INCLUDE,
+    await tx.opportunity.update({
+      where: { id }, data: { stage: body.stage, stageChangedAt: now, lastActivityAt: now },
     })
     await writeAudit(tx, {
       entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
       before: { stage: current.stage }, after: { stage: body.stage },
     })
-    if (stamped) {
+    if (body.quote) await createQuoteIn(tx, { ...current, stage: body.stage }, body.quote, actor)
+    if (body.skipQuoteReason) {
+      const today = officeDateOf(now)
+      await tx.opportunity.update({ where: { id }, data: { offeredOn: today } })
       await writeAudit(tx, {
         entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
-        before: { offeredOn: null }, after: { offeredOn: officeDateOf(now).toISOString() },
-        note: "Stamped when the quotation was submitted",
+        before: { offeredOn: null }, after: { offeredOn: today.toISOString() },
+        note: `Moved without a quote: ${body.skipQuoteReason}`,
       })
     }
     await emitEvent(tx, {
@@ -399,7 +418,7 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
       actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
       title: `${current.serial} moved to ${body.stage}`, href: `/opportunities/${id}`,
     })
-    return presentOpportunity(updated)
+    return presentOpportunity(await tx.opportunity.findFirst({ where: { id }, include: INCLUDE }))
   })
 }
 

@@ -51,7 +51,7 @@ export function presentProject(
     team: row.team.map((m) => ({
       employeeId: m.employeeId, fullName: m.employee.fullName, responsibility: m.responsibility, onAccount: people.has(m.employeeId),
     })),
-    startOn: day(row.startOn), dueOn: day(row.dueOn), priority: row.priority,
+    startOn: day(row.startOn), dueOn: day(row.dueOn), nextRenewalOn: day(row.nextRenewalOn), priority: row.priority,
     budget: moneyOrNull(row.budget),
     value: moneyOrNull(row.opportunity.amount),
     plannedCost: plannedCostOf(row.opportunity.lines),
@@ -76,7 +76,7 @@ export function presentProject(
       return {
         id: l.id, product: l.product, oemBrand: l.oemBrand, model: l.model, partNo: l.partNo ?? null, quantity: l.quantity,
         // "What it covers" on a Software Opportunity's Modules (spec §2.4).
-        note: l.note ?? null,
+        description: l.description ?? null,
         supplierName: l.supplier?.name ?? null,
         lineValue: moneyOrNull(l.lineValue),
         marginPercent: l.marginPercent == null ? null : dec(l.marginPercent).toFixed(2),

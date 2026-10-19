@@ -24,7 +24,7 @@ import { TRACK_LABEL } from "@/lib/api/sales/stages"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunityStatus, OpportunitySummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
-import { PanelTable, RowActions, TONE } from "@/components/dashboard/record-kit"
+import { PanelTable, TONE } from "@/components/dashboard/record-kit"
 import { opportunityStats } from "@/components/sales/shared/sales-stats"
 import { sized } from "@/components/sales/shared/sized-cell"
 import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
@@ -271,16 +271,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
 
   const rows = useMemo(
     () =>
-      deals.map((deal, index) => [
-        ...columns.map((column) => sized(cellFor(column, deal, index))),
-        {
-          node: (
-            <RowActions
-              actions={[{ kind: "link", label: deal.canManage ? "Work" : "View", href: `/sales/opportunities/${deal.id}` }]}
-            />
-          ),
-        } as TableCell,
-      ]),
+      deals.map((deal, index) => columns.map((column) => sized(cellFor(column, deal, index)))),
     [deals, columns]
   )
 
@@ -467,9 +458,11 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
       <PanelTable
         title="Pipeline"
         emptyIcon={RiBriefcaseLine}
-        cols={`${columns.map((c) => COLUMN_WIDTH[c]).join(" ")} auto`}
-        headers={[...columns.map((c) => COLUMN_LABEL[c]), ""]}
+        cols={columns.map((c) => COLUMN_WIDTH[c]).join(" ")}
+        headers={columns.map((c) => COLUMN_LABEL[c])}
         rows={rows}
+        // A click anywhere on a row opens the Opportunity (owner, 2026-10-18).
+        rowHrefs={deals.map((deal) => `/sales/opportunities/${deal.id}`)}
         isLoading={isLoading}
         isError={query.isError}
         onRetry={() => query.refetch()}

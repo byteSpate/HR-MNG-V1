@@ -54,6 +54,10 @@ export type AuditEntity =
   // A Permission switch on Sales Settings: who turned what on or off for
   // Sales Users, and when.
   | "SALES_PERMISSION"
+  // The Heatmap list in Sales Settings (owner, 2026-10-13): a group, product
+  // or part was added, renamed, moved, hidden, shown or deleted. `entityId`
+  // is that row's id; `before`/`after` carry its level and title.
+  | "HEATMAP_LIST"
   // An Owner's request to remove a collaborator from a Sales Account, and the
   // Sales Admin's answer.
   | "SALES_COLLABORATOR_REMOVAL"

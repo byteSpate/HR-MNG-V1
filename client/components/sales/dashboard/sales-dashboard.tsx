@@ -18,6 +18,8 @@ import {
 import { getSalesTargetYear, setSalesTarget } from "@/lib/api/sales/targets"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { getSalesDashboard } from "@/lib/api/sales/dashboard"
+import { HeatmapBand } from "@/components/sales/dashboard/heatmap-band"
+import { PaymentsTable } from "@/components/sales/payments/payments-table"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type {
@@ -667,6 +669,21 @@ export function SalesDashboard() {
               </div>
             ) : null}
           </Band>
+
+          {/* Follows the scope picker above: `employeeId` is the person, "all", or nothing for me. */}
+          <HeatmapBand employeeId={employeeId} />
+
+          {/* Sales Admins and Super Admins only (owner, 2026-10-18): every
+              invoice not yet fully paid, across all accounts. */}
+          {isSalesAdmin ? (
+            <section className="mt-5">
+              <div className="mb-2.5">
+                <h2 className="font-heading text-[15px] font-bold tracking-tight">Payments</h2>
+                <p className={`mt-0.5 text-[12.5px] ${TONE.muted}`}>Every invoice not yet fully paid. Click a row to see its payments.</p>
+              </div>
+              <PaymentsTable filter={{ open: true }} showAccount showOpportunity emptyText="Every approved invoice is fully paid." />
+            </section>
+          ) : null}
 
           {/* Hidden from a Sales User rather than disabled: a target somebody
               sets for themselves is not a target, so the control is not theirs

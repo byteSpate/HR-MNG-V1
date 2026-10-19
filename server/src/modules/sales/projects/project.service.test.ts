@@ -169,11 +169,11 @@ describe("getProject", () => {
     vi.mocked(prisma.project.findFirst).mockResolvedValue(projectRow({
       opportunity: {
         ...projectRow().opportunity,
-        lines: [{ ...projectRow().opportunity.lines[0], note: "Leave and attendance" }],
+        lines: [{ ...projectRow().opportunity.lines[0], description: "Leave and attendance" }],
       },
     }) as any)
     const p = await getProject("prj-1", USER)
-    expect(p.lines[0].note).toBe("Leave and attendance")
+    expect(p.lines[0].description).toBe("Leave and attendance")
   })
 
   it("says the Project is not visible rather than leaking that it exists", async () => {
@@ -245,6 +245,11 @@ describe("listProjects", () => {
     }
     const task = (status: string, dueOn: string) => ({
       status, dueOn: new Date(`${dueOn}T00:00:00.000Z`), updatedAt: new Date("2026-09-27T10:00:00.000Z"),
+    })
+
+    it("shows the next renewal date, or null", async () => {
+      expect((await one({ nextRenewalOn: new Date("2027-01-31T00:00:00.000Z") })).nextRenewalOn).toBe("2027-01-31")
+      expect((await one({ nextRenewalOn: null })).nextRenewalOn).toBeNull()
     })
 
     it("counts done and total milestones per row", async () => {

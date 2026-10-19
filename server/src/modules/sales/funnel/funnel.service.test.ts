@@ -26,7 +26,10 @@ vi.mock("../../../config/prisma", () => ({
   },
 }))
 
+vi.mock("./funnel.quarter", () => ({ readQuarterSummaries: vi.fn() }))
+
 import prisma from "../../../config/prisma"
+import { readQuarterSummaries } from "./funnel.quarter"
 import { closeChangesFrom, FUNNEL_NOT_YOURS, getFunnel, listFunnelTeam } from "./funnel.service"
 
 const mocked = (fn: unknown) => fn as ReturnType<typeof vi.fn>
@@ -74,7 +77,14 @@ const DEAL = {
   lostToProduct: null,
   nextStep: null,
   lines: [],
+  owner: { fullName: "Rahim Uddin" },
+  quotes: [],
 }
+
+const STRIP = (label: string) => ({
+  quarterLabel: label, target: null, won: "0.00", gap: null, openQuoted: null,
+  coverage: null, targetMet: false, quoteMissingCount: 0,
+})
 
 const dealArgs = () => mocked(prisma.opportunity.findMany).mock.calls[0][0]
 
@@ -86,6 +96,27 @@ beforeEach(() => {
   mocked(prisma.opportunity.findMany).mockResolvedValue([DEAL])
   mocked(prisma.salesComment.findMany).mockResolvedValue([])
   mocked(prisma.$queryRaw).mockResolvedValue([])
+  mocked(readQuarterSummaries).mockImplementation(async (people: { id: string }[], year: number, quarter: number) =>
+    new Map(people.map((p) => [p.id, STRIP(`Q${quarter} ${year}`)])))
+})
+
+describe("the quarter strip and filter (owner, 2026-10-13)", () => {
+  it("shows this quarter by default, measured for the person whose funnel it is", async () => {
+    const grid = await getFunnel(QUERY as never, USER, new Date("2026-10-13T06:00:00.000Z"))
+    expect(grid.summary.quarterLabel).toBe("Q4 2026")
+    expect(mocked(readQuarterSummaries).mock.calls[0].slice(0, 3)).toEqual([[{ id: "emp-1", fullName: "Rahim Uddin" }], 2026, 4])
+  })
+
+  it("shows the quarter asked for, and only its rows when asked", async () => {
+    const grid = await getFunnel({ ...QUERY, quarter: "2027-Q1", inQuarter: true } as never, USER, new Date("2026-10-13T06:00:00.000Z"))
+    expect(grid.summary.quarterLabel).toBe("Q1 2027")
+    expect(dealArgs().where.expectedCloseDate).toEqual({ gte: day("2027-01-01"), lt: day("2027-04-01") })
+  })
+
+  it("reads each row's quotes and owner", async () => {
+    await getFunnel(QUERY as never, USER, new Date("2026-10-13T06:00:00.000Z"))
+    expect(dealArgs().select).toMatchObject({ owner: { select: { fullName: true } }, quotes: expect.any(Object) })
+  })
 })
 
 describe("getFunnel: who may see whose", () => {
@@ -376,6 +407,13 @@ describe("listFunnelTeam", () => {
     // off the UTC date it reviewed the week before the one just finished.
     const result = await listFunnelTeam(ADMIN, new Date("2026-09-11T21:00:00.000Z"))
     expect(result.weekStart).toBe("2026-09-06")
+  })
+
+  it("adds each person's quarter figures", async () => {
+    const result = await listFunnelTeam(ADMIN, new Date("2026-10-13T06:00:00.000Z"), "2026-Q4")
+    expect(result.quarterLabel).toBe("Q4 2026")
+    expect(result.rows[0].summary.quarterLabel).toBe("Q4 2026")
+    expect(mocked(readQuarterSummaries).mock.calls[0][0]).toHaveLength(2)
   })
 
   it("aggregates in the database rather than fetching every deal", async () => {

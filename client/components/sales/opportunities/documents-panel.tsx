@@ -89,9 +89,15 @@ export function DocumentsPanel({
         <ul className="divide-y divide-[#E4E9EF]">
           {query.data.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-2 py-2.5">
-              <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-semibold hover:underline">
-                {d.name} <RiExternalLinkLine className="size-3.5" aria-hidden />
-              </a>
+              {d.url ? (
+                <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-semibold hover:underline">
+                  {d.name} <RiExternalLinkLine className="size-3.5" aria-hidden />
+                </a>
+              ) : (
+                <span className="text-[13px] font-semibold">
+                  {d.name} <span className={`font-normal ${TONE.muted}`}>(only admins can open this)</span>
+                </span>
+              )}
               <span className={`text-[12px] ${TONE.muted}`}>
                 {STAGE_LABEL[d.stage]} · {d.createdByName ?? "Someone"} · {new Date(d.createdAt).toLocaleDateString()}
               </span>

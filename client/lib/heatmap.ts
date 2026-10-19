@@ -1,106 +1,113 @@
-import type { HeatmapCardView, HeatmapColour, HeatmapItemBody, HeatmapItemView, HeatmapNeed } from "@/lib/api/types"
+import type {
+  HeatmapColour,
+  HeatmapGroupView,
+  HeatmapListLevel,
+  HeatmapOverview,
+  HeatmapOverviewProduct,
+  HeatmapProductView,
+} from "@/lib/api/types"
+import type { HeatmapMarkBody } from "@/lib/api/sales/heatmap"
 
 /**
- * The words and colours of a heatmap card. The colour itself is chosen by the
- * server (`heatmap.colour.ts`), which also writes the sentence that explains
- * it; this only says how each colour looks and what it is called.
+ * The words and colours of the Heatmap (owner, 2026-10-18). Nobody picks a
+ * colour. A part has a tick (they do not have it, so we can offer it), a
+ * cross (they have it, or we cannot go) or nothing, and the server works the
+ * product colour out from its parts. Grey means "not checked yet". It is never
+ * a choice.
  */
-export const COLOUR: Record<HeatmapColour, { word: string; card: string; dot: string; text: string }> = {
-  GREEN: { word: "Chance now", card: "border-[#9ED3B4] bg-[#EEF8F2]", dot: "bg-[#1F8A4C]", text: "text-[#17673A]" },
-  YELLOW: { word: "Chance later", card: "border-[#EBCB7A] bg-[#FFF7E3]", dot: "bg-[#C98A0B]", text: "text-[#8A5E0C]" },
-  RED: { word: "No chance", card: "border-[#E9B4B4] bg-[#FCEFEF]", dot: "bg-[#C24141]", text: "text-[#B03A3A]" },
-  GREY: { word: "Not checked", card: "border-[#E4E9EF] bg-[#F6F8FA]", dot: "bg-[#8A94A2]", text: "text-[#5F6B7C]" },
+export const COLOUR: Record<HeatmapColour, { word: string; lane: string; stripe: string; dot: string; text: string; soft: string }> = {
+  GREEN: {
+    word: "Can offer",
+    lane: "We can start here",
+    stripe: "bg-[#1F8A4C]",
+    dot: "bg-[#1F8A4C]",
+    text: "text-[#17673A]",
+    soft: "border-[#9ED3B4] bg-[#EEF8F2]",
+  },
+  RED: {
+    word: "Cannot offer",
+    lane: "They have it, or we cannot go",
+    stripe: "bg-[#C24141]",
+    dot: "bg-[#C24141]",
+    text: "text-[#B03A3A]",
+    soft: "border-[#E9B4B4] bg-[#FCEFEF]",
+  },
+  GREY: {
+    word: "Not checked",
+    lane: "Not checked yet",
+    stripe: "bg-[#C9D1DB]",
+    dot: "bg-[#8A94A2]",
+    text: "text-[#5F6B7C]",
+    soft: "border-[#E4E9EF] bg-white",
+  },
 }
 
-export const COLOUR_ORDER: readonly HeatmapColour[] = ["GREEN", "YELLOW", "RED", "GREY"]
+export const COLOUR_ORDER: readonly HeatmapColour[] = ["GREEN", "RED", "GREY"]
 
-export const NEED_LABEL: Record<HeatmapNeed, string> = {
-  NEED: "Need it",
-  NO_NEED: "No need",
-  NOT_ASKED: "Not asked yet",
+const partsWord = (n: number) => (n === 1 ? "part" : "parts")
+
+/** The line under a product's name. */
+export function closedLine(product: HeatmapProductView): string {
+  const total = product.parts.length
+  if (product.colour === "GREEN") return `${product.tickedCount} of ${total} ${partsWord(total)} ticked`
+  if (product.colour === "RED") return product.note ?? "They have it, or we cannot go."
+  if (total === 0) return "No parts yet"
+  if (product.checkedCount === 0) return "Not checked yet"
+  return `${product.checkedCount} of ${total} ${partsWord(total)} checked`
 }
 
-/** Everything the item form holds, as the text in each box. */
-export interface ItemDraft {
-  brand: string
-  model: string
-  quantity: string
-  site: string
-  boughtFrom: string
-  boughtOn: string
-  supportEndsOn: string
-  endOfLifeOn: string
-  supportBy: string
-  notes: string
-  details: Record<string, string>
+export interface BoardCard {
+  product: HeatmapProductView
+  groupTitle: string
 }
 
-export function draftOfItem(item?: HeatmapItemView): ItemDraft {
-  return {
-    brand: item?.brand ?? "",
-    model: item?.model ?? "",
-    quantity: item ? String(item.quantity) : "1",
-    site: item?.site ?? "",
-    boughtFrom: item?.boughtFrom ?? "",
-    boughtOn: item?.boughtOn ?? "",
-    supportEndsOn: item?.supportEndsOn ?? "",
-    endOfLifeOn: item?.endOfLifeOn ?? "",
-    supportBy: item?.supportBy ?? "",
-    notes: item?.notes ?? "",
-    details: { ...(item?.details ?? {}) },
+/** The two sides of the board. Grey products are not on it. Order is the list's own order. */
+export function boardLanes(groups: HeatmapGroupView[]): { green: BoardCard[]; red: BoardCard[] } {
+  const lanes: { green: BoardCard[]; red: BoardCard[] } = { green: [], red: [] }
+  for (const g of groups) {
+    for (const product of g.products) {
+      if (product.colour === "GREEN") lanes.green.push({ product, groupTitle: g.title })
+      else if (product.colour === "RED") lanes.red.push({ product, groupTitle: g.title })
+    }
   }
+  return lanes
 }
 
-const orNull = (s: string) => s.trim() || null
+/** Pressing the button a part already has clears it. Any other press sets it. */
+export function nextPartMark(current: "GREEN" | "RED" | null, pressed: "GREEN" | "RED"): HeatmapMarkBody {
+  return current === pressed ? "NONE" : pressed
+}
+
+/** "All ticks" or "All crosses": clears when every part already has it, and sets it otherwise. */
+export function allMarkTarget(product: HeatmapProductView, pressed: "GREEN" | "RED"): HeatmapMarkBody {
+  return product.parts.length > 0 && product.parts.every((p) => p.mark === pressed) ? "NONE" : pressed
+}
 
 /**
- * What the form sends, or the first thing to fix. The server checks it all
- * again; this only catches the two things a person most often gets wrong, so
- * they see it before the round trip.
+ * The widths of a product's bar on the dashboard, as shares of all accounts in
+ * scope. Null when there are no accounts: a bar for nobody would be a number
+ * nobody measured.
  */
-export function itemBodyOf(draft: ItemDraft): { body: HeatmapItemBody } | { error: string } {
-  if (!draft.brand.trim()) return { error: "Write the brand." }
-  const quantity = draft.quantity.trim()
-  if (!/^\d{1,7}$/.test(quantity) || Number(quantity) < 1) return { error: "How many must be a whole number, 1 or more." }
-  const details: Record<string, string> = {}
-  for (const [key, value] of Object.entries(draft.details)) if (value.trim()) details[key] = value.trim()
-  return {
-    body: {
-      brand: draft.brand.trim(),
-      model: orNull(draft.model),
-      quantity: Number(quantity),
-      site: orNull(draft.site),
-      boughtFrom: orNull(draft.boughtFrom),
-      boughtOn: orNull(draft.boughtOn),
-      supportEndsOn: orNull(draft.supportEndsOn),
-      endOfLifeOn: orNull(draft.endOfLifeOn),
-      supportBy: orNull(draft.supportBy),
-      notes: orNull(draft.notes),
-      details,
-    },
-  }
+export function barShares(product: HeatmapOverviewProduct, accounts: number): { green: number; red: number; rest: number } | null {
+  if (accounts <= 0) return null
+  const green = (product.green / accounts) * 100
+  const red = (product.red / accounts) * 100
+  return { green, red, rest: 100 - green - red }
 }
 
-export function itemTitle(item: Pick<HeatmapItemView, "brand" | "model">): string {
-  return item.model ? `${item.brand} ${item.model}` : item.brand
+/** The top line of the dashboard band. */
+export function checkedLine(overview: Pick<HeatmapOverview, "accounts" | "checkedAccounts">): string {
+  if (overview.accounts === 0) return "There are no accounts yet."
+  return `Accounts checked: ${overview.checkedAccounts} of ${overview.accounts}`
 }
 
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-/** "3 Mar 2027", from "2027-03-03". Read as text, so no time zone can move the day. */
-export function dayText(dateOnly: string): string {
-  const [y, m, d] = dateOnly.split("-").map(Number)
-  return `${d} ${SHORT_MONTHS[m - 1]} ${y}`
+/** The list editor's note on a row some accounts use. Empty when none do. */
+export function usedByText(n: number): string {
+  if (n === 0) return ""
+  return n === 1 ? "Used by 1 account" : `Used by ${n} accounts`
 }
 
-/** The card's own fields on one item, as one line: "Ports on each switch: 24 · PoE: Yes". */
-export function detailsLine(card: Pick<HeatmapCardView, "extras">, item: Pick<HeatmapItemView, "details">): string {
-  return card.extras
-    .filter((f) => item.details[f.key])
-    .map((f) => {
-      const v = item.details[f.key]
-      const shown = f.type === "YES_NO" ? (v === "YES" ? "Yes" : "No") : f.type === "DATE" ? dayText(v) : v
-      return `${f.label}: ${shown}`
-    })
-    .join(" · ")
+/** Deleting a group or product deletes what is inside it, so the confirm box says so. */
+export function deleteWarning(level: HeatmapListLevel): string | null {
+  return level === "parts" ? null : "This also deletes everything inside it."
 }
