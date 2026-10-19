@@ -51,7 +51,8 @@ function rowCells(p: ProjectListRow): TableCell[] {
       node: (
         <div className="min-w-0">
           <Tag label={PROJECT_STATUS_LABEL[p.status]} tone={PROJECT_STATUS_TONE[p.status]} />
-          {quiet ? <div className="mt-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">{quiet}</div> : null}
+          {/* One line, so every row keeps the same height (owner, 2026-10-19). */}
+          {quiet ? <div title={quiet} className="mt-0.5 truncate text-[11.5px] font-semibold text-[#8A5E0C]">{quiet}</div> : null}
         </div>
       ),
     },
@@ -201,7 +202,7 @@ export function ProjectsPage() {
       <PanelTable
         title="Delivery work"
         emptyIcon={RiFolder3Line}
-        cols="minmax(0,2.2fr) minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,0.9fr)"
+        cols="minmax(0,2fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1.45fr) minmax(0,0.85fr) minmax(0,0.85fr) minmax(0,1fr) minmax(0,0.75fr) minmax(0,0.8fr) minmax(0,0.9fr)"
         headers={["Project", "Account", "Project Manager", "Status", "Health", "Progress", "Days left", "Open tasks", "Milestones", "Next renewal"]}
         rows={projects.map((p) => rowCells(p).map(sized))}
         // A click anywhere on a row opens the project (owner, 2026-10-18).

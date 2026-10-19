@@ -227,7 +227,7 @@ function FunnelGridRow({
         <td className="px-2 py-1.5 text-center tabular-nums text-[#5F6B7C]">{row.serialNo}</td>
 
         {/* The Funnel date is Quote 1's date, so it changes with the quote, not here. */}
-        <td className="px-2 py-1.5 tabular-nums">
+        <td className="px-2 py-1.5 whitespace-nowrap tabular-nums">
           {row.offeredOn ? longDay(row.offeredOn) : <span className={TONE.muted}>—</span>}
         </td>
 
@@ -252,14 +252,14 @@ function FunnelGridRow({
             {row.latestQuote ? (
               <>
                 <span className="block font-medium tabular-nums text-[#1B2733]">{taka(row.latestQuote.amount)}</span>
-                <span className={cn("block text-xs", TONE.muted)}>
+                <span className={cn("block text-xs whitespace-nowrap", TONE.muted)}>
                   {longDay(row.latestQuote.quotedOn)} · Quote {row.quoteCount}
                 </span>
               </>
             ) : (
               <>
                 <span className={cn("block", TONE.muted)}>No price yet</span>
-                <span className="mt-0.5 inline-block rounded-full bg-[#FDF3E2] px-2 py-0.5 text-[11px] font-medium text-[#8A5E0C]">
+                <span className="mt-0.5 inline-block rounded-full bg-[#FDF3E2] px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-[#8A5E0C]">
                   Quote missing
                 </span>
               </>
@@ -291,7 +291,7 @@ function FunnelGridRow({
           </div>
         </td>
 
-        <td className={cn("px-2 py-1.5 tabular-nums", row.daysLeft !== null && row.daysLeft < 0 ? "font-medium text-[#B03A3A]" : row.daysLeft === null ? TONE.muted : undefined)}>
+        <td className={cn("px-2 py-1.5 whitespace-nowrap tabular-nums", row.daysLeft !== null && row.daysLeft < 0 ? "font-medium text-[#B03A3A]" : row.daysLeft === null ? TONE.muted : undefined)}>
           {daysLeftText(row.daysLeft)}
         </td>
 
