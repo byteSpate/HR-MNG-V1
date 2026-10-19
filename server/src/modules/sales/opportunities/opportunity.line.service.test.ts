@@ -30,7 +30,7 @@ const USER = {
 const OPP = { id: "opp-1", salesAccountId: "account-1", track: "NETWORKING", salesAccount: { ownerEmployeeId: "emp-1" } }
 const LINE = {
   id: "line-1", opportunityId: "opp-1", product: "Switch", oemBrand: "Cisco",
-  model: null, partNo: null, quantity: 2, unitValue: dec("100"), lineValue: null,
+  model: null, partNo: null, quantity: 2, unitValue: dec("100"), lineValue: dec("200"),
   description: null, order: 0, createdAt: new Date("2026-09-09"), updatedAt: new Date("2026-09-09"),
   // The parent Opportunity's track, which decides whether this line is a
   // Networking product or a Software module.
@@ -328,5 +328,30 @@ describe("the Total price is Quantity × Price per unit (owner, 2026-10-18)", ()
   it("saves the description", async () => {
     await addOpportunityLine("opp-1", { product: "Switch", description: "Two units for the head office." }, USER)
     expect(createdData().description).toBe("Two units for the head office.")
+  })
+})
+
+describe("review of PR #99", () => {
+  const updatedData = () => vi.mocked(prisma.opportunityLine.update).mock.calls[0][0].data as any
+
+  it("fixes an old Total that disagrees, even when quantity and price are sent unchanged", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, quantity: 2, unitValue: dec("100"), lineValue: dec("999") } as any)
+    await updateOpportunityLine("line-1", { quantity: 2, unitValue: "100", model: "C9300" } as any, USER)
+    expect(updatedData().lineValue.toFixed(2)).toBe("200.00")
+  })
+
+  it("fixes an old Total on any save of the product", async () => {
+    vi.mocked(prisma.opportunityLine.findFirst).mockResolvedValue({ ...LINE, quantity: 2, unitValue: dec("100"), lineValue: dec("999") } as any)
+    await updateOpportunityLine("line-1", { model: "C9300" } as any, USER)
+    expect(updatedData().lineValue.toFixed(2)).toBe("200.00")
+    expect(vi.mocked(prisma.auditLog.create).mock.calls[0][0].data).toMatchObject({
+      before: { lineValue: "999.00" }, after: { lineValue: "200.00" },
+    })
+  })
+
+  it("still saves a Software module, which has no quantity", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ ...OPP, track: "SOFTWARE_DEVELOPMENT" } as any)
+    await expect(addOpportunityLine("opp-1", { product: "HR module", lineValue: "250000" }, USER)).resolves.toBeDefined()
+    expect((vi.mocked(prisma.opportunityLine.create).mock.calls[0][0].data as any).quantity).toBeNull()
   })
 })

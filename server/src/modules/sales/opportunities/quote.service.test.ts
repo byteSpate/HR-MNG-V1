@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
     user: { findUnique: vi.fn() },
-    opportunity: { findFirst: vi.fn(), update: vi.fn() },
+    opportunity: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     opportunityQuote: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() },
     auditLog: { create: vi.fn() },
   },
@@ -48,6 +49,8 @@ beforeEach(() => {
     employee: { id: args.where.id === "user-1" ? "emp-1" : args.where.id === "user-2" ? "emp-2" : "emp-9" },
   })) as any)
   vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opp() as any)
+  // The amount as it is once the row is locked. Matches opp() unless a test says otherwise.
+  vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ amount: dec("1000000") } as any)
   vi.mocked(prisma.opportunityQuote.create).mockImplementation((async (a: any) => quote({ ...a.data, id: "q-new" })) as any)
 })
 
@@ -81,6 +84,7 @@ describe("adding a quote", () => {
 
   it("does not move the amount when the new quote is not the latest", async () => {
     vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opp({ offeredOn: d("2026-10-01"), amount: dec("1500000") }) as any)
+    vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ amount: dec("1500000") } as any)
     vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue(quote({ id: "q-latest", amount: dec("1500000"), quotedOn: d("2026-10-10") }) as any)
     await addQuote("opp-1", BODY, OWNER_USER)
     expect(prisma.opportunity.update).not.toHaveBeenCalled()
@@ -168,5 +172,38 @@ describe("editing and deleting the latest quote", () => {
   it("says so when the quote is not on this Opportunity", async () => {
     vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue(null)
     await expect(deleteLatestQuote("opp-1", "q-x", OWNER_USER)).rejects.toMatchObject({ statusCode: 404 })
+  })
+})
+
+describe("two quote saves at the same moment (review of PR #99)", () => {
+  const order = (fn: unknown) => (vi.mocked(fn as any).mock.invocationCallOrder[0] ?? Infinity)
+
+  it("locks the Opportunity before it reads the latest quote, on add", async () => {
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue(quote({ id: "q-new" }) as any)
+    await addQuote("opp-1", BODY, OWNER_USER)
+    expect(prisma.$queryRaw).toHaveBeenCalled()
+    expect(order(prisma.$queryRaw)).toBeLessThan(order(prisma.opportunityQuote.findFirst))
+  })
+
+  it("locks the Opportunity before it reads the latest quote, on edit and delete", async () => {
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue(quote() as any)
+    await editLatestQuote("opp-1", "q-1", BODY, OWNER_USER)
+    expect(order(prisma.$queryRaw)).toBeLessThan(order(prisma.opportunityQuote.findFirst))
+    vi.clearAllMocks()
+    vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(opp() as any)
+    vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ amount: dec("1000000") } as any)
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue(quote() as any)
+    await deleteLatestQuote("opp-1", "q-1", OWNER_USER)
+    expect(order(prisma.$queryRaw)).toBeLessThan(order(prisma.opportunityQuote.findFirst))
+  })
+
+  it("compares with the amount saved once locked, not the one read before", async () => {
+    // Another save already set the amount to this quote's figure while we waited for the lock.
+    vi.mocked(prisma.opportunity.findUnique).mockResolvedValue({ amount: dec("1200000") } as any)
+    vi.mocked(prisma.opportunityQuote.findFirst).mockResolvedValue(quote({ id: "q-new" }) as any)
+    await addQuote("opp-1", BODY, OWNER_USER)
+    expect(prisma.opportunity.update).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ amount: expect.anything() }) }))
   })
 })

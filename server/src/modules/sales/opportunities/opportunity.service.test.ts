@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../../config/prisma", () => ({
   default: {
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
     idCounter: { upsert: vi.fn() },
     user: { findUnique: vi.fn(), findMany: vi.fn() },
     employee: { findUnique: vi.fn(), findMany: vi.fn() },

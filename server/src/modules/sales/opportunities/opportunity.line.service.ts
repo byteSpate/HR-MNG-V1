@@ -158,7 +158,10 @@ export async function updateOpportunityLine(
         after[field] = toMoneyString(next)
       }
     }
-    if (!isModule && ("quantity" in data || "unitValue" in data)) {
+    // On every save of a product, not only when quantity or price change: a
+    // Total typed before the rule existed (2 × 100 saved as 999) is put right
+    // the next time anyone saves the line (review of PR #99).
+    if (!isModule) {
       const nextQuantity = ("quantity" in data ? data.quantity : current.quantity) as number | null
       const nextUnit = ("unitValue" in data ? data.unitValue : current.unitValue) as Prisma.Decimal | null
       const total = productTotal(nextQuantity, nextUnit === null ? null : dec(nextUnit))

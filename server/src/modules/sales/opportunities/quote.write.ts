@@ -45,6 +45,17 @@ export function quoteDate(value: string): Date {
 const amountText = (v: unknown) => (v == null ? null : toMoneyString(dec(v as string)))
 
 /**
+ * Locks the Opportunity row until the transaction ends. Every quote write
+ * takes it before reading the latest quote, so two saves at the same moment
+ * take turns and the second one sees the first. Without it each could read
+ * its own quote as the latest, and the one that commits last would leave the
+ * amount on the wrong quote.
+ */
+export async function lockOpportunity(tx: Prisma.TransactionClient, id: string): Promise<void> {
+  await tx.$queryRaw`SELECT "id" FROM "Opportunity" WHERE "id" = ${id} FOR UPDATE`
+}
+
+/**
  * Sets the Opportunity's amount to its latest quote, and writes the change to
  * History. With no quote left, the amount stays as it was: the last known
  * figure is more honest than none.
@@ -55,11 +66,15 @@ export async function syncAmount(
   actor: AccessTokenPayload,
 ): Promise<void> {
   const latest = await tx.opportunityQuote.findFirst({ where: { opportunityId: opp.id }, orderBy: LATEST_FIRST })
-  if (!latest || amountText(latest.amount) === amountText(opp.amount)) return
+  // The amount as it is now, under the lock. `opp` was read before the lock,
+  // and another save may have changed it while this one waited.
+  const saved = await tx.opportunity.findUnique({ where: { id: opp.id }, select: { amount: true } })
+  const savedAmount = saved ? saved.amount : opp.amount
+  if (!latest || amountText(latest.amount) === amountText(savedAmount)) return
   await tx.opportunity.update({ where: { id: opp.id }, data: { amount: latest.amount, lastActivityAt: new Date() } })
   await writeAudit(tx, {
     entity: "OPPORTUNITY", entityId: opp.id, action: "UPDATE", changedBy: actor.sub,
-    before: { amount: amountText(opp.amount) }, after: { amount: amountText(latest.amount) },
+    before: { amount: amountText(savedAmount) }, after: { amount: amountText(latest.amount) },
   })
 }
 
@@ -74,6 +89,7 @@ export async function createQuoteIn(
   actor: AccessTokenPayload,
 ): Promise<void> {
   const quotedOn = quoteDate(body.quotedOn)
+  await lockOpportunity(tx, opp.id)
   const created = await tx.opportunityQuote.create({
     data: {
       opportunityId: opp.id, amount: dec(body.amount), quotedOn, reference: body.reference, note: body.note,

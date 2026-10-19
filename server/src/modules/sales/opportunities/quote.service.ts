@@ -8,7 +8,7 @@ import { employeeIdFor, isSalesAdmin } from "../sales.access"
 import { QUOTED_STAGES } from "../sales.stages"
 import { INCLUDE, loadForWrite } from "./opportunity.service"
 import { presentOpportunity } from "./opportunity.present"
-import { createQuoteIn, LATEST_FIRST, quoteDate, quoteText, syncAmount } from "./quote.write"
+import { createQuoteIn, LATEST_FIRST, lockOpportunity, quoteDate, quoteText, syncAmount } from "./quote.write"
 import type { QuoteBody } from "./quote.validators"
 
 export { quoteText }
@@ -47,6 +47,8 @@ async function latestFor(tx: Prisma.TransactionClient, opportunityId: string, qu
   if (current.status !== "ONGOING") throw new AppError(409, CLOSED)
   const employeeId = await employeeIdFor(actor)
   if (!isSalesAdmin(actor) && employeeId !== current.ownerEmployeeId) throw new AppError(403, NOT_YOURS)
+  // Before the latest quote is read, so a save at the same moment cannot slip in between.
+  await lockOpportunity(tx, opportunityId)
   const latest = await tx.opportunityQuote.findFirst({ where: { opportunityId }, orderBy: LATEST_FIRST })
   if (!latest) throw new AppError(404, NO_SUCH_QUOTE)
   if (latest.id !== quoteId) throw new AppError(409, NOT_LATEST)

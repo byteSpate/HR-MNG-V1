@@ -18,7 +18,7 @@ import { taka } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { lineTotal } from "@/lib/line-total"
+import { lineQuantity, lineTotal } from "@/lib/line-total"
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { SupplierPicker } from "@/components/sales/opportunities/supplier-picker"
 
@@ -125,7 +125,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
         ? updateOpportunityLine(accessToken!, editing.id, {
             product: product.trim(), oemBrand: oemBrand.trim() || null,
             model: model.trim() || null, partNo: partNo.trim() || null,
-            quantity: quantity.trim() ? Number(quantity) : null,
+            quantity: lineQuantity(modules, quantity),
             unitValue: unitValue.trim() || null,
             // A module's Price is typed. A product's Total is worked out by the server.
             ...(modules ? { lineValue: lineValue.trim() || null } : {}),
@@ -136,7 +136,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
         : addOpportunityLine(accessToken!, deal.id, {
             product: product.trim(), oemBrand: oemBrand.trim() || undefined,
             model: model.trim() || undefined, partNo: partNo.trim() || undefined,
-            quantity: quantity.trim() ? Number(quantity) : undefined,
+            quantity: lineQuantity(modules, quantity) ?? undefined,
             unitValue: unitValue.trim() || undefined,
             ...(modules ? { lineValue: lineValue.trim() || undefined } : {}),
             marginPercent: marginPercent.trim() || undefined,

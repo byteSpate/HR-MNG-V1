@@ -11,3 +11,13 @@ export function lineTotal(quantity: string, unitValue: string): number | null {
   if (!Number.isFinite(q) || !Number.isFinite(u)) return null
   return Math.round(q * u * 100) / 100
 }
+
+/**
+ * The quantity a save sends. A Software module has no quantity field, and the
+ * server refuses one, so it sends none at all; the form's starting "1" belongs
+ * to products only (review of PR #99). Empty on a product means no quantity.
+ */
+export function lineQuantity(isModule: boolean, quantity: string): number | null | undefined {
+  if (isModule) return undefined
+  return quantity.trim() ? Number(quantity) : null
+}
