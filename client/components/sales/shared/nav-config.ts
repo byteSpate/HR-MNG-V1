@@ -57,8 +57,8 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // all of them at once.
         { label: "Opportunities", href: "/sales/opportunities", icon: "RiBriefcaseLine" },
         // Delivery work for Won Opportunities (spec 2026-09-28 §1.8). Named
-        // "Post Activities" by the owner on 2026-10-18; the route stays.
-        { label: "Post Activities", href: "/sales/projects", icon: "RiFolderChartLine" },
+        // "Won Projects" by the owner (2026-10-18, corrected 2026-10-19); the route stays.
+        { label: "Won Projects", href: "/sales/projects", icon: "RiFolderChartLine" },
         // Meetings and follow-up tasks across every account (revision §24.21).
         // Each carries a count badge from the overview's own figures.
         { label: "Meetings", href: "/sales/meetings", icon: "RiCalendar2Line" },

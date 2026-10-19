@@ -216,7 +216,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
               ),
             },
             { value: "opportunities", icon: RiFlashlightLine, label: "Opportunities", content: <AccountOpportunitiesPanel account={accountQuery.data} /> },
-            { value: "projects", icon: RiFolder3Line, label: "Won Projects", content: <AccountProjectsPanel accountId={accountId} /> },
+            { value: "projects", icon: RiFolder3Line, label: "Post Activities", content: <AccountProjectsPanel accountId={accountId} /> },
             // Sales Admins and Super Admins only (owner, 2026-10-18).
             ...(isSalesAdmin
               ? [{ value: "payments", icon: RiMoneyDollarCircleLine, label: "Payments", content: <PaymentsTable filter={{ accountId }} showOpportunity /> }]
