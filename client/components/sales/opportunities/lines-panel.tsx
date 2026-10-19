@@ -391,7 +391,10 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                   id="line-total"
                   className={`flex h-9 items-center rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 text-[13px] ${productTotal === null ? TONE.muted : "font-semibold"}`}
                 >
-                  {productTotal === null ? "Not set" : taka(String(productTotal))}
+                  {/* Exact, paisa included: the server stores 3001.50, so the form must not say 3,002. */}
+                  {productTotal === null
+                    ? "Not set"
+                    : `৳${productTotal.toLocaleString("en-BD", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </output>
               </Field>
             )}
