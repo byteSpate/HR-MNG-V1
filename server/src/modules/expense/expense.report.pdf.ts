@@ -66,7 +66,7 @@ interface Cell {
 
 const t = (text: string): Cell => ({ text })
 
-function table(columns: Column[], body: Cell[][]): string {
+function table(columns: Column[], body: Cell[][], closing = ""): string {
   const cols = columns.map((c) => `<col${c.width ? ` style="width:${c.width}"` : ""}>`).join("")
   const head = columns
     .map((c) => `<th${c.numeric === false ? ' class="l"' : ""}>${escapeHtml(c.heading)}</th>`)
@@ -86,7 +86,25 @@ function table(columns: Column[], body: Cell[][]): string {
       return `<tr>${cells}</tr>`
     })
     .join("")
-  return `<table><colgroup>${cols}</colgroup><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`
+  return `<table><colgroup>${cols}</colgroup><thead><tr>${head}</tr></thead><tbody>${rows}${closing}</tbody></table>`
+}
+
+/**
+ * One "Total" row per currency, straight after the last claim. The word and the
+ * sum sit together in one cell at the right edge, under the Amount column, so
+ * the eye does not cross a gap to join them. Per currency for the same reason
+ * as the band: BDT and USD are never added together. It sits in the body, not
+ * in a `<tfoot>`, because Chromium repeats a foot on every page and a total
+ * belongs only at the end.
+ */
+function totalRows(report: ExpenseReport, perPerson: boolean): string {
+  const span = columnsFor(perPerson).length
+  return report.totals.byCurrency
+    .map(
+      (c) =>
+        `<tr class="total"><td class="r" colspan="${span}">Total (${c.claims} ${c.claims === 1 ? "claim" : "claims"}): ${escapeHtml(`${c.amount} ${c.currency}`)}</td></tr>`
+    )
+    .join("")
 }
 
 /**
@@ -111,11 +129,11 @@ function columnsFor(perPerson: boolean): Column[] {
     { heading: "Expense", numeric: false, width: perPerson ? "18%" : "14%" },
     { heading: "Details", numeric: false, width: perPerson ? "14%" : "11%" },
     { heading: "Route", numeric: false, width: perPerson ? "13%" : "11%" },
-    { heading: "Amount", numeric: false, width: "13%" },
     { heading: "Status", numeric: false, width: "9%" },
     { heading: "Note from reviewer", numeric: false, width: perPerson ? "11%" : "10%" },
     { heading: "Receipts", width: "5%" },
     { heading: "Payslip", numeric: false, width: "8%", nowrap: true },
+    { heading: "Amount", numeric: false, width: "13%" },
   ]
 }
 
@@ -155,13 +173,13 @@ function rowFor(row: ExpenseReportRow, perPerson: boolean): Cell[] {
     stacked(row.name ?? row.category.name, row.category.name),
     t(row.description ?? ""),
     t(route(row)),
-    amountCell(row),
     stacked(STATUS_LABEL[row.status] ?? row.status, row.reviewedOn ? `on ${row.reviewedOn}` : null),
     t(row.reviewNote ?? ""),
     // A claim with no receipt is the thing an approver is looking for, so it
     // says so in words rather than printing a nought to scan past.
     t(row.receipts === 0 ? "None" : String(row.receipts)),
     t(row.paidOn ?? ""),
+    amountCell(row),
   ]
 }
 
@@ -212,6 +230,7 @@ const STYLES = `
     border-bottom: 0.5pt solid #E9EDF2; word-break: break-word;
   }
   th.l, td.l { text-align: left; }
+  td.r { text-align: right; }
   td.nw, th.nw { white-space: nowrap; }
   thead th {
     background: #17191C; color: #FFFFFF; border-bottom: none;
@@ -222,6 +241,10 @@ const STYLES = `
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
   tbody tr:nth-child(even) td { background: #FBFCFD; }
+  tbody tr.total td {
+    background: #F1F4F8; font-weight: 700; border-top: 1pt solid #17191C;
+    border-bottom: none; font-size: 8.5pt;
+  }
   .nm { font-weight: 600; color: #17191C; }
   .ds { font-size: 6.5pt; color: #17191C; margin-top: 1px; }
   .empty { color: #17191C; font-style: italic; padding: 16px 0; }
@@ -238,7 +261,7 @@ export function renderExpenseReportHtml(
   const perPerson = report.employee !== null
   const columns = columnsFor(perPerson)
   const body = report.rows.length
-    ? table(columns, report.rows.map((r) => rowFor(r, perPerson)))
+    ? table(columns, report.rows.map((r) => rowFor(r, perPerson)), totalRows(report, perPerson))
     : emptyNote(report)
 
   const subject = perPerson

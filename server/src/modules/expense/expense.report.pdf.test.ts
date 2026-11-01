@@ -62,6 +62,21 @@ describe("the expense report document", () => {
     }
   })
 
+  it("ends the table with one Total row per currency, after the last claim", () => {
+    const r = report([row(), row({ id: "claim-2", amount: "300.00" })])
+    r.totals.byCurrency = [
+      { currency: "BDT", claims: 2, amount: "1500.00" },
+      { currency: "USD", claims: 1, amount: "40.00" },
+    ]
+    const out = html(r)
+    expect(out.match(/<tr class="total">/g)).toHaveLength(2)
+    expect(out).toContain("Total (2 claims)")
+    expect(out).toContain("1500.00 BDT")
+    expect(out).toContain("Total (1 claim)")
+    expect(out.lastIndexOf("Taxi to Motijheel")).toBeLessThan(out.indexOf('<tr class="total">'))
+    expect(out.indexOf('<tr class="total">')).toBeLessThan(out.indexOf("</tbody>"))
+  })
+
   it("opens with the red, blue and green stripe, above the header", () => {
     const out = html(report([row()]))
     expect(out).toContain('<div class="stripe"></div>')
