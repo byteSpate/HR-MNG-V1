@@ -4,6 +4,7 @@ vi.mock("../../../config/prisma", () => ({
   default: {
     user: { findUnique: vi.fn() },
     salesContact: { findMany: vi.fn(), count: vi.fn() },
+    salesAccount: { findMany: vi.fn() },
   },
 }))
 
@@ -16,7 +17,7 @@ const USER = { sub: "user-1", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
 const ADMIN = { sub: "user-9", role: "EMPLOYEE", salesRole: "SALES_ADMIN" } as any
 const ROW = {
   id: "c-1", name: "Karim Ahmed", designation: "IT Manager", phone: "01700000000", email: "karim@alpha.com",
-  status: "VERIFIED", isPrimary: true, salesAccount: { id: "acc-1", name: "Alpha Ltd" },
+  status: "VERIFIED", isPrimary: true, salesAccount: { id: "acc-1", name: "Alpha Ltd", industry: "Banking" },
 }
 const findManyArgs = () => vi.mocked(prisma.salesContact.findMany).mock.calls[0][0] as any
 const q = (raw: Record<string, unknown> = {}) => listContactsQuerySchema.parse(raw)
@@ -26,19 +27,20 @@ beforeEach(() => {
   vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: { id: "emp-1" } } as any)
   vi.mocked(prisma.salesContact.findMany).mockResolvedValue([ROW] as any)
   vi.mocked(prisma.salesContact.count).mockResolvedValue(1)
+  vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as any)
 })
 
 describe("the Contacts page (owner, 2026-10-18)", () => {
   it("shows a Sales User only contacts of accounts they own or are assigned to", async () => {
     await listAllContacts(q(), USER)
     expect(findManyArgs().where).toEqual({
-      AND: [{ salesAccount: { OR: [{ ownerEmployeeId: "emp-1" }, { assignments: { some: { employeeId: "emp-1" } } }] } }, {}],
+      AND: [{ salesAccount: { OR: [{ ownerEmployeeId: "emp-1" }, { assignments: { some: { employeeId: "emp-1" } } }] } }, {}, {}, {}],
     })
   })
 
   it("shows a Sales Admin every contact", async () => {
     await listAllContacts(q(), ADMIN)
-    expect(findManyArgs().where).toEqual({ AND: [{ salesAccount: {} }, {}] })
+    expect(findManyArgs().where).toEqual({ AND: [{ salesAccount: {} }, {}, {}, {}] })
   })
 
   it("searches name, job title, phone, email and account name, ignoring case and taking % and _ as letters", async () => {
@@ -47,9 +49,31 @@ describe("the Contacts page (owner, 2026-10-18)", () => {
     expect(findManyArgs().where.AND[1]).toEqual({
       OR: [
         { name: text }, { designation: text }, { phone: text }, { email: text },
-        { salesAccount: { name: text } },
+        { salesAccount: { name: text } }, { salesAccount: { industry: text } },
       ],
     })
+  })
+
+  it("filters by industry as a whole word, ignoring case, and by status", async () => {
+    await listAllContacts(q({ industry: " banking ", status: "VERIFIED" }), ADMIN)
+    expect(findManyArgs().where.AND.slice(2)).toEqual([
+      { salesAccount: { industry: { equals: "banking", mode: "insensitive" } } },
+      { status: "VERIFIED" },
+    ])
+  })
+
+  it("refuses a status that is not in the list", () => {
+    expect(() => q({ status: "MAYBE" })).toThrow()
+  })
+
+  it("lists each industry once, whatever the letter case, from the accounts the viewer can see", async () => {
+    vi.mocked(prisma.salesAccount.findMany).mockResolvedValue(
+      [{ industry: "Banking" }, { industry: "banking" }, { industry: "Garments" }, { industry: " " }] as any,
+    )
+    const page = await listAllContacts(q(), USER)
+    expect(page.industries).toEqual(["Banking", "Garments"])
+    const args = vi.mocked(prisma.salesAccount.findMany).mock.calls[0][0] as any
+    expect(args.where.AND[0]).toEqual({ OR: [{ ownerEmployeeId: "emp-1" }, { assignments: { some: { employeeId: "emp-1" } } }] })
   })
 
   it("pages by 50 and sorts by account name", async () => {
@@ -63,9 +87,9 @@ describe("the Contacts page (owner, 2026-10-18)", () => {
     expect(page).toEqual({
       rows: [{
         id: "c-1", name: "Karim Ahmed", designation: "IT Manager", phone: "01700000000", email: "karim@alpha.com",
-        status: "VERIFIED", isPrimary: true, accountId: "acc-1", accountName: "Alpha Ltd",
+        status: "VERIFIED", isPrimary: true, accountId: "acc-1", accountName: "Alpha Ltd", accountIndustry: "Banking",
       }],
-      total: 73, page: 1, pageSize: 50,
+      total: 73, page: 1, pageSize: 50, industries: [],
     })
   })
 
@@ -77,8 +101,8 @@ describe("the Contacts page (owner, 2026-10-18)", () => {
   it("downloads the same rows, with no paging, under the title Contacts", async () => {
     const spec = await buildContactsExportSpec(q({ q: "alpha", page: "3" }), USER)
     expect(findManyArgs().skip).toBeUndefined()
-    expect(findManyArgs().where.AND[1].OR).toHaveLength(5)
+    expect(findManyArgs().where.AND[1].OR).toHaveLength(6)
     expect(spec.title).toBe("Contacts")
-    expect(spec.rows).toEqual([["Karim Ahmed", "IT Manager", "01700000000", "karim@alpha.com", "Alpha Ltd", "Verified"]])
+    expect(spec.rows).toEqual([["Karim Ahmed", "IT Manager", "01700000000", "karim@alpha.com", "Alpha Ltd", "Banking", "Verified"]])
   })
 })

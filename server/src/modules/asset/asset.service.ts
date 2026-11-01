@@ -43,10 +43,43 @@ export async function nextAssetTag(tx: Prisma.TransactionClient): Promise<string
   return `BS-AST-${String(counter.value).padStart(5, "0")}`
 }
 
+/**
+ * `assetTag` and `serialNumber` are both unique. A clash is the person's
+ * mistake, not ours, so it answers 409 with the field named, not a 500.
+ * Caught around the transaction, as `createCategory` does.
+ */
+async function guardUnique<T>(write: () => Promise<T>): Promise<T> {
+  try {
+    return await write()
+  } catch (err) {
+    if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
+      // Where Prisma puts the field name depends on the driver (`target` on
+      // the engine, a constraint under `driverAdapterError` on the adapter),
+      // so read the whole detail rather than one key.
+      const target = JSON.stringify((err as { meta?: unknown }).meta ?? "")
+      if (target.includes("serialNumber")) {
+        throw new AppError(409, "Another asset already has this serial number. Check the number, then try again.")
+      }
+      if (target.includes("assetTag")) {
+        throw new AppError(409, "Another asset already has this asset tag. Use a different tag.")
+      }
+      throw new AppError(409, "Another asset already has one of these values. Check the serial number and the tag.")
+    }
+    throw err
+  }
+}
+
+async function requireDepartment(tx: Prisma.TransactionClient, departmentId: string | undefined) {
+  if (!departmentId) return
+  const department = await tx.department.findUnique({ where: { id: departmentId }, select: { id: true } })
+  if (!department) throw new AppError(400, "This department was not found. Choose a department from the list.")
+}
+
 export async function createAsset(input: CreateAssetInput, actor: AccessTokenPayload) {
-  return prisma.$transaction(async (tx) => {
+  return guardUnique(() => prisma.$transaction(async (tx) => {
     const category = await tx.assetCategory.findUnique({ where: { id: input.categoryId } })
     if (!category) throw new AppError(400, "Asset category not found")
+    await requireDepartment(tx, input.departmentId)
 
     // Enforced at create rather than as a nullable field everyone forgets.
     if (category.requiresSerial && !input.serialNumber) {
@@ -84,7 +117,7 @@ export async function createAsset(input: CreateAssetInput, actor: AccessTokenPay
     })
 
     return asset
-  })
+  }))
 }
 
 /**
@@ -373,9 +406,13 @@ export async function updateAsset(
   input: UpdateAssetInput,
   actor: AccessTokenPayload
 ) {
-  return prisma.$transaction(async (tx) => {
+  return guardUnique(() => prisma.$transaction(async (tx) => {
     const existing = await tx.asset.findUnique({ where: { id } })
     if (!existing) throw new AppError(404, "Asset not found")
+
+    if (input.departmentId && input.departmentId !== existing.departmentId) {
+      await requireDepartment(tx, input.departmentId)
+    }
 
     if (input.categoryId && input.categoryId !== existing.categoryId) {
       const category = await tx.assetCategory.findUnique({ where: { id: input.categoryId } })
@@ -483,7 +520,7 @@ export async function updateAsset(
     })
 
     return updated
-  })
+  }))
 }
 
 export async function listCategories() {

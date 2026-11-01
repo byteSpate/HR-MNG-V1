@@ -15,7 +15,7 @@ export const CONTACTS_PAGE_SIZE = 50
 
 export const CONTACT_SELECT = {
   id: true, name: true, designation: true, phone: true, email: true, status: true, isPrimary: true,
-  salesAccount: { select: { id: true, name: true } },
+  salesAccount: { select: { id: true, name: true, industry: true } },
 } as const
 
 /**
@@ -23,18 +23,28 @@ export const CONTACT_SELECT = {
  * `mode: "insensitive"` matches the typed text as it is, so % and _ are
  * letters, not wildcards.
  */
-export async function contactsWhere(q: string | undefined, actor: AccessTokenPayload): Promise<Prisma.SalesContactWhereInput> {
+export async function contactsWhere(
+  query: Pick<ListContactsQuery, "q" | "industry" | "status">,
+  actor: AccessTokenPayload,
+): Promise<Prisma.SalesContactWhereInput> {
+  const { q, industry, status } = query
   const scope = accountScopeFor(actor, await employeeIdFor(actor))
   const text = { contains: q ?? "", mode: "insensitive" as const }
   const search: Prisma.SalesContactWhereInput = q
-    ? { OR: [{ name: text }, { designation: text }, { phone: text }, { email: text }, { salesAccount: { name: text } }] }
+    ? { OR: [{ name: text }, { designation: text }, { phone: text }, { email: text }, { salesAccount: { name: text } }, { salesAccount: { industry: text } }] }
     : {}
-  return { AND: [{ salesAccount: scope }, search] }
+  // The industry filter matches the whole word, ignoring case, so "Banking"
+  // does not also pull in "Banking software".
+  const byIndustry: Prisma.SalesContactWhereInput = industry
+    ? { salesAccount: { industry: { equals: industry, mode: "insensitive" } } }
+    : {}
+  const byStatus: Prisma.SalesContactWhereInput = status ? { status } : {}
+  return { AND: [{ salesAccount: scope }, search, byIndustry, byStatus] }
 }
 
 export function contactsOrderBy(sort: ListContactsQuery["sort"], dir: ListContactsQuery["dir"]): Prisma.SalesContactOrderByWithRelationInput[] {
   const first: Prisma.SalesContactOrderByWithRelationInput =
-    sort === "account" ? { salesAccount: { name: dir } } : sort === "designation" ? { designation: dir } : sort === "status" ? { status: dir } : { name: dir }
+    sort === "account" ? { salesAccount: { name: dir } } : sort === "industry" ? { salesAccount: { industry: dir } } : sort === "designation" ? { designation: dir } : sort === "status" ? { status: dir } : { name: dir }
   return [first, { id: "asc" }]
 }
 
@@ -44,12 +54,34 @@ export function presentContact(r: ContactRow): ContactDirectoryRow {
   return {
     id: r.id, name: r.name, designation: r.designation, phone: r.phone, email: r.email,
     status: r.status, isPrimary: r.isPrimary, accountId: r.salesAccount.id, accountName: r.salesAccount.name,
+    accountIndustry: r.salesAccount.industry,
   }
 }
 
+/**
+ * The industries the viewer can filter by: those of the accounts they may see,
+ * each once, whatever the letter case. Industry is typed freely on an account,
+ * so "Banking" and "banking" are one choice here.
+ */
+export async function visibleIndustries(actor: AccessTokenPayload): Promise<string[]> {
+  const scope = accountScopeFor(actor, await employeeIdFor(actor))
+  const rows = await prisma.salesAccount.findMany({
+    where: { AND: [scope, { industry: { not: null } }, { contacts: { some: {} } }] },
+    distinct: ["industry"],
+    orderBy: { industry: "asc" },
+    select: { industry: true },
+  })
+  const seen = new Map<string, string>()
+  for (const r of rows) {
+    const name = r.industry?.trim()
+    if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name)
+  }
+  return [...seen.values()]
+}
+
 export async function listAllContacts(query: ListContactsQuery, actor: AccessTokenPayload): Promise<ContactDirectoryPage> {
-  const where = await contactsWhere(query.q, actor)
-  const [rows, total] = await Promise.all([
+  const where = await contactsWhere(query, actor)
+  const [rows, total, industries] = await Promise.all([
     prisma.salesContact.findMany({
       where,
       orderBy: contactsOrderBy(query.sort, query.dir),
@@ -58,6 +90,7 @@ export async function listAllContacts(query: ListContactsQuery, actor: AccessTok
       select: CONTACT_SELECT,
     }),
     prisma.salesContact.count({ where }),
+    visibleIndustries(actor),
   ])
-  return { rows: rows.map(presentContact), total, page: query.page, pageSize: CONTACTS_PAGE_SIZE }
+  return { rows: rows.map(presentContact), total, page: query.page, pageSize: CONTACTS_PAGE_SIZE, industries }
 }

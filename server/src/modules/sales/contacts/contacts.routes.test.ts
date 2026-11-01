@@ -16,7 +16,7 @@ const token = (salesRole: "SALES_ADMIN" | "SALES_USER" | null) =>
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(listAllContacts).mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 50 })
+  vi.mocked(listAllContacts).mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 50, industries: [] })
 })
 
 describe("the Contacts routes", () => {
@@ -34,6 +34,6 @@ describe("the Contacts routes", () => {
 
   it("refuse a bad sort with a plain sentence", async () => {
     const res = await request(app).get("/api/sales/contacts?sort=salary").set("Authorization", token("SALES_USER")).expect(400)
-    expect(res.body.error).toBe("Sort by name, job title, account or status.")
+    expect(res.body.error).toBe("Sort by name, job title, account, industry or status.")
   })
 })

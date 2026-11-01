@@ -1,6 +1,6 @@
 "use client"
 
-import { boardLanes, closedLine, COLOUR, type BoardCard } from "@/lib/heatmap"
+import { boardLanes, COLOUR, type BoardCard } from "@/lib/heatmap"
 import type { HeatmapGroupView } from "@/lib/api/types"
 import { TONE } from "@/components/dashboard/record-kit"
 import { HeatmapStartButton } from "@/components/sales/accounts/heatmap-start-button"
@@ -24,8 +24,10 @@ function Card({
   canManage: boolean
   onOpen: (productId: string) => void
 }) {
-  const { product, groupTitle } = card
-  const tone = COLOUR[product.colour]
+  const { product, part, groupTitle, first } = card
+  // The side the part is on, not the colour of its product: a half crossed
+  // product is Grey, but its crossed part is still a red card here.
+  const tone = COLOUR[part.mark === "RED" ? "RED" : "GREEN"]
   return (
     <li
       className={cn(
@@ -41,16 +43,21 @@ function Card({
           onClick={() => onOpen(product.id)}
           className="min-w-0 text-left focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
         >
-          <span className="block text-[13.5px] font-bold [overflow-wrap:anywhere] hover:underline">{product.title}</span>
-          <span className={`block text-[11.5px] ${TONE.muted}`}>{groupTitle}</span>
+          <span className="block text-[13.5px] font-bold [overflow-wrap:anywhere] hover:underline">{part.title}</span>
+          <span className={`block text-[11.5px] ${TONE.muted}`}>
+            {product.title}, {groupTitle}
+          </span>
         </button>
-        <span className="text-[12px] leading-snug [overflow-wrap:anywhere]">{closedLine(product)}</span>
-        {product.markedByName && product.markedAt ? (
+        {part.note ? <span className={`text-[12px] leading-snug [overflow-wrap:anywhere] ${TONE.muted}`}>{part.note}</span> : null}
+        {first && part.mark === "RED" && product.colour === "RED" && product.note ? (
+          <span className="text-[12px] leading-snug [overflow-wrap:anywhere]">{product.note}</span>
+        ) : null}
+        {first && product.markedByName && product.markedAt ? (
           <span className={`text-[11.5px] ${TONE.muted}`}>
-            {product.markedByName}, {onDay(product.markedAt)}
+            Last change: {product.markedByName}, {onDay(product.markedAt)}
           </span>
         ) : null}
-        {canManage && product.colour === "GREEN" ? (
+        {first && canManage && part.mark === "GREEN" ? (
           <div className="pt-0.5">
             <HeatmapStartButton accountId={accountId} productTitle={product.title} />
           </div>
@@ -88,7 +95,7 @@ function Lane({
       ) : (
         <ul className="grid gap-2">
           {cards.map((card, i) => (
-            <Card key={card.product.id} card={card} index={i} accountId={accountId} canManage={canManage} onOpen={onOpen} />
+            <Card key={card.part.id} card={card} index={i} accountId={accountId} canManage={canManage} onOpen={onOpen} />
           ))}
         </ul>
       )}
@@ -97,10 +104,10 @@ function Lane({
 }
 
 /**
- * The board at the top of the Heatmap tab (owner, 2026-10-18): every Green
- * product on the left, every Red product on the right. Grey products are not
- * here; they are in the list below, where they are checked. A click on a card
- * opens that product in the list.
+ * The board at the top of the Heatmap tab (owner, 2026-11-01): every part with
+ * a tick on the left, every part with a cross on the right, whatever colour
+ * its product has. Parts with no mark are in the list below, where they are
+ * checked. A click on a card opens its product in the list.
  */
 export function HeatmapBoard({
   accountId,
@@ -119,7 +126,7 @@ export function HeatmapBoard({
       <Lane
         colour="GREEN"
         cards={lanes.green}
-        empty="No product is Green yet. Open a product below and press ✓ on a part."
+        empty="No part has a tick yet. Open a product below and press ✓ on a part."
         accountId={accountId}
         canManage={canManage}
         onOpen={onOpen}
@@ -127,7 +134,7 @@ export function HeatmapBoard({
       <Lane
         colour="RED"
         cards={lanes.red}
-        empty="No product is Red yet. Press ✗ on every part of a product below."
+        empty="No part has a cross yet. Open a product below and press ✗ on a part."
         accountId={accountId}
         canManage={canManage}
         onOpen={onOpen}

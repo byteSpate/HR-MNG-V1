@@ -10,6 +10,7 @@ vi.mock("../../config/prisma", () => {
     auditLog: { create: vi.fn() },
     event: { create: vi.fn() },
     employee: { findUnique: vi.fn() },
+    department: { findUnique: vi.fn() },
   }
   return {
     default: {
@@ -24,7 +25,7 @@ vi.mock("../../config/prisma", () => {
 })
 
 import prisma from "../../config/prisma"
-import { createAsset, getAsset, listAssets, markAssetLost, nextAssetTag, retireAsset } from "./asset.service"
+import { createAsset, getAsset, listAssets, markAssetLost, nextAssetTag, retireAsset, updateAsset } from "./asset.service"
 
 const tx = (prisma as unknown as { __tx: any }).__tx
 
@@ -53,6 +54,63 @@ beforeEach(() => {
 describe("nextAssetTag", () => {
   it("pads to five digits, matching every other code in the system", async () => {
     await expect(nextAssetTag(tx)).resolves.toBe("BS-AST-00042")
+  })
+})
+
+const clash = (target: string) => Object.assign(new Error("Unique constraint failed"), { code: "P2002", meta: { target: [target] } })
+
+describe("saving an asset that clashes or points at nothing", () => {
+  const existing = { id: "a-1", categoryId: "cat-2", serialNumber: "SN-1", departmentId: null }
+
+  it("says the serial number is already taken when an edit clashes, not a server error", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.asset.update.mockRejectedValue(clash("serialNumber"))
+    await expect(updateAsset("a-1", { serialNumber: "SN-2" }, hr)).rejects.toMatchObject({
+      statusCode: 409,
+      message: expect.stringContaining("serial number"),
+    })
+  })
+
+  it("reads the field from the driver adapter's error shape too", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.asset.update.mockRejectedValue(
+      Object.assign(new Error("Unique constraint failed"), {
+        code: "P2002",
+        meta: { driverAdapterError: { cause: { kind: "UniqueConstraintViolation", constraint: { fields: ["serialNumber"] } } } },
+      }),
+    )
+    await expect(updateAsset("a-1", { serialNumber: "SN-2" }, hr)).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining("serial number") })
+  })
+
+  it("says the asset tag is already taken when an edit clashes", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.asset.update.mockRejectedValue(clash("assetTag"))
+    await expect(updateAsset("a-1", { assetTag: "BS-AST-00001" }, hr)).rejects.toMatchObject({
+      statusCode: 409,
+      message: expect.stringContaining("asset tag"),
+    })
+  })
+
+  it("answers 409 for a new asset with a serial number that is taken", async () => {
+    tx.assetCategory.findUnique.mockResolvedValue(chairCategory)
+    tx.asset.create.mockRejectedValue(clash("serialNumber"))
+    await expect(createAsset({ categoryId: "cat-2", name: "Chair", serialNumber: "SN-1" }, hr)).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it("answers 400, not a server error, for a department that does not exist", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.department.findUnique.mockResolvedValue(null)
+    await expect(updateAsset("a-1", { departmentId: "11111111-1111-4111-8111-111111111111" }, hr)).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringContaining("department"),
+    })
+    expect(tx.asset.update).not.toHaveBeenCalled()
+  })
+
+  it("lets other errors through untouched", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.asset.update.mockRejectedValue(new Error("connection lost"))
+    await expect(updateAsset("a-1", { name: "New name" }, hr)).rejects.toThrow("connection lost")
   })
 })
 
