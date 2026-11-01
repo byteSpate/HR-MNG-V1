@@ -42,11 +42,34 @@ const groups: HeatmapGroupView[] = [
   { id: "g2", title: "Servers", products: [product({ id: "4", title: "Server", colour: "GREEN" })] },
 ]
 
-test("the board has Green on one side, Red on the other, and leaves Grey off", () => {
+test("the board lists every ticked part on one side and every crossed part on the other", () => {
+  const mixed = product({
+    id: "5", title: "Cabling", colour: "GREY",
+    parts: [
+      { id: "a", title: "Cat6", note: null, mark: "RED" },
+      { id: "b", title: "Fibre", note: null, mark: "GREEN" },
+      { id: "c", title: "Rack", note: null, mark: null },
+      { id: "d", title: "Patch panel", note: null, mark: "RED" },
+    ],
+  })
+  const lanes = boardLanes([{ id: "g3", title: "Network", products: [mixed, product({ id: "6", colour: "GREY" })] }])
+  assert.deepEqual(lanes.green.map((c) => c.part.title), ["Fibre"])
+  assert.deepEqual(lanes.red.map((c) => c.part.title), ["Cat6", "Patch panel"])
+  // Only the first card of a product in a lane carries the product's actions.
+  assert.deepEqual(lanes.red.map((c) => c.first), [true, false])
+  assert.equal(lanes.red[0].groupTitle, "Network")
+})
+
+test("an all-crossed product puts every part on the Red side and none on Green", () => {
+  const red = product({ id: "2", colour: "RED", parts: [{ id: "a", title: "S", note: null, mark: "RED" }, { id: "b", title: "M", note: null, mark: "RED" }] })
+  const lanes = boardLanes([{ id: "g", title: "Network", products: [red] }])
+  assert.equal(lanes.green.length, 0)
+  assert.equal(lanes.red.length, 2)
+})
+
+test("a product with no marks is not on the board", () => {
   const lanes = boardLanes(groups)
-  assert.deepEqual(lanes.green.map((c) => c.product.id), ["1", "4"])
-  assert.deepEqual(lanes.red.map((c) => c.product.id), ["2"])
-  assert.deepEqual(lanes.green.map((c) => c.groupTitle), ["Network", "Servers"])
+  assert.deepEqual(lanes, { green: [], red: [] })
 })
 
 test("pressing the mark a part already has clears it", () => {

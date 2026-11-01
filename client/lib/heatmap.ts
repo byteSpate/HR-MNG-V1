@@ -4,6 +4,7 @@ import type {
   HeatmapListLevel,
   HeatmapOverview,
   HeatmapOverviewProduct,
+  HeatmapPartView,
   HeatmapProductView,
 } from "@/lib/api/types"
 import type { HeatmapMarkBody } from "@/lib/api/sales/heatmap"
@@ -56,18 +57,33 @@ export function closedLine(product: HeatmapProductView): string {
   return `${product.checkedCount} of ${total} ${partsWord(total)} checked`
 }
 
+/** One ticked or crossed part on the board. */
 export interface BoardCard {
   product: HeatmapProductView
+  part: HeatmapPartView
   groupTitle: string
+  /** True on the first card of a product in this lane, which carries the product's own actions. */
+  first: boolean
 }
 
-/** The two sides of the board. Grey products are not on it. Order is the list's own order. */
+/**
+ * The two sides of the board (owner, 2026-11-01): every part with a tick on the
+ * left and every part with a cross on the right, whatever colour its product
+ * has. A product that is half crossed still shows its crosses. Parts with no
+ * mark are not here; they are in the list below, where they are checked. Order
+ * is the list's own order.
+ */
 export function boardLanes(groups: HeatmapGroupView[]): { green: BoardCard[]; red: BoardCard[] } {
   const lanes: { green: BoardCard[]; red: BoardCard[] } = { green: [], red: [] }
   for (const g of groups) {
     for (const product of g.products) {
-      if (product.colour === "GREEN") lanes.green.push({ product, groupTitle: g.title })
-      else if (product.colour === "RED") lanes.red.push({ product, groupTitle: g.title })
+      const seen = { GREEN: false, RED: false }
+      for (const part of product.parts) {
+        if (part.mark !== "GREEN" && part.mark !== "RED") continue
+        const lane = part.mark === "GREEN" ? lanes.green : lanes.red
+        lane.push({ product, part, groupTitle: g.title, first: !seen[part.mark] })
+        seen[part.mark] = true
+      }
     }
   }
   return lanes
