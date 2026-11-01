@@ -3959,10 +3959,14 @@ export interface ContactDirectoryRow {
   isPrimary: boolean
   accountId: string
   accountName: string
+  /** Typed on the account, so it can be blank. */
+  accountIndustry: string | null
 }
 
 export interface ContactDirectoryPage {
   rows: ContactDirectoryRow[]
+  /** The industries to filter by, each once. */
+  industries: string[]
   total: number
   page: number
   pageSize: number

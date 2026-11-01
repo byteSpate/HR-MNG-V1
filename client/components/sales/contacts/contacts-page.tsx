@@ -6,7 +6,7 @@ import { RiArrowDownSLine, RiArrowUpSLine, RiContactsBook2Line, RiSearchLine } f
 
 import { listAllContacts, type ContactSort } from "@/lib/api/sales/contacts"
 import { salesKeys } from "@/lib/api/sales/keys"
-import type { ContactDirectoryRow } from "@/lib/api/types"
+import type { ContactDirectoryRow, SalesContactStatus } from "@/lib/api/types"
 import { useSession } from "@/lib/auth/session-context"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, TONE } from "@/components/dashboard/record-kit"
@@ -17,9 +17,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-const HEADERS = ["Name", "Job title", "Phone", "Email", "Account", "Status"]
+const HEADERS = ["Name", "Job title", "Phone", "Email", "Account", "Industry", "Status"]
 /** The columns the server can sort by, in header order. Phone and email cannot be sorted. */
-const SORT_OF: (ContactSort | null)[] = ["name", "designation", null, null, "account", "status"]
+const SORT_OF: (ContactSort | null)[] = ["name", "designation", null, null, "account", "industry", "status"]
 
 function cellsOf(c: ContactDirectoryRow): TableCell[] {
   const plain = (v: string | null) => (v ? { text: v } : { node: <span className={TONE.muted}>-</span> })
@@ -29,19 +29,26 @@ function cellsOf(c: ContactDirectoryRow): TableCell[] {
     plain(c.phone),
     plain(c.email),
     { text: c.accountName },
+    plain(c.accountIndustry),
     { tag: CONTACT_STATUS_LABEL[c.status], tone: CONTACT_STATUS_TONE[c.status] },
   ]
 }
 
+const STATUSES = Object.keys(CONTACT_STATUS_LABEL) as SalesContactStatus[]
+const selectClass =
+  "h-9 rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+
 /**
  * Every contact of every account the viewer may see (owner, 2026-10-18), as a
- * sheet: sort by a column name, search once, download as CSV or PDF. A click
+ * sheet: sort by a column name, search once, filter by industry or status, download as CSV or PDF. A click
  * anywhere on a row opens the account's Contacts tab.
  */
 export function ContactsPage() {
   const { accessToken } = useSession()
   const [typed, setTyped] = useState("")
   const [q, setQ] = useState("")
+  const [industry, setIndustry] = useState("")
+  const [status, setStatus] = useState<SalesContactStatus | "">("")
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState<ContactSort>("name")
   const [dir, setDir] = useState<"asc" | "desc">("asc")
@@ -56,8 +63,8 @@ export function ContactsPage() {
   }, [typed])
 
   const query = useQuery({
-    queryKey: salesKeys.contactDirectory(q, page, sort, dir),
-    queryFn: () => listAllContacts(accessToken!, { q, page, sort, dir }),
+    queryKey: salesKeys.contactDirectory(q, industry, status, page, sort, dir),
+    queryFn: () => listAllContacts(accessToken!, { q, industry, status, page, sort, dir }),
     enabled: !!accessToken,
     placeholderData: (previous) => previous,
   })
@@ -91,8 +98,16 @@ export function ContactsPage() {
     )
   })
 
-  const empty = q
-    ? { title: "Nothing matches your search", body: `No contact matches "${q}". Check the spelling, or search for less.`, action: "Clear the search" }
+  const filtered = !!(q || industry || status)
+  const clearAll = () => {
+    setTyped("")
+    setQ("")
+    setIndustry("")
+    setStatus("")
+    setPage(1)
+  }
+  const empty = filtered
+    ? { title: "No contact matches", body: "Try a shorter search, or take off a filter.", action: "Clear search and filters" }
     : { title: "No contacts yet", body: "Contacts are added on each account's Contacts tab.", action: undefined }
 
   return (
@@ -108,14 +123,60 @@ export function ContactsPage() {
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               aria-label="Search contacts"
-              placeholder="Name, job title, phone, email or account"
+              placeholder="Name, job title, phone, email, account or industry"
               className="pl-8 text-[13px]"
             />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor="contact-industry" className={`text-[12px] font-semibold ${TONE.muted}`}>
+              Industry
+            </label>
+            <select
+              id="contact-industry"
+              value={industry}
+              onChange={(e) => {
+                setIndustry(e.target.value)
+                setPage(1)
+              }}
+              className={selectClass}
+            >
+              <option value="">All</option>
+              {/* A chosen industry stays in the list even if no account has it any more. */}
+              {(industry && !data.industries.includes(industry) ? [industry, ...data.industries] : data.industries).map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="contact-status" className={`ml-1 text-[12px] font-semibold ${TONE.muted}`}>
+              Status
+            </label>
+            <select
+              id="contact-status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value as SalesContactStatus | "")
+                setPage(1)
+              }}
+              className={selectClass}
+            >
+              <option value="">All</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {CONTACT_STATUS_LABEL[s]}
+                </option>
+              ))}
+            </select>
+            {filtered ? (
+              <Button type="button" variant="outline" onClick={clearAll} className="h-9 text-[12px] font-bold">
+                Clear
+              </Button>
+            ) : null}
           </div>
           <ExportMenu
             basePath="/api/sales/contacts"
             fileName="contacts"
-            params={{ q: q || undefined, sort, dir }}
+            params={{ q: q || undefined, industry: industry || undefined, status: status || undefined, sort, dir }}
             formats={["csv", "pdf"]}
             disabled={query.isError}
           />
@@ -126,7 +187,7 @@ export function ContactsPage() {
 
       <PanelTable
         emptyIcon={RiContactsBook2Line}
-        cols="minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,0.8fr)"
+        cols="minmax(0,1.3fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr)"
         headers={HEADERS}
         headerNodes={headerNodes}
         rows={(data?.rows ?? []).map(cellsOf)}
@@ -137,7 +198,7 @@ export function ContactsPage() {
         emptyTitle={empty.title}
         emptyBody={empty.body}
         emptyAction={empty.action}
-        onEmptyAction={() => setTyped("")}
+        onEmptyAction={clearAll}
       />
 
       {data && data.total > data.pageSize ? (

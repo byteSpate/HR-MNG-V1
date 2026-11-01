@@ -16,22 +16,30 @@ const STATUS_WORD: Record<string, string> = {
 /** The Contacts page as a file: the same search and sort, every page. */
 export async function buildContactsExportSpec(query: ListContactsQuery, actor: AccessTokenPayload): Promise<ExportSpec> {
   const rows = await prisma.salesContact.findMany({
-    where: await contactsWhere(query.q, actor),
+    where: await contactsWhere(query, actor),
     orderBy: contactsOrderBy(query.sort, query.dir),
     select: CONTACT_SELECT,
   })
   return {
     title: "Contacts",
-    filterNote: query.q ? `Search: ${query.q}` : undefined,
+    filterNote:
+      [
+        query.q ? `Search: ${query.q}` : null,
+        query.industry ? `Industry: ${query.industry}` : null,
+        query.status ? `Status: ${STATUS_WORD[query.status]}` : null,
+      ]
+        .filter(Boolean)
+        .join(". ") || undefined,
     columns: [
       { header: "Name", type: "text", inPdf: true },
       { header: "Job title", type: "text", inPdf: true },
       { header: "Phone", type: "text", inPdf: true },
       { header: "Email", type: "text", inPdf: true },
       { header: "Account", type: "text", inPdf: true },
+      { header: "Industry", type: "text", inPdf: true },
       { header: "Status", type: "text", inPdf: true },
     ],
-    rows: rows.map((r) => [r.name, r.designation, r.phone, r.email, r.salesAccount.name, STATUS_WORD[r.status] ?? r.status]),
+    rows: rows.map((r) => [r.name, r.designation, r.phone, r.email, r.salesAccount.name, r.salesAccount.industry, STATUS_WORD[r.status] ?? r.status]),
   }
 }
 
@@ -41,7 +49,7 @@ export async function exportContactsHandler(req: Request, res: Response, next: N
     const query = parse(listContactsQuerySchema, req.query)
     await sendExport({
       res, spec: await buildContactsExportSpec(query, req.user!), format, baseName: "contacts",
-      actor: req.user!, list: "SALES_CONTACTS", filter: { q: query.q ?? null },
+      actor: req.user!, list: "SALES_CONTACTS", filter: { q: query.q ?? null, industry: query.industry ?? null, status: query.status ?? null },
     })
   } catch (err) {
     next(err)
