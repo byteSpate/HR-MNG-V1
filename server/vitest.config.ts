@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    // The full suite loads ~350 files at once; route tests that import the whole
+    // app can pass the 5s default under that load and fail the deploy gate.
+    testTimeout: 15000,
   },
   resolve: {
     alias: {
