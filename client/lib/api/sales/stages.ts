@@ -27,8 +27,9 @@ export const TRACK_LABEL: Record<SalesTrack, string> = {
 export const TRACKS: SalesTrack[] = ["NETWORKING", "SOFTWARE_DEVELOPMENT"]
 
 /**
- * The two Networking stages that show a box for links to files kept outside
- * the app (Google Drive). The box never blocks a stage change: with no link it
+ * The stages that show a box for links to files kept outside the app (Google
+ * Drive): Design files and Costing and BOQ link, and from 2026-11-02 four more
+ * for the early stages. The box never blocks a stage change: with no link it
  * only says so. Links are the same rows as the Documents tab, tagged with the
  * stage they were added at.
  */
@@ -48,6 +49,27 @@ export const STAGE_LINK_FIELDS: Partial<
     namePlaceholder: "Costing v1",
     kind: "COSTING_BOQ",
   },
+  // Early stages (owner, 2026-11-02). Each is a link to a file, nothing more.
+  TECHNICAL_VALIDATION: {
+    title: "Validation report",
+    empty: "No validation report link added yet.",
+    namePlaceholder: "Validation v1",
+  },
+  REQUIREMENT_RECEIVED: {
+    title: "Requirement document",
+    empty: "No requirement document link added yet.",
+    namePlaceholder: "Requirement v1",
+  },
+  BRD_SENT: {
+    title: "BRD file",
+    empty: "No BRD link added yet.",
+    namePlaceholder: "BRD v1",
+  },
+  SRS_SENT: {
+    title: "SRS file",
+    empty: "No SRS link added yet.",
+    namePlaceholder: "SRS v1",
+  },
 }
 
 /**
@@ -59,6 +81,16 @@ export const QUOTED_STAGES: ReadonlySet<OpportunityStage> = new Set<OpportunityS
   "COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED",
   "PROPOSAL_SUBMITTED", "PROPOSAL_REVISION", "NEGOTIATION", "AWAITING_DECISION",
 ])
+
+/**
+ * The stages before the first quote goes out (owner, 2026-11-02): Networking's
+ * first three and Software's first four. A hand copy of the server's
+ * `BEFORE_QUOTE_STAGES`; the Before Quotation view uses it to name the stages.
+ */
+export const BEFORE_QUOTE_STAGES: Record<SalesTrack, OpportunityStage[]> = {
+  NETWORKING: NETWORKING_STAGES.filter((stage) => !QUOTED_STAGES.has(stage)),
+  SOFTWARE_DEVELOPMENT: SOFTWARE_STAGES.filter((stage) => !QUOTED_STAGES.has(stage)),
+}
 
 /** Where the price is talked over again: Proposal revision and Negotiation ("Quotation Revision"). */
 export const REVISION_STAGES: ReadonlySet<OpportunityStage> = new Set<OpportunityStage>(["PROPOSAL_REVISION", "NEGOTIATION"])
