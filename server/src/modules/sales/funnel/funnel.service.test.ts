@@ -21,7 +21,7 @@ vi.mock("../../../config/prisma", () => ({
     salesComment: { findMany: vi.fn(), create: vi.fn() },
     auditLog: { findMany: vi.fn(), create: vi.fn() },
     funnelMeeting: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    salesTask: { findMany: vi.fn(), create: vi.fn() },
+    salesTask: { findMany: vi.fn(), create: vi.fn(), groupBy: vi.fn() },
     user: { findUnique: vi.fn() },
   },
 }))
@@ -365,9 +365,26 @@ describe("listFunnelTeam", () => {
         { ownerEmployeeId: "emp-1", _count: { _all: 3 }, _sum: { amount: "300.00" } },
       ])
       .mockResolvedValueOnce([{ ownerEmployeeId: "emp-1", _sum: { amount: "200.00" } }])
+      .mockResolvedValueOnce([{ ownerEmployeeId: "emp-1", _count: { _all: 2 } }])
+    mocked(prisma.salesTask.groupBy)
+      .mockResolvedValueOnce([{ assignedToEmployeeId: "emp-1", _count: { _all: 4 } }])
+      .mockResolvedValueOnce([{ assignedToEmployeeId: "emp-2", _count: { _all: 1 } }])
     mocked(prisma.funnelMeeting.findUnique).mockResolvedValue({
       reviews: [{ employeeId: "emp-1" }],
     })
+  })
+
+  it("shows each person's Before Quotation, logged and open take-out counts, zero when none", async () => {
+    const result = await listFunnelTeam(ADMIN, new Date("2026-09-19T09:00:00.000Z"))
+    expect(result.rows[0]).toMatchObject({ beforeQuoteCount: 2, loggedCount: 4, openTakeOuts: 0 })
+    expect(result.rows[1]).toMatchObject({ beforeQuoteCount: 0, loggedCount: 0, openTakeOuts: 1 })
+  })
+
+  it("counts Before Quotation only for ongoing Opportunities in the early stages", async () => {
+    await listFunnelTeam(ADMIN, new Date("2026-09-19T09:00:00.000Z"))
+    const where = mocked(prisma.opportunity.groupBy).mock.calls[2][0].where
+    expect(where.status).toBe("ONGOING")
+    expect(where.OR).toHaveLength(2)
   })
 
   it("is refused to a Sales User", async () => {
@@ -418,7 +435,7 @@ describe("listFunnelTeam", () => {
 
   it("aggregates in the database rather than fetching every deal", async () => {
     await listFunnelTeam(ADMIN, new Date("2026-09-19T09:00:00.000Z"))
-    expect(prisma.opportunity.groupBy).toHaveBeenCalledTimes(2)
+    expect(prisma.opportunity.groupBy).toHaveBeenCalledTimes(3)
     expect(prisma.opportunity.findMany).not.toHaveBeenCalled()
   })
 })

@@ -20,13 +20,11 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   completeFunnelMeeting,
-  createFunnelAction,
   addManagementNote,
   editFunnelCell,
   getFunnel,
   getFunnelMeeting,
   getFunnelTeam,
-  listMeetingActions,
   listTakeOuts,
   openFunnelMeeting,
   reopenFunnelMeeting,
@@ -35,7 +33,7 @@ import {
   setPersonReviewed,
 } from "@/lib/api/sales/funnel"
 import { funnelKeys, funnelWriteKeys } from "@/lib/api/sales/funnel-keys"
-import type { FunnelActionBody, FunnelCellField, FunnelQueryOptions, FunnelSort } from "@/lib/api/types"
+import type { FunnelCellField, FunnelQueryOptions, FunnelSort } from "@/lib/api/types"
 import { useSession } from "@/lib/auth/session-context"
 import { nextPerson } from "@/lib/funnel-nav"
 import { cn } from "@/lib/utils"
@@ -121,16 +119,6 @@ export function FunnelPage() {
     enabled: isAuthed && isAdmin,
   })
 
-  // What has been handed out at the open meeting. Only the team screen shows
-  // it, so only that screen asks. `funnelKeys.actions` sits under
-  // `funnelKeys.all`, so `refresh` after a new action item refetches it.
-  const meetingId = meetingQuery.data?.id
-  const actionsQuery = useQuery({
-    queryKey: funnelKeys.actions(meetingId ?? ""),
-    queryFn: () => listMeetingActions(meetingId!, accessToken!),
-    enabled: isAuthed && isAdmin && showingTeam && Boolean(meetingId),
-  })
-
   const refresh = () => {
     for (const key of funnelWriteKeys) {
       void queryClient.invalidateQueries({ queryKey: key })
@@ -194,12 +182,6 @@ export function FunnelPage() {
   const managementNote = useMutation({
     mutationFn: (input: { opportunityId: string; body: string }) =>
       addManagementNote(meetingQuery.data!.id, input, accessToken!),
-    onSuccess: refresh,
-  })
-
-  const funnelAction = useMutation({
-    mutationFn: (body: FunnelActionBody) =>
-      createFunnelAction(meetingQuery.data!.id, body, accessToken!),
     onSuccess: refresh,
   })
 
@@ -328,13 +310,8 @@ export function FunnelPage() {
               <FunnelMeetingPanel
                 meeting={meetingQuery.data ?? null}
                 team={teamQuery.data}
-                busy={meetingAction.isPending || funnelAction.isPending}
+                busy={meetingAction.isPending}
                 error={meetingAction.isError ? meetingAction.error : null}
-                actions={{
-                  items: actionsQuery.data?.items,
-                  loading: actionsQuery.isLoading,
-                  error: actionsQuery.data ? null : actionsQuery.error,
-                }}
                 onOpen={() => meetingAction.mutate({ kind: "open" })}
                 onToggleAttendee={(employeeId) =>
                   meetingAction.mutate({ kind: "attendees", employeeId })
@@ -342,7 +319,6 @@ export function FunnelPage() {
                 onSaveNote={(note) => meetingAction.mutate({ kind: "note", note })}
                 onComplete={() => meetingAction.mutate({ kind: "complete" })}
                 onReopen={() => meetingAction.mutate({ kind: "reopen" })}
-                onCreateAction={(body) => funnelAction.mutateAsync(body)}
               />
             )}
             <QuarterPicker value={teamQuarter} options={quarters} onChange={setTeamQuarter} />

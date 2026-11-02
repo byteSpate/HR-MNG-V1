@@ -3601,6 +3601,12 @@ export interface FunnelTeamRow {
   stillOpen: string | null
   reviewed: boolean
   summary: FunnelSummary
+  /** Ongoing Opportunities before the first quote stage. */
+  beforeQuoteCount: number
+  /** Work logged as done in the week under review. */
+  loggedCount: number
+  /** Take-outs and meeting action items still open. */
+  openTakeOuts: number
 }
 
 export interface FunnelTeam {
