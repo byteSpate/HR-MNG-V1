@@ -42,16 +42,27 @@ export const listOpportunitySchema = z.object({
   closing: z.coerce.number().int().min(1).max(365).optional(),
   quiet: z.coerce.number().int().min(1).max(365).optional(),
   stuck: z.coerce.number().int().min(1).max(365).optional(),
+  /** BEFORE_QUOTATION: ongoing Opportunities before the first quote stage (owner, 2026-11-02). */
+  view: z.enum(["BEFORE_QUOTATION"]).optional(),
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 })
 export type ListOpportunityQuery = z.infer<typeof listOpportunitySchema>
+
+/** The counters above the Before Quotation grid. */
+export const beforeQuotationSummarySchema = z.object({
+  ownerEmployeeId: z.string().uuid().optional(),
+  mine: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+})
+export type BeforeQuotationSummaryQuery = z.infer<typeof beforeQuotationSummarySchema>
 
 export const updateOpportunitySchema = z.object({
   name: z.string().trim().min(2).max(180).optional(),
   track: salesTrack.optional(),
   amount: money.nullable().optional(),
   expectedCloseDate: dateOnly.nullable().optional(),
+  /** The day the quote is planned to go out. A reminder only (owner, 2026-11-02). */
+  expectedQuoteOn: dateOnly.nullable().optional(),
   oemAccountManager: z.string().trim().max(160).nullable().optional(),
   ownerEmployeeId: z.string().uuid().optional(),
   addAssignment: z.boolean().optional(),

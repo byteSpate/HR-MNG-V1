@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  firstStageFor, NETWORKING_STAGES, QUOTED_STAGES, SOFTWARE_STAGES, stageFitsTrack, stagesFor, quoteAskFor, REVISION_STAGES,
+  BEFORE_QUOTE_STAGES, firstStageFor, NETWORKING_STAGES, QUOTED_STAGES, SOFTWARE_STAGES, stageFitsTrack, stagesFor, quoteAskFor, REVISION_STAGES,
 } from "./sales.stages"
 
 describe("stages per track", () => {
@@ -63,5 +63,25 @@ describe("when the stage change asks for a quote (owner, 2026-10-13)", () => {
   it("asks nothing before the quote stages, or on other quote stages once on the Funnel", () => {
     expect(quoteAskFor("TECHNICAL_VALIDATION", { offeredOn: null })).toBeNull()
     expect(quoteAskFor("CUSTOMER_PROCUREMENT", { offeredOn: new Date() })).toBeNull()
+  })
+})
+
+describe("the stages before the first quote (owner, 2026-11-02)", () => {
+  it("is 3 stages for Networking and 4 for Software", () => {
+    expect(BEFORE_QUOTE_STAGES.NETWORKING).toEqual(["ASSIGNED_QUALIFIED", "DISCOVERY_DESIGN", "TECHNICAL_VALIDATION"])
+    expect(BEFORE_QUOTE_STAGES.SOFTWARE_DEVELOPMENT).toEqual([
+      "REQUIREMENT_RECEIVED", "REQUIREMENT_GATHERING", "BRD_SENT", "SRS_SENT",
+    ])
+  })
+
+  it("never holds a stage where an offer has gone out", () => {
+    for (const track of ["NETWORKING", "SOFTWARE_DEVELOPMENT"] as const) {
+      for (const stage of BEFORE_QUOTE_STAGES[track]) expect(QUOTED_STAGES.has(stage)).toBe(false)
+    }
+  })
+
+  it("keeps each track's own stage order", () => {
+    expect(NETWORKING_STAGES.slice(0, 3)).toEqual(BEFORE_QUOTE_STAGES.NETWORKING)
+    expect(SOFTWARE_STAGES.slice(0, 4)).toEqual(BEFORE_QUOTE_STAGES.SOFTWARE_DEVELOPMENT)
   })
 })

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express"
 
 import {
+  beforeQuotationSummary,
   changeOpportunityNextStep,
   setSoftwareNeeded,
   changeOpportunityStage,
@@ -23,6 +24,7 @@ import {
 import { correctOpportunityStatus } from "./opportunity.status"
 import { addDocumentLink, listDocumentLinks, removeDocumentLink } from "./document.service"
 import {
+  beforeQuotationSummarySchema,
   changeOpportunityNextStepSchema,
   setSoftwareNeededSchema,
   changeOpportunityStageSchema,
@@ -52,6 +54,11 @@ export async function listOpportunitiesHandler(req: Request, res: Response, next
 
 export async function listOpportunityOwnersHandler(req: Request, res: Response, next: NextFunction) {
   try { return res.status(200).json(await listOpportunityOwners(req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function beforeQuotationSummaryHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(200).json(await beforeQuotationSummary(beforeQuotationSummarySchema.parse(req.query), req.user!)) }
   catch (err) { return next(err) }
 }
 

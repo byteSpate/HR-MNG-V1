@@ -39,6 +39,7 @@ import { removalActionRows } from "./removal.dashboard"
 import { marginTotal, type MarginTotal } from "../sales.margin"
 import { WAITING_DAYS, waitingForMinutesWhere } from "../meetings/minutes.waiting"
 import { weekStartOf } from "../weekly/weekly.dates"
+import { QUIET_DAYS, STUCK_DAYS } from "../sales.thresholds"
 import { currentQuarter, quarterOf, quarterRange } from "../targets/sales.quarters"
 import { planQuarters, sumPlans, type PlannedQuarter } from "../targets/target.plan"
 import { phasesOf, presentQuarter, winsByQuarter, yearRange } from "../targets/target.service"
@@ -46,10 +47,6 @@ import type { SalesActionRow, SalesDashboardPayload, SalesTeamRow } from "../sal
 
 const MS_PER_DAY = 86_400_000
 
-/** Deals quiet for this long need chasing. */
-const QUIET_DAYS = 30
-/** A deal that has not moved stage in this long is stuck — the reason Stage exists. */
-const STUCK_DAYS = 21
 /** How far ahead the closing-soon row looks. */
 const CLOSING_DAYS = 30
 /** "This week" for meetings: today and the six days after it. */
