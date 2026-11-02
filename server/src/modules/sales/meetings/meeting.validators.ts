@@ -44,7 +44,23 @@ export const updateMeetingSchema = z
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
 
 export const changeMeetingStatusSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("COMPLETED"), outcome: z.string().trim().max(2000).optional() }),
+  z.object({
+    status: z.literal("COMPLETED"),
+    outcome: z.string().trim().max(2000).optional(),
+    /**
+     * Next steps written while completing (owner, 2026-11-02). Each becomes a
+     * task linked to this meeting, so the week's log shows what came out of it.
+     */
+    nextSteps: z
+      .array(
+        z.object({
+          title: z.string().trim().min(2, "Give the next step a title").max(180),
+          dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
+        })
+      )
+      .max(10, "Add up to 10 next steps")
+      .optional(),
+  }),
   z.object({
     status: z.literal("CANCELLED"),
     reason: z.string().trim().min(2, "Say why the meeting is cancelled").max(500),

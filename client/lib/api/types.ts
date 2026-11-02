@@ -3286,7 +3286,7 @@ export interface UpdateMeetingBody {
 }
 
 export type ChangeMeetingStatusBody =
-  | { status: "COMPLETED"; outcome?: string }
+  | { status: "COMPLETED"; outcome?: string; nextSteps?: { title: string; dueOn: string }[] }
   | { status: "CANCELLED"; reason: string }
   | { status: "SCHEDULED" }
 

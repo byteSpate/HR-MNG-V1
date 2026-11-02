@@ -10,6 +10,7 @@ vi.mock("../../../config/prisma", () => ({
     salesContact: { findMany: vi.fn() },
     salesMeeting: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     salesMeetingAttendee: { deleteMany: vi.fn() },
+    salesTask: { create: vi.fn() },
     auditLog: { create: vi.fn() },
     event: { create: vi.fn() },
   },
@@ -207,6 +208,53 @@ describe("changing a meeting", () => {
 
     await expect(updateMeeting("meeting-1", { notes: "x" } as any, USER))
       .rejects.toMatchObject({ statusCode: 404 })
+  })
+})
+
+describe("next steps when a meeting is completed (owner, 2026-11-02)", () => {
+  const STEPS = [
+    { title: "Send the revised quote", dueOn: "2026-09-25" },
+    { title: "Book the site survey", dueOn: "2026-09-28" },
+  ]
+  const taskData = (n: number) => (vi.mocked(prisma.salesTask.create).mock.calls[n][0] as any).data
+
+  beforeEach(() => {
+    vi.mocked(prisma.salesTask.create).mockResolvedValue({
+      id: "task-1", title: "x", dueOn: new Date("2026-09-25T00:00:00.000Z"),
+    } as any)
+  })
+
+  it("makes a task for each next step, linked to the meeting, its account and its Opportunity", async () => {
+    vi.mocked(prisma.salesMeeting.findFirst).mockResolvedValue(meeting({ opportunityId: "opp-1" }) as any)
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue({ id: "opp-1" } as any)
+
+    await changeMeetingStatus("meeting-1", { status: "COMPLETED", nextSteps: STEPS } as any, USER)
+
+    expect(prisma.salesTask.create).toHaveBeenCalledTimes(2)
+    expect(taskData(0)).toMatchObject({
+      title: "Send the revised quote", meetingId: "meeting-1", salesAccountId: "account-1", opportunityId: "opp-1",
+      type: "VISIT_FOLLOW_UP", origin: "SELF", assignedToEmployeeId: "emp-1",
+    })
+    expect(taskData(0).dueOn.toISOString()).toBe("2026-09-25T00:00:00.000Z")
+    expect(taskData(1)).toMatchObject({ title: "Book the site survey", meetingId: "meeting-1" })
+  })
+
+  it("makes no task when there are no next steps", async () => {
+    await changeMeetingStatus("meeting-1", { status: "COMPLETED", outcome: "Wants a quote" } as any, USER)
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a date that is not on the calendar and saves nothing at all", async () => {
+    await expect(
+      changeMeetingStatus("meeting-1", { status: "COMPLETED", nextSteps: [{ title: "Call back", dueOn: "2026-02-30" }] } as any, USER)
+    ).rejects.toThrow("2026-02-30 is not a date on the calendar")
+    expect(prisma.salesMeeting.update).not.toHaveBeenCalled()
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("ignores next steps when the meeting is cancelled", async () => {
+    await changeMeetingStatus("meeting-1", { status: "CANCELLED", reason: "Customer travelling", nextSteps: STEPS } as any, USER)
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
   })
 })
 
