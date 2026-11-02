@@ -14,8 +14,8 @@ vi.mock("../../../config/prisma", () => ({
 }))
 
 import prisma from "../../../config/prisma"
-import { removeProjectLog, saveProjectLog } from "./weekly.dailylog"
-import { saveProjectLogSchema } from "./weekly.validators"
+import { removeProjectLog, saveProjectLog } from "./project.log"
+import { saveProjectLogSchema } from "./project.validators"
 
 const WRITER = { sub: "user-1", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
 const PROJECT = "22222222-2222-4222-8222-222222222222"
@@ -94,9 +94,26 @@ describe("a Daily Log line", () => {
     expect(prisma.projectDailyLog.upsert).not.toHaveBeenCalled()
   })
 
-  it("refuses a day still to come (Review Focus 4)", async () => {
+  it("refuses a day still to come, and saves nothing (Review Focus)", async () => {
     await expect(saveProjectLog({ date: "2026-10-04", projectId: PROJECT, noWork: true, text: null }, WRITER))
-      .rejects.toThrow(/has not happened yet|not in this week|not happened yet/)
+      .rejects.toThrow("Choose a day that is today or earlier.")
+    expect(prisma.weeklyReport.upsert).not.toHaveBeenCalled()
+    expect(prisma.projectDailyLog.upsert).not.toHaveBeenCalled()
+  })
+
+  it("writes a day from an earlier week into that week's own row, with no open-week rule", async () => {
+    // Sunday 20 September is in the week before the one that opened on the 27th.
+    await saveProjectLog({ date: "2026-09-20", projectId: PROJECT, noWork: false, text: "Wrote the plan" }, WRITER)
+    expect(prisma.weeklyReport.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { employeeId_weekStart: { employeeId: "emp-2", weekStart: new Date("2026-09-20T00:00:00.000Z") } },
+    }))
+    expect(prisma.projectDailyLog.upsert).toHaveBeenCalled()
+  })
+
+  it("accepts today", async () => {
+    // The fake clock is Thursday 1 October in Dhaka.
+    await saveProjectLog({ date: "2026-10-01", projectId: PROJECT, noWork: true, text: null }, WRITER)
+    expect(prisma.projectDailyLog.upsert).toHaveBeenCalled()
   })
 
   it("refuses a day that is not a date at all", async () => {
@@ -104,12 +121,11 @@ describe("a Daily Log line", () => {
       .rejects.toThrow("yesterday is not a date on the calendar")
   })
 
-  it("reopens a submitted week, the same as Other work does", async () => {
+  it("leaves an old submitted week row as it is, because nothing is submitted any more", async () => {
     vi.mocked(prisma.weeklyReport.upsert).mockResolvedValue({ id: "wr-1", status: "SUBMITTED" } as any)
     await saveProjectLog({ date: TUESDAY, projectId: PROJECT, noWork: true, text: null }, WRITER)
-    expect(prisma.weeklyReport.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "DRAFT" } }),
-    )
+    expect(prisma.weeklyReport.update).not.toHaveBeenCalled()
+    expect(prisma.projectDailyLog.upsert).toHaveBeenCalled()
   })
 
   it("audits the line, so the week's history says what was written", async () => {
@@ -119,7 +135,7 @@ describe("a Daily Log line", () => {
     }))
   })
 
-  it("refuses a caller who does not write Weekly Reports", async () => {
+  it("refuses a caller who is not a Sales User", async () => {
     await expect(saveProjectLog(
       { date: TUESDAY, projectId: PROJECT, noWork: true, text: null },
       { ...WRITER, salesRole: "SALES_ADMIN" },

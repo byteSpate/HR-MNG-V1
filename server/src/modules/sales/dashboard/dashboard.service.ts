@@ -240,13 +240,12 @@ async function actionRows(
     })
   const assigned = subject.employeeIds ? { assignedToEmployeeId: { in: subject.employeeIds } } : {}
 
-  // A writer reads their own week; everybody else reads the roll-up (§26.16).
-  // Sales Admins do not write weekly reports, so they never see the writer row.
+  // A writer reads their own figures; everybody else reads the roll-up.
   const mine = writerEmployeeId
   const weekStart = weekStartOf(today)
   const lastWeekStart = addDays(weekStart, -7)
 
-  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue, minutesWaiting, myWeek, weeklyWriters, weeklySubmitted, myFunnelOpen, funnelReviewed] = await Promise.all([
+  const [closing, unverified, quiet, stuck, meetingsToday, meetingsWeek, tasksDue, tasksOverdue, minutesWaiting, salesUsers, myFunnelOpen, funnelReviewed] = await Promise.all([
     prisma.opportunity.count({
       where: { ...open, expectedCloseDate: { gte: today, lte: closingBy } },
     }),
@@ -260,22 +259,13 @@ async function actionRows(
     // The Meeting Minutes page's own rule, so this row, its badge and that
     // page's "Waiting for minutes" can never disagree.
     prisma.salesMeeting.count({ where: waitingForMinutesWhere(subject.employeeIds, now) }),
-    // The weekly report (§26.16). A writer is told where their own week
-    // stands; the roll-up counts the reports last week is still missing.
-    mine
-      ? prisma.weeklyReport.findUnique({
-          where: { employeeId_weekStart: { employeeId: mine, weekStart } },
-          select: { status: true },
-        })
-      : Promise.resolve(null),
+    // How many active Sales Users there are. The Funnel row below says "Of N
+    // Sales Users", and an admin's count of people not yet walked is out of it.
     mine
       ? Promise.resolve(0)
       : prisma.employee.count({
           where: { user: { salesRole: SalesRole.SALES_USER, isActive: true }, employmentStatus: "ACTIVE" },
         }),
-    mine
-      ? Promise.resolve(0)
-      : prisma.weeklyReport.count({ where: { weekStart: lastWeekStart, status: "SUBMITTED" } }),
     // The funnel (§27.14). A writer is told how many of their own quoted
     // deals are still live; an admin is told how many people have not been
     // walked yet in the week under review.
@@ -293,7 +283,7 @@ async function actionRows(
       : prisma.funnelMeetingReview.count({
           where: {
             funnelMeeting: { weekStart: lastWeekStart },
-            // The same people `weeklyWriters` counts. Reviews are recorded for
+            // The same people `salesUsers` counts. Reviews are recorded for
             // anybody in the team list, admins included, so counting them all
             // would let a reviewed admin cancel out an unreviewed writer.
             employee: {
@@ -339,32 +329,7 @@ async function actionRows(
       tone: toneFor.queue(minutesWaiting),
       href: "/meetings/minutes",
     },
-    // A writer sees a status line and no badge: their own week is not a
-    // queue of work. The roll-up counts what is still missing.
-    mine
-      ? {
-          key: "weekly",
-          label: "This week's report",
-          // One report outstanding, or none. A bare 0 beside a status line
-          // reads as nothing at all; the menu badge is still admin-only.
-          count: myWeek?.status === "SUBMITTED" ? 0 : 1,
-          detail:
-            myWeek?.status === "SUBMITTED" ? "Submitted" : myWeek?.status === "DRAFT" ? "Draft" : "Not started",
-          tone: toneFor.queue(myWeek?.status === "SUBMITTED" ? 0 : 1),
-          href: "/weekly",
-        }
-      : {
-          key: "weekly",
-          label: "Last week's reports not submitted",
-          count: Math.max(weeklyWriters - weeklySubmitted, 0),
-          detail:
-            weeklyWriters - weeklySubmitted <= 0
-              ? "Everybody sent last week's report"
-              : `Of ${weeklyWriters} Sales Users`,
-          tone: toneFor.queue(Math.max(weeklyWriters - weeklySubmitted, 0)),
-          href: "/weekly/all",
-        },
-    // The funnel row (§27.14), following Weekly Report in the menu and here.
+    // The funnel row (§27.14).
     mine
       ? {
           key: "funnel",
@@ -379,12 +344,12 @@ async function actionRows(
       : {
           key: "funnel",
           label: "Funnels not reviewed last week",
-          count: Math.max(weeklyWriters - funnelReviewed, 0),
+          count: Math.max(salesUsers - funnelReviewed, 0),
           detail:
-            weeklyWriters - funnelReviewed <= 0
+            salesUsers - funnelReviewed <= 0
               ? "Everybody was walked"
-              : `Of ${weeklyWriters} Sales Users`,
-          tone: toneFor.queue(Math.max(weeklyWriters - funnelReviewed, 0)),
+              : `Of ${salesUsers} Sales Users`,
+          tone: toneFor.queue(Math.max(salesUsers - funnelReviewed, 0)),
           href: "/funnel",
         },
     {

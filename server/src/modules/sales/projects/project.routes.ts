@@ -5,7 +5,7 @@ import { requireSales } from "../../../middleware/requireSales"
 import { requireSalesPermission } from "../../../middleware/requireSalesPermission"
 import {
   addMilestoneHandler, addProjectTaskHandler, cancelProjectTaskHandler, changeProjectStatusHandler,
-  getProjectDailyLogHandler, getProjectHandler, listProjectActivityHandler, listProjectsHandler, listProjectTasksHandler,
+  getProjectDailyLogHandler, getProjectHandler, removeProjectLogHandler, saveProjectLogHandler, listProjectActivityHandler, listProjectsHandler, listProjectTasksHandler,
   removeMilestoneHandler, setProjectTeamHandler, startProjectHandler, tickLineHandler,
   untickLineHandler, updateMilestoneHandler, updateProjectHandler,
 } from "./project.controller"
@@ -30,6 +30,9 @@ router.patch("/projects/:id/status", requireAuth, requireSales(), changeProjectS
 router.post("/projects/:id/milestones", requireAuth, requireSales(), requireSalesPermission("project.edit"), addMilestoneHandler)
 router.get("/projects/:id/activity", requireAuth, requireSales(), listProjectActivityHandler)
 router.get("/projects/:id/daily-log", requireAuth, requireSales(), getProjectDailyLogHandler)
+// Kept at their old paths (owner, 2026-11-02): the Daily Log tab calls these.
+router.put("/weekly/project-log", requireAuth, requireSales(), saveProjectLogHandler)
+router.delete("/weekly/project-log/:id", requireAuth, requireSales(), removeProjectLogHandler)
 router.get("/projects/:id/tasks", requireAuth, requireSales(), listProjectTasksHandler)
 router.post("/projects/:id/tasks", requireAuth, requireSales(), addProjectTaskHandler)
 router.put("/projects/:id/lines/:lineId/done", requireAuth, requireSales(), tickLineHandler)

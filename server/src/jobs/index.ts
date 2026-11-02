@@ -13,7 +13,6 @@ import {
   runMonthlyAttendanceReportEmail,
 } from "./attendance-report-email.job"
 import { runSalesDailyEmail } from "./sales-daily-email.job"
-import { runWeeklyReportReminder } from "./sales-weekly-reminder.job"
 
 /** Runs `job`, logging rather than throwing — an unhandled rejection inside
  *  a scheduled task takes the process down with it. */
@@ -63,12 +62,6 @@ export function startJobs(): void {
     timezone: env.APP_TIMEZONE,
   })
 
-  // 16:00 on the day the weekly report is due, so there are still two
-  // working hours left to write it (revision §26.3). The job itself decides
-  // whose deadline is today, so a holiday moves the reminder with it.
-  cron.schedule("0 16 * * *", () => guard("weekly report reminder", () => runWeeklyReportReminder()), {
-    timezone: env.APP_TIMEZONE,
-  })
 
   console.log(`[jobs] scheduled, timezone ${env.APP_TIMEZONE}`)
 }

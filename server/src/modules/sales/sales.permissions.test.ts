@@ -43,12 +43,12 @@ describe("the catalog", () => {
     expect(new Set(keys).size).toBe(keys.length)
   })
 
-  it("keeps today's behaviour by default: only account.create and the four team powers are off", () => {
+  it("keeps today's behaviour by default: only account.create and the three team powers are off", () => {
     const off = SALES_PERMISSIONS.filter((p) => !p.default).map((p) => p.key)
     expect([...off].sort()).toEqual(
-      ["account.create", "target.set", "team.dashboard", "team.funnel", "team.weekly"].sort()
+      ["account.create", "target.set", "team.dashboard", "team.funnel"].sort()
     )
-    expect(SALES_PERMISSIONS.filter((p) => p.phase === 1)).toHaveLength(21)
+    expect(SALES_PERMISSIONS.filter((p) => p.phase === 1)).toHaveLength(19)
   })
 })
 
@@ -213,6 +213,21 @@ describe("savePermissions", () => {
     await savePermissions([{ key: "task.create", enabled: false }], ADMIN)
     vi.mocked(prisma.salesPermission.findMany).mockResolvedValue([{ key: "task.create", enabled: false }] as never)
     const map = await getPermissionMap()
+    expect(map["task.create"]).toBe(false)
+  })
+})
+
+describe("a saved switch for a key that was removed (owner, 2026-11-02)", () => {
+  it("is ignored, so an old row cannot break the map or switch anything on", async () => {
+    // The Weekly Report is gone, but its two switches may still be saved in the table.
+    vi.mocked(prisma.salesPermission.findMany).mockResolvedValue([
+      { key: "weekly.submit", enabled: true },
+      { key: "team.weekly", enabled: true },
+      { key: "task.create", enabled: false },
+    ] as never)
+    const map = await getPermissionMap()
+    expect(map).not.toHaveProperty("weekly.submit")
+    expect(map).not.toHaveProperty("team.weekly")
     expect(map["task.create"]).toBe(false)
   })
 })

@@ -68,3 +68,21 @@ export type SetProjectTeamBody = z.infer<typeof setProjectTeamSchema>
 export type ChangeProjectStatusBody = z.infer<typeof changeProjectStatusSchema>
 export type AddMilestoneBody = z.infer<typeof addMilestoneSchema>
 export type UpdateMilestoneBody = z.infer<typeof updateMilestoneSchema>
+
+/**
+ * One Daily Log line (spec §2.2). "No work" and a line are alternatives: with
+ * no text and no tick there is nothing to record, and a silent blank day is
+ * exactly what the gap marker is for.
+ */
+export const saveProjectLogSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a YYYY-MM-DD date"),
+    projectId: z.string().uuid(),
+    noWork: z.boolean(),
+    text: z.string().trim().max(2000).nullable().default(null),
+  })
+  .refine((b) => b.noWork || (b.text ?? "").trim().length > 0, {
+    message: "Write what you did, or tick No work on this Project today",
+    path: ["text"],
+  })
+export type SaveProjectLogBody = z.infer<typeof saveProjectLogSchema>

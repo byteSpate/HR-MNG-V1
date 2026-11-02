@@ -24,7 +24,6 @@ import permissionRouter from "./permissions/permission.routes"
 import projectRouter from "./projects/project.routes"
 import targetRouter from "./targets/target.routes"
 import taskRouter from "./tasks/task.routes"
-import weeklyRouter from "./weekly/weekly.routes"
 
 const router = Router()
 
@@ -58,7 +57,6 @@ router.use(taskRouter)
 
 router.use(minutesRouter)
 
-router.use(weeklyRouter)
 
 // Each folder owns its routes and this file only mounts them (§28). The order
 // is the order the routes were registered in before the split, so first-match
