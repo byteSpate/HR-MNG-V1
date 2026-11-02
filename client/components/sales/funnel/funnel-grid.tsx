@@ -65,6 +65,13 @@ interface FunnelGridProps {
    */
   filtersActive: boolean
   onClearFilters: () => void
+  /**
+   * Open take-outs for each Opportunity, by id (owner, 2026-11-02): how many
+   * there are and the words of the newest. Absent leaves the column out.
+   */
+  takeOuts?: Record<string, { count: number; latest: string }>
+  /** Opens the Opportunity in the side panel, where a take-out can be given. */
+  onOpenPanel?: (opportunityId: string) => void
 }
 
 export function FunnelGridTable({
@@ -78,6 +85,8 @@ export function FunnelGridTable({
   onAddManagementNote,
   filtersActive,
   onClearFilters,
+  takeOuts,
+  onOpenPanel,
 }: FunnelGridProps) {
   const [openRow, setOpenRow] = useState<string | null>(null)
 
@@ -176,6 +185,7 @@ export function FunnelGridTable({
                 {head("daysLeft", "Days left", "w-32")}
                 {head("since", "Days since quoted", "w-28 text-right")}
                 {head("status", "Opportunity Status", "w-32")}
+                {onOpenPanel ? head("takeouts", "Take-outs", "w-48") : null}
               </tr>
             </thead>
             <tbody>
@@ -191,6 +201,8 @@ export function FunnelGridTable({
                   onEdit={onEdit}
                   canAddManagementNote={canAddManagementNote}
                   onAddManagementNote={onAddManagementNote}
+                  takeOut={takeOuts?.[row.opportunityId]}
+                  onOpenPanel={onOpenPanel}
                 />
               ))}
             </tbody>
@@ -209,6 +221,8 @@ function FunnelGridRow({
   onEdit,
   canAddManagementNote,
   onAddManagementNote,
+  takeOut,
+  onOpenPanel,
 }: {
   row: FunnelRow
   editable: boolean
@@ -217,6 +231,8 @@ function FunnelGridRow({
   onEdit: (opportunityId: string, field: FunnelCellField, value: string | null) => Promise<void>
   canAddManagementNote: boolean
   onAddManagementNote: (opportunityId: string, body: string) => Promise<void>
+  takeOut?: { count: number; latest: string }
+  onOpenPanel?: (opportunityId: string) => void
 }) {
   const save = (field: FunnelCellField) => (value: string | null) =>
     onEdit(row.opportunityId, field, value)
@@ -309,11 +325,34 @@ function FunnelGridRow({
             {STATUS_LABEL[row.status] ?? row.status}
           </span>
         </td>
+
+        {/* One tap opens the side panel: the count and the newest words of the
+            open take-outs, and a way to give another (owner, 2026-11-02). */}
+        {onOpenPanel ? (
+          <td className="px-2 py-1.5">
+            <button
+              type="button"
+              onClick={() => onOpenPanel(row.opportunityId)}
+              className="block w-full min-w-0 text-left hover:underline focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+            >
+              {takeOut ? (
+                <>
+                  <span className="block text-xs font-medium text-[#1B2733]">
+                    {takeOut.count === 1 ? "1 open take-out" : `${takeOut.count} open take-outs`}
+                  </span>
+                  <span className={cn("block truncate text-xs", TONE.muted)}>{takeOut.latest}</span>
+                </>
+              ) : (
+                <span className="text-xs font-medium text-[#1B2733]">Give take-out</span>
+              )}
+            </button>
+          </td>
+        ) : null}
       </tr>
 
       {open ? (
         <tr className="border-t border-[#EEF1F5] bg-[#FAFBFC]">
-          <td colSpan={12} className="px-4 py-3">
+          <td colSpan={13} className="px-4 py-3">
             <FunnelRowDetail
               row={row}
               editable={editable}

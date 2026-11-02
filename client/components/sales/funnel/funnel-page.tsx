@@ -11,7 +11,7 @@
 import { useMemo, useState } from "react"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { RiArrowLeftLine, RiCheckLine } from "@remixicon/react"
+import { RiArrowLeftLine, RiArrowRightLine, RiCheckLine } from "@remixicon/react"
 
 import { PageHeader } from "@/components/dashboard/page-header"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
@@ -27,6 +27,7 @@ import {
   getFunnelMeeting,
   getFunnelTeam,
   listMeetingActions,
+  listTakeOuts,
   openFunnelMeeting,
   reopenFunnelMeeting,
   setMeetingAttendees,
@@ -36,11 +37,15 @@ import {
 import { funnelKeys, funnelWriteKeys } from "@/lib/api/sales/funnel-keys"
 import type { FunnelActionBody, FunnelCellField, FunnelQueryOptions, FunnelSort } from "@/lib/api/types"
 import { useSession } from "@/lib/auth/session-context"
+import { nextPerson } from "@/lib/funnel-nav"
 import { cn } from "@/lib/utils"
+import { BeforeQuotationView } from "@/components/sales/opportunities/before-quotation-view"
 
 import { FunnelFilters } from "./funnel-filters"
 import { FunnelGridTable } from "./funnel-grid"
 import { FunnelMeetingPanel } from "./funnel-meeting"
+import { PersonWeekPanel } from "./person-week"
+import { RowPanel } from "./row-panel"
 import { FunnelTeamList } from "./funnel-team"
 import { quarterOptions } from "./funnel-labels"
 import { FunnelSummaryStrip, QuarterPicker } from "./funnel-summary"
@@ -213,6 +218,31 @@ export function FunnelPage() {
 
   const grid = gridQuery.data
 
+  // The Saturday page (owner, 2026-11-02): the side panel, the switch between
+  // the quoted funnel and Before Quotation, and the open take-outs by
+  // Opportunity so each row can show its count.
+  const [panelId, setPanelId] = useState<string | null>(null)
+  const [funnelView, setFunnelView] = useState<"QUOTED" | "BEFORE">("QUOTED")
+  const personId = grid?.employeeId
+  const openTakeOuts = useQuery({
+    queryKey: funnelKeys.takeOuts(personId ?? "", "open"),
+    queryFn: () => listTakeOuts({ employeeId: personId!, status: "PENDING" }, accessToken!),
+    enabled: isAuthed && !!personId && !showingTeam,
+  })
+  const takeOutsByDeal = useMemo(() => {
+    const byDeal: Record<string, { count: number; latest: string; at: string }> = {}
+    for (const task of openTakeOuts.data?.items ?? []) {
+      if (!task.opportunityId) continue
+      const seen = byDeal[task.opportunityId]
+      byDeal[task.opportunityId] = {
+        count: (seen?.count ?? 0) + 1,
+        latest: !seen || task.createdAt > seen.at ? task.title : seen.latest,
+        at: !seen || task.createdAt > seen.at ? task.createdAt : seen.at,
+      }
+    }
+    return byDeal
+  }, [openTakeOuts.data])
+
   // Accounts seen while no account was picked. Adjusted during render, React's
   // own pattern for state that follows a query result; an effect would render
   // the stale list once first. A different person's grid starts the set over.
@@ -254,6 +284,7 @@ export function FunnelPage() {
   // last screen is not news on this one.
   const goTo = (employeeId: string | null) => {
     setOpenEmployeeId(employeeId)
+    setPanelId(null)
     setFilters(DEFAULT_FILTERS)
     setSeen({ owner: null, names: {} })
     meetingAction.reset()
@@ -384,13 +415,67 @@ export function FunnelPage() {
             </Button>
           )
         ) : null}
+
+        {/* The admin walks the team one person at a time, in the team list's
+            order (owner, 2026-11-02). In an open meeting this also marks the
+            person walked, so one tap does both. */}
+        {canTeam && grid && teamQuery.data && nextPerson(teamQuery.data.rows, grid.employeeId) ? (
+          <Button
+            variant="outline"
+            disabled={meetingAction.isPending}
+            onClick={() => {
+              const next = nextPerson(teamQuery.data!.rows, grid.employeeId)!
+              if (isAdmin && meetingOpen && !alreadyWalked) {
+                meetingAction.mutate({ kind: "reviewed", employeeId: grid.employeeId }, { onSuccess: () => goTo(next) })
+              } else {
+                goTo(next)
+              }
+            }}
+          >
+            {isAdmin && meetingOpen && !alreadyWalked ? "Mark walked and go to the next person" : "Next person"}
+            <RiArrowRightLine className="size-4" aria-hidden />
+          </Button>
+        ) : null}
       </div>
+
+      {grid ? <PersonWeekPanel employeeId={grid.employeeId} isAdmin={isAdmin} /> : null}
+
+      {grid ? (
+        <div role="tablist" aria-label="Which Opportunities" className="flex flex-wrap gap-2">
+          {(["QUOTED", "BEFORE"] as const).map((view) => (
+            <Button
+              key={view}
+              type="button"
+              role="tab"
+              aria-selected={funnelView === view}
+              onClick={() => setFunnelView(view)}
+              className={
+                funnelView === view
+                  ? "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+                  : "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              }
+            >
+              {view === "QUOTED" ? "Quoted" : "Before Quotation"}
+            </Button>
+          ))}
+        </div>
+      ) : null}
 
       {gridQuery.isError ? <PanelAlert>{toMessage(gridQuery.error)}</PanelAlert> : null}
       {editCell.isError ? <PanelAlert>{toMessage(editCell.error)}</PanelAlert> : null}
       {managementNote.isError ? <PanelAlert>{toMessage(managementNote.error)}</PanelAlert> : null}
       {meetingAction.isError ? <PanelAlert>{toMessage(meetingAction.error)}</PanelAlert> : null}
 
+      {grid && funnelView === "BEFORE" ? (
+        <BeforeQuotationView
+          ownerEmployeeId={grid.employeeId}
+          showFilters={false}
+          onOpenOpportunity={(deal) => setPanelId(deal.id)}
+        />
+      ) : null}
+
+      {funnelView === "QUOTED" ? (
+      <>
       {/* Outside the loading branch, so a filter or sort change keeps the bar
           (and the focus in it). Only the very first page hides it. The totals
           go while a new view is loading: the old view's figure beside the new
@@ -449,6 +534,8 @@ export function FunnelPage() {
               }}
               filtersActive={filtersActive}
               onClearFilters={() => setFilters({ sort: filters.sort, direction: filters.direction, quarter: filters.quarter })}
+              takeOuts={takeOutsByDeal}
+              onOpenPanel={setPanelId}
             />
           </div>
           <p className={cn("text-xs", TONE.muted)}>
@@ -461,6 +548,19 @@ export function FunnelPage() {
         // still loading.
         <Skeleton className="h-96 w-full" />
       )}
+      </>
+      ) : null}
+
+      {grid ? (
+        <RowPanel
+          opportunityId={panelId}
+          employeeId={grid.employeeId}
+          employeeName={grid.employeeName}
+          isAdmin={isAdmin}
+          showQuotes={funnelView === "QUOTED"}
+          onClose={() => setPanelId(null)}
+        />
+      ) : null}
     </div>
   )
 }

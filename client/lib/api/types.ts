@@ -3679,6 +3679,29 @@ export interface FunnelGrid {
   summary: FunnelSummary
 }
 
+/**
+ * One person's week for the Saturday review (owner, 2026-11-02). Mirrors server
+ * sales.types.ts.
+ */
+export interface PersonWeek {
+  /** The Sunday the week starts on, YYYY-MM-DD. */
+  weekStart: string
+  employee: { id: string; fullName: string }
+  /** Sunday to Thursday always. Friday and the Saturday before appear only when they hold a task. */
+  days: { date: string; label: string; tasks: SalesTaskSummary[] }[]
+  countsByType: Record<SalesTaskType, number>
+  takeOuts: { open: SalesTaskSummary[]; doneThisWeek: SalesTaskSummary[] }
+}
+
+/** What a take-out list asks for. Absent employeeId means the caller's own. */
+export interface TakeOutQuery {
+  employeeId?: string
+  opportunityId?: string
+  status?: "PENDING" | "DONE"
+  from?: string
+  to?: string
+}
+
 export interface FunnelTeamRow {
   employeeId: string
   employeeName: string
