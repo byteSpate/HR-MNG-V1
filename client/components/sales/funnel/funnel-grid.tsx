@@ -12,7 +12,7 @@
 
 import { useState } from "react"
 
-import { RiArrowUpSLine, RiErrorWarningLine } from "@remixicon/react"
+import { RiAddLine, RiArrowUpSLine, RiErrorWarningLine } from "@remixicon/react"
 
 import { FieldHelp, PanelNotice, TONE } from "@/components/dashboard/record-kit"
 import { daysLeftText, FUNNEL_NAME_HEADING, FUNNEL_NAME_HELP } from "./funnel-labels"
@@ -185,7 +185,7 @@ export function FunnelGridTable({
                 {head("daysLeft", "Days left", "w-32")}
                 {head("since", "Days since quoted", "w-28 text-right")}
                 {head("status", "Opportunity Status", "w-32")}
-                {onOpenPanel ? head("takeouts", "Take-outs", "w-48") : null}
+                {onOpenPanel ? head("takeouts", "Take-outs", "w-40") : null}
               </tr>
             </thead>
             <tbody>
@@ -330,22 +330,23 @@ function FunnelGridRow({
             open take-outs, and a way to give another (owner, 2026-11-02). */}
         {onOpenPanel ? (
           <td className="px-2 py-1.5">
-            <button
-              type="button"
-              onClick={() => onOpenPanel(row.opportunityId)}
-              className="block w-full min-w-0 text-left hover:underline focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
-            >
+            <div className="flex min-w-[7.5rem] flex-col items-start gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenPanel(row.opportunityId)}
+                className="whitespace-nowrap"
+              >
+                <RiAddLine aria-hidden="true" className="size-3.5" />
+                Take-out
+              </Button>
               {takeOut ? (
-                <>
-                  <span className="block text-xs font-medium text-[#1B2733]">
-                    {takeOut.count === 1 ? "1 open take-out" : `${takeOut.count} open take-outs`}
-                  </span>
-                  <span className={cn("block truncate text-xs", TONE.muted)}>{takeOut.latest}</span>
-                </>
-              ) : (
-                <span className="text-xs font-medium text-[#1B2733]">Give take-out</span>
-              )}
-            </button>
+                <span className={cn("block max-w-[9rem] truncate text-xs", TONE.muted)}>
+                  {takeOut.count === 1 ? "1 open" : `${takeOut.count} open`}: {takeOut.latest}
+                </span>
+              ) : null}
+            </div>
           </td>
         ) : null}
       </tr>
