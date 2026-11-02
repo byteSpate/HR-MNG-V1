@@ -66,6 +66,32 @@ function TakeOutLines({ title, items, empty }: { title: string; items: SalesTask
   )
 }
 
+/**
+ * The same shape as the loaded week (a heading line, five day rows), so the
+ * page does not jump when the data arrives. Quiet: the shared Skeleton pulses
+ * already and nothing else moves.
+ */
+function PersonWeekSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Loading this person's week"
+      className="space-y-4 rounded-lg border border-[#E4E9EF] bg-white px-4 py-4"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-3.5 w-32" />
+      </div>
+      <div className="space-y-2.5">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-8 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function PersonWeekPanel({
   employeeId,
   isAdmin,
@@ -93,7 +119,7 @@ export function PersonWeekPanel({
       </div>
     )
   }
-  if (query.isPending) return <Skeleton className="h-48 w-full" />
+  if (query.isPending) return <PersonWeekSkeleton />
 
   const week: PersonWeek = query.data
   const total = Object.values(week.countsByType).reduce((a, b) => a + b, 0)

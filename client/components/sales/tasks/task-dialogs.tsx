@@ -17,6 +17,7 @@ import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { ChangeTaskStatusBody, SalesTaskPriority, SalesTaskSummary, SalesTaskType } from "@/lib/api/types"
 import { DialogActions, Field, FormError, toMessage } from "@/components/dashboard/record-kit"
+import { RetryNote } from "@/components/sales/shared/panel"
 import { AccountPicker, usePlanRefresh } from "@/components/sales/meetings/meeting-dialogs"
 import { TASK_PRIORITY_LABEL, meetingWhen } from "@/components/sales/shared/sales-shared"
 import { TASK_TYPE_LABEL, TASK_TYPES } from "@/components/sales/shared/task-types"
@@ -237,8 +238,8 @@ function TaskForm({
 
       {accountId ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Opportunity" htmlFor="task-deal" hint="Optional.">
-            <Select value={dealId || NONE} onValueChange={(v) => setDealId(!v || v === NONE ? "" : v)}>
+          <Field label="Opportunity" htmlFor="task-deal" hint={dealsQuery.isPending ? "Loading the Opportunities of this account…" : "Optional."}>
+            <Select disabled={dealsQuery.isPending} value={dealId || NONE} onValueChange={(v) => setDealId(!v || v === NONE ? "" : v)}>
               <SelectTrigger id="task-deal" className="w-full">
                 <SelectValue>{(v: string | null) => deals.find((d) => d.id === v)?.serial ?? "Not about one Opportunity"}</SelectValue>
               </SelectTrigger>
@@ -249,9 +250,12 @@ function TaskForm({
                 ))}
               </SelectContent>
             </Select>
+            {dealsQuery.isError ? (
+              <RetryNote onRetry={() => void dealsQuery.refetch()}>The Opportunities could not be loaded.</RetryNote>
+            ) : null}
           </Field>
-          <Field label="Meeting" htmlFor="task-meeting" hint="Optional.">
-            <Select value={meetingId || NONE} onValueChange={(v) => setMeetingId(!v || v === NONE ? "" : v)}>
+          <Field label="Meeting" htmlFor="task-meeting" hint={meetingsQuery.isPending ? "Loading the meetings of this account…" : "Optional."}>
+            <Select disabled={meetingsQuery.isPending} value={meetingId || NONE} onValueChange={(v) => setMeetingId(!v || v === NONE ? "" : v)}>
               <SelectTrigger id="task-meeting" className="w-full">
                 <SelectValue>
                   {(v: string | null) => meetings.find((m) => m.id === v)?.title ?? "Not from a meeting"}
@@ -264,6 +268,9 @@ function TaskForm({
                 ))}
               </SelectContent>
             </Select>
+            {meetingsQuery.isError ? (
+              <RetryNote onRetry={() => void meetingsQuery.refetch()}>The meetings could not be loaded.</RetryNote>
+            ) : null}
           </Field>
         </div>
       ) : null}

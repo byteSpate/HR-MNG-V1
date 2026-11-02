@@ -87,6 +87,12 @@ function QuoteDateCell({ deal }: { deal: OpportunitySummary }) {
           </span>
         )}
         {state === "late" ? <Tag label="Late" tone="red" /> : state === "soon" ? <Tag label="Soon" tone="yellow" /> : null}
+        {/* The box is locked while the date saves, so say so. Polite, not an alert. */}
+        {save.isPending ? (
+          <span role="status" className={`text-[11.5px] ${TONE.muted}`}>
+            Saving…
+          </span>
+        ) : null}
       </span>
       {save.isError ? <span className="mt-0.5 block text-[11.5px] text-[#B03A3A]">{toMessage(save.error)}</span> : null}
     </span>

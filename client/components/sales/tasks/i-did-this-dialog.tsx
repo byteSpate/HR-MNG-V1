@@ -21,6 +21,7 @@ import { useSession } from "@/lib/auth/session-context"
 import type { SalesTaskType } from "@/lib/api/types"
 import { DialogActions, Field, FormError, toMessage } from "@/components/dashboard/record-kit"
 import { AccountPicker, usePlanRefresh } from "@/components/sales/meetings/meeting-dialogs"
+import { RetryNote } from "@/components/sales/shared/panel"
 import { onDay } from "@/components/sales/shared/sales-shared"
 import { TASK_TYPE_LABEL, TASK_TYPES } from "@/components/sales/shared/task-types"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
@@ -204,8 +205,8 @@ function IDidThisForm({
       ) : null}
 
       {accountId && !fixedOpportunityId ? (
-        <Field label="Opportunity" htmlFor="did-deal" hint="Optional.">
-          <Select value={dealId || NONE} onValueChange={(v) => setDealId(!v || v === NONE ? "" : v)}>
+        <Field label="Opportunity" htmlFor="did-deal" hint={dealsQuery.isPending ? "Loading the Opportunities of this account…" : "Optional."}>
+          <Select disabled={dealsQuery.isPending} value={dealId || NONE} onValueChange={(v) => setDealId(!v || v === NONE ? "" : v)}>
             <SelectTrigger id="did-deal" className="w-full">
               <SelectValue>{(v: string | null) => deals.find((d) => d.id === v)?.serial ?? "Not about one Opportunity"}</SelectValue>
             </SelectTrigger>
@@ -216,6 +217,9 @@ function IDidThisForm({
               ))}
             </SelectContent>
           </Select>
+          {dealsQuery.isError ? (
+            <RetryNote onRetry={() => void dealsQuery.refetch()}>The Opportunities could not be loaded.</RetryNote>
+          ) : null}
         </Field>
       ) : null}
 

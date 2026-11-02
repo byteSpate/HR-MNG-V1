@@ -273,7 +273,7 @@ export function FunnelPage() {
   }
 
   if (!isAuthed) {
-    return <Skeleton className="h-64 w-full" />
+    return <Skeleton className="h-64 w-full bg-[#E4E9EF]" />
   }
 
   // ── the admin's team list ──
@@ -305,7 +305,7 @@ export function FunnelPage() {
                 </Button>
               </div>
             ) : meetingQuery.isLoading ? (
-              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-28 w-full bg-[#E4E9EF]" />
             ) : (
               <FunnelMeetingPanel
                 meeting={meetingQuery.data ?? null}
@@ -327,7 +327,7 @@ export function FunnelPage() {
         ) : teamQuery.isError ? null : (
           // Loading, empty and broken are three different screens. No counts
           // are shown beside a skeleton, and a failure shows its alert alone.
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full bg-[#E4E9EF]" />
         )}
       </div>
     )
@@ -414,7 +414,11 @@ export function FunnelPage() {
         ) : null}
       </div>
 
-      {grid ? <PersonWeekPanel employeeId={grid.employeeId} isAdmin={isAdmin} /> : null}
+      {/* Asked as soon as we know whose page it is, not after the grid has come
+          back, so the week and the grid load side by side. */}
+      {(openEmployeeId ?? grid?.employeeId) ? (
+        <PersonWeekPanel employeeId={(openEmployeeId ?? grid?.employeeId)!} isAdmin={isAdmin} />
+      ) : null}
 
       {grid ? (
         <div role="tablist" aria-label="Which Opportunities" className="flex flex-wrap gap-2">
@@ -522,7 +526,7 @@ export function FunnelPage() {
       ) : gridQuery.isError ? null : (
         // Broken shows its alert alone; a skeleton beside it would read as
         // still loading.
-        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-96 w-full bg-[#E4E9EF]" />
       )}
       </>
       ) : null}
