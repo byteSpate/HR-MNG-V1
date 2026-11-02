@@ -239,6 +239,16 @@ describe("next steps when a meeting is completed (owner, 2026-11-02)", () => {
     expect(taskData(1)).toMatchObject({ title: "Book the site survey", meetingId: "meeting-1" })
   })
 
+  it("gives the next steps to the account owner when an admin with no employee record completes it", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: null } as any)
+    const SUPER = { ...USER, role: "SUPER_ADMIN", salesRole: null }
+
+    await changeMeetingStatus("meeting-1", { status: "COMPLETED", nextSteps: STEPS } as any, SUPER)
+
+    expect(prisma.salesTask.create).toHaveBeenCalledTimes(2)
+    expect(taskData(0)).toMatchObject({ assignedToEmployeeId: "emp-1", meetingId: "meeting-1" })
+  })
+
   it("makes no task when there are no next steps", async () => {
     await changeMeetingStatus("meeting-1", { status: "COMPLETED", outcome: "Wants a quote" } as any, USER)
     expect(prisma.salesTask.create).not.toHaveBeenCalled()

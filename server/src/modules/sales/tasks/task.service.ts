@@ -101,6 +101,12 @@ interface NewTask {
   type?: SalesTaskType
   /** Set for "I did this": the task is made already done. */
   completed?: { at: Date; by: string }
+  /**
+   * Who gets the task when the caller has no Employee record (a Super Admin).
+   * A meeting's next step goes to the account owner then, so completing a
+   * meeting never fails just because an admin did it.
+   */
+  fallbackEmployeeId?: string
 }
 
 /**
@@ -122,6 +128,7 @@ export async function createTaskIn(tx: Prisma.TransactionClient, input: NewTask,
     }
     employeeId = await employeeIdFor(actor, asClient(tx))
   }
+  if (!employeeId) employeeId = input.fallbackEmployeeId ?? null
   // Super Admin and HR Admin are seeded with no Employee row, and a task needs
   // somebody to belong to.
   if (!employeeId) {

@@ -465,7 +465,7 @@ export async function changeMeetingStatus(
         ...(body.status === "CANCELLED" ? { cancelReason: body.reason } : {}),
       },
     })
-    // Each next step is a task for the caller, linked to this meeting. They
+    // Each next step is a task for the caller (the account owner when the caller has no Employee record), linked to this meeting. They
     // are made in this transaction, so a refusal undoes the completion too.
     for (const step of nextSteps) {
       await createTaskIn(
@@ -477,6 +477,8 @@ export async function changeMeetingStatus(
           title: step.title,
           dueOn: step.dueOn,
           type: "VISIT_FOLLOW_UP",
+          // An admin with no Employee record completing it: the owner does the follow-up.
+          fallbackEmployeeId: current.salesAccount.ownerEmployeeId,
         },
         actor
       )
