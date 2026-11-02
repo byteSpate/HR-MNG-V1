@@ -121,9 +121,9 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
       profileHref={user ? `${ROLE_ROUTES[user.role]}/profile` : undefined}
     >
       {children}
-      {/* One tap from every Sales page (owner, 2026-11-02). Only a person with an
-          employee record can have tasks, so a Super Admin without one never sees it. */}
-      {user?.employeeCode ? <IDidThisButton /> : null}
+      {/* One tap from every Sales page (owner, 2026-11-02). Only a Sales User logs
+          work this way. A Sales Admin or Super Admin reads the logs instead. */}
+      {!isSalesAdmin ? <IDidThisButton /> : null}
     </DashboardShell>
   )
 }

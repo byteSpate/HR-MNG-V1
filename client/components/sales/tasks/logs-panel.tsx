@@ -163,7 +163,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
         <Skeleton className="h-64 w-full" />
       ) : items.length === 0 ? (
         <p className={`rounded-md border border-[#E4E9EF] bg-white px-4 py-4 text-[12.5px] ${TONE.muted}`}>
-          {ownLog
+          {ownLog && !isSalesAdmin
             ? "Nothing logged this week yet. Press I did this to add work that is not about an account, like learning or office work."
             : "Nothing logged for this person this week."}
         </p>
