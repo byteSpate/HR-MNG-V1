@@ -151,6 +151,14 @@ describe("opening the review", () => {
     expect(data.ranByEmployeeId).toBe("emp-admin")
     expect(tx.auditLog.create).toHaveBeenCalled()
   })
+
+  it("lets a Super Admin with no employee record run it, with nobody saved as having run it", async () => {
+    mocked(prisma.user.findUnique).mockResolvedValue({ employee: null })
+    await openFunnelMeeting({}, ADMIN, new Date("2026-09-19T09:00:00.000Z"))
+    const data = mocked(tx.funnelMeeting.create).mock.calls[0][0].data
+    expect(data.ranByEmployeeId).toBeNull()
+    expect(tx.auditLog.create).toHaveBeenCalled()
+  })
 })
 
 describe("a completed meeting takes no new work", () => {

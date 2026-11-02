@@ -1,5 +1,6 @@
 "use client"
 
+import { RetryNote } from "@/components/sales/shared/panel"
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
@@ -156,6 +157,8 @@ export function SupplierPicker({ value, onChange }: { value: string; onChange: (
         id="line-supplier"
         className={SELECT}
         value={value}
+        disabled={options.isPending}
+        aria-busy={options.isPending}
         onChange={(e) => {
           if (e.target.value === ADD_NEW) {
             setDialogOpen(true)
@@ -164,12 +167,16 @@ export function SupplierPicker({ value, onChange }: { value: string; onChange: (
           onChange(e.target.value)
         }}
       >
-        <option value="">Choose a supplier</option>
+        <option value="">{options.isPending ? "Loading suppliers…" : "Choose a supplier"}</option>
         {(options.data ?? []).map((s) => (
           <option key={s.id} value={s.id}>{s.name}</option>
         ))}
         <option value={ADD_NEW}>+ Add a new supplier</option>
       </select>
+
+      {options.isError ? (
+        <RetryNote onRetry={() => void options.refetch()}>The suppliers could not be loaded.</RetryNote>
+      ) : null}
 
       <AddSupplierDialog open={dialogOpen} onOpenChange={setDialogOpen} onChange={onChange} />
     </>

@@ -54,14 +54,19 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
       <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
         <div className="overflow-x-auto">
           {/* One line per value, so rows stay one height (owner, 2026-10-19). */}
-          <table className="w-full min-w-[1200px] border-collapse text-sm [&_td]:whitespace-nowrap">
+          <table className="w-full min-w-[1400px] border-collapse text-sm [&_td]:whitespace-nowrap">
             <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
                   Person
                 </th>
+                {/* The three things in one place (owner, 2026-11-02): early
+                    Opportunities, the week's log, and open take-outs. */}
+                <th scope="col" className="px-4 py-2 text-right font-medium">Before quotation</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Logged this week</th>
+                <th scope="col" className="px-4 py-2 text-right font-medium">Open take-outs</th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
-                  Opportunities
+                  Quoted Opportunities
                 </th>
                 <th scope="col" className="px-4 py-2 text-right font-medium">
                   Quoted
@@ -101,6 +106,9 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                       {row.employeeName}
                     </button>
                   </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{row.beforeQuoteCount}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{row.loggedCount}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{row.openTakeOuts}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{row.dealCount}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">
                     <Money amount={row.quoted} />

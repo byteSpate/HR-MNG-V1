@@ -65,3 +65,20 @@ export const listProjectActivity = (t: string, id: string) =>
 
 export const getProjectDailyLog = (t: string, id: string, week?: string) =>
   apiFetch<ProjectDailyLogView>(`/api/sales/projects/${id}/daily-log${week ? `?week=${week}` : ""}`, { accessToken: t })
+
+/**
+ * One Daily Log line: what I did on this Project that day, or that I did no
+ * work on it. The URL keeps its old `/weekly/project-log` name (owner,
+ * 2026-11-02): the Weekly Report is gone, the path was not renamed.
+ */
+export function saveProjectLog(
+  accessToken: string,
+  body: { date: string; projectId: string; noWork: boolean; text: string | null }
+): Promise<void> {
+  return apiFetch<void>("/api/sales/weekly/project-log", { method: "PUT", accessToken, body: JSON.stringify(body) })
+}
+
+/** A person takes back a line they wrote. Only their own. */
+export function removeProjectLog(accessToken: string, id: string): Promise<void> {
+  return apiFetch<void>(`/api/sales/weekly/project-log/${id}`, { method: "DELETE", accessToken })
+}

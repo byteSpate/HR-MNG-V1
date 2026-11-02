@@ -21,15 +21,16 @@ import { presentOpportunity } from "./opportunity.present"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.present"
 import { presentChanges, resolveNames } from "../accounts/history.present"
 import { createTaskIn } from "../tasks/task.service"
-import { firstStageFor, quoteAskFor, stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
+import { BEFORE_QUOTE_STAGES, firstStageFor, quoteAskFor, stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
+import { QUIET_DAYS, QUOTE_DUE_DAYS, STUCK_DAYS } from "../sales.thresholds"
 import { canDo } from "../sales.permissions"
 import { createQuoteIn } from "./quote.write"
 import { ensureCustomerForAccount } from "../../customer/customer.link"
 import type {
-  ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
+  BeforeQuotationSummaryQuery, ChangeOpportunityNextStepBody, ChangeOpportunityStageBody, ChangeOpportunityStatusBody,
   CreateOpportunityBody, ListOpportunityQuery, UpdateOpportunityBody,
 } from "./opportunity.validators"
-import type { OpportunityHistory, OpportunityHistoryEntry, TimelineItem } from "../sales.types"
+import type { BeforeQuotationSummary, OpportunityHistory, OpportunityHistoryEntry, TimelineItem } from "../sales.types"
 
 const MS_PER_DAY = 86_400_000
 const HISTORY_LIMIT = 100
@@ -221,6 +222,8 @@ export async function listOpportunities(query: ListOpportunityQuery, actor: Acce
     ...(query.closing || query.quiet || query.stuck
       ? query.status ? {} : { status: "ONGOING" }
       : {}),
+    // Last, so it wins: Before Quotation is only ever ongoing Opportunities.
+    ...(query.view === "BEFORE_QUOTATION" ? { status: "ONGOING" as const, OR: beforeQuoteStages() } : {}),
   }
   const rows = await prisma.opportunity.findMany({
     where, include: INCLUDE, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -232,6 +235,48 @@ export async function listOpportunities(query: ListOpportunityQuery, actor: Acce
     items: page.map((row) => presentOpportunity(row, canManageDeal(row, actor, employeeId))),
     nextCursor: hasMore ? page.at(-1)!.id : null,
   }
+}
+
+/**
+ * One clause per track: this track's stages before the first quote. An
+ * Opportunity is in Before Quotation when it matches its own track's list.
+ */
+function beforeQuoteStages(): Prisma.OpportunityWhereInput[] {
+  return (["NETWORKING", "SOFTWARE_DEVELOPMENT"] as const).map((track) => ({
+    track,
+    stage: { in: [...BEFORE_QUOTE_STAGES[track]] },
+  }))
+}
+
+/**
+ * The counters above the Before Quotation grid (owner, 2026-11-02): how many
+ * are there, how many have a quote due soon, have no next step, are quiet, or
+ * are stuck. Same day counts as the dashboard (`sales.thresholds.ts`).
+ */
+export async function beforeQuotationSummary(
+  query: BeforeQuotationSummaryQuery,
+  actor: AccessTokenPayload
+): Promise<BeforeQuotationSummary> {
+  const employeeId = await employeeIdFor(actor)
+  const now = new Date()
+  const today = officeDateOf(now)
+  const base: Prisma.OpportunityWhereInput = {
+    salesAccount: accountScopeFor(actor, employeeId),
+    status: "ONGOING",
+    OR: beforeQuoteStages(),
+    ...(query.ownerEmployeeId ? { ownerEmployeeId: query.ownerEmployeeId } : {}),
+    ...(query.mine ? { ownerEmployeeId: employeeId ?? "__none__" } : {}),
+  }
+  const count = (extra: Prisma.OpportunityWhereInput) => prisma.opportunity.count({ where: { ...base, ...extra } })
+  const [total, quoteDueSoon, noNextStep, quiet, stuck] = await Promise.all([
+    count({}),
+    count({ expectedQuoteOn: { gte: today, lte: new Date(today.getTime() + QUOTE_DUE_DAYS * MS_PER_DAY) } }),
+    // An empty next step is saved as null, so null is "no next step".
+    count({ nextStep: null }),
+    count({ lastActivityAt: { lt: new Date(now.getTime() - QUIET_DAYS * MS_PER_DAY) } }),
+    count({ stageChangedAt: { lt: new Date(now.getTime() - STUCK_DAYS * MS_PER_DAY) } }),
+  ])
+  return { total, quoteDueSoon, noNextStep, quiet, stuck }
 }
 
 export async function listOpportunityOwners(actor: AccessTokenPayload) {
@@ -358,6 +403,7 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
     }
     if (body.amount !== undefined) stage("amount", body.amount === null ? null : dec(body.amount), current.amount)
     if (body.expectedCloseDate !== undefined) stage("expectedCloseDate", day(body.expectedCloseDate), current.expectedCloseDate)
+    if (body.expectedQuoteOn !== undefined) stage("expectedQuoteOn", day(body.expectedQuoteOn), current.expectedQuoteOn)
     if (body.oemAccountManager !== undefined) stage("oemAccountManager", body.oemAccountManager, current.oemAccountManager)
     if (body.ownerEmployeeId && body.ownerEmployeeId !== current.ownerEmployeeId) {
       const owner = await ownerFor(tx, current.salesAccount, body.ownerEmployeeId, body.addAssignment, actor)

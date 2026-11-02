@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { navGroups } from "@/components/sales/shared/nav-config"
+import { IDidThisButton } from "@/components/sales/tasks/i-did-this-dialog"
 import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { loginPathFor } from "@/lib/auth/return-to"
 import { useSession } from "@/lib/auth/session-context"
@@ -98,9 +99,6 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
         // "/meetings", so a prefix sum would count the minutes row into Meetings.
         "/sales/meetings": dashboard.data?.badges["/meetings"] ?? 0,
         "/sales/meetings/minutes": dashboard.data?.badges["/meetings/minutes"] ?? 0,
-        // Only an admin has a number here: a writer's own week is a status
-        // line on the overview, not a queue (§26.16).
-        "/sales/weekly": dashboard.data?.badges["/weekly/all"] ?? 0,
         // The same for the funnel: an admin's number is the people not yet
         // walked last week, while a writer's is a count of their own live
         // deals, which is information rather than work, so it gets no badge.
@@ -123,6 +121,9 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
       profileHref={user ? `${ROLE_ROUTES[user.role]}/profile` : undefined}
     >
       {children}
+      {/* One tap from every Sales page (owner, 2026-11-02). Only a Sales User logs
+          work this way. A Sales Admin or Super Admin reads the logs instead. */}
+      {!isSalesAdmin ? <IDidThisButton /> : null}
     </DashboardShell>
   )
 }

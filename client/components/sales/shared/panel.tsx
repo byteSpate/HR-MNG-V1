@@ -63,3 +63,24 @@ export function PanelError({ onRetry }: { onRetry: () => void }) {
     </Panel>
   )
 }
+
+/**
+ * A small inline answer for a dropdown or list inside a form whose data did not
+ * load. It names the problem and offers the way out, so the form never shows a
+ * picker with nothing in it as if nothing existed (loading, empty and broken
+ * are three different screens).
+ */
+export function RetryNote({ children, onRetry }: { children: React.ReactNode; onRetry: () => void }) {
+  return (
+    <p role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-semibold text-[#B03A3A]">
+      <span>{children}</span>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="font-bold underline underline-offset-2 hover:no-underline focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+      >
+        Try again
+      </button>
+    </p>
+  )
+}

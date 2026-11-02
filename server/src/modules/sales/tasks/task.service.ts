@@ -12,16 +12,16 @@
  */
 
 import prisma from "../../../config/prisma"
-import type { Prisma } from "../../../generated/prisma/client"
+import type { Prisma, SalesTaskType } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
 import { addDays, formatDateOnly, formatShortDate, parseDateOnly } from "../../../utils/dates"
 import type { AccessTokenPayload } from "../../auth/auth.types"
-import { officeDateOf } from "../../attendance/attendance.time"
+import { officeDateOf, officeInstantOf } from "../../attendance/attendance.time"
 import { emitEvent } from "../../event/event.emit"
 import { accountScopeFor, employeeIdFor, isSalesAdmin, requireAccountAccess } from "../sales.access"
 import type { SalesTaskStatusResult, SalesTaskSummary } from "../sales.types"
-import type { ChangeTaskStatusBody, CreateTaskBody, ListTaskQuery, UpdateTaskBody } from "./task.validators"
+import type { ChangeTaskStatusBody, CreateTaskBody, ListTaskQuery, LogDoneBody, UpdateTaskBody } from "./task.validators"
 import { presentTask, TASK_STATUS_LABEL } from "./task.present"
 
 export const TASK_NOT_VISIBLE = "That task does not exist, or is not yours"
@@ -37,7 +37,11 @@ const INCLUDE = {
   opportunity: { select: { serial: true, name: true } },
   meeting: { select: { title: true } },
   assignedTo: { select: { fullName: true } },
+  assignedBy: { select: { fullName: true } },
 } satisfies Prisma.SalesTaskInclude
+
+/** The same include for any read that shows a task, so every list presents it the same way. */
+export const TASK_INCLUDE = INCLUDE
 
 /** A date the user picked, refused as a 400 rather than a 500 when it is not on the calendar. */
 function dueDate(value: string): Date {
@@ -68,14 +72,41 @@ function dueFilter(due: ListTaskQuery["due"], today: Date): Prisma.SalesTaskWher
   return {}
 }
 
+/**
+ * The day a task counts for (owner, 2026-11-02): a done task counts for the
+ * office day it was done, any other task for its due day. `from` and `to` are
+ * both included.
+ */
+export function dayRange(from?: string, to?: string): Prisma.SalesTaskWhereInput[] {
+  if (!from && !to) return []
+  const start = from ? dueDate(from) : undefined
+  const end = to ? dueDate(to) : undefined
+  const doneWindow = {
+    ...(start ? { gte: officeInstantOf(start, "00:00") } : {}),
+    ...(end ? { lt: officeInstantOf(addDays(end, 1), "00:00") } : {}),
+  }
+  const dueWindow = { ...(start ? { gte: start } : {}), ...(end ? { lte: end } : {}) }
+  return [{ OR: [{ status: "DONE", completedAt: doneWindow }, { status: { not: "DONE" }, dueOn: dueWindow }] }]
+}
+
 interface NewTask {
-  salesAccountId: string
+  /** Optional (owner, 2026-11-02): learning and office work have no account. */
+  salesAccountId?: string | null
   opportunityId?: string | null
   meetingId?: string | null
   title: string
   detail?: string | null
   dueOn: Date
   priority?: "LOW" | "NORMAL" | "HIGH"
+  type?: SalesTaskType
+  /** Set for "I did this": the task is made already done. */
+  completed?: { at: Date; by: string }
+  /**
+   * Who gets the task when the caller has no Employee record (a Super Admin).
+   * A meeting's next step goes to the account owner then, so completing a
+   * meeting never fails just because an admin did it.
+   */
+  fallbackEmployeeId?: string
 }
 
 /**
@@ -84,40 +115,58 @@ interface NewTask {
  * too (§24.11), so both ways in keep the same rules.
  */
 export async function createTaskIn(tx: Prisma.TransactionClient, input: NewTask, actor: AccessTokenPayload) {
-  const access = await requireAccountAccess(input.salesAccountId, actor, asClient(tx))
+  let accountId: string | null = null
+  let employeeId: string | null
+  if (input.salesAccountId) {
+    const access = await requireAccountAccess(input.salesAccountId, actor, asClient(tx))
+    accountId = access.accountId
+    employeeId = access.employeeId
+  } else {
+    // An Opportunity and a meeting always belong to an account.
+    if (input.opportunityId || input.meetingId) {
+      throw new AppError(400, "A task with an Opportunity or a meeting needs an account.")
+    }
+    employeeId = await employeeIdFor(actor, asClient(tx))
+  }
+  if (!employeeId) employeeId = input.fallbackEmployeeId ?? null
   // Super Admin and HR Admin are seeded with no Employee row, and a task needs
   // somebody to belong to.
-  if (!access.employeeId) {
+  if (!employeeId) {
     throw new AppError(400, "Only an employee can have tasks, and your account has no employee record")
   }
-  if (input.opportunityId) {
+  if (accountId && input.opportunityId) {
     const deal = await tx.opportunity.findFirst({
-      where: { id: input.opportunityId, salesAccountId: access.accountId },
+      where: { id: input.opportunityId, salesAccountId: accountId },
       select: { id: true },
     })
     if (!deal) throw new AppError(400, "That Opportunity is not on this account")
   }
-  if (input.meetingId) {
+  if (accountId && input.meetingId) {
     const meeting = await tx.salesMeeting.findFirst({
-      where: { id: input.meetingId, salesAccountId: access.accountId },
+      where: { id: input.meetingId, salesAccountId: accountId },
       select: { id: true },
     })
     if (!meeting) throw new AppError(400, "That meeting is not on this account")
   }
 
   const priority = input.priority ?? "NORMAL"
+  const type = input.type ?? "OTHER"
   const created = await tx.salesTask.create({
     data: {
       origin: "SELF",
-      salesAccountId: access.accountId,
+      type,
+      salesAccountId: accountId,
       opportunityId: input.opportunityId ?? null,
       meetingId: input.meetingId ?? null,
       title: input.title,
       detail: input.detail ?? null,
       dueOn: input.dueOn,
       priority,
-      assignedToEmployeeId: access.employeeId,
+      assignedToEmployeeId: employeeId,
       assignedByEmployeeId: null,
+      ...(input.completed
+        ? { status: "DONE" as const, completedAt: input.completed.at, completedBy: input.completed.by }
+        : {}),
     },
     include: INCLUDE,
   })
@@ -128,26 +177,28 @@ export async function createTaskIn(tx: Prisma.TransactionClient, input: NewTask,
     action: "CREATE",
     changedBy: actor.sub,
     after: {
-      salesAccountId: access.accountId,
+      salesAccountId: accountId,
       title: input.title,
       dueOn: formatDateOnly(input.dueOn),
       priority,
+      type,
       opportunityId: input.opportunityId ?? null,
       meetingId: input.meetingId ?? null,
+      ...(input.completed ? { status: "DONE" } : {}),
     },
   })
   // Keyed to the task, not the account. The account's Timeline is open to every
   // hub member and a task is not; the Timeline reads tasks itself, for the
   // people allowed to see them.
   await emitEvent(tx, {
-    type: "sales.task.created",
+    type: input.completed ? "sales.task.completed" : "sales.task.created",
     entity: "SALES_TASK",
     entityId: created.id,
     actorUserId: actor.sub,
-    subjectEmployeeId: access.employeeId,
+    subjectEmployeeId: employeeId,
     managerEmployeeId: null,
-    title: `Task added: ${input.title}`,
-    meta: `Due ${formatShortDate(input.dueOn)}`,
+    title: input.completed ? `Task done: ${input.title}` : `Task added: ${input.title}`,
+    meta: input.completed ? null : `Due ${formatShortDate(input.dueOn)}`,
     href: "/tasks",
   })
   return created
@@ -158,6 +209,33 @@ export async function createTask(body: CreateTaskBody, actor: AccessTokenPayload
   return prisma.$transaction(async (tx) => {
     const created = await createTaskIn(tx, { ...body, dueOn }, actor)
     return presentTask(created, true, officeDateOf(new Date()))
+  })
+}
+
+/**
+ * "I did this" (owner, 2026-11-02): one line about something already done. It
+ * is made Done, dated to the day the person picked (office time), and a day in
+ * the future is refused: nobody has done tomorrow's work yet.
+ */
+export async function logDoneTask(body: LogDoneBody, actor: AccessTokenPayload, now: Date = new Date()): Promise<SalesTaskSummary> {
+  const doneOn = dueDate(body.doneOn)
+  const today = officeDateOf(now)
+  if (doneOn.getTime() > today.getTime()) throw new AppError(400, "Choose a day that is today or earlier.")
+  return prisma.$transaction(async (tx) => {
+    const created = await createTaskIn(
+      tx,
+      {
+        salesAccountId: body.salesAccountId ?? null,
+        opportunityId: body.opportunityId ?? null,
+        title: body.title,
+        detail: body.detail ?? null,
+        dueOn: doneOn,
+        type: body.type,
+        completed: { at: officeInstantOf(doneOn, "00:00"), by: actor.sub },
+      },
+      actor
+    )
+    return presentTask(created, true, today)
   })
 }
 
@@ -196,7 +274,7 @@ export async function updateTask(id: string, body: UpdateTaskBody, actor: Access
     const before: Record<string, unknown> = {}
     const after: Record<string, unknown> = {}
 
-    for (const field of ["title", "detail", "priority"] as const) {
+    for (const field of ["title", "detail", "priority", "type"] as const) {
       const next = body[field]
       if (next === undefined || next === current[field]) continue
       data[field] = next as never
@@ -334,11 +412,18 @@ export async function listTasks(
 ): Promise<{ items: SalesTaskSummary[] }> {
   const employeeId = await employeeIdFor(actor)
   const today = officeDateOf(now)
+  // Only a Sales Admin may read somebody else's tasks. For anyone else the
+  // filter is ignored, so their own scope is all they ever get.
+  const pickedPerson = isSalesAdmin(actor) ? query.assignedToEmployeeId : undefined
   const where: Prisma.SalesTaskWhereInput = {
-    AND: taskScopeFor(actor, employeeId),
+    AND: [...taskScopeFor(actor, employeeId), ...dayRange(query.from, query.to)],
     ...dueFilter(query.due, today),
     ...(query.status ? { status: query.status } : {}),
     ...(query.origin ? { origin: query.origin } : {}),
+    ...(query.takeOuts ? { origin: { in: ["FUNNEL_MEETING", "TAKE_OUT"] as ("FUNNEL_MEETING" | "TAKE_OUT")[] } } : {}),
+    ...(query.type ? { type: query.type } : {}),
+    ...(query.noAccount ? { salesAccountId: null } : {}),
+    ...(pickedPerson ? { assignedToEmployeeId: pickedPerson } : {}),
     ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
     ...(query.opportunityId ? { opportunityId: query.opportunityId } : {}),
     ...(query.projectId ? { projectId: query.projectId } : {}),

@@ -3065,6 +3065,9 @@ model Opportunity {
   currency Currency @default(BDT)
 
   expectedCloseDate DateTime?
+  /// The day the owner plans to send the quote. A reminder only: it never
+  /// blocks a stage move. Shown in the Before Quotation view.
+  expectedQuoteOn   DateTime?
 
   status       OpportunityStatus @default(ONGOING)
   /// Required for LOST and CANCELLED.
@@ -3548,6 +3551,22 @@ enum SalesTaskOrigin {
   FUNNEL_MEETING
   /// Work on a Project, given by its Project Manager or taken by a team member.
   PROJECT
+  /// An admin gave it on a funnel row or to a person, outside a meeting
+  /// (Saturday review design, 2026-11-02). The giver and the day it was written
+  /// are shown with it.
+  TAKE_OUT
+}
+
+/// What kind of work a task records (owner, 2026-11-02): the task is also the
+/// daily log. Work with no account is logged the same way.
+enum SalesTaskType {
+  VISIT_FOLLOW_UP
+  QUOTATION_SENT
+  REQUIREMENT_SENT
+  CALL_OR_EMAIL
+  LEARNING
+  INTERNAL_WORK
+  OTHER
 }
 
 enum SalesTaskPriority {
@@ -3568,6 +3587,8 @@ enum SalesTaskStatus {
 model SalesTask {
   id     String          @id @default(uuid())
   origin SalesTaskOrigin @default(SELF)
+  /// Existing tasks are Other. Set when the task is planned or logged.
+  type   SalesTaskType   @default(OTHER)
 
   /// Required by the service in phase 3, so every task is on an account's
   /// Timeline. Nullable in the table because a phase 5 project task may not
@@ -3891,9 +3912,10 @@ model FunnelMeeting {
   status FunnelMeetingStatus @default(SCHEDULED)
 
   /// Who ran it. An Employee rather than a User id, because this is a person
-  /// in the room, and the team list is drawn from Employee.
-  ranByEmployeeId String
-  ranBy           Employee @relation("FunnelMeetingRanBy", fields: [ranByEmployeeId], references: [id])
+  /// in the room, and the team list is drawn from Employee. Empty when a
+  /// Super Admin with no Employee record ran it: `createdBy` still names them.
+  ranByEmployeeId String?
+  ranBy           Employee? @relation("FunnelMeetingRanBy", fields: [ranByEmployeeId], references: [id], onDelete: Restrict)
 
   /// One free note for the week — not per person. Per-person and per-deal
   /// words are SalesComment rows carrying `funnelMeetingId` (§27.8).

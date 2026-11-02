@@ -16,11 +16,14 @@ import {
   addManagementNoteHandler,
   completeMeetingHandler,
   createFunnelActionHandler,
+  createTakeOutHandler,
   editFunnelCellHandler,
+  getPersonWeekHandler,
   getFunnelHandler,
   getFunnelMeetingHandler,
   listFunnelTeamHandler,
   listMeetingActionsHandler,
+  listTakeOutsHandler,
   openFunnelMeetingHandler,
   reopenMeetingHandler,
   setMeetingAttendeesHandler,
@@ -108,5 +111,14 @@ router.post(
   requireSales(SalesRole.SALES_ADMIN),
   createFunnelActionHandler
 )
+
+// ── take-outs (owner, 2026-11-02) ──
+// A literal path, so it is never read as an id. Giving one is for a Sales Admin
+// (or a Super Admin). Reading follows the Funnel's own rule in the service: your
+// own, or anybody's when the team switch is on.
+// One person's week for the Saturday page. Same read rule as the grid and the team list.
+router.get("/week", requireAuth, requireSales(), getPersonWeekHandler)
+router.post("/take-outs", requireAuth, requireSales(SalesRole.SALES_ADMIN), createTakeOutHandler)
+router.get("/take-outs", requireAuth, requireSales(), listTakeOutsHandler)
 
 export default router

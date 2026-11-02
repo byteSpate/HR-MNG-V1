@@ -62,6 +62,8 @@ export interface OpportunitySummary {
   /** Products whose margin cannot be worked out: no Total price, or no percentage. */
   unmarginedLineCount: number
   expectedCloseDate: string | null
+  /** The day the quote is planned to go out, YYYY-MM-DD. Shown in Before Quotation. */
+  expectedQuoteOn: string | null
   offeredOn: string | null
   oemAccountManager: string | null
   status: OpportunityStatus
@@ -379,9 +381,24 @@ export interface SalesMinutesListItem {
 
 // ── TASKS (phase 3) ────────────────────────────────────────────────────────
 
+/** What kind of work a task records (owner, 2026-11-02). Same order as the Prisma enum. */
+export type SalesTaskType =
+  | "VISIT_FOLLOW_UP"
+  | "QUOTATION_SENT"
+  | "REQUIREMENT_SENT"
+  | "CALL_OR_EMAIL"
+  | "LEARNING"
+  | "INTERNAL_WORK"
+  | "OTHER"
+
 export interface SalesTaskSummary {
   id: string
-  origin: "SELF" | "FUNNEL_MEETING"
+  origin: "SELF" | "FUNNEL_MEETING" | "PROJECT" | "TAKE_OUT"
+  type: SalesTaskType
+  /** Who gave it, for a take-out or a meeting action item. Null for a task a person made for themselves. */
+  givenByName: string | null
+  /** The day it was given, YYYY-MM-DD in office time. Null when givenByName is null. */
+  givenOn: string | null
   /** Always set in phase 3; nullable because a phase 5 project task may have no account. */
   salesAccountId: string | null
   salesAccountName: string | null
@@ -401,11 +418,39 @@ export interface SalesTaskSummary {
   outcome: string | null
   cancelReason: string | null
   completedAt: string | null
+  /** The office day it was done, YYYY-MM-DD. Null when it is not done. */
+  doneOn: string | null
   /** Pending and due before today in office time. Worked out when read, never stored. */
   overdue: boolean
   /** Only the owner changes a task, a Sales Admin included. */
   canManage: boolean
   createdAt: string
+}
+
+/**
+ * One person's week for the Saturday review (owner, 2026-11-02): what they did
+ * and planned, how it splits by type, and their take-outs.
+ */
+export interface PersonWeek {
+  /** The Sunday the week starts on, YYYY-MM-DD. */
+  weekStart: string
+  employee: { id: string; fullName: string }
+  /** Sunday to Thursday always. Friday and the Saturday before appear only when they hold a task. */
+  days: { date: string; label: string; tasks: SalesTaskSummary[] }[]
+  countsByType: Record<SalesTaskType, number>
+  takeOuts: { open: SalesTaskSummary[]; doneThisWeek: SalesTaskSummary[] }
+}
+
+/** The counters above the Before Quotation grid (owner, 2026-11-02). */
+export interface BeforeQuotationSummary {
+  total: number
+  /** An expected quote date in the next 14 days. */
+  quoteDueSoon: number
+  noNextStep: number
+  /** No activity for 30 days. */
+  quiet: number
+  /** In one stage for 21 days. */
+  stuck: number
 }
 
 export interface SalesTaskStatusResult extends SalesTaskSummary {

@@ -18,6 +18,7 @@ import prisma from "../../../config/prisma"
 import type { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
+import { parseDateOnly } from "../../../utils/dates"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { emitEvent } from "../../event/event.emit"
 import { standingOf } from "../accounts/account.service"
@@ -26,6 +27,7 @@ import { waitingForMinutesWhere } from "./minutes.waiting"
 import { canManageAccount, employeeIdFor, isSalesAdmin, requireAccountAccess } from "../sales.access"
 import { canWorkAccounts } from "../sales.eligibility"
 import { sendMeetingChanged, type MeetingChange } from "../sales.mailer"
+import { createTaskIn } from "../tasks/task.service"
 import type { SalesMeetingSummary } from "../sales.types"
 import type {
   ChangeMeetingStatusBody,
@@ -422,6 +424,12 @@ export async function changeMeetingStatus(
   body: ChangeMeetingStatusBody,
   actor: AccessTokenPayload
 ): Promise<SalesMeetingSummary> {
+  // Next steps only count when the meeting is completed. Their dates are read
+  // here, before anything is written, so a bad date saves nothing at all.
+  const nextSteps = (body.status === "COMPLETED" ? (body.nextSteps ?? []) : []).map((step) => ({
+    title: step.title,
+    dueOn: nextStepDate(step.dueOn),
+  }))
   const { updated, notices } = await prisma.$transaction(async (tx) => {
     const { meeting: current, employeeId } = await meetingForWrite(tx, id, actor)
     if (current.status === body.status) {
@@ -457,6 +465,24 @@ export async function changeMeetingStatus(
         ...(body.status === "CANCELLED" ? { cancelReason: body.reason } : {}),
       },
     })
+    // Each next step is a task for the caller (the account owner when the caller has no Employee record), linked to this meeting. They
+    // are made in this transaction, so a refusal undoes the completion too.
+    for (const step of nextSteps) {
+      await createTaskIn(
+        tx,
+        {
+          salesAccountId: current.salesAccountId,
+          opportunityId: current.opportunityId,
+          meetingId: id,
+          title: step.title,
+          dueOn: step.dueOn,
+          type: "VISIT_FOLLOW_UP",
+          // An admin with no Employee record completing it: the owner does the follow-up.
+          fallbackEmployeeId: current.salesAccount.ownerEmployeeId,
+        },
+        actor
+      )
+    }
     const type =
       body.status === "COMPLETED"
         ? ("sales.meeting.completed" as const)
@@ -502,6 +528,15 @@ export async function changeMeetingStatus(
   })
   await emailAttendees(updated, notices)
   return presentMeeting(updated)
+}
+
+/** A next step's due day, refused as a 400 rather than a 500 when it is not on the calendar. */
+function nextStepDate(value: string): Date {
+  try {
+    return parseDateOnly(value)
+  } catch {
+    throw new AppError(400, `${value} is not a date on the calendar`)
+  }
 }
 
 /** Any hub member may read a meeting, as they may read its account. */

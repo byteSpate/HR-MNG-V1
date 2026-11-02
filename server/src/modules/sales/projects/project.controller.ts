@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import type { NextFunction, Request, Response } from "express"
 
+import { removeProjectLog, saveProjectLog } from "./project.log"
 import { changeProjectStatus, getProject, listProjects, setProjectTeam, startProject, updateProject } from "./project.service"
 import { addMilestone, removeMilestone, tickLine, untickLine, updateMilestone } from "./project.milestone.service"
 import {
@@ -10,6 +11,7 @@ import {
   cancelProjectTaskSchema,
   changeProjectStatusSchema,
   listProjectSchema,
+  saveProjectLogSchema,
   setProjectTeamSchema,
   updateMilestoneSchema,
   updateProjectSchema,
@@ -90,6 +92,21 @@ export async function cancelProjectTaskHandler(req: Request<{ taskId: string }>,
 
 export async function listProjectActivityHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
   try { return res.status(200).json(await listProjectActivity(req.params.id, req.user!)) }
+  catch (err) { return next(err) }
+}
+
+/**
+ * A Daily Log line, written or taken back. The URLs keep their old
+ * `/weekly/project-log` names so nothing that calls them has to change, even
+ * though the Weekly Report itself is retired (owner, 2026-11-02).
+ */
+export async function saveProjectLogHandler(req: Request, res: Response, next: NextFunction) {
+  try { await saveProjectLog(saveProjectLogSchema.parse(req.body), req.user!); return res.status(204).send() }
+  catch (err) { return next(err) }
+}
+
+export async function removeProjectLogHandler(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try { await removeProjectLog(req.params.id, req.user!); return res.status(204).send() }
   catch (err) { return next(err) }
 }
 

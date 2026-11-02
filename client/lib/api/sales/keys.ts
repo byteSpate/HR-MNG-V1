@@ -64,6 +64,9 @@ export const salesKeys = {
    */
   opportunities: (filters: Record<string, unknown> = {}) =>
     ["sales", "opportunities", filters] as const,
+  /** Under "opportunities", so any Opportunity write also refreshes the Before Quotation counters. */
+  beforeQuotationSummary: (filters: Record<string, unknown> = {}) =>
+    ["sales", "opportunities", "before-quotation-summary", filters] as const,
   opportunity: (id: string) => ["sales", "opportunities", id] as const,
   opportunityTimeline: (id: string) => ["sales", "opportunities", id, "timeline"] as const,
   opportunityHistory: (id: string) => ["sales", "opportunities", id, "history"] as const,
@@ -107,13 +110,6 @@ export const salesKeys = {
    * the editor takes what the server sends back instead.
    */
   minutes: (id: string) => ["sales", "minutes", "doc", id] as const,
-  // ── the weekly report (phase 5) ─────────────────────────────────────────
-  /** My week. Keyed by the week, so moving between weeks keeps each cached. */
-  weeklyMine: (week: string | null) => ["sales", "weekly", "mine", week] as const,
-  /** All Reports, for an admin, one chosen week. */
-  weeklyTeam: (week: string | null) => ["sales", "weekly", "team", week] as const,
-  /** One person's week, read by an admin. */
-  weeklyOf: (employeeId: string, week: string | null) => ["sales", "weekly", "of", employeeId, week] as const,
 
   /** Sales Settings. Outside "minutes", so writing a document does not refetch it. */
   minutesTemplate: () => ["sales", "settings", "minutes-template"] as const,
@@ -138,7 +134,6 @@ export function planWriteKeys() {
     ["sales", "minutes", "list"] as const,
     // A scheduled meeting and a completed task are both source facts for a
     // Weekly Report, so a write made from that page must refresh its week too.
-    ["sales", "weekly"] as const,
   ]
 }
 

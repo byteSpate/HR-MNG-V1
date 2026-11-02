@@ -53,6 +53,17 @@ export const QUOTED_STAGES: ReadonlySet<string> = new Set([
 ])
 
 /**
+ * The stages before the first quote goes out (owner, 2026-11-02): Networking's
+ * first three and Software's first four. Software's SRS sent is also before the
+ * quote, which is why the two tracks differ. Worked out from the lists above, so
+ * a new stage is placed in one spot only.
+ */
+export const BEFORE_QUOTE_STAGES: Record<SalesTrack, readonly OpportunityStage[]> = {
+  NETWORKING: NETWORKING_STAGES.filter((stage) => !QUOTED_STAGES.has(stage)),
+  SOFTWARE_DEVELOPMENT: SOFTWARE_STAGES.filter((stage) => !QUOTED_STAGES.has(stage)),
+}
+
+/**
  * The stages where the price is talked over again (owner, 2026-10-13):
  * Software's Proposal revision and Negotiation (the team's "Quotation
  * Revision"). Moving into one offers a new quote, with Skip.

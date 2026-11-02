@@ -9,7 +9,7 @@ vi.mock("../../../config/prisma", () => ({
 }))
 
 vi.mock("./task.service", () => ({
-  createTask: vi.fn(), listTasks: vi.fn(), getTask: vi.fn(),
+  createTask: vi.fn(), listTasks: vi.fn(), getTask: vi.fn(), logDoneTask: vi.fn(),
   updateTask: vi.fn(), changeTaskStatus: vi.fn(),
 }))
 vi.mock("../opportunities/opportunity.service", async (original) => ({
@@ -59,6 +59,31 @@ describe("task routes", () => {
     expect(body).toMatchObject({ ...TASK, priority: "NORMAL" })
     expect(body).not.toHaveProperty("assignedToEmployeeId")
     expect(body).not.toHaveProperty("origin")
+  })
+
+  it("I did this: needs a sign-in, and saves one with a type and a day", async () => {
+    vi.mocked(tasks.logDoneTask).mockResolvedValue({ id: "task-2" } as any)
+    const body = { title: "Sent the BOQ", type: "QUOTATION_SENT", doneOn: "2026-09-15" }
+
+    await request(app).post("/api/sales/tasks/done").send(body).expect(401)
+    await request(app).post("/api/sales/tasks/done").set("Authorization", auth("SALES_USER")).send(body).expect(201)
+    expect(vi.mocked(tasks.logDoneTask).mock.calls[0][0]).toMatchObject(body)
+  })
+
+  it("I did this: refuses a body with no type, or a day that is not a date", async () => {
+    for (const body of [
+      { title: "Sent the BOQ", doneOn: "2026-09-15" },
+      { title: "Sent the BOQ", type: "OTHER", doneOn: "15/09/2026" },
+    ]) {
+      await request(app).post("/api/sales/tasks/done").set("Authorization", auth("SALES_USER")).send(body).expect(400)
+    }
+    expect(tasks.logDoneTask).not.toHaveBeenCalled()
+  })
+
+  it("makes a task with no account", async () => {
+    await request(app).post("/api/sales/tasks").set("Authorization", auth("SALES_USER"))
+      .send({ title: "Read the VAT guide", dueOn: "2026-09-20", type: "LEARNING" }).expect(201)
+    expect(vi.mocked(tasks.createTask).mock.calls[0][0]).toMatchObject({ type: "LEARNING" })
   })
 
   it("refuses a task with no due date, or a due date that is not a date", async () => {

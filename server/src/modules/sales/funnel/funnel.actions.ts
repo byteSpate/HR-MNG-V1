@@ -15,6 +15,7 @@
  */
 
 import prisma from "../../../config/prisma"
+import type { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
 import { formatDateOnly, parseDateOnly } from "../../../utils/dates"
@@ -28,7 +29,6 @@ import { lockMeeting } from "./funnel.meeting"
 
 export const ACTIONS_ADMIN_ONLY = "Only a Sales Admin can give out an action item"
 export const ASSIGNEE_NOT_SALES = "That person is not in the Sales Hub"
-export const ACTIONS_NEED_EMPLOYEE = "You need an employee record to give out an action item"
 export const ACTION_DEAL_MISSING = "That Opportunity does not exist"
 export const ACTION_ACCOUNT_MISSING = "That account does not exist"
 
@@ -37,6 +37,7 @@ const INCLUDE = {
   opportunity: { select: { serial: true, name: true } },
   meeting: { select: { title: true } },
   assignedTo: { select: { fullName: true } },
+  assignedBy: { select: { fullName: true } },
 } as const
 
 export interface FunnelActionInput {
@@ -47,6 +48,89 @@ export interface FunnelActionInput {
   priority?: "LOW" | "NORMAL" | "HIGH"
   salesAccountId?: string | null
   opportunityId?: string | null
+}
+
+interface GiveTaskArgs {
+  origin: "FUNNEL_MEETING" | "TAKE_OUT"
+  funnelMeetingId: string | null
+  assignerEmployeeId: string | null
+  dueOn: Date
+  priority: "LOW" | "NORMAL" | "HIGH"
+  actor: AccessTokenPayload
+  /** The audit row's note, so History says how it was given. */
+  note: string
+}
+
+/**
+ * Makes one task for somebody else, inside the caller's transaction. Shared by
+ * the Saturday meeting's action items and by a take-out given outside a
+ * meeting, so both keep the same checks: the person is in the Sales Hub, the
+ * Opportunity and account exist, and an Opportunity decides the account.
+ * Self-service tasks never come through here (`createTaskIn` is separate).
+ */
+export async function giveTaskIn(tx: Prisma.TransactionClient, body: FunnelActionInput, args: GiveTaskArgs) {
+  // The assignee must actually be in the Sales Hub. Handing work to somebody
+  // who cannot open the page is a task nobody will ever see.
+  const assignee = await tx.employee.findFirst({
+    where: { id: body.assignedToEmployeeId, user: { salesRole: { not: null }, isActive: true } },
+    select: { id: true },
+  })
+  if (!assignee) throw new AppError(400, ASSIGNEE_NOT_SALES)
+
+  let salesAccountId = body.salesAccountId ?? null
+  if (body.opportunityId) {
+    const deal = await tx.opportunity.findUnique({
+      where: { id: body.opportunityId },
+      select: { id: true, salesAccountId: true },
+    })
+    if (!deal) throw new AppError(400, ACTION_DEAL_MISSING)
+    // Keep the account and the deal consistent, so the task lands on the right
+    // Timeline rather than on none.
+    salesAccountId = deal.salesAccountId
+  } else if (salesAccountId) {
+    // An unknown id would be a foreign-key error, which is a 500.
+    const account = await tx.salesAccount.findUnique({
+      where: { id: salesAccountId },
+      select: { id: true },
+    })
+    if (!account) throw new AppError(400, ACTION_ACCOUNT_MISSING)
+  }
+
+  const task = await tx.salesTask.create({
+    data: {
+      origin: args.origin,
+      funnelMeetingId: args.funnelMeetingId,
+      salesAccountId,
+      opportunityId: body.opportunityId ?? null,
+      title: body.title,
+      detail: body.detail ?? null,
+      dueOn: args.dueOn,
+      priority: args.priority,
+      assignedToEmployeeId: body.assignedToEmployeeId,
+      // The whole point of this path: this task has a giver.
+      assignedByEmployeeId: args.assignerEmployeeId,
+    },
+    include: INCLUDE,
+  })
+
+  await writeAudit(tx, {
+    entity: "SALES_TASK",
+    entityId: task.id,
+    action: "CREATE",
+    changedBy: args.actor.sub,
+    after: {
+      origin: args.origin,
+      funnelMeetingId: args.funnelMeetingId,
+      assignedToEmployeeId: body.assignedToEmployeeId,
+      assignedByEmployeeId: args.assignerEmployeeId,
+      title: body.title,
+      dueOn: formatDateOnly(args.dueOn),
+      priority: args.priority,
+    },
+    note: args.note,
+  })
+
+  return task
 }
 
 /**
@@ -69,7 +153,7 @@ export async function createFunnelAction(
   if (!isSalesAdmin(actor)) throw new AppError(403, ACTIONS_ADMIN_ONLY)
 
   const assignerEmployeeId = await employeeIdFor(actor)
-  if (!assignerEmployeeId) throw new AppError(409, ACTIONS_NEED_EMPLOYEE)
+  // No Employee record (a Super Admin) is allowed: the audit row names the user.
 
   const dueOn = body.dueOn ? parseDateOnly(body.dueOn) : nextSaturdayFrom(officeDateOf(now))
   const priority = body.priority ?? "NORMAL"
@@ -78,69 +162,15 @@ export async function createFunnelAction(
     // Locked and re-read here, not checked beforehand: a meeting completed a
     // moment ago must not take this action item (§27.11).
     await lockMeeting(tx, meetingId, { open: true })
-
-    // The assignee must actually be in the Sales Hub. Handing work to somebody
-    // who cannot open the page is a task nobody will ever see.
-    const assignee = await tx.employee.findFirst({
-      where: { id: body.assignedToEmployeeId, user: { salesRole: { not: null }, isActive: true } },
-      select: { id: true },
-    })
-    if (!assignee) throw new AppError(400, ASSIGNEE_NOT_SALES)
-
-    let salesAccountId = body.salesAccountId ?? null
-    if (body.opportunityId) {
-      const deal = await tx.opportunity.findUnique({
-        where: { id: body.opportunityId },
-        select: { id: true, salesAccountId: true },
-      })
-      if (!deal) throw new AppError(400, ACTION_DEAL_MISSING)
-      // Keep the account and the deal consistent, so the task lands on the right
-      // Timeline rather than on none.
-      salesAccountId = deal.salesAccountId
-    } else if (salesAccountId) {
-      // An unknown id would be a foreign-key error, which is a 500.
-      const account = await tx.salesAccount.findUnique({
-        where: { id: salesAccountId },
-        select: { id: true },
-      })
-      if (!account) throw new AppError(400, ACTION_ACCOUNT_MISSING)
-    }
-
-    const task = await tx.salesTask.create({
-      data: {
-        origin: "FUNNEL_MEETING",
-        funnelMeetingId: meetingId,
-        salesAccountId,
-        opportunityId: body.opportunityId ?? null,
-        title: body.title,
-        detail: body.detail ?? null,
-        dueOn,
-        priority,
-        assignedToEmployeeId: body.assignedToEmployeeId,
-        // The whole point of this path: this task has a giver.
-        assignedByEmployeeId: assignerEmployeeId,
-      },
-      include: INCLUDE,
-    })
-
-    await writeAudit(tx, {
-      entity: "SALES_TASK",
-      entityId: task.id,
-      action: "CREATE",
-      changedBy: actor.sub,
-      after: {
-        origin: "FUNNEL_MEETING",
-        funnelMeetingId: meetingId,
-        assignedToEmployeeId: body.assignedToEmployeeId,
-        assignedByEmployeeId: assignerEmployeeId,
-        title: body.title,
-        dueOn: formatDateOnly(dueOn),
-        priority,
-      },
+    return giveTaskIn(tx, body, {
+      origin: "FUNNEL_MEETING",
+      funnelMeetingId: meetingId,
+      assignerEmployeeId,
+      dueOn,
+      priority,
+      actor,
       note: "Given at a funnel meeting",
     })
-
-    return task
   })
 
   // `canManage` is false for the giver: an action item belongs to the person

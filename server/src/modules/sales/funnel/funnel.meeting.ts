@@ -22,7 +22,6 @@ import { meetingSaturdayFor, weekReviewedBy } from "./funnel.dates"
 export const ADMIN_ONLY = "Only a Sales Admin can run a funnel meeting"
 export const MEETING_NOT_FOUND = "That funnel meeting does not exist"
 export const MEETING_CLOSED = "That funnel meeting is completed. Reopen it to make changes"
-export const NEEDS_EMPLOYEE = "A Sales Admin needs an employee record to run a meeting"
 export const UNKNOWN_PEOPLE = "One or more of those people do not exist"
 export const UNKNOWN_PERSON = "That person does not exist"
 
@@ -31,7 +30,8 @@ export interface FunnelMeetingDetail {
   weekStart: string
   heldOn: string
   status: "SCHEDULED" | "COMPLETED"
-  ranByEmployeeId: string
+  ranByEmployeeId: string | null
+  /** "Super Admin" when the person who ran it has no Employee record. */
   ranByName: string
   note: string | null
   attendees: { employeeId: string; employeeName: string }[]
@@ -60,8 +60,8 @@ interface DetailRow {
   weekStart: Date
   heldOn: Date
   status: "SCHEDULED" | "COMPLETED"
-  ranByEmployeeId: string
-  ranBy: { fullName: string }
+  ranByEmployeeId: string | null
+  ranBy: { fullName: string } | null
   note: string | null
   attendees: { employeeId: string; employee: { fullName: string } }[]
   reviews: { employeeId: string; reviewedAt: Date; employee: { fullName: string } }[]
@@ -75,7 +75,7 @@ function present(row: DetailRow): FunnelMeetingDetail {
     heldOn: formatDateOnly(row.heldOn),
     status: row.status,
     ranByEmployeeId: row.ranByEmployeeId,
-    ranByName: row.ranBy.fullName,
+    ranByName: row.ranBy?.fullName ?? "Super Admin",
     note: row.note,
     attendees: row.attendees.map((a) => ({
       employeeId: a.employeeId,
@@ -108,8 +108,9 @@ export async function openFunnelMeeting(
 ): Promise<FunnelMeetingDetail> {
   requireAdmin(actor)
 
+  // A Super Admin may have no Employee record. The meeting then has no
+  // "ran by" person, and `createdBy` and the audit row still name the user.
   const employeeId = await employeeIdFor(actor)
-  if (!employeeId) throw new AppError(409, NEEDS_EMPLOYEE)
 
   // The office's own date, not the UTC one: at 03:00 in Dhaka on a Saturday
   // the UTC date is still Friday, which is the week before.
@@ -123,7 +124,7 @@ export async function openFunnelMeeting(
   try {
     const created = await prisma.$transaction(async (tx) => {
       const meeting = await tx.funnelMeeting.create({
-        data: { weekStart, heldOn, ranByEmployeeId: employeeId, createdBy: actor.sub },
+        data: { weekStart, heldOn, ranByEmployeeId: employeeId ?? null, createdBy: actor.sub },
         select: DETAIL,
       })
 
@@ -135,7 +136,8 @@ export async function openFunnelMeeting(
         after: { weekStart: formatDateOnly(weekStart), heldOn: formatDateOnly(heldOn) },
       })
 
-      await emitEvent(tx, {
+      // No Employee record means nobody to notify. The audit row above still names the user.
+      if (employeeId) await emitEvent(tx, {
         type: "sales.funnel.meeting_opened",
         entity: "FUNNEL_MEETING",
         entityId: meeting.id,
@@ -386,7 +388,7 @@ export async function setMeetingStatus(
       after: { status },
     })
 
-    await emitEvent(tx, {
+    if (meeting.ranByEmployeeId) await emitEvent(tx, {
       type:
         status === "COMPLETED"
           ? "sales.funnel.meeting_completed"

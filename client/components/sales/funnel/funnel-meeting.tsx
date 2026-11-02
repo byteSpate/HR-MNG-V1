@@ -4,47 +4,28 @@
  * The Saturday review, as a panel above the team list (revision §27.11).
  *
  * Admin only. It carries who was in the room, whose funnel has been walked,
- * the week's note, and how many action items were handed out.
+ * and the week's note. Work is given from a person's page, as a take-out.
  */
 
-import { useState, type FormEvent } from "react"
+import { useState } from "react"
 
 import { RiCheckLine } from "@remixicon/react"
 
 import { PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
-import { onDay } from "@/components/sales/shared/sales-shared"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import type {
-  FunnelActionBody,
-  FunnelMeetingDetail,
-  FunnelTeam,
-  SalesTaskSummary,
-} from "@/lib/api/types"
+import type { FunnelMeetingDetail, FunnelTeam } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
-
-const TASK_STATUS_LABEL: Record<SalesTaskSummary["status"], string> = {
-  PENDING: "Open",
-  DONE: "Done",
-  CANCELLED: "Cancelled",
-}
 
 interface FunnelMeetingPanelProps {
   meeting: FunnelMeetingDetail | null
   team: FunnelTeam
   busy: boolean
   error: unknown
-  /**
-   * What has been handed out at this meeting. Loading, broken and empty are
-   * three different things here, so they arrive as three different fields.
-   */
-  actions: { items: SalesTaskSummary[] | undefined; loading: boolean; error: unknown }
   onOpen: () => void
   onToggleAttendee: (employeeId: string, present: boolean) => void
   onSaveNote: (note: string | null) => void
   onComplete: () => void
   onReopen: () => void
-  onCreateAction: (body: FunnelActionBody) => Promise<unknown>
 }
 
 export function FunnelMeetingPanel({
@@ -52,40 +33,12 @@ export function FunnelMeetingPanel({
   team,
   busy,
   error,
-  actions,
   onOpen,
   onToggleAttendee,
   onSaveNote,
   onComplete,
   onReopen,
-  onCreateAction,
 }: FunnelMeetingPanelProps) {
-  const [actionTitle, setActionTitle] = useState("")
-  const [actionDetail, setActionDetail] = useState("")
-  const [assigneeId, setAssigneeId] = useState("")
-  const [actionError, setActionError] = useState<unknown>(null)
-
-  async function submitAction(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!assigneeId || !actionTitle.trim()) return
-    setActionError(null)
-    try {
-      await onCreateAction({
-        assignedToEmployeeId: assigneeId,
-        title: actionTitle.trim(),
-        detail: actionDetail.trim() || null,
-      })
-    } catch (err) {
-      // The form keeps what was typed: a refusal (the meeting was completed a
-      // moment ago, say) is worth reading, and retyping it is not.
-      setActionError(err)
-      return
-    }
-    setActionTitle("")
-    setActionDetail("")
-    setAssigneeId("")
-  }
-
   if (!meeting) {
     return (
       <div className="rounded-lg border border-[#E4E9EF] bg-white px-4 py-4">
@@ -97,7 +50,7 @@ export function FunnelMeetingPanel({
             </p>
             <p className={cn("mt-0.5 text-sm", TONE.muted)}>
               You can walk anybody&apos;s funnel without one. Open a meeting to tick who was in the
-              room, mark people reviewed, and hand out action items.
+              room, mark people reviewed, and write the week&apos;s note.
             </p>
           </div>
           <Button onClick={onOpen} disabled={busy}>
@@ -119,8 +72,7 @@ export function FunnelMeetingPanel({
           not an alert. It also says plainly what still works (§27.11). */}
       {completed ? (
         <PanelNotice>
-          This meeting is completed. Nothing written in it has been locked — reopen it to add a note
-          or another action item.
+          This meeting is completed. Nothing written in it has been locked — reopen it to change a note.
         </PanelNotice>
       ) : null}
 
@@ -131,8 +83,7 @@ export function FunnelMeetingPanel({
           </p>
           <p className={cn("mt-0.5 text-sm", TONE.muted)}>
             Held {meeting.heldOn}, run by {meeting.ranByName} · {meeting.reviewed.length} of{" "}
-            {team.rows.length} walked · {meeting.actionItemCount}{" "}
-            {meeting.actionItemCount === 1 ? "action item" : "action items"}
+            {team.rows.length} walked
           </p>
         </div>
         {completed ? (
@@ -181,86 +132,11 @@ export function FunnelMeetingPanel({
             their own grid.
           </p>
 
-          {!completed ? (
-            <form onSubmit={(event) => void submitAction(event)} className="mt-4 border-t border-[#E4E9EF] pt-4">
-              <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
-                Give an action item
-              </h4>
-              <p className={cn("mt-1 text-xs", TONE.muted)}>
-                It is due next Saturday and appears in the recipient&apos;s task list.
-              </p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <select
-                  value={assigneeId}
-                  onChange={(event) => setAssigneeId(event.target.value)}
-                  required
-                  className="rounded-md border border-[#E4E9EF] bg-white px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
-                >
-                  <option value="">Assign to…</option>
-                  {team.rows.map((person) => (
-                    <option key={person.employeeId} value={person.employeeId}>
-                      {person.employeeName}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={actionTitle}
-                  onChange={(event) => setActionTitle(event.target.value)}
-                  required
-                  maxLength={200}
-                  placeholder="What needs doing?"
-                  className="rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
-                />
-              </div>
-              <textarea
-                value={actionDetail}
-                onChange={(event) => setActionDetail(event.target.value)}
-                maxLength={2000}
-                rows={2}
-                placeholder="Optional context"
-                className="mt-2 w-full rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
-              />
-              {actionError ? (
-                <div className="mt-2">
-                  <PanelAlert>{toMessage(actionError)}</PanelAlert>
-                </div>
-              ) : null}
-              <Button type="submit" size="sm" className="mt-2" disabled={busy}>
-                {busy ? "Giving…" : "Give action item"}
-              </Button>
-            </form>
-          ) : null}
-
-          {/* Shown on a completed meeting too: what was handed out is the
-              record of the meeting, not a control. */}
-          <div className="mt-4 border-t border-[#E4E9EF] pt-4">
-            <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
-              Given at this meeting
-            </h4>
-            {actions.loading ? (
-              <Skeleton className="mt-2 h-12 w-full" />
-            ) : actions.error ? (
-              <div className="mt-2">
-                <PanelAlert>{toMessage(actions.error)}</PanelAlert>
-              </div>
-            ) : !actions.items || actions.items.length === 0 ? (
-              <p className={cn("mt-2 text-sm", TONE.muted)}>
-                No action items have been given at this meeting yet.
-              </p>
-            ) : (
-              <ul className="mt-2 space-y-2">
-                {actions.items.map((item) => (
-                  <li key={item.id} className="rounded-md bg-white px-3 py-2 ring-1 ring-[#E4E9EF]">
-                    <p className="text-sm font-medium text-[#1B2733]">{item.title}</p>
-                    <p className={cn("text-xs", TONE.muted)}>
-                      To {item.assignedToName} · due {onDay(item.dueOn)} ·{" "}
-                      {TASK_STATUS_LABEL[item.status]}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {/* One way to give work: the take-out on a person's page. The old form
+              here did the same thing under another name (owner, 2026-11-02). */}
+          <p className={cn("mt-4 border-t border-[#E4E9EF] pt-4 text-xs", TONE.muted)}>
+            To give someone work, open their name in the list below and press Take-out.
+          </p>
         </div>
 
         <div>

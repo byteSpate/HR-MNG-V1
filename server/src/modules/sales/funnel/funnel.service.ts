@@ -10,8 +10,10 @@
 import prisma from "../../../config/prisma"
 import { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
+import { addDays } from "../../../utils/dates"
 import { dec, toMoneyString } from "../../payroll/payroll.money"
-import { officeDateOf } from "../../attendance/attendance.time"
+import { BEFORE_QUOTE_STAGES } from "../sales.stages"
+import { officeDateOf, officeInstantOf } from "../../attendance/attendance.time"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { commentKindScopeFor, employeeIdFor } from "../sales.access"
 import { canDo } from "../sales.permissions"
@@ -44,8 +46,8 @@ const READ_CAP = 2000
 const CLOSED_OUT = ["LOST", "CANCELLED"] as const
 
 /** Whose funnel is being asked for, and may this caller see it (§27.12). */
-async function subjectOf(
-  query: FunnelQuery,
+export async function subjectOf(
+  query: { employeeId?: string },
   actor: AccessTokenPayload
 ): Promise<{ employeeId: string; employeeName: string }> {
   const own = await employeeIdFor(actor)
@@ -361,6 +363,12 @@ export interface FunnelTeamRow {
   reviewed: boolean
   /** Their quarter against their target (owner, 2026-10-13). */
   summary: FunnelSummary
+  /** Ongoing Opportunities still before the first quote stage (owner, 2026-11-02). */
+  beforeQuoteCount: number
+  /** Work they logged as done in the week under review: I did this, tasks finished. */
+  loggedCount: number
+  /** Take-outs and meeting action items they still have open. */
+  openTakeOuts: number
 }
 
 /**
@@ -383,7 +391,8 @@ export async function listFunnelTeam(
   // Dhaka the UTC date is still Friday, which is the week before.
   const weekStart = weekReviewedBy(officeDateOf(now))
 
-  const [people, quotedGroups, openGroups, meeting] = await Promise.all([
+  const weekEnd = addDays(weekStart, 7)
+  const [people, quotedGroups, openGroups, meeting, beforeGroups, loggedGroups, takeOutGroups] = await Promise.all([
     prisma.employee.findMany({
       where: { user: { salesRole: { not: null }, isActive: true } },
       select: { id: true, fullName: true },
@@ -404,11 +413,38 @@ export async function listFunnelTeam(
       where: { weekStart },
       select: { reviews: { select: { employeeId: true } } },
     }),
+    prisma.opportunity.groupBy({
+      by: ["ownerEmployeeId"],
+      where: {
+        status: "ONGOING",
+        OR: (["NETWORKING", "SOFTWARE_DEVELOPMENT"] as const).map((track) => ({
+          track,
+          stage: { in: [...BEFORE_QUOTE_STAGES[track]] },
+        })),
+      },
+      _count: { _all: true },
+    }),
+    prisma.salesTask.groupBy({
+      by: ["assignedToEmployeeId"],
+      where: {
+        status: "DONE",
+        completedAt: { gte: officeInstantOf(weekStart, "00:00"), lt: officeInstantOf(weekEnd, "00:00") },
+      },
+      _count: { _all: true },
+    }),
+    prisma.salesTask.groupBy({
+      by: ["assignedToEmployeeId"],
+      where: { status: "PENDING", origin: { in: ["TAKE_OUT", "FUNNEL_MEETING"] } },
+      _count: { _all: true },
+    }),
   ])
 
   const quotedBy = new Map(quotedGroups.map((g) => [g.ownerEmployeeId, g]))
   const openBy = new Map(openGroups.map((g) => [g.ownerEmployeeId, g]))
   const reviewed = new Set((meeting?.reviews ?? []).map((r) => r.employeeId))
+  const beforeBy = new Map(beforeGroups.map((g) => [g.ownerEmployeeId, g._count._all]))
+  const loggedBy = new Map(loggedGroups.map((g) => [g.assignedToEmployeeId, g._count._all]))
+  const takeOutsBy = new Map(takeOutGroups.map((g) => [g.assignedToEmployeeId, g._count._all]))
 
   const asMoney = (value: unknown): string | null =>
     value === null || value === undefined ? null : toMoneyString(dec(value as never))
@@ -424,6 +460,9 @@ export async function listFunnelTeam(
     stillOpen: asMoney(openBy.get(person.id)?._sum.amount),
     reviewed: reviewed.has(person.id),
     summary: summaries.get(person.id)!,
+    beforeQuoteCount: beforeBy.get(person.id) ?? 0,
+    loggedCount: loggedBy.get(person.id) ?? 0,
+    openTakeOuts: takeOutsBy.get(person.id) ?? 0,
   }))
 
   return { weekStart: weekStart.toISOString().slice(0, 10), quarterLabel: quarterLabel(year, quarter), rows }

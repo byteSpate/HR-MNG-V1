@@ -44,6 +44,7 @@ import {
   getOpportunity,
   getOpportunityHistory,
   getOpportunityTimeline,
+  beforeQuotationSummary,
   listOpportunities,
   listOpportunityOwners,
   setSoftwareNeeded,
@@ -889,5 +890,107 @@ describe("Networking stages", () => {
       await changeOpportunityStage("opp-1", { stage }, USER)
       expect(prisma.opportunity.update).toHaveBeenCalledTimes(1)
     }
+  })
+})
+
+describe("Before Quotation (owner, 2026-11-02)", () => {
+  const NETWORKING_BEFORE = ["ASSIGNED_QUALIFIED", "DISCOVERY_DESIGN", "TECHNICAL_VALIDATION"]
+  const SOFTWARE_BEFORE = ["REQUIREMENT_RECEIVED", "REQUIREMENT_GATHERING", "BRD_SENT", "SRS_SENT"]
+  const whereOf = (n = 0) => (vi.mocked(prisma.opportunity.findMany).mock.calls[n][0] as any).where
+
+  beforeEach(() => vi.setSystemTime(NOW))
+
+  it("lists ongoing Opportunities that are before the quote stages of their own track", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+    await listOpportunities({ view: "BEFORE_QUOTATION" } as any, USER)
+
+    expect(whereOf()).toMatchObject({
+      status: "ONGOING",
+      OR: [
+        { track: "NETWORKING", stage: { in: NETWORKING_BEFORE } },
+        { track: "SOFTWARE_DEVELOPMENT", stage: { in: SOFTWARE_BEFORE } },
+      ],
+    })
+  })
+
+  it("never lists a closed one, even when the status filter asks for it", async () => {
+    await listOpportunities({ view: "BEFORE_QUOTATION", status: "WON" } as any, USER)
+    expect(whereOf().status).toBe("ONGOING")
+  })
+
+  it("keeps the other filters", async () => {
+    await listOpportunities({ view: "BEFORE_QUOTATION", ownerEmployeeId: "emp-2", stage: "BRD_SENT" } as any, USER)
+    expect(whereOf()).toMatchObject({ ownerEmployeeId: "emp-2", stage: "BRD_SENT" })
+  })
+
+  it("does not change the plain list when no view is asked for", async () => {
+    await listOpportunities({} as any, USER)
+    expect(whereOf().OR).toBeUndefined()
+    expect(whereOf().status).toBeUndefined()
+  })
+
+  it("counts quote due soon, no next step, quiet and stuck, with the same days the dashboard uses", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+    vi.mocked(prisma.opportunity.count).mockImplementation((async (args: any) => {
+      const w = args.where
+      if (w.expectedQuoteOn) return 2
+      if (w.nextStep === null) return 3
+      if (w.lastActivityAt) return 4
+      if (w.stageChangedAt) return 5
+      return 10
+    }) as any)
+
+    await expect(beforeQuotationSummary({}, USER)).resolves.toEqual({
+      total: 10, quoteDueSoon: 2, noNextStep: 3, quiet: 4, stuck: 5,
+    })
+
+    const wheres = vi.mocked(prisma.opportunity.count).mock.calls.map((c) => (c[0] as any).where)
+    for (const w of wheres) {
+      expect(w).toMatchObject({ status: "ONGOING", salesAccount: expect.any(Object) })
+      expect(w.OR).toHaveLength(2)
+    }
+    const quiet = wheres.find((w) => w.lastActivityAt)
+    const stuck = wheres.find((w) => w.stageChangedAt)
+    const due = wheres.find((w) => w.expectedQuoteOn)
+    expect(quiet.lastActivityAt.lt.getTime()).toBe(NOW.getTime() - 30 * 86_400_000)
+    expect(stuck.stageChangedAt.lt.getTime()).toBe(NOW.getTime() - 21 * 86_400_000)
+    expect(due.expectedQuoteOn.lte.getTime() - due.expectedQuoteOn.gte.getTime()).toBe(14 * 86_400_000)
+  })
+
+  it("narrows the counts to one owner when asked", async () => {
+    await beforeQuotationSummary({ ownerEmployeeId: "emp-2" }, USER)
+    for (const call of vi.mocked(prisma.opportunity.count).mock.calls) {
+      expect((call[0] as any).where.ownerEmployeeId).toBe("emp-2")
+    }
+  })
+
+  it("changes the expected quote date, writes the audit row and counts it as activity", async () => {
+    await updateOpportunity("opp-1", { expectedQuoteOn: "2026-11-20" } as any, USER)
+
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ expectedQuoteOn: new Date("2026-11-20T00:00:00.000Z"), lastActivityAt: expect.any(Date) }),
+    }))
+    const audit = vi.mocked(prisma.auditLog.create).mock.calls[0][0] as any
+    expect(audit.data).toMatchObject({ entity: "OPPORTUNITY", action: "UPDATE" })
+    expect(JSON.stringify(audit.data.after)).toContain("expectedQuoteOn")
+  })
+
+  it("clears the expected quote date when null is sent", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(
+      opportunity({ expectedQuoteOn: new Date("2026-11-20T00:00:00.000Z") }) as any
+    )
+    await updateOpportunity("opp-1", { expectedQuoteOn: null } as any, USER)
+    expect(prisma.opportunity.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ expectedQuoteOn: null }),
+    }))
+  })
+
+  it("shows the expected quote date on the Opportunity", async () => {
+    vi.mocked(prisma.opportunity.findFirst).mockResolvedValue(
+      opportunity({ expectedQuoteOn: new Date("2026-11-20T00:00:00.000Z") }) as any
+    )
+    await expect(getOpportunity("opp-1", USER)).resolves.toMatchObject({ expectedQuoteOn: "2026-11-20" })
   })
 })

@@ -27,6 +27,13 @@ export const funnelKeys = {
    */
   meeting: (weekStart?: string) => ["sales", "funnel", "meeting", weekStart ?? "current"] as const,
 
+  /** One person's week. Under `all`, so any funnel write refreshes it. */
+  week: (employeeId: string, week?: string) => ["sales", "funnel", "week", employeeId, week ?? "current"] as const,
+
+  /** A person's take-outs, optionally for one Opportunity. */
+  takeOuts: (employeeId: string, opportunityId?: string) =>
+    ["sales", "funnel", "take-outs", employeeId, opportunityId ?? "all"] as const,
+
   actions: (meetingId: string) => ["sales", "funnel", "meeting", meetingId, "actions"] as const,
 }
 

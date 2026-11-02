@@ -22,11 +22,15 @@ import {
   setPersonReviewed,
 } from "./funnel.meeting"
 import { addManagementNote } from "./funnel.notes"
+import { createTakeOut, listTakeOuts } from "./funnel.takeouts"
+import { getPersonWeek } from "./funnel.week"
 import { getFunnel, listFunnelTeam } from "./funnel.service"
 import {
   editFunnelCellBodySchema,
   funnelActionSchema,
   funnelQuerySchema,
+  personWeekQuerySchema,
+  takeOutQuerySchema,
   teamQuerySchema,
   managementNoteSchema,
   meetingAttendeesSchema,
@@ -173,6 +177,35 @@ export async function createFunnelActionHandler(req: Request, res: Response, nex
 export async function listMeetingActionsHandler(req: Request, res: Response, next: NextFunction) {
   try {
     return res.status(200).json({ items: await listMeetingActions(pathParam(req, "id"), req.user!) })
+  } catch (err) {
+    return next(err)
+  }
+}
+
+// ── take-outs (owner, 2026-11-02) ──
+
+export async function createTakeOutHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    // A take-out has the same body as a meeting action item.
+    const body = funnelActionSchema.parse(req.body)
+    return res.status(201).json(await createTakeOut(body, req.user!))
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function listTakeOutsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const query = takeOutQuerySchema.parse(req.query)
+    return res.status(200).json({ items: await listTakeOuts(query, req.user!) })
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getPersonWeekHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    return res.status(200).json(await getPersonWeek(personWeekQuerySchema.parse(req.query), req.user!))
   } catch (err) {
     return next(err)
   }

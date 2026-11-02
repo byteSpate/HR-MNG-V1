@@ -3,6 +3,7 @@ import type {
   ChangeTaskStatusBody,
   CreateTaskBody,
   ListTasksQuery,
+  LogDoneBody,
   SalesTaskStatusResult,
   SalesTaskSummary,
   UpdateTaskBody,
@@ -17,6 +18,15 @@ export function listTasks(accessToken: string, query: ListTasksQuery = {}): Prom
 
 export function createTask(accessToken: string, body: CreateTaskBody): Promise<SalesTaskSummary> {
   return apiFetch<SalesTaskSummary>("/api/sales/tasks", {
+    method: "POST",
+    accessToken,
+    body: JSON.stringify(body),
+  })
+}
+
+/** "I did this": a task made already done, dated to the day the person picked. */
+export function logDoneTask(accessToken: string, body: LogDoneBody): Promise<SalesTaskSummary> {
+  return apiFetch<SalesTaskSummary>("/api/sales/tasks/done", {
     method: "POST",
     accessToken,
     body: JSON.stringify(body),

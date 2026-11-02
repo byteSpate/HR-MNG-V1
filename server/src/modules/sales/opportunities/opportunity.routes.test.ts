@@ -12,7 +12,7 @@ vi.mock("./opportunity.service", () => ({
   createOpportunity: vi.fn(), listOpportunities: vi.fn(), listOpportunityOwners: vi.fn(), getOpportunity: vi.fn(),
   updateOpportunity: vi.fn(), changeOpportunityStage: vi.fn(),
   changeOpportunityStatus: vi.fn(), changeOpportunityNextStep: vi.fn(),
-  getOpportunityTimeline: vi.fn(), getOpportunityHistory: vi.fn(),
+  getOpportunityTimeline: vi.fn(), getOpportunityHistory: vi.fn(), beforeQuotationSummary: vi.fn(),
 }))
 vi.mock("./opportunity.status", () => ({ correctOpportunityStatus: vi.fn() }))
 vi.mock("./opportunity.line.service", () => ({
@@ -44,6 +44,50 @@ beforeEach(() => {
   vi.mocked(lines.addOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
   vi.mocked(lines.updateOpportunityLine).mockResolvedValue({ id: "line-1" } as any)
   vi.mocked(lines.suggestOpportunityLineValues).mockResolvedValue([])
+})
+
+describe("Before Quotation routes (owner, 2026-11-02)", () => {
+  const COUNTS = { total: 4, quoteDueSoon: 1, noNextStep: 2, quiet: 0, stuck: 1 }
+
+  it("serves the counters on their own path, never as an Opportunity id", async () => {
+    vi.mocked(opportunities.beforeQuotationSummary).mockResolvedValue(COUNTS as any)
+    const res = await request(app).get("/api/sales/opportunities/before-quotation/summary")
+      .set("Authorization", auth("SALES_USER")).expect(200)
+    expect(res.body).toEqual(COUNTS)
+    expect(opportunities.getOpportunity).not.toHaveBeenCalled()
+  })
+
+  it("needs a Sales Hub sign-in", async () => {
+    await request(app).get("/api/sales/opportunities/before-quotation/summary").expect(401)
+    await request(app).get("/api/sales/opportunities/before-quotation/summary").set("Authorization", auth(null)).expect(403)
+  })
+
+  it("passes the owner filter on and refuses an owner that is not an id", async () => {
+    vi.mocked(opportunities.beforeQuotationSummary).mockResolvedValue(COUNTS as any)
+    const owner = "11111111-1111-4111-8111-111111111111"
+    await request(app).get(`/api/sales/opportunities/before-quotation/summary?ownerEmployeeId=${owner}`)
+      .set("Authorization", auth("SALES_ADMIN")).expect(200)
+    expect(vi.mocked(opportunities.beforeQuotationSummary).mock.calls[0][0]).toMatchObject({ ownerEmployeeId: owner })
+    await request(app).get("/api/sales/opportunities/before-quotation/summary?ownerEmployeeId=nope")
+      .set("Authorization", auth("SALES_ADMIN")).expect(400)
+  })
+
+  it("lists the Before Quotation view and refuses another view name", async () => {
+    await request(app).get("/api/sales/opportunities?view=BEFORE_QUOTATION").set("Authorization", auth("SALES_USER")).expect(200)
+    expect(vi.mocked(opportunities.listOpportunities).mock.calls[0][0]).toMatchObject({ view: "BEFORE_QUOTATION" })
+    await request(app).get("/api/sales/opportunities?view=EVERYTHING").set("Authorization", auth("SALES_USER")).expect(400)
+  })
+
+  it("saves an expected quote date and clears it with null", async () => {
+    vi.mocked(opportunities.updateOpportunity).mockResolvedValue({ id: "opp-1" } as any)
+    await request(app).patch("/api/sales/opportunities/opp-1").set("Authorization", auth("SALES_USER"))
+      .send({ expectedQuoteOn: "2026-11-20" }).expect(200)
+    await request(app).patch("/api/sales/opportunities/opp-1").set("Authorization", auth("SALES_USER"))
+      .send({ expectedQuoteOn: null }).expect(200)
+    await request(app).patch("/api/sales/opportunities/opp-1").set("Authorization", auth("SALES_USER"))
+      .send({ expectedQuoteOn: "20/11/2026" }).expect(400)
+    expect(vi.mocked(opportunities.updateOpportunity).mock.calls.map((c) => (c[1] as any).expectedQuoteOn)).toEqual(["2026-11-20", null])
+  })
 })
 
 describe("opportunity routes", () => {

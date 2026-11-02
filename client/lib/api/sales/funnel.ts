@@ -14,7 +14,9 @@ import type {
   FunnelMeetingDetail,
   FunnelQueryOptions,
   FunnelTeam,
+  PersonWeek,
   SalesTaskSummary,
+  TakeOutQuery,
 } from "../types"
 
 /**
@@ -166,4 +168,34 @@ export function createFunnelAction(
     body: JSON.stringify(body),
     accessToken,
   })
+}
+
+// ── the Saturday page and take-outs (owner, 2026-11-02) ──
+
+/** One person's week: what they did and planned, by type, with their take-outs. */
+export function getPersonWeek(
+  options: { employeeId?: string; week?: string },
+  accessToken: string
+): Promise<PersonWeek> {
+  const params = new URLSearchParams()
+  if (options.employeeId) params.set("employeeId", options.employeeId)
+  if (options.week) params.set("week", options.week)
+  const query = params.toString()
+  return apiFetch(`/api/sales/funnel/week${query ? `?${query}` : ""}`, { accessToken })
+}
+
+/** A take-out has the same body as a meeting action item. A Sales Admin writes it, any day. */
+export function createTakeOut(body: FunnelActionBody, accessToken: string): Promise<SalesTaskSummary> {
+  return apiFetch("/api/sales/funnel/take-outs", {
+    method: "POST",
+    body: JSON.stringify(body),
+    accessToken,
+  })
+}
+
+export function listTakeOuts(query: TakeOutQuery, accessToken: string): Promise<{ items: SalesTaskSummary[] }> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) if (value) params.set(key, String(value))
+  const qs = params.toString()
+  return apiFetch(`/api/sales/funnel/take-outs${qs ? `?${qs}` : ""}`, { accessToken })
 }

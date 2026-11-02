@@ -2852,6 +2852,8 @@ export interface OpportunitySummary {
   /** Products whose margin cannot be worked out: no Total price, or no percentage. */
   unmarginedLineCount: number
   expectedCloseDate: string | null
+  /** The day the quote is planned to go out, YYYY-MM-DD. A reminder only (owner, 2026-11-02). */
+  expectedQuoteOn: string | null
   /** Set once the quotation or proposal has gone out: it is then in the funnel. */
   offeredOn: string | null
   oemAccountManager: string | null
@@ -2919,9 +2921,23 @@ export interface UpdateOpportunityBody {
   track?: SalesTrack
   amount?: string | null
   expectedCloseDate?: string | null
+  /** The day the quote is planned to go out. Null clears it. */
+  expectedQuoteOn?: string | null
   oemAccountManager?: string | null
   ownerEmployeeId?: string
   addAssignment?: boolean
+}
+
+/** The counters above the Before Quotation grid. Mirrors server sales.types.ts. */
+export interface BeforeQuotationSummary {
+  total: number
+  /** An expected quote date in the next 14 days. */
+  quoteDueSoon: number
+  noNextStep: number
+  /** No activity for 30 days. */
+  quiet: number
+  /** In one stage for 21 days. */
+  stuck: number
 }
 
 export interface OpportunityLineBody {
@@ -3286,7 +3302,7 @@ export interface UpdateMeetingBody {
 }
 
 export type ChangeMeetingStatusBody =
-  | { status: "COMPLETED"; outcome?: string }
+  | { status: "COMPLETED"; outcome?: string; nextSteps?: { title: string; dueOn: string }[] }
   | { status: "CANCELLED"; reason: string }
   | { status: "SCHEDULED" }
 
@@ -3301,13 +3317,27 @@ export interface ListMeetingsQuery {
 
 export type SalesTaskStatus = "PENDING" | "DONE" | "CANCELLED"
 export type SalesTaskPriority = "LOW" | "NORMAL" | "HIGH"
-export type SalesTaskOrigin = "SELF" | "FUNNEL_MEETING" | "PROJECT"
+export type SalesTaskOrigin = "SELF" | "FUNNEL_MEETING" | "PROJECT" | "TAKE_OUT"
+/** What kind of work a task records (owner, 2026-11-02). Mirrors server sales.types.ts, same order as the Prisma enum. */
+export type SalesTaskType =
+  | "VISIT_FOLLOW_UP"
+  | "QUOTATION_SENT"
+  | "REQUIREMENT_SENT"
+  | "CALL_OR_EMAIL"
+  | "LEARNING"
+  | "INTERNAL_WORK"
+  | "OTHER"
 /** overdue: before today. today. now: today or overdue. week: today and the six days after. */
 export type TaskDueFilter = "overdue" | "today" | "now" | "week"
 
 export interface SalesTaskSummary {
   id: string
   origin: SalesTaskOrigin
+  type: SalesTaskType
+  /** Who gave it, for a take-out or a meeting action item. Null for a task a person made for themselves. */
+  givenByName: string | null
+  /** The day it was given, YYYY-MM-DD. Null when givenByName is null. */
+  givenOn: string | null
   salesAccountId: string | null
   salesAccountName: string | null
   opportunityId: string | null
@@ -3326,6 +3356,8 @@ export interface SalesTaskSummary {
   outcome: string | null
   cancelReason: string | null
   completedAt: string | null
+  /** The office day it was done, YYYY-MM-DD. Null when it is not done. */
+  doneOn: string | null
   /** Pending and due before today. Worked out by the server. */
   overdue: boolean
   /** Only the owner changes a task, a Sales Admin included. */
@@ -3339,13 +3371,26 @@ export interface SalesTaskStatusResult extends SalesTaskSummary {
 }
 
 export interface CreateTaskBody {
-  salesAccountId: string
+  /** Optional (owner, 2026-11-02): learning and office work have no account. */
+  salesAccountId?: string
   opportunityId?: string
   meetingId?: string
   title: string
   detail?: string
   dueOn: string
   priority?: SalesTaskPriority
+  type?: SalesTaskType
+}
+
+/** "I did this": one line about something already done. */
+export interface LogDoneBody {
+  title: string
+  type: SalesTaskType
+  /** The day it was done, YYYY-MM-DD. Not in the future. */
+  doneOn: string
+  salesAccountId?: string
+  opportunityId?: string
+  detail?: string
 }
 
 export interface UpdateTaskBody {
@@ -3355,6 +3400,7 @@ export interface UpdateTaskBody {
   detail?: string | null
   dueOn?: string
   priority?: SalesTaskPriority
+  type?: SalesTaskType
 }
 
 export type ChangeTaskStatusBody =
@@ -3370,6 +3416,16 @@ export interface ListTasksQuery {
   opportunityId?: string
   meetingId?: string
   mine?: boolean
+  type?: SalesTaskType
+  /** Logs: only tasks that belong to no account. */
+  noAccount?: boolean
+  /** Only take-outs: tasks an admin gave, at a meeting or outside one. */
+  takeOuts?: boolean
+  /** The day range a task counts for: the day it was done, or its due day when not done. YYYY-MM-DD. */
+  from?: string
+  to?: string
+  /** A Sales Admin may read another person's tasks. Anyone else is ignored by the server. */
+  assignedToEmployeeId?: string
 }
 
 /**
@@ -3386,116 +3442,6 @@ export interface UpdateSalesAccountBody {
   status?: SalesAccountStatus
   /** Required by the server whenever the status leaves ACTIVE. */
   statusReason?: string | null
-}
-
-// ── the weekly report (phase 5, revision §26) ────────────────────────────────
-
-export type WeeklyReportStatus = "NOT_STARTED" | "DRAFT" | "SUBMITTED"
-
-/** Why a day is empty, when that is not the person's doing (§26.12). */
-export interface WeeklyDayLabel {
-  kind: "HOLIDAY" | "WEEKLY_OFF" | "LEAVE" | "OUTSIDE_EMPLOYMENT"
-  text: string
-}
-
-export interface WeeklyRowDeal {
-  id: string
-  serial: string
-  name: string
-  /** The products, or the deal's name when it has none yet. */
-  requirement: string
-  softwareNeeded: boolean | null
-  nextStep: string | null
-}
-
-/** One account on one day: the row the team's own sheets have (§26.7). */
-export interface WeeklyAccountRow {
-  salesAccountId: string
-  accountName: string
-  deals: WeeklyRowDeal[]
-  requirement: string
-  visited: string[]
-  pendingTasks: { id: string; title: string; dueOn: string }[]
-  challenges: string | null
-  gap: string | null
-  /** Typed, and only where the account has no open deal. */
-  nextStep: string | null
-  taskId: string | null
-}
-
-export interface WeeklyOtherWork {
-  id: string
-  date: string
-  text: string
-}
-
-/** One Project row on one day of the Weekly Report: the Daily Log (spec §2.2). */
-export interface WeekProjectRow {
-  projectId: string
-  serial: string
-  name: string
-  logId: string | null
-  noWork: boolean
-  text: string | null
-  /** A working day that has come, for an In Progress Project, with no line. */
-  missing: boolean
-}
-
-export interface WeeklyDay {
-  date: string
-  label: WeeklyDayLabel | null
-  accounts: WeeklyAccountRow[]
-  otherWork: WeeklyOtherWork[]
-  projects: WeekProjectRow[]
-}
-
-export interface WeeklyCounts {
-  accounts: number
-  communications: number
-  meetings: number
-  dealChanges: number
-  tasksDone: number
-  /** Daily Log lines the person could have written this week and did not. */
-  missingDailyLogs: number
-}
-
-export interface WeeklyReportDetail {
-  weekStart: string
-  days: WeeklyDay[]
-  counts: WeeklyCounts
-  status: WeeklyReportStatus
-  /** The day it is due: the Thursday, or the last working day before it. */
-  deadlineDay: string
-  submittedLate: boolean
-  firstSubmittedAt: string | null
-  lastSubmittedAt: string | null
-  copies: { id: string; submittedAt: string; fileName: string }[]
-  person: { employeeId: string; fullName: string; designation: string }
-}
-
-/** One line of All Reports (§26.15). */
-export interface WeeklyTeamRow {
-  employeeId: string
-  fullName: string
-  designation: string
-  status: WeeklyReportStatus
-  submittedLate: boolean
-  firstSubmittedAt: string | null
-}
-
-export interface SaveWeeklyNoteBody {
-  date: string
-  salesAccountId: string
-  challenges: string | null
-  gap: string | null
-  nextStep: string | null
-  /** Turns the typed next step into a task for me, due a week out (§26.10). */
-  makeTask: boolean
-}
-
-export interface AddWeeklyOtherWorkBody {
-  date: string
-  text: string
 }
 
 // ── the funnel (revision §27) ───────────────────────────────────────────────
@@ -3623,6 +3569,29 @@ export interface FunnelGrid {
   summary: FunnelSummary
 }
 
+/**
+ * One person's week for the Saturday review (owner, 2026-11-02). Mirrors server
+ * sales.types.ts.
+ */
+export interface PersonWeek {
+  /** The Sunday the week starts on, YYYY-MM-DD. */
+  weekStart: string
+  employee: { id: string; fullName: string }
+  /** Sunday to Thursday always. Friday and the Saturday before appear only when they hold a task. */
+  days: { date: string; label: string; tasks: SalesTaskSummary[] }[]
+  countsByType: Record<SalesTaskType, number>
+  takeOuts: { open: SalesTaskSummary[]; doneThisWeek: SalesTaskSummary[] }
+}
+
+/** What a take-out list asks for. Absent employeeId means the caller's own. */
+export interface TakeOutQuery {
+  employeeId?: string
+  opportunityId?: string
+  status?: "PENDING" | "DONE"
+  from?: string
+  to?: string
+}
+
 export interface FunnelTeamRow {
   employeeId: string
   employeeName: string
@@ -3632,6 +3601,12 @@ export interface FunnelTeamRow {
   stillOpen: string | null
   reviewed: boolean
   summary: FunnelSummary
+  /** Ongoing Opportunities before the first quote stage. */
+  beforeQuoteCount: number
+  /** Work logged as done in the week under review. */
+  loggedCount: number
+  /** Take-outs and meeting action items still open. */
+  openTakeOuts: number
 }
 
 export interface FunnelTeam {
@@ -4057,12 +4032,10 @@ export type SalesPermissionKey =
   | "minutes.send"
   | "minutes.edit_template"
   | "task.create"
-  | "weekly.submit"
   | "funnel.edit_cell"
   | "target.set"
   | "team.dashboard"
   | "team.funnel"
-  | "team.weekly"
 
 export interface SalesPermissionRow {
   key: SalesPermissionKey

@@ -6,6 +6,7 @@ import { requireSalesPermission } from "../../../middleware/requireSalesPermissi
 import {
   addDocumentLinkHandler,
   addOpportunityLineHandler,
+  beforeQuotationSummaryHandler,
   changeOpportunityNextStepHandler,
   changeOpportunityStageHandler,
   changeOpportunityStatusHandler,
@@ -33,6 +34,8 @@ const router = Router()
 router.get("/opportunities", requireAuth, requireSales(), listOpportunitiesHandler)
 router.post("/opportunities", requireAuth, requireSales(), requireSalesPermission("opportunity.create"), createOpportunityHandler)
 router.get("/opportunities/owners", requireAuth, requireSales(), listOpportunityOwnersHandler)
+// Literal paths, so they are never read as an id (owner, 2026-11-02).
+router.get("/opportunities/before-quotation/summary", requireAuth, requireSales(), beforeQuotationSummaryHandler)
 router.get("/opportunities/:id", requireAuth, requireSales(), getOpportunityHandler)
 router.patch("/opportunities/:id", requireAuth, requireSales(), updateOpportunityHandler)
 router.patch("/opportunities/:id/stage", requireAuth, requireSales(), requireSalesPermission("opportunity.change_stage"), changeOpportunityStageHandler)

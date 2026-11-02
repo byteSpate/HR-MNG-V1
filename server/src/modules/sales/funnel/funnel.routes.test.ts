@@ -62,6 +62,7 @@ describe("the admin-only routes turn a Sales User away", () => {
     ["post", `/api/sales/funnel/meeting/${ID}/actions`, "giving an action item"],
     ["get", `/api/sales/funnel/meeting/${ID}/actions`, "listing action items"],
     ["post", `/api/sales/funnel/meeting/${ID}/notes`, "a management note"],
+    ["post", "/api/sales/funnel/take-outs", "giving a take-out"],
   ]
 
   it.each(cases)("%s %s (%s)", async (method, path) => {
@@ -74,7 +75,7 @@ describe("the admin-only routes turn a Sales User away", () => {
 })
 
 describe("somebody with no Sales Hub role is turned away from all of it", () => {
-  it.each(["/api/sales/funnel", "/api/sales/funnel/team", "/api/sales/funnel/meeting"])(
+  it.each(["/api/sales/funnel", "/api/sales/funnel/team", "/api/sales/funnel/meeting", "/api/sales/funnel/take-outs", "/api/sales/funnel/week"])(
     "GET %s",
     async (path) => {
       await request(app).get(path).set("Authorization", auth(OUTSIDER)).expect(403)
@@ -87,6 +88,43 @@ describe("somebody with no Sales Hub role is turned away from all of it", () => 
       .set("Authorization", auth(OUTSIDER))
       .send({ opportunityId: ID, edit: { field: "useCase", value: "x" } })
       .expect(403)
+  })
+})
+
+describe("take-outs over HTTP (owner, 2026-11-02)", () => {
+  it("answers 401 with no token", async () => {
+    await request(app).post("/api/sales/funnel/take-outs").send({}).expect(401)
+    await request(app).get("/api/sales/funnel/take-outs").expect(401)
+  })
+
+  it("refuses a take-out with no title or a person that is not an id", async () => {
+    for (const body of [
+      { assignedToEmployeeId: ID, title: "" },
+      { assignedToEmployeeId: "not-an-id", title: "Chase it" },
+      { title: "Chase it" },
+    ]) {
+      const res = await request(app).post("/api/sales/funnel/take-outs").set("Authorization", auth(ADMIN)).send(body)
+      expect(res.status).toBe(400)
+    }
+  })
+
+  it("refuses a day that is not on the calendar when listing", async () => {
+    const res = await request(app).get("/api/sales/funnel/take-outs?from=2026-02-30").set("Authorization", auth(USER))
+    expect(res.status).toBe(400)
+  })
+})
+
+describe("one person's week over HTTP (owner, 2026-11-02)", () => {
+  it("answers 401 with no token", async () => {
+    await request(app).get("/api/sales/funnel/week").expect(401)
+  })
+
+  it("refuses a week that does not start on a Sunday, and a person that is not an id", async () => {
+    // 2026-09-07 is a Monday.
+    for (const query of ["week=2026-09-07", "week=2026-02-30", "employeeId=nope"]) {
+      const res = await request(app).get(`/api/sales/funnel/week?${query}`).set("Authorization", auth(USER))
+      expect(res.status).toBe(400)
+    }
   })
 })
 
