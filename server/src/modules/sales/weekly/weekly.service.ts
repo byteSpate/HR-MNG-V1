@@ -21,7 +21,7 @@ import { writeAudit } from "../../../utils/audit"
 import { accountScopeFor, employeeIdFor } from "../sales.access"
 import { canDo } from "../sales.permissions"
 import { composeWeek, type WeekView } from "./weekly.compose"
-import { deadlineDayOf, isInWeek, saturdayBefore, weekEndOf, weekStartOf } from "./weekly.dates"
+import { deadlineDayOf, isInWeek, saturdayBefore, weekEndOf, weekStartOf } from "../sales.week"
 
 /** A task made from a typed next step starts a week out (plan choice 9). */
 const TASK_DUE_DAYS = 7

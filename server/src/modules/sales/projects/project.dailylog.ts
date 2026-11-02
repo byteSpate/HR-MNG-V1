@@ -5,7 +5,7 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import { officeToday } from "../../attendance/attendance.time"
 import { resolveShift } from "../../attendance/attendance.grid"
 import type { ProjectDailyLogView } from "../sales.types"
-import { dayLabelOf, saturdayBefore, weekDays, weekEndOf, weekStartOf } from "../weekly/weekly.dates"
+import { dayLabelOf, saturdayBefore, weekDays, weekEndOf, weekStartOf } from "../sales.week"
 import { loadProjectRow } from "./project.access"
 
 /**

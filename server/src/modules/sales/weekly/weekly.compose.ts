@@ -20,7 +20,7 @@ import {
   type DayLabel,
   type LeaveWindow,
   type WeeklyHoliday,
-} from "./weekly.dates"
+} from "../sales.week"
 import type { Shift } from "../../../generated/prisma/client"
 
 // ── what the loader passes in ────────────────────────────────────────────────

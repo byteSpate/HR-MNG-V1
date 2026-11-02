@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-vi.mock("../../../config/env", () => ({ env: { APP_TIMEZONE: "Asia/Dhaka" } }))
+vi.mock("../../config/env", () => ({ env: { APP_TIMEZONE: "Asia/Dhaka" } }))
 
 import {
   dayLabelOf,
@@ -10,7 +10,7 @@ import {
   saturdayBefore,
   weekDays,
   weekStartOf,
-} from "./weekly.dates"
+} from "./sales.week"
 
 const day = (value: string) => new Date(`${value}T00:00:00.000Z`)
 

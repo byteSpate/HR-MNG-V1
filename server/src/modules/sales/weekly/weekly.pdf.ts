@@ -15,7 +15,7 @@
  */
 
 import { brandAsset, escapeHtml, renderPdf } from "../../../utils/pdf"
-import type { DayLabel } from "./weekly.dates"
+import type { DayLabel } from "../sales.week"
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]

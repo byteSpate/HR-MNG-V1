@@ -10,7 +10,7 @@
 import type { Shift } from "../../../generated/prisma/client"
 import { resolveShift } from "../../attendance/attendance.grid"
 import type { HolidayRow } from "../sales.reminders"
-import { deadlineDayOf, weekStartOf } from "./weekly.dates"
+import { deadlineDayOf, weekStartOf } from "../sales.week"
 
 export interface ReminderPerson {
   id: string

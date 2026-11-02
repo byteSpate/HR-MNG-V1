@@ -3,7 +3,7 @@ import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
 import { parseDateOnly } from "../../../utils/dates"
 import type { AccessTokenPayload } from "../../auth/auth.types"
-import { weekStartOf } from "./weekly.dates"
+import { weekStartOf } from "../sales.week"
 import { openWeekFor, writableDate, writerFor } from "./weekly.service"
 import type { SaveProjectLogBody } from "./weekly.validators"
 
