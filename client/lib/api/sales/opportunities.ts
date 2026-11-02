@@ -1,5 +1,6 @@
 import { apiFetch } from "../client"
 import type {
+  BeforeQuotationSummary,
   CreateOpportunityBody,
   DocumentLinkSummary,
   OpportunityLineBody,
@@ -24,6 +25,8 @@ export interface ListOpportunitiesQuery {
   closing?: number
   quiet?: number
   stuck?: number
+  /** BEFORE_QUOTATION: ongoing Opportunities before the first quote stage (owner, 2026-11-02). */
+  view?: "BEFORE_QUOTATION"
   cursor?: string
   limit?: number
 }
@@ -44,6 +47,18 @@ export function listOpportunityOwners(
   accessToken: string
 ): Promise<{ id: string; fullName: string }[]> {
   return apiFetch<{ id: string; fullName: string }[]>("/api/sales/opportunities/owners", { accessToken })
+}
+
+/** The counters above the Before Quotation grid. */
+export function getBeforeQuotationSummary(
+  accessToken: string,
+  query: { ownerEmployeeId?: string; mine?: boolean } = {}
+): Promise<BeforeQuotationSummary> {
+  const search = new URLSearchParams()
+  if (query.ownerEmployeeId) search.set("ownerEmployeeId", query.ownerEmployeeId)
+  if (query.mine) search.set("mine", "true")
+  const qs = search.toString()
+  return apiFetch<BeforeQuotationSummary>(`/api/sales/opportunities/before-quotation/summary${qs ? `?${qs}` : ""}`, { accessToken })
 }
 
 export function getOpportunity(accessToken: string, id: string): Promise<OpportunitySummary> {

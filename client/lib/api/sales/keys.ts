@@ -64,6 +64,9 @@ export const salesKeys = {
    */
   opportunities: (filters: Record<string, unknown> = {}) =>
     ["sales", "opportunities", filters] as const,
+  /** Under "opportunities", so any Opportunity write also refreshes the Before Quotation counters. */
+  beforeQuotationSummary: (filters: Record<string, unknown> = {}) =>
+    ["sales", "opportunities", "before-quotation-summary", filters] as const,
   opportunity: (id: string) => ["sales", "opportunities", id] as const,
   opportunityTimeline: (id: string) => ["sales", "opportunities", id, "timeline"] as const,
   opportunityHistory: (id: string) => ["sales", "opportunities", id, "history"] as const,

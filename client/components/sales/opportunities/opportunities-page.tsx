@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -38,8 +38,48 @@ import {
   stageSentence,
   taka,
 } from "@/components/sales/shared/sales-shared"
+import { BeforeQuotationView } from "@/components/sales/opportunities/before-quotation-view"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import type { TableCell } from "@/components/dashboard/types"
+
+const TOGGLE_ON = "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const TOGGLE_OFF =
+  "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+
+type OpportunityView = "ALL" | "BEFORE"
+const VIEW_KEY = "sales.opportunities.view"
+const VIEW_EVENT = "sales:opportunities-view"
+/** Kept in memory too, so the switch still works when the browser blocks storage. */
+let rememberedView: OpportunityView | null = null
+
+function readView(): OpportunityView {
+  try {
+    const stored = window.localStorage.getItem(VIEW_KEY)
+    if (stored === "ALL" || stored === "BEFORE") return stored
+  } catch {
+    // Storage can be blocked. The in-memory choice below still holds.
+  }
+  return rememberedView ?? "ALL"
+}
+
+function subscribeView(onChange: () => void) {
+  window.addEventListener("storage", onChange)
+  window.addEventListener(VIEW_EVENT, onChange)
+  return () => {
+    window.removeEventListener("storage", onChange)
+    window.removeEventListener(VIEW_EVENT, onChange)
+  }
+}
+
+function chooseView(next: OpportunityView) {
+  rememberedView = next
+  try {
+    window.localStorage.setItem(VIEW_KEY, next)
+  } catch {
+    // Not saved for next time. Nothing else depends on it.
+  }
+  window.dispatchEvent(new Event(VIEW_EVENT))
+}
 
 const STAGGER_STEP_MS = 40
 const STAGGER_MAX_STEPS = 6
@@ -208,6 +248,10 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
   const [ownerEmployeeId, setOwnerEmployeeId] = useState(actionFilters.ownerEmployeeId ?? "")
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS)
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Two views (owner, 2026-11-02): everything, as before, or the ones waiting
+  // for their first quote. The choice is remembered in this browser only; the
+  // page works the same without it.
+  const view = useSyncExternalStore(subscribeView, readView, () => "ALL" as OpportunityView)
 
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const { closing, quiet, stuck } = actionFilters
@@ -228,17 +272,17 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
   const query = useQuery({
     queryKey: salesKeys.opportunities(filters as Record<string, unknown>),
     queryFn: () => listOpportunities(accessToken!, filters),
-    enabled: isAuthed,
+    enabled: isAuthed && view === "ALL",
   })
   const ownersQuery = useQuery({
     queryKey: ["sales", "opportunity-owners"],
     queryFn: () => listOpportunityOwners(accessToken!),
-    enabled: isAuthed,
+    enabled: isAuthed && view === "ALL",
   })
 
   const deals = useMemo(() => query.data?.items ?? [], [query.data])
   const owners = ownersQuery.data ?? []
-  const isLoading = sessionStatus === "loading" || query.isPending
+  const isLoading = sessionStatus === "loading" || (view === "ALL" && query.isPending)
   const isFiltered = Boolean(status || stage || mine || ownerEmployeeId || closing || quiet || stuck)
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
   const viewDescription = mine
@@ -303,6 +347,19 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
         }
       />
 
+      <div role="tablist" aria-label="Which Opportunities" className="mb-3 flex flex-wrap gap-2">
+        <Button type="button" role="tab" aria-selected={view === "ALL"} onClick={() => chooseView("ALL")} className={view === "ALL" ? TOGGLE_ON : TOGGLE_OFF}>
+          All Opportunities
+        </Button>
+        <Button type="button" role="tab" aria-selected={view === "BEFORE"} onClick={() => chooseView("BEFORE")} className={view === "BEFORE" ? TOGGLE_ON : TOGGLE_OFF}>
+          Before Quotation
+        </Button>
+      </div>
+
+      {view === "BEFORE" ? (
+        <BeforeQuotationView />
+      ) : (
+      <>
       <SalesStatRow stats={stats} isLoading={isLoading} isError={query.isError} />
 
       {/* Hidden while the first page loads. A filter row beside a skeleton
@@ -476,6 +533,8 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
         emptyActionIcon={isFiltered ? <RiArrowRightLine className="size-4" aria-hidden /> : undefined}
         onEmptyAction={clearFilters}
       />
+      </>
+      )}
     </>
   )
 }

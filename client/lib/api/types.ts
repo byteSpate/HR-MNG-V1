@@ -2852,6 +2852,8 @@ export interface OpportunitySummary {
   /** Products whose margin cannot be worked out: no Total price, or no percentage. */
   unmarginedLineCount: number
   expectedCloseDate: string | null
+  /** The day the quote is planned to go out, YYYY-MM-DD. A reminder only (owner, 2026-11-02). */
+  expectedQuoteOn: string | null
   /** Set once the quotation or proposal has gone out: it is then in the funnel. */
   offeredOn: string | null
   oemAccountManager: string | null
@@ -2919,9 +2921,23 @@ export interface UpdateOpportunityBody {
   track?: SalesTrack
   amount?: string | null
   expectedCloseDate?: string | null
+  /** The day the quote is planned to go out. Null clears it. */
+  expectedQuoteOn?: string | null
   oemAccountManager?: string | null
   ownerEmployeeId?: string
   addAssignment?: boolean
+}
+
+/** The counters above the Before Quotation grid. Mirrors server sales.types.ts. */
+export interface BeforeQuotationSummary {
+  total: number
+  /** An expected quote date in the next 14 days. */
+  quoteDueSoon: number
+  noNextStep: number
+  /** No activity for 30 days. */
+  quiet: number
+  /** In one stage for 21 days. */
+  stuck: number
 }
 
 export interface OpportunityLineBody {
