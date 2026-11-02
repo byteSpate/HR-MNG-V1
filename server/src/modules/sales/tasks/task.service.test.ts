@@ -14,7 +14,9 @@ vi.mock("../../../config/prisma", () => ({
 }))
 
 import prisma from "../../../config/prisma"
-import { changeTaskStatus, createTask, getTask, listTasks, updateTask } from "./task.service"
+import { changeTaskStatus, createTask, getTask, listTasks, logDoneTask, updateTask } from "./task.service"
+import { presentTask } from "./task.present"
+import { officeDateOf } from "../../attendance/attendance.time"
 
 const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "rahim@demo.com",
@@ -271,5 +273,144 @@ describe("a Project Task on the Tasks page", () => {
   it("still lets a person cancel their own ordinary task", async () => {
     const result = await changeTaskStatus("task-1", { status: "CANCELLED", reason: "Customer went quiet" } as any, USER, NOW)
     expect(result.status).toBe("CANCELLED")
+  })
+})
+
+describe("a task with no account (owner, 2026-11-02)", () => {
+  it("makes a task with no account for the signed-in employee", async () => {
+    await createTask({ title: "Read the VAT guide", dueOn: "2026-09-20", type: "LEARNING" } as any, USER)
+
+    expect(createData()).toMatchObject({
+      salesAccountId: null, assignedToEmployeeId: "emp-1", origin: "SELF", type: "LEARNING",
+    })
+    expect(prisma.salesAccount.findFirst).not.toHaveBeenCalled()
+  })
+
+  it("makes the type Other when none is given", async () => {
+    await createTask(BASE as any, USER)
+    expect(createData().type).toBe("OTHER")
+  })
+
+  it("still checks the account when there is one", async () => {
+    await createTask({ ...BASE, type: "VISIT_FOLLOW_UP" } as any, USER)
+    expect(prisma.salesAccount.findFirst).toHaveBeenCalled()
+    expect(createData()).toMatchObject({ salesAccountId: "account-1", type: "VISIT_FOLLOW_UP" })
+  })
+})
+
+describe("changing a task's type", () => {
+  it("changes the type and records it in the audit row", async () => {
+    await updateTask("task-1", { type: "QUOTATION_SENT" } as any, USER)
+    expect(updateData()).toEqual({ type: "QUOTATION_SENT" })
+    const audit = vi.mocked(prisma.auditLog.create).mock.calls[0][0] as any
+    expect(JSON.stringify(audit)).toContain("QUOTATION_SENT")
+  })
+})
+
+describe("I did this", () => {
+  const DONE = { title: "Sent the BOQ", type: "QUOTATION_SENT", doneOn: "2026-09-15" }
+
+  it("saves an already done task dated to the day picked", async () => {
+    vi.mocked(prisma.salesTask.create).mockImplementation((async (args: any) => task({ ...args.data })) as never)
+    const saved = await logDoneTask(DONE as any, USER, NOW)
+
+    expect(createData()).toMatchObject({
+      status: "DONE", completedBy: "user-1", assignedToEmployeeId: "emp-1", type: "QUOTATION_SENT", origin: "SELF", salesAccountId: null,
+    })
+    expect(createData().dueOn.toISOString()).toBe("2026-09-15T00:00:00.000Z")
+    // The day the person picked, in office time.
+    expect(officeDateOf(createData().completedAt).toISOString()).toBe("2026-09-15T00:00:00.000Z")
+    expect(saved.status).toBe("DONE")
+  })
+
+  it("accepts an earlier day", async () => {
+    await logDoneTask({ ...DONE, doneOn: "2026-09-10" } as any, USER, NOW)
+    expect(officeDateOf(createData().completedAt).toISOString()).toBe("2026-09-10T00:00:00.000Z")
+  })
+
+  it("refuses a future day and saves nothing", async () => {
+    await expect(logDoneTask({ ...DONE, doneOn: "2026-09-16" } as any, USER, NOW))
+      .rejects.toThrow("Choose a day that is today or earlier.")
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("refuses a day that is not on the calendar", async () => {
+    await expect(logDoneTask({ ...DONE, doneOn: "2026-02-30" } as any, USER, NOW))
+      .rejects.toThrow("2026-02-30 is not a date on the calendar")
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("needs an employee record, with a plain message", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ employee: null } as any)
+    await expect(logDoneTask(DONE as any, USER, NOW))
+      .rejects.toThrow("Only an employee can have tasks, and your account has no employee record")
+    expect(prisma.salesTask.create).not.toHaveBeenCalled()
+  })
+
+  it("puts it on the account when one is given", async () => {
+    await logDoneTask({ ...DONE, salesAccountId: "account-1", opportunityId: "opp-1" } as any, USER, NOW)
+    expect(createData()).toMatchObject({ salesAccountId: "account-1", opportunityId: "opp-1" })
+  })
+})
+
+describe("listing for Logs and take-outs (owner, 2026-11-02)", () => {
+  it("lists only tasks with no account when noAccount is true", async () => {
+    await listTasks({ noAccount: true } as any, USER, NOW)
+    expect(listWhere().salesAccountId).toBeNull()
+  })
+
+  it("filters by type", async () => {
+    await listTasks({ type: "LEARNING" } as any, USER, NOW)
+    expect(listWhere().type).toBe("LEARNING")
+  })
+
+  it("filters by the day a task counts for: done on that day, or due on it when not done", async () => {
+    await listTasks({ from: "2026-09-13", to: "2026-09-17" } as any, USER, NOW)
+    const text = JSON.stringify(listWhere())
+    expect(text).toContain("completedAt")
+    expect(text).toContain("dueOn")
+  })
+
+  it("lists take-outs as the tasks given at a meeting or outside one", async () => {
+    await listTasks({ takeOuts: true } as any, USER, NOW)
+    expect(listWhere().origin).toEqual({ in: ["FUNNEL_MEETING", "TAKE_OUT"] })
+  })
+
+  it("lets a Sales Admin list another person's tasks", async () => {
+    await listTasks({ assignedToEmployeeId: "emp-5" } as any, ADMIN, NOW)
+    expect(listWhere().assignedToEmployeeId).toBe("emp-5")
+  })
+
+  it("ignores that filter for anybody else, so they only ever see their own scope", async () => {
+    await listTasks({ assignedToEmployeeId: "emp-5" } as any, USER, NOW)
+    expect(listWhere().assignedToEmployeeId).toBeUndefined()
+    expect(listWhere().AND).toEqual(expect.any(Array))
+  })
+})
+
+describe("presenting a task", () => {
+  const TODAY = new Date("2026-11-02T00:00:00.000Z")
+
+  it("says who gave a take-out and on which day", () => {
+    const shown = presentTask(
+      task({ origin: "TAKE_OUT", type: "OTHER", assignedBy: { fullName: "Rima" }, createdAt: new Date("2026-11-01T06:00:00.000Z") }),
+      false, TODAY,
+    )
+    expect(shown).toMatchObject({ origin: "TAKE_OUT", givenByName: "Rima", givenOn: "2026-11-01", type: "OTHER" })
+  })
+
+  it("says the same for a task given at a funnel meeting", () => {
+    const shown = presentTask(task({ origin: "FUNNEL_MEETING", assignedBy: { fullName: "Rima" } }), false, TODAY)
+    expect(shown.givenByName).toBe("Rima")
+    expect(shown.givenOn).toBe("2026-09-13")
+  })
+
+  it("leaves the giver empty on a task a person made for themselves", () => {
+    const shown = presentTask(task({ type: "LEARNING" }), true, TODAY)
+    expect(shown).toMatchObject({ givenByName: null, givenOn: null, type: "LEARNING" })
+  })
+
+  it("reads a row with no type as Other", () => {
+    expect(presentTask(task(), true, TODAY).type).toBe("OTHER")
   })
 })

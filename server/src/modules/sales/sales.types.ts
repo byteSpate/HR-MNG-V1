@@ -379,9 +379,24 @@ export interface SalesMinutesListItem {
 
 // ── TASKS (phase 3) ────────────────────────────────────────────────────────
 
+/** What kind of work a task records (owner, 2026-11-02). Same order as the Prisma enum. */
+export type SalesTaskType =
+  | "VISIT_FOLLOW_UP"
+  | "QUOTATION_SENT"
+  | "REQUIREMENT_SENT"
+  | "CALL_OR_EMAIL"
+  | "LEARNING"
+  | "INTERNAL_WORK"
+  | "OTHER"
+
 export interface SalesTaskSummary {
   id: string
-  origin: "SELF" | "FUNNEL_MEETING"
+  origin: "SELF" | "FUNNEL_MEETING" | "PROJECT" | "TAKE_OUT"
+  type: SalesTaskType
+  /** Who gave it, for a take-out or a meeting action item. Null for a task a person made for themselves. */
+  givenByName: string | null
+  /** The day it was given, YYYY-MM-DD in office time. Null when givenByName is null. */
+  givenOn: string | null
   /** Always set in phase 3; nullable because a phase 5 project task may have no account. */
   salesAccountId: string | null
   salesAccountName: string | null

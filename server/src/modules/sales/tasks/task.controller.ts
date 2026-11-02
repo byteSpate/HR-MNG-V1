@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express"
 
-import { changeTaskStatus, createTask, getTask, listTasks, updateTask } from "./task.service"
-import { changeTaskStatusSchema, createTaskSchema, listTaskSchema, updateTaskSchema } from "./task.validators"
+import { changeTaskStatus, createTask, getTask, listTasks, logDoneTask, updateTask } from "./task.service"
+import { changeTaskStatusSchema, createTaskSchema, listTaskSchema, logDoneSchema, updateTaskSchema } from "./task.validators"
 
 // ── tasks ───────────────────────────────────────────────────────────────────
 
@@ -12,6 +12,11 @@ export async function listTasksHandler(req: Request, res: Response, next: NextFu
 
 export async function createTaskHandler(req: Request, res: Response, next: NextFunction) {
   try { return res.status(201).json(await createTask(createTaskSchema.parse(req.body), req.user!)) }
+  catch (err) { return next(err) }
+}
+
+export async function logDoneTaskHandler(req: Request, res: Response, next: NextFunction) {
+  try { return res.status(201).json(await logDoneTask(logDoneSchema.parse(req.body), req.user!)) }
   catch (err) { return next(err) }
 }
 

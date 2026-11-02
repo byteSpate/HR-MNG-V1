@@ -1,4 +1,5 @@
 import { formatDateOnly } from "../../../utils/dates"
+import { officeDateOf } from "../../attendance/attendance.time"
 import type { SalesTaskSummary } from "../sales.types"
 
 export const TASK_STATUS_LABEL: Record<string, string> = {
@@ -12,9 +13,14 @@ export const TASK_STATUS_LABEL: Record<string, string> = {
  * read, against the same day the due filters use.
  */
 export function presentTask(row: any, canManage: boolean, today: Date): SalesTaskSummary {
+  // A task somebody gave: a meeting action item or a take-out. Both show who and on which day.
+  const given = row.origin === "FUNNEL_MEETING" || row.origin === "TAKE_OUT"
   return {
     id: row.id,
     origin: row.origin,
+    type: row.type ?? "OTHER",
+    givenByName: given ? (row.assignedBy?.fullName ?? null) : null,
+    givenOn: given ? formatDateOnly(officeDateOf(row.createdAt)) : null,
     salesAccountId: row.salesAccountId ?? null,
     salesAccountName: row.salesAccount?.name ?? null,
     opportunityId: row.opportunityId ?? null,
