@@ -239,6 +239,7 @@ export const TASK_ORIGIN_LABEL: Record<SalesTaskOrigin, string> = {
   SELF: "My own",
   FUNNEL_MEETING: "Funnel meeting",
   PROJECT: "Project",
+  TAKE_OUT: "Take-out",
 }
 
 /** One glyph each, used on the Timeline, the panels and the overview. */

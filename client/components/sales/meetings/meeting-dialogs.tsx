@@ -93,7 +93,25 @@ export function useStartMinutes() {
  * Read from the shared directory and narrowed to `canManage`, which is the
  * same rule the server applies when the form is sent.
  */
-export function AccountPicker({ id, value, onChange }: { id: string; value: string; onChange: (id: string) => void }) {
+/** The picker's "no account" choice. A select cannot hold an empty value, so it has its own. */
+const NO_ACCOUNT = "__no-account__"
+
+/**
+ * `noneLabel` adds a first choice that means no account (owner, 2026-11-02:
+ * learning and office work have none). Without it the picker works as before:
+ * a meeting always sits on an account.
+ */
+export function AccountPicker({
+  id,
+  value,
+  onChange,
+  noneLabel,
+}: {
+  id: string
+  value: string
+  onChange: (id: string) => void
+  noneLabel?: string
+}) {
   const { accessToken } = useSession()
   const query = useQuery({
     queryKey: ["sales", "account-picker"],
@@ -120,7 +138,7 @@ export function AccountPicker({ id, value, onChange }: { id: string; value: stri
     )
   }
   const accounts = (query.data ?? []).filter((account) => account.canManage)
-  if (query.isSuccess && accounts.length === 0) {
+  if (query.isSuccess && accounts.length === 0 && !noneLabel) {
     return (
       <p className="text-[12px] leading-relaxed text-[#5F6B7C]">
         You do not work any account yet. A meeting or a task always sits on an account you own or collaborate on.
@@ -128,16 +146,21 @@ export function AccountPicker({ id, value, onChange }: { id: string; value: stri
     )
   }
   return (
-    <Select value={value} onValueChange={(next) => onChange(next ?? "")} disabled={query.isPending}>
+    <Select
+      value={value || (noneLabel ? NO_ACCOUNT : "")}
+      onValueChange={(next) => onChange(!next || next === NO_ACCOUNT ? "" : next)}
+      disabled={query.isPending}
+    >
       <SelectTrigger id={id} className="w-full">
         <SelectValue>
           {(v: string | null) =>
             accounts.find((account) => account.id === v)?.name ??
-            (query.isPending ? "Loading your accounts…" : "Choose an account")
+            (query.isPending ? "Loading your accounts…" : noneLabel ?? "Choose an account")
           }
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
+        {noneLabel ? <SelectItem value={NO_ACCOUNT}>{noneLabel}</SelectItem> : null}
         {accounts.map((account) => (
           <SelectItem key={account.id} value={account.id}>
             {account.name}

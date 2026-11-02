@@ -3301,13 +3301,27 @@ export interface ListMeetingsQuery {
 
 export type SalesTaskStatus = "PENDING" | "DONE" | "CANCELLED"
 export type SalesTaskPriority = "LOW" | "NORMAL" | "HIGH"
-export type SalesTaskOrigin = "SELF" | "FUNNEL_MEETING" | "PROJECT"
+export type SalesTaskOrigin = "SELF" | "FUNNEL_MEETING" | "PROJECT" | "TAKE_OUT"
+/** What kind of work a task records (owner, 2026-11-02). Mirrors server sales.types.ts, same order as the Prisma enum. */
+export type SalesTaskType =
+  | "VISIT_FOLLOW_UP"
+  | "QUOTATION_SENT"
+  | "REQUIREMENT_SENT"
+  | "CALL_OR_EMAIL"
+  | "LEARNING"
+  | "INTERNAL_WORK"
+  | "OTHER"
 /** overdue: before today. today. now: today or overdue. week: today and the six days after. */
 export type TaskDueFilter = "overdue" | "today" | "now" | "week"
 
 export interface SalesTaskSummary {
   id: string
   origin: SalesTaskOrigin
+  type: SalesTaskType
+  /** Who gave it, for a take-out or a meeting action item. Null for a task a person made for themselves. */
+  givenByName: string | null
+  /** The day it was given, YYYY-MM-DD. Null when givenByName is null. */
+  givenOn: string | null
   salesAccountId: string | null
   salesAccountName: string | null
   opportunityId: string | null
@@ -3326,6 +3340,8 @@ export interface SalesTaskSummary {
   outcome: string | null
   cancelReason: string | null
   completedAt: string | null
+  /** The office day it was done, YYYY-MM-DD. Null when it is not done. */
+  doneOn: string | null
   /** Pending and due before today. Worked out by the server. */
   overdue: boolean
   /** Only the owner changes a task, a Sales Admin included. */
@@ -3339,13 +3355,26 @@ export interface SalesTaskStatusResult extends SalesTaskSummary {
 }
 
 export interface CreateTaskBody {
-  salesAccountId: string
+  /** Optional (owner, 2026-11-02): learning and office work have no account. */
+  salesAccountId?: string
   opportunityId?: string
   meetingId?: string
   title: string
   detail?: string
   dueOn: string
   priority?: SalesTaskPriority
+  type?: SalesTaskType
+}
+
+/** "I did this": one line about something already done. */
+export interface LogDoneBody {
+  title: string
+  type: SalesTaskType
+  /** The day it was done, YYYY-MM-DD. Not in the future. */
+  doneOn: string
+  salesAccountId?: string
+  opportunityId?: string
+  detail?: string
 }
 
 export interface UpdateTaskBody {
@@ -3355,6 +3384,7 @@ export interface UpdateTaskBody {
   detail?: string | null
   dueOn?: string
   priority?: SalesTaskPriority
+  type?: SalesTaskType
 }
 
 export type ChangeTaskStatusBody =
@@ -3370,6 +3400,16 @@ export interface ListTasksQuery {
   opportunityId?: string
   meetingId?: string
   mine?: boolean
+  type?: SalesTaskType
+  /** Logs: only tasks that belong to no account. */
+  noAccount?: boolean
+  /** Only take-outs: tasks an admin gave, at a meeting or outside one. */
+  takeOuts?: boolean
+  /** The day range a task counts for: the day it was done, or its due day when not done. YYYY-MM-DD. */
+  from?: string
+  to?: string
+  /** A Sales Admin may read another person's tasks. Anyone else is ignored by the server. */
+  assignedToEmployeeId?: string
 }
 
 /**

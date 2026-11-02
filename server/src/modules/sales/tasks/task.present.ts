@@ -38,6 +38,9 @@ export function presentTask(row: any, canManage: boolean, today: Date): SalesTas
     outcome: row.outcome ?? null,
     cancelReason: row.cancelReason ?? null,
     completedAt: row.completedAt?.toISOString() ?? null,
+    // The office day it was done, so a screen groups it under the right day
+    // without knowing the office's time zone.
+    doneOn: row.completedAt ? formatDateOnly(officeDateOf(row.completedAt)) : null,
     overdue: row.status === "PENDING" && row.dueOn.getTime() < today.getTime(),
     canManage,
     createdAt: row.createdAt.toISOString(),

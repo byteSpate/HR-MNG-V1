@@ -15,10 +15,11 @@ import { listMeetings } from "@/lib/api/sales/meetings"
 import { changeTaskStatus, createTask, updateTask } from "@/lib/api/sales/tasks"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
-import type { ChangeTaskStatusBody, SalesTaskPriority, SalesTaskSummary } from "@/lib/api/types"
+import type { ChangeTaskStatusBody, SalesTaskPriority, SalesTaskSummary, SalesTaskType } from "@/lib/api/types"
 import { DialogActions, Field, FormError, toMessage } from "@/components/dashboard/record-kit"
 import { AccountPicker, usePlanRefresh } from "@/components/sales/meetings/meeting-dialogs"
 import { TASK_PRIORITY_LABEL, meetingWhen } from "@/components/sales/shared/sales-shared"
+import { TASK_TYPE_LABEL, TASK_TYPES } from "@/components/sales/shared/task-types"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -106,6 +107,7 @@ function TaskForm({
   const [detail, setDetail] = useState(task?.detail ?? "")
   const [dueOn, setDueOn] = useState(task?.dueOn ?? start?.dueOn ?? "")
   const [priority, setPriority] = useState<SalesTaskPriority>(task?.priority ?? "NORMAL")
+  const [type, setType] = useState<SalesTaskType>(task?.type ?? "OTHER")
   const [dealId, setDealId] = useState(task?.opportunityId ?? start?.opportunityId ?? "")
   const [meetingId, setMeetingId] = useState(task?.meetingId ?? start?.meetingId ?? "")
   const [error, setError] = useState<string | null>(null)
@@ -132,14 +134,17 @@ function TaskForm({
             detail: detail.trim() || null,
             dueOn,
             priority,
+            type,
             opportunityId: dealId || null,
             meetingId: meetingId || null,
           })
         : createTask(accessToken!, {
-            salesAccountId: accountId,
+            // No account is fine (owner, 2026-11-02): learning and office work have none.
+            ...(accountId ? { salesAccountId: accountId } : {}),
             title: title.trim(),
             dueOn,
             priority,
+            type,
             ...(detail.trim() ? { detail: detail.trim() } : {}),
             ...(dealId ? { opportunityId: dealId } : {}),
             ...(meetingId ? { meetingId } : {}),
@@ -154,7 +159,6 @@ function TaskForm({
   function submit(e?: React.FormEvent) {
     e?.preventDefault()
     setError(null)
-    if (!accountId) return setError("Choose the account the task is about.")
     if (title.trim().length < 2) return setError("Give the task a title.")
     if (!dueOn) return setError("Pick the day it is due.")
     mutation.mutate()
@@ -162,10 +166,17 @@ function TaskForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      {!fixedAccountId ? (
-        <Field label="Account" htmlFor="task-account">
+      {/* Only when making a task: saving an edit cannot move a task to another account. */}
+      {!fixedAccountId && !task ? (
+        <Field
+          label="Account"
+          htmlFor="task-account"
+          hint="Optional."
+          help="Leave it empty for work that is not about an account, like learning or office work."
+        >
           <AccountPicker
             id="task-account"
+            noneLabel="No account"
             value={accountId}
             onChange={(id) => {
               setAccountId(id)
@@ -183,6 +194,21 @@ function TaskForm({
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Call back about the quote"
         />
+      </Field>
+
+      <Field label="Type" htmlFor="task-type" help="What kind of work this is. It helps the week read clearly.">
+        <Select value={type} onValueChange={(v) => v && setType(v as SalesTaskType)}>
+          <SelectTrigger id="task-type" className="w-full">
+            <SelectValue>{(v: string | null) => TASK_TYPE_LABEL[(v ?? type) as SalesTaskType]}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {TASK_TYPES.map((t) => (
+              <SelectItem key={t} value={t}>
+                {TASK_TYPE_LABEL[t]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Field>
 
       <div className="grid gap-3 sm:grid-cols-2">

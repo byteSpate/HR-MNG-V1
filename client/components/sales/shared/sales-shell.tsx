@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { navGroups } from "@/components/sales/shared/nav-config"
+import { IDidThisButton } from "@/components/sales/tasks/i-did-this-dialog"
 import { ROLE_ROUTES } from "@/lib/auth/role-routes"
 import { loginPathFor } from "@/lib/auth/return-to"
 import { useSession } from "@/lib/auth/session-context"
@@ -123,6 +124,8 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
       profileHref={user ? `${ROLE_ROUTES[user.role]}/profile` : undefined}
     >
       {children}
+      {/* One tap from every Sales page (owner, 2026-11-02). */}
+      <IDidThisButton />
     </DashboardShell>
   )
 }

@@ -410,6 +410,18 @@ describe("presenting a task", () => {
     expect(shown).toMatchObject({ givenByName: null, givenOn: null, type: "LEARNING" })
   })
 
+  it("gives the office day a task was done, so a screen never has to guess the time zone", () => {
+    // 04:00 UTC is 10:00 in Dhaka, the same day; 20:00 UTC is 02:00 the next day there.
+    const morning = presentTask(task({ status: "DONE", completedAt: new Date("2026-11-02T04:00:00.000Z") }), true, TODAY)
+    const lateNight = presentTask(task({ status: "DONE", completedAt: new Date("2026-11-02T20:00:00.000Z") }), true, TODAY)
+    expect(morning.doneOn).toBe("2026-11-02")
+    expect(lateNight.doneOn).toBe("2026-11-03")
+  })
+
+  it("has no done day for a task that is not done", () => {
+    expect(presentTask(task(), true, TODAY).doneOn).toBeNull()
+  })
+
   it("reads a row with no type as Other", () => {
     expect(presentTask(task(), true, TODAY).type).toBe("OTHER")
   })

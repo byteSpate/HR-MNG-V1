@@ -32,7 +32,9 @@ import { sized } from "@/components/sales/shared/sized-cell"
 import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
 import { Tag } from "@/components/dashboard/tag"
 import { taskActions } from "@/components/sales/shared/plan-panels"
+import { LogsPanel } from "@/components/sales/tasks/logs-panel"
 import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
+import { TASK_TYPE_LABEL } from "@/components/sales/shared/task-types"
 import {
   TASK_ORIGIN_LABEL,
   TASK_PRIORITY_LABEL,
@@ -82,6 +84,8 @@ export function TasksPage({
   const [origin, setOrigin] = useState<SalesTaskOrigin | "">("")
   const [mineChoice, setMine] = useState<boolean | null>(initialMine)
   const mine = mineChoice ?? !isSalesAdmin
+  // Two tabs (owner, 2026-11-02): the tasks as before, and Logs for work that has no account.
+  const [tab, setTab] = useState<"tasks" | "logs">("tasks")
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<SalesTaskSummary | null>(null)
   const [ending, setEnding] = useState<{ task: SalesTaskSummary; action: "DONE" | "CANCELLED" } | null>(null)
@@ -131,9 +135,15 @@ export function TasksPage({
       node: (
         <span className="block min-w-0">
           <span className="block truncate font-semibold">{task.title}</span>
-          {task.detail || task.opportunitySerial || task.meetingTitle ? (
+          {task.detail || task.opportunitySerial || task.meetingTitle || task.givenByName || task.type !== "OTHER" ? (
             <span className={`block truncate text-[11.5px] ${TONE.muted}`}>
-              {[task.opportunitySerial, task.meetingTitle, task.detail].filter(Boolean).join(" · ")}
+              {[
+                task.givenByName ? `Take-out from ${task.givenByName}${task.givenOn ? `, ${onDay(task.givenOn)}` : ""}` : null,
+                task.type !== "OTHER" ? TASK_TYPE_LABEL[task.type] : null,
+                task.opportunitySerial,
+                task.meetingTitle,
+                task.detail,
+              ].filter(Boolean).join(" · ")}
             </span>
           ) : null}
         </span>
@@ -177,12 +187,25 @@ export function TasksPage({
       <PageHeader
         kicker="Sales"
         title="Tasks"
-        sub="Follow-ups you set yourself, each on an account. Anything due or overdue is in your 00:01 email."
+        sub="Follow-ups you set yourself. Anything due or overdue is in your 00:01 email."
         cta={can("task.create") ? "New task" : undefined}
         onCta={can("task.create") ? () => setCreateOpen(true) : undefined}
         ctaIcon={RiAddLine}
       />
 
+      <div role="tablist" aria-label="Tasks or Logs" className="mb-3 flex flex-wrap gap-2">
+        <Button type="button" role="tab" aria-selected={tab === "tasks"} onClick={() => setTab("tasks")} className={tab === "tasks" ? TOGGLE_ON : TOGGLE_OFF}>
+          Tasks
+        </Button>
+        <Button type="button" role="tab" aria-selected={tab === "logs"} onClick={() => setTab("logs")} className={tab === "logs" ? TOGGLE_ON : TOGGLE_OFF}>
+          Logs
+        </Button>
+      </div>
+
+      {tab === "logs" ? (
+        <LogsPanel isSalesAdmin={isSalesAdmin} />
+      ) : (
+      <>
       <SalesStatRow stats={stats} isLoading={isLoading} isError={query.isError} />
 
       {/* Hidden while loading: a filter beside a skeleton reads as an answer
@@ -275,6 +298,9 @@ export function TasksPage({
         // With no "New task" action (the switch is off) this is never called.
         onEmptyAction={isFiltered ? clearFilters : can("task.create") ? () => setCreateOpen(true) : () => {}}
       />
+
+      </>
+      )}
 
       <TaskFormDialog open={createOpen} onOpenChange={setCreateOpen} />
       <TaskFormDialog

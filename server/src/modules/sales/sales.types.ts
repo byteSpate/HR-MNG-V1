@@ -418,6 +418,8 @@ export interface SalesTaskSummary {
   outcome: string | null
   cancelReason: string | null
   completedAt: string | null
+  /** The office day it was done, YYYY-MM-DD. Null when it is not done. */
+  doneOn: string | null
   /** Pending and due before today in office time. Worked out when read, never stored. */
   overdue: boolean
   /** Only the owner changes a task, a Sales Admin included. */
