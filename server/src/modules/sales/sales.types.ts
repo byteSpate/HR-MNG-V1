@@ -425,6 +425,20 @@ export interface SalesTaskSummary {
   createdAt: string
 }
 
+/**
+ * One person's week for the Saturday review (owner, 2026-11-02): what they did
+ * and planned, how it splits by type, and their take-outs.
+ */
+export interface PersonWeek {
+  /** The Sunday the week starts on, YYYY-MM-DD. */
+  weekStart: string
+  employee: { id: string; fullName: string }
+  /** Sunday to Thursday always. Friday and the Saturday before appear only when they hold a task. */
+  days: { date: string; label: string; tasks: SalesTaskSummary[] }[]
+  countsByType: Record<SalesTaskType, number>
+  takeOuts: { open: SalesTaskSummary[]; doneThisWeek: SalesTaskSummary[] }
+}
+
 /** The counters above the Before Quotation grid (owner, 2026-11-02). */
 export interface BeforeQuotationSummary {
   total: number

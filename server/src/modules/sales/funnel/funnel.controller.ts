@@ -23,11 +23,13 @@ import {
 } from "./funnel.meeting"
 import { addManagementNote } from "./funnel.notes"
 import { createTakeOut, listTakeOuts } from "./funnel.takeouts"
+import { getPersonWeek } from "./funnel.week"
 import { getFunnel, listFunnelTeam } from "./funnel.service"
 import {
   editFunnelCellBodySchema,
   funnelActionSchema,
   funnelQuerySchema,
+  personWeekQuerySchema,
   takeOutQuerySchema,
   teamQuerySchema,
   managementNoteSchema,
@@ -196,6 +198,14 @@ export async function listTakeOutsHandler(req: Request, res: Response, next: Nex
   try {
     const query = takeOutQuerySchema.parse(req.query)
     return res.status(200).json({ items: await listTakeOuts(query, req.user!) })
+  } catch (err) {
+    return next(err)
+  }
+}
+
+export async function getPersonWeekHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    return res.status(200).json(await getPersonWeek(personWeekQuerySchema.parse(req.query), req.user!))
   } catch (err) {
     return next(err)
   }

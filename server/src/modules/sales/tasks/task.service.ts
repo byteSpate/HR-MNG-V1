@@ -40,6 +40,9 @@ const INCLUDE = {
   assignedBy: { select: { fullName: true } },
 } satisfies Prisma.SalesTaskInclude
 
+/** The same include for any read that shows a task, so every list presents it the same way. */
+export const TASK_INCLUDE = INCLUDE
+
 /** A date the user picked, refused as a 400 rather than a 500 when it is not on the calendar. */
 function dueDate(value: string): Date {
   try {

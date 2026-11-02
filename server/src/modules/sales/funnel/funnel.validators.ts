@@ -186,6 +186,12 @@ export const takeOutQuerySchema = z.object({
   to: dateOnly.optional(),
 })
 
+/** `GET /week`: whose week, and which (a Sunday), if not the one just finished. */
+export const personWeekQuerySchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  week: weekStartDate.optional(),
+})
+
 /** The team view's quarter (owner, 2026-10-13). Absent means this quarter. */
 export const teamQuerySchema = z.object({
   quarter: z.string().regex(/^\d{4}-Q[1-4]$/, "Pick a quarter.").optional(),

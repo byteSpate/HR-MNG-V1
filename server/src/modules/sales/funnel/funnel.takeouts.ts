@@ -17,20 +17,12 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import { employeeIdFor, isSalesAdmin } from "../sales.access"
 import type { SalesTaskSummary } from "../sales.types"
 import { presentTask } from "../tasks/task.present"
-import { dayRange } from "../tasks/task.service"
+import { dayRange, TASK_INCLUDE } from "../tasks/task.service"
 import { ACTIONS_NEED_EMPLOYEE, giveTaskIn, type FunnelActionInput } from "./funnel.actions"
 import { nextSaturdayFrom } from "./funnel.dates"
 import { subjectOf } from "./funnel.service"
 
 export const TAKE_OUT_ADMIN_ONLY = "Only a Sales Admin can give a take-out"
-
-const INCLUDE = {
-  salesAccount: { select: { name: true } },
-  opportunity: { select: { serial: true, name: true } },
-  meeting: { select: { title: true } },
-  assignedTo: { select: { fullName: true } },
-  assignedBy: { select: { fullName: true } },
-} as const
 
 export type TakeOutInput = FunnelActionInput
 
@@ -77,6 +69,34 @@ export interface TakeOutQuery {
   to?: string
 }
 
+/**
+ * The read itself, with no access check: the caller has already asked
+ * `subjectOf` whether this person may be read. `viewerEmployeeId` decides which
+ * rows the viewer may change (their own).
+ */
+export async function readTakeOuts(
+  employeeId: string,
+  query: Omit<TakeOutQuery, "employeeId">,
+  viewerEmployeeId: string | null,
+  now: Date = new Date()
+): Promise<SalesTaskSummary[]> {
+  const rows = await prisma.salesTask.findMany({
+    where: {
+      assignedToEmployeeId: employeeId,
+      origin: { in: ["FUNNEL_MEETING", "TAKE_OUT"] },
+      ...(query.opportunityId ? { opportunityId: query.opportunityId } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      AND: dayRange(query.from, query.to),
+    },
+    include: TASK_INCLUDE,
+    orderBy: [{ status: "asc" }, { dueOn: "asc" }, { createdAt: "asc" }],
+    take: 200,
+  })
+
+  const today = officeDateOf(now)
+  return rows.map((row) => presentTask(row, row.assignedToEmployeeId === viewerEmployeeId, today))
+}
+
 /** Take-outs and meeting action items of one person, open ones first. */
 export async function listTakeOuts(
   query: TakeOutQuery,
@@ -85,20 +105,5 @@ export async function listTakeOuts(
 ): Promise<SalesTaskSummary[]> {
   const subject = await subjectOf(query, actor)
   const own = await employeeIdFor(actor)
-
-  const rows = await prisma.salesTask.findMany({
-    where: {
-      assignedToEmployeeId: subject.employeeId,
-      origin: { in: ["FUNNEL_MEETING", "TAKE_OUT"] },
-      ...(query.opportunityId ? { opportunityId: query.opportunityId } : {}),
-      ...(query.status ? { status: query.status } : {}),
-      AND: dayRange(query.from, query.to),
-    },
-    include: INCLUDE,
-    orderBy: [{ status: "asc" }, { dueOn: "asc" }, { createdAt: "asc" }],
-    take: 200,
-  })
-
-  const today = officeDateOf(now)
-  return rows.map((row) => presentTask(row, row.assignedToEmployeeId === own, today))
+  return readTakeOuts(subject.employeeId, query, own, now)
 }
