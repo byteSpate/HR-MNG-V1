@@ -174,6 +174,18 @@ export const funnelActionSchema = z.object({
   opportunityId: z.string().uuid().nullable().optional(),
 })
 
+/**
+ * What a take-out list asks for (owner, 2026-11-02). Absent `employeeId` means
+ * the caller's own. The days are real calendar days.
+ */
+export const takeOutQuerySchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  opportunityId: z.string().uuid().optional(),
+  status: z.enum(["PENDING", "DONE"]).optional(),
+  from: dateOnly.optional(),
+  to: dateOnly.optional(),
+})
+
 /** The team view's quarter (owner, 2026-10-13). Absent means this quarter. */
 export const teamQuerySchema = z.object({
   quarter: z.string().regex(/^\d{4}-Q[1-4]$/, "Pick a quarter.").optional(),

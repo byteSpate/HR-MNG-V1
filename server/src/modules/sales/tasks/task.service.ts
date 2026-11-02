@@ -74,7 +74,7 @@ function dueFilter(due: ListTaskQuery["due"], today: Date): Prisma.SalesTaskWher
  * office day it was done, any other task for its due day. `from` and `to` are
  * both included.
  */
-function dayRange(from?: string, to?: string): Prisma.SalesTaskWhereInput[] {
+export function dayRange(from?: string, to?: string): Prisma.SalesTaskWhereInput[] {
   if (!from && !to) return []
   const start = from ? dueDate(from) : undefined
   const end = to ? dueDate(to) : undefined

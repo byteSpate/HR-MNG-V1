@@ -44,8 +44,8 @@ const READ_CAP = 2000
 const CLOSED_OUT = ["LOST", "CANCELLED"] as const
 
 /** Whose funnel is being asked for, and may this caller see it (§27.12). */
-async function subjectOf(
-  query: FunnelQuery,
+export async function subjectOf(
+  query: { employeeId?: string },
   actor: AccessTokenPayload
 ): Promise<{ employeeId: string; employeeName: string }> {
   const own = await employeeIdFor(actor)
