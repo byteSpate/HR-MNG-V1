@@ -19,7 +19,7 @@ export function presentTask(row: any, canManage: boolean, today: Date): SalesTas
     id: row.id,
     origin: row.origin,
     type: row.type ?? "OTHER",
-    givenByName: given ? (row.assignedBy?.fullName ?? null) : null,
+    givenByName: given ? (row.assignedBy?.fullName ?? "Super Admin") : null,
     givenOn: given ? formatDateOnly(officeDateOf(row.createdAt)) : null,
     salesAccountId: row.salesAccountId ?? null,
     salesAccountName: row.salesAccount?.name ?? null,

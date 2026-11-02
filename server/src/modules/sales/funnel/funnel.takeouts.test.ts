@@ -24,7 +24,7 @@ vi.mock("../../../config/prisma", () => {
 
 import prisma from "../../../config/prisma"
 import { clearPermissionCache } from "../sales.permissions"
-import { ACTION_DEAL_MISSING, ACTIONS_NEED_EMPLOYEE, ASSIGNEE_NOT_SALES } from "./funnel.actions"
+import { ACTION_DEAL_MISSING, ASSIGNEE_NOT_SALES } from "./funnel.actions"
 import { FUNNEL_NOT_YOURS } from "./funnel.service"
 import { createTakeOut, listTakeOuts, TAKE_OUT_ADMIN_ONLY } from "./funnel.takeouts"
 
@@ -109,9 +109,13 @@ describe("giving a take-out", () => {
     })
   })
 
-  it("needs the giver to have an employee record", async () => {
+  it("lets a Super Admin with no employee record give one, with no giver saved", async () => {
     mocked(prisma.user.findUnique).mockResolvedValue({ employee: null })
-    await expect(createTakeOut(BODY, ADMIN, NOW)).rejects.toMatchObject({ statusCode: 409, message: ACTIONS_NEED_EMPLOYEE })
+    await createTakeOut(BODY, ADMIN, NOW)
+    expect(mocked(tx.salesTask.create).mock.calls[0][0].data).toMatchObject({
+      origin: "TAKE_OUT",
+      assignedByEmployeeId: null,
+    })
   })
 })
 

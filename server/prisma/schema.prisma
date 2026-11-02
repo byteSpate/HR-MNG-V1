@@ -3912,9 +3912,10 @@ model FunnelMeeting {
   status FunnelMeetingStatus @default(SCHEDULED)
 
   /// Who ran it. An Employee rather than a User id, because this is a person
-  /// in the room, and the team list is drawn from Employee.
-  ranByEmployeeId String
-  ranBy           Employee @relation("FunnelMeetingRanBy", fields: [ranByEmployeeId], references: [id])
+  /// in the room, and the team list is drawn from Employee. Empty when a
+  /// Super Admin with no Employee record ran it: `createdBy` still names them.
+  ranByEmployeeId String?
+  ranBy           Employee? @relation("FunnelMeetingRanBy", fields: [ranByEmployeeId], references: [id], onDelete: Restrict)
 
   /// One free note for the week — not per person. Per-person and per-deal
   /// words are SalesComment rows carrying `funnelMeetingId` (§27.8).

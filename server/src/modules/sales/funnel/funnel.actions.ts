@@ -29,7 +29,6 @@ import { lockMeeting } from "./funnel.meeting"
 
 export const ACTIONS_ADMIN_ONLY = "Only a Sales Admin can give out an action item"
 export const ASSIGNEE_NOT_SALES = "That person is not in the Sales Hub"
-export const ACTIONS_NEED_EMPLOYEE = "You need an employee record to give out an action item"
 export const ACTION_DEAL_MISSING = "That Opportunity does not exist"
 export const ACTION_ACCOUNT_MISSING = "That account does not exist"
 
@@ -54,7 +53,7 @@ export interface FunnelActionInput {
 interface GiveTaskArgs {
   origin: "FUNNEL_MEETING" | "TAKE_OUT"
   funnelMeetingId: string | null
-  assignerEmployeeId: string
+  assignerEmployeeId: string | null
   dueOn: Date
   priority: "LOW" | "NORMAL" | "HIGH"
   actor: AccessTokenPayload
@@ -154,7 +153,7 @@ export async function createFunnelAction(
   if (!isSalesAdmin(actor)) throw new AppError(403, ACTIONS_ADMIN_ONLY)
 
   const assignerEmployeeId = await employeeIdFor(actor)
-  if (!assignerEmployeeId) throw new AppError(409, ACTIONS_NEED_EMPLOYEE)
+  // No Employee record (a Super Admin) is allowed: the audit row names the user.
 
   const dueOn = body.dueOn ? parseDateOnly(body.dueOn) : nextSaturdayFrom(officeDateOf(now))
   const priority = body.priority ?? "NORMAL"

@@ -18,7 +18,7 @@ import { employeeIdFor, isSalesAdmin } from "../sales.access"
 import type { SalesTaskSummary } from "../sales.types"
 import { presentTask } from "../tasks/task.present"
 import { dayRange, TASK_INCLUDE } from "../tasks/task.service"
-import { ACTIONS_NEED_EMPLOYEE, giveTaskIn, type FunnelActionInput } from "./funnel.actions"
+import { giveTaskIn, type FunnelActionInput } from "./funnel.actions"
 import { nextSaturdayFrom } from "./funnel.dates"
 import { subjectOf } from "./funnel.service"
 
@@ -38,7 +38,7 @@ export async function createTakeOut(
   if (!isSalesAdmin(actor)) throw new AppError(403, TAKE_OUT_ADMIN_ONLY)
 
   const assignerEmployeeId = await employeeIdFor(actor)
-  if (!assignerEmployeeId) throw new AppError(409, ACTIONS_NEED_EMPLOYEE)
+  // No Employee record (a Super Admin) is allowed: the audit row names the user.
 
   const dueOn = body.dueOn ? parseDateOnly(body.dueOn) : nextSaturdayFrom(officeDateOf(now))
   const priority = body.priority ?? "NORMAL"
