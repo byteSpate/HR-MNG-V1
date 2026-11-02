@@ -8,6 +8,7 @@ import { salesKeys } from "@/lib/api/sales/keys"
 import { useSession } from "@/lib/auth/session-context"
 import type { ProjectSummary } from "@/lib/api/types"
 import { TONE } from "@/components/dashboard/record-kit"
+import { ProjectLogForm } from "@/components/sales/projects/project-log-form"
 import { Button } from "@/components/ui/button"
 
 function addDays(iso: string, days: number): string {
@@ -19,12 +20,12 @@ function addDays(iso: string, days: number): string {
 /**
  * The Project's Daily Log, one week at a time (spec §2.2).
  *
- * Read-only here on purpose: a team member writes their line in their own
- * Weekly Report, which is the same place they write everything else about
- * their week. This screen is the Project Manager reading what came back.
+ * The table is the Project Manager reading what came back. A team member
+ * writes their own line in the box under it: the Weekly Report, where it used
+ * to be written, is retired (owner, 2026-11-02).
  */
 export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
-  const { accessToken } = useSession()
+  const { accessToken, user } = useSession()
   const [week, setWeek] = useState<string | null>(null)
 
   const log = useQuery({
@@ -129,9 +130,12 @@ export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
         </div>
       )}
 
-      <p className={`text-[12px] ${TONE.muted}`}>
-        Team members write this in their Weekly Report, one line a day for each Project in progress.
-      </p>
+      {/* Only a Sales User writes a line, so the box is not offered to anybody else. */}
+      {user?.salesRole === "SALES_USER" ? (
+        <ProjectLogForm projectId={project.id} />
+      ) : (
+        <p className={`text-[12px] ${TONE.muted}`}>Team members write one line a day for each Project in progress.</p>
+      )}
     </div>
   )
 }

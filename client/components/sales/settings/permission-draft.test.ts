@@ -7,7 +7,7 @@ import { groupPermissions, lastChangeOf, pendingChanges } from "./permission-dra
 const row = (over: Partial<SalesPermissionRow>): SalesPermissionRow => ({
   key: "task.create",
   label: "Create a Task",
-  group: "Tasks and Weekly Report",
+  group: "Tasks",
   phase: 1,
   default: true,
   enabled: true,
@@ -19,23 +19,23 @@ const row = (over: Partial<SalesPermissionRow>): SalesPermissionRow => ({
 test("groups in the order the groups first appear, and drops Phase 2 rows", () => {
   const groups = groupPermissions([
     row({ key: "account.edit", group: "Sales Accounts" }),
-    row({ key: "task.create", group: "Tasks and Weekly Report" }),
-    row({ key: "weekly.submit", group: "Tasks and Weekly Report" }),
+    row({ key: "task.create", group: "Tasks" }),
+    row({ key: "opportunity.create", group: "Tasks" }),
     row({ key: "target.set", group: "Team and Targets", phase: 2 }),
   ])
   assert.deepEqual(
     groups.map((g) => g.group),
-    ["Sales Accounts", "Tasks and Weekly Report"]
+    ["Sales Accounts", "Tasks"]
   )
   assert.deepEqual(
     groups[1].rows.map((r) => r.key),
-    ["task.create", "weekly.submit"]
+    ["task.create", "opportunity.create"]
   )
 })
 
 test("lists only the switches whose draft differs from the saved value", () => {
-  const rows = [row({ key: "task.create", enabled: true }), row({ key: "weekly.submit", enabled: true })]
-  assert.deepEqual(pendingChanges(rows, { "task.create": false, "weekly.submit": true }), [
+  const rows = [row({ key: "task.create", enabled: true }), row({ key: "opportunity.create", enabled: true })]
+  assert.deepEqual(pendingChanges(rows, { "task.create": false, "opportunity.create": true }), [
     { key: "task.create", enabled: false },
   ])
 })

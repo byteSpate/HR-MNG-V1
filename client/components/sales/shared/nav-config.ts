@@ -67,12 +67,9 @@ export function navGroups(salesRole: SalesRole | null, canOwnAccounts: boolean):
         // The menu stays flat: §22's tree is not adopted in this phase.
         { label: "Meeting Minutes", href: "/sales/meetings/minutes", icon: "RiFileList3Line" },
         { label: "Tasks", href: "/sales/tasks", icon: "RiTaskLine" },
-        // One person's account of one working week (revision §26.14), right
-        // after Tasks. My Week, Past Weeks and All Reports are tabs inside the
-        // page rather than menu items: the menu stays flat.
-        { label: "Weekly Report", href: "/sales/weekly", icon: "RiCalendarCheckLine" },
-        // Every quoted deal, per person, reviewed each Saturday (§27.14).
-        // After Weekly Report, because it reads the week that report covers.
+        // Every quoted deal, per person, reviewed each Saturday (§27.14). The
+        // person's week of tasks and take-outs is on the same page (owner,
+        // 2026-11-02); the Weekly Report that used to sit before this is retired.
         // One item: the team list and one person's grid are the same page,
         // and the meeting is a panel on it rather than a route of its own.
         { label: "Funnel", href: "/sales/funnel", icon: "RiFilter3Line" },
