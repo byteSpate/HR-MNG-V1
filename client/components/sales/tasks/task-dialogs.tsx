@@ -162,6 +162,9 @@ function TaskForm({
     setError(null)
     if (title.trim().length < 2) return setError("Give the task a title.")
     if (!dueOn) return setError("Pick the day it is due.")
+    if (task?.status === "DONE" && dueOn > new Date().toLocaleDateString("en-CA")) {
+      return setError("Choose a day that is today or earlier. This task is already done.")
+    }
     mutation.mutate()
   }
 
@@ -214,9 +217,13 @@ function TaskForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
-          label="Due"
+          label={task?.status === "DONE" ? "Day done" : "Due"}
           htmlFor="task-due"
-          help="It is in your 00:01 email that day, and every day after until it is done."
+          help={
+            task?.status === "DONE"
+              ? "The day this was done. It decides which day of your log it is on."
+              : "It is in your 00:01 email that day, and every day after until it is done."
+          }
         >
           <Input id="task-due" type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
         </Field>

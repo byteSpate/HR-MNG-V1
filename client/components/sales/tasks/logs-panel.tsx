@@ -23,7 +23,7 @@ import { Tag } from "@/components/dashboard/tag"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { onDay, TASK_STATUS_LABEL, TASK_STATUS_TONE } from "@/components/sales/shared/sales-shared"
 import { TASK_TYPE_LABEL, TASK_TYPES } from "@/components/sales/shared/task-types"
-import { useTaskStatus } from "@/components/sales/tasks/task-dialogs"
+import { TaskFormDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
 import { logDaySlots, shiftWeek, weekLabel, weekRange, weekStartOf } from "@/components/sales/tasks/logs-days"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -35,7 +35,7 @@ const ME = "me"
 
 const todayInput = () => new Date().toLocaleDateString("en-CA")
 
-function LogRow({ task, onDone, busy }: { task: SalesTaskSummary; onDone: () => void; busy: boolean }) {
+function LogRow({ task, onDone, onEdit, busy }: { task: SalesTaskSummary; onDone: () => void; onEdit: () => void; busy: boolean }) {
   const given = task.givenByName ? `Take-out from ${task.givenByName}${task.givenOn ? `, ${onDay(task.givenOn)}` : ""}` : null
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[#EFF2F6] px-4 py-2.5 first:border-t-0">
@@ -49,6 +49,11 @@ function LogRow({ task, onDone, busy }: { task: SalesTaskSummary; onDone: () => 
       </span>
       <Tag label={TASK_TYPE_LABEL[task.type]} tone="neutral" />
       <Tag label={TASK_STATUS_LABEL[task.status]} tone={TASK_STATUS_TONE[task.status]} />
+      {task.canManage ? (
+        <Button type="button" variant="outline" onClick={onEdit} className="h-auto rounded-md px-3 py-1.5 text-[12px] font-bold">
+          Edit
+        </Button>
+      ) : null}
       {task.status === "PENDING" && task.canManage ? (
         <Button
           type="button"
@@ -72,6 +77,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
   const [type, setType] = useState<SalesTaskType | "">("")
   const [person, setPerson] = useState(ME)
   const finish = useTaskStatus()
+  const [editing, setEditing] = useState<SalesTaskSummary | null>(null)
 
   // Only a Sales Admin can read another person's log, so only they get the picker.
   const people = useQuery({
@@ -184,6 +190,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
                       key={task.id}
                       task={task}
                       busy={finish.isPending}
+                      onEdit={() => setEditing(task)}
                       onDone={() => finish.mutate({ id: task.id, body: { status: "DONE" } })}
                     />
                   ))}
@@ -193,6 +200,11 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
           ))}
         </div>
       )}
+      <TaskFormDialog
+        open={!!editing}
+        onOpenChange={(open) => (open ? undefined : setEditing(null))}
+        task={editing ?? undefined}
+      />
     </section>
   )
 }

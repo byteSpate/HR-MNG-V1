@@ -28,6 +28,7 @@ import { useSalesPermissions } from "@/components/sales/shared/use-sales-permiss
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 /** A select's "none", since an empty value reads as nothing chosen at all. */
@@ -76,6 +77,7 @@ function IDidThisForm({
 
   const [title, setTitle] = useState("")
   const [type, setType] = useState<SalesTaskType>("OTHER")
+  const [detail, setDetail] = useState("")
   const [doneOn, setDoneOn] = useState(todayInput())
   const [accountId, setAccountId] = useState(fixedAccountId ?? "")
   const [dealId, setDealId] = useState(fixedOpportunityId ?? "")
@@ -97,6 +99,7 @@ function IDidThisForm({
         title: title.trim(),
         type,
         doneOn,
+        ...(detail.trim() ? { detail: detail.trim() } : {}),
         ...(accountId ? { salesAccountId: accountId } : {}),
         ...(accountId && dealId ? { opportunityId: dealId } : {}),
       }),
@@ -118,6 +121,7 @@ function IDidThisForm({
 
   function another() {
     setTitle("")
+    setDetail("")
     setSavedFor(null)
     setError(null)
   }
@@ -162,6 +166,16 @@ function IDidThisForm({
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Sent the BOQ to the customer"
           autoFocus
+        />
+      </Field>
+
+      <Field label="Details" htmlFor="did-detail" hint="Optional.">
+        <Textarea
+          id="did-detail"
+          value={detail}
+          maxLength={2000}
+          onChange={(e) => setDetail(e.target.value)}
+          placeholder="Who you spoke to, what was agreed, what comes next"
         />
       </Field>
 

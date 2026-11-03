@@ -385,10 +385,13 @@ export function taskActions(
       { kind: "edit", label: "Edit", onClick: handlers.onEdit },
     ]
   }
-  if (!choices.reopen) return []
+  // A finished task can be corrected without reopening it (owner, 2026-11-03).
+  const edit = { kind: "edit" as const, label: "Edit", onClick: handlers.onEdit }
+  if (!choices.reopen) return [edit]
   return [
+    edit,
     {
-      kind: "custom",
+      kind: "custom" as const,
       label: "Reopen",
       icon: <RiArrowGoBackLine className="size-3.5" aria-hidden />,
       onClick: handlers.onReopen,
