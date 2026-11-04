@@ -176,7 +176,7 @@ export async function draftRun(body: { year: number; month: number }, actor: Acc
 
     for (const code of classCodes) {
       if (!rateByCode.get(code)) {
-        throw new AppError(409, `${code} has no depreciation rate. Choose one before drafting a run — depreciation will not file a nil charge.`, { accountCode: code })
+        throw new AppError(409, `${code} has no depreciation rate. Choose one before you draft a run. A run will not file a nil charge.`, { accountCode: code })
       }
     }
 

@@ -799,7 +799,7 @@ export async function submitRun(id: string, actorUserId: string) {
   if (!run || run.deletedAt) throw new AppError(404, "Payroll run not found")
   requireStatus(run, "DRAFT", "submit")
   if (!run.processedAt) {
-    throw new AppError(409, "This run has not been processed yet — process it before submitting")
+    throw new AppError(409, "This run is not processed yet. Process it, then submit it.")
   }
 
   const updated = await prisma.$transaction(async (tx) => {

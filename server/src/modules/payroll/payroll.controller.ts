@@ -256,7 +256,7 @@ export async function deleteAdjustmentHandler(req: RequestWithId, res: Response,
 const bankFileCurrency = (value: unknown) => {
   const currency = typeof value === "string" ? value.toUpperCase() : "BDT"
   if (currency !== "BDT" && currency !== "USD") {
-    throw new AppError(400, `Unknown currency "${currency}" — expected BDT or USD`)
+    throw new AppError(400, `Unknown currency "${currency}". Use BDT or USD.`)
   }
   return currency
 }

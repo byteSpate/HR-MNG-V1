@@ -61,7 +61,7 @@ export async function submitRequest(
         throw new AppError(400, `${category.name} is issued by quantity, so a quantity is required.`)
       }
       if (category.tracksIndividually && input.quantity !== undefined) {
-        throw new AppError(400, `${category.name} is issued one at a time — submit one request per item.`)
+        throw new AppError(400, `${category.name} is issued one at a time. Submit one request for each item.`)
       }
 
       data = {

@@ -277,7 +277,7 @@ export function assertChartCoversLedger(chart: ChartIndex, balances: BalanceMap)
   const named = orphans.map((a) => `${a.code} ${a.name}`).join(", ")
   throw new AppError(
     409,
-    `${named} ${orphans.length === 1 ? "carries a balance but sits" : "carry balances but sit"} under no statement section, so the statements would not account for the whole ledger. Re-parent ${orphans.length === 1 ? "it" : "them"} under the right group in the chart of accounts.`,
+    `${named} ${orphans.length === 1 ? "carries a balance but sits" : "carry balances but sit"} under no statement section. The statements would not add up to the whole ledger. Move ${orphans.length === 1 ? "it" : "them"} under the right group in the chart of accounts.`,
     { accountIds: orphans.map((a) => a.id), codes: orphans.map((a) => a.code) }
   )
 }

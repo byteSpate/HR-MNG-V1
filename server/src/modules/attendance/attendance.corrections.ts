@@ -106,7 +106,7 @@ export async function regulariseAttendance(
     throw new AppError(403, "You can only amend your own attendance")
   }
   if (record.approval === "APPROVED") {
-    throw new AppError(409, "This record has already been approved — ask HR to correct it")
+    throw new AppError(409, "This record is already approved. Ask HR to correct it.")
   }
 
   const ageDays = Math.round((officeToday().getTime() - record.date.getTime()) / 86_400_000)

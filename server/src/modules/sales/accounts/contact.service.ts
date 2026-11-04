@@ -143,7 +143,7 @@ export async function updateContact(
   // changed) can answer whether this edit would leave the contact
   // unreachable.
   if (!next.phone && !next.email) {
-    throw new AppError(400, "Add a phone number or an email — a contact needs at least one way to reach them")
+    throw new AppError(400, "Add a phone number or an email. A contact needs at least one way to reach them.")
   }
 
   return prisma.$transaction(async (tx) => {
