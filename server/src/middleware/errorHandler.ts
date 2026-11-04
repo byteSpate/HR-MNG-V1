@@ -29,7 +29,44 @@ function validationMessage(err: ZodError): string {
   const issue = err.issues[0]
   if (!issue) return "Invalid request"
   const field = issue.path.join(".")
-  return field ? `${field}: ${issue.message}` : issue.message
+  const message = plainIssueMessage(issue) ?? issue.message
+  return field ? `${field}: ${message}` : message
+}
+
+/**
+ * Plain words for the two Zod messages users meet most. Anything else is
+ * returned as null, so the caller keeps Zod's own text.
+ */
+function plainIssueMessage(issue: ZodError["issues"][number]): string | null {
+  if (issue.code === "too_small" && issue.origin === "string" && Number(issue.minimum) === 1) {
+    return "Write a value. This cannot be empty."
+  }
+  if (issue.code === "invalid_type" && /received undefined/.test(issue.message)) {
+    return "This is needed."
+  }
+  return null
+}
+
+/**
+ * The central answer to a Prisma failure that a service did not catch.
+ * Detected by name and `code`, so this file does not import the generated
+ * client. Any other code returns null and falls through to the 500.
+ */
+function prismaErrorResponse(err: unknown): { status: number; error: string } | null {
+  if (!(err instanceof Error) || err.name !== "PrismaClientKnownRequestError") return null
+  switch ((err as { code?: unknown }).code) {
+    case "P2002":
+      return { status: 409, error: "This value is already used. Change it and try again." }
+    case "P2025":
+      return { status: 404, error: "We could not find this record. Refresh the page and try again." }
+    case "P2003":
+      return {
+        status: 400,
+        error: "This record is linked to another record that does not exist. Check the link and try again.",
+      }
+    default:
+      return null
+  }
 }
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
@@ -43,6 +80,8 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   if (err instanceof ZodError) {
     return res.status(400).json({ error: validationMessage(err) })
   }
+  const prismaResponse = prismaErrorResponse(err)
+  if (prismaResponse) return res.status(prismaResponse.status).json({ error: prismaResponse.error })
   console.error(err)
   return res.status(500).json({ error: "Internal server error" })
 }
