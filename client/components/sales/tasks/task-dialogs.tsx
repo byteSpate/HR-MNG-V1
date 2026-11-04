@@ -225,7 +225,7 @@ function TaskForm({
               : "It is in your 00:01 email that day, and every day after until it is done."
           }
         >
-          <Input id="task-due" type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
+          <Input id="task-due" type="date" max={task?.status === "DONE" ? new Date().toLocaleDateString("en-CA") : undefined} value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
         </Field>
         <Field label="Priority" htmlFor="task-priority">
           <Select value={priority} onValueChange={(v) => v && setPriority(v as SalesTaskPriority)}>
@@ -360,6 +360,7 @@ function TaskStatusForm({
   onDone: (followUpOn: string | null) => void
 }) {
   const [text, setText] = useState("")
+  const [doneOn, setDoneOn] = useState(() => new Date().toLocaleDateString("en-CA"))
   const [error, setError] = useState<string | null>(null)
   const status = useTaskStatus()
 
@@ -370,10 +371,14 @@ function TaskStatusForm({
       setError("Say why the task is cancelled.")
       return
     }
+    if (action === "DONE") {
+      if (!doneOn) return setError("Pick the day you did it.")
+      if (doneOn > new Date().toLocaleDateString("en-CA")) return setError("Choose a day that is today or earlier.")
+    }
     const body: ChangeTaskStatusBody =
       action === "CANCELLED"
         ? { status: "CANCELLED", reason: text.trim() }
-        : { status: "DONE", ...(text.trim() ? { outcome: text.trim() } : {}) }
+        : { status: "DONE", doneOn, ...(text.trim() ? { outcome: text.trim() } : {}) }
     status.mutate(
       { id: task.id, body },
       {
@@ -391,9 +396,14 @@ function TaskStatusForm({
           <Input id="task-reason" value={text} onChange={(e) => setText(e.target.value)} />
         </Field>
       ) : (
-        <Field label="What came of it?" htmlFor="task-outcome" hint="Optional.">
-          <Textarea id="task-outcome" value={text} onChange={(e) => setText(e.target.value)} />
-        </Field>
+        <>
+          <Field label="Day done" htmlFor="task-done-on" help="The day you did the work. It decides which day of your log it is on.">
+            <Input id="task-done-on" type="date" max={new Date().toLocaleDateString("en-CA")} value={doneOn} onChange={(e) => setDoneOn(e.target.value)} />
+          </Field>
+          <Field label="What came of it?" htmlFor="task-outcome" hint="Optional.">
+            <Textarea id="task-outcome" value={text} onChange={(e) => setText(e.target.value)} />
+          </Field>
+        </>
       )}
       {error ? <FormError>{error}</FormError> : null}
       <DialogFooter>

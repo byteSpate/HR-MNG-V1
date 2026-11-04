@@ -1,13 +1,10 @@
 "use client"
 
 /**
- * The Logs tab on the Tasks page (owner, 2026-11-02): the person's tasks that
- * belong to no account, day by day for one week. This is where learning, office
- * work and any other work that is not about an account is kept, next to the
- * take-outs an admin gave them.
- *
- * Tasks that have an account stay where they are: on the account's Timeline,
- * on the Opportunity, and in the Tasks list.
+ * The Logs tab on the Tasks page (owner, 2026-11-02): all the work the person
+ * has done, with or without an account, day by day for one week. An account or
+ * Opportunity shows as a small line under the title. A done task counts for the
+ * day it was done, not the day it was planned.
  */
 
 import { useMemo, useState } from "react"
@@ -23,7 +20,7 @@ import { Tag } from "@/components/dashboard/tag"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { onDay, TASK_STATUS_LABEL, TASK_STATUS_TONE } from "@/components/sales/shared/sales-shared"
 import { TASK_TYPE_LABEL, TASK_TYPES } from "@/components/sales/shared/task-types"
-import { TaskFormDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
+import { TaskFormDialog } from "@/components/sales/tasks/task-dialogs"
 import { logDaySlots, shiftWeek, weekLabel, weekRange, weekStartOf } from "@/components/sales/tasks/logs-days"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -35,15 +32,16 @@ const ME = "me"
 
 const todayInput = () => new Date().toLocaleDateString("en-CA")
 
-function LogRow({ task, onDone, onEdit, busy }: { task: SalesTaskSummary; onDone: () => void; onEdit: () => void; busy: boolean }) {
+function LogRow({ task, onEdit }: { task: SalesTaskSummary; onEdit: () => void }) {
+  const about = [task.salesAccountName, task.opportunitySerial].filter(Boolean).join(" · ")
   const given = task.givenByName ? `Take-out from ${task.givenByName}${task.givenOn ? `, ${onDay(task.givenOn)}` : ""}` : null
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[#EFF2F6] px-4 py-2.5 first:border-t-0">
       <span className="min-w-0 flex-1 basis-60">
         <span className="block text-[13px] font-semibold [overflow-wrap:anywhere]">{task.title}</span>
-        {given || task.detail ? (
+        {about || given || task.detail ? (
           <span className={`block text-[11.5px] ${TONE.muted} [overflow-wrap:anywhere]`}>
-            {[given, task.detail].filter(Boolean).join(" · ")}
+            {[about, given, task.detail].filter(Boolean).join(" · ")}
           </span>
         ) : null}
       </span>
@@ -52,17 +50,6 @@ function LogRow({ task, onDone, onEdit, busy }: { task: SalesTaskSummary; onDone
       {task.canManage ? (
         <Button type="button" variant="outline" onClick={onEdit} className="h-auto rounded-md px-3 py-1.5 text-[12px] font-bold">
           Edit
-        </Button>
-      ) : null}
-      {task.status === "PENDING" && task.canManage ? (
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy}
-          onClick={onDone}
-          className="h-auto rounded-md px-3 py-1.5 text-[12px] font-bold"
-        >
-          Mark done
         </Button>
       ) : null}
     </li>
@@ -76,7 +63,6 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
   const [weekStart, setWeekStart] = useState(() => weekStartOf(todayInput()))
   const [type, setType] = useState<SalesTaskType | "">("")
   const [person, setPerson] = useState(ME)
-  const finish = useTaskStatus()
   const [editing, setEditing] = useState<SalesTaskSummary | null>(null)
 
   // Only a Sales Admin can read another person's log, so only they get the picker.
@@ -88,7 +74,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
 
   const filters: ListTasksQuery = useMemo(
     () => ({
-      noAccount: true,
+      status: "DONE",
       ...weekRange(weekStart),
       ...(type ? { type } : {}),
       ...(person === ME ? { mine: true } : { assignedToEmployeeId: person }),
@@ -170,7 +156,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
       ) : items.length === 0 ? (
         <p className={`rounded-md border border-[#E4E9EF] bg-white px-4 py-4 text-[12.5px] ${TONE.muted}`}>
           {ownLog && !isSalesAdmin
-            ? "Nothing logged this week yet. Press I did this to add work that is not about an account, like learning or office work."
+            ? "Nothing logged this week yet. Press I did this to record work you have done."
             : "Nothing logged for this person this week."}
         </p>
       ) : (
@@ -189,9 +175,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
                     <LogRow
                       key={task.id}
                       task={task}
-                      busy={finish.isPending}
                       onEdit={() => setEditing(task)}
-                      onDone={() => finish.mutate({ id: task.id, body: { status: "DONE" } })}
                     />
                   ))}
                 </ul>

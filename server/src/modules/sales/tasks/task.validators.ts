@@ -66,7 +66,12 @@ export const updateTaskSchema = z
   .refine((body) => Object.keys(body).length > 0, { message: "Nothing was changed" })
 
 export const changeTaskStatusSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("DONE"), outcome: z.string().trim().max(2000).optional() }),
+  z.object({
+    status: z.literal("DONE"),
+    outcome: z.string().trim().max(2000).optional(),
+    /** The day the work was done. Today when left out. Never a future day. */
+    doneOn: dateOnly.optional(),
+  }),
   z.object({
     status: z.literal("CANCELLED"),
     reason: z.string().trim().min(2, "Say why the task is cancelled").max(500),

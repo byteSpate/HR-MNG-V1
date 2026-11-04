@@ -285,6 +285,11 @@ export async function updateTask(id: string, body: UpdateTaskBody, actor: Access
       const next = dueDate(body.dueOn)
       if (next.getTime() !== current.dueOn.getTime()) {
         data.dueOn = next
+        // A done task counts for the day it was done, so editing its day moves that too.
+        if (current.status === "DONE") {
+          if (next.getTime() > officeDateOf(new Date()).getTime()) throw new AppError(400, "Choose a day that is today or earlier.")
+          data.completedAt = officeInstantOf(next, "00:00")
+        }
         before.dueOn = formatDateOnly(current.dueOn)
         after.dueOn = body.dueOn
       }
@@ -347,10 +352,17 @@ export async function changeTaskStatus(
       if (current.status === "CANCELLED") throw new AppError(403, PROJECT_TASK_CANCELLED)
     }
 
+    // The day the work was done counts, not the day the button was pressed.
+    let completedAt = now
+    if (body.status === "DONE" && body.doneOn) {
+      const doneOn = dueDate(body.doneOn)
+      if (doneOn.getTime() > officeDateOf(now).getTime()) throw new AppError(400, "Choose a day that is today or earlier.")
+      completedAt = officeInstantOf(doneOn, "00:00")
+    }
     const cleared = { outcome: null, cancelReason: null, completedAt: null, completedBy: null }
     const data: Prisma.SalesTaskUncheckedUpdateInput =
       body.status === "DONE"
-        ? { ...cleared, status: "DONE", outcome: body.outcome ?? null, completedAt: now, completedBy: actor.sub }
+        ? { ...cleared, status: "DONE", outcome: body.outcome ?? null, completedAt, completedBy: actor.sub }
         : body.status === "CANCELLED"
           ? { ...cleared, status: "CANCELLED", cancelReason: body.reason }
           : { ...cleared, status: "PENDING" }

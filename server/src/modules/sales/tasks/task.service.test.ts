@@ -155,6 +155,26 @@ describe("ending a task", () => {
     }))
   })
 
+  it("counts the day the person says it was done, not the day the button was pressed", async () => {
+    await changeTaskStatus("task-1", { status: "DONE", doneOn: "2026-09-10" } as any, USER, NOW)
+
+    expect(updateData().completedAt.getTime()).toBeLessThan(NOW.getTime() - 3 * 24 * 3600 * 1000)
+  })
+
+  it("refuses a done day in the future", async () => {
+    await expect(changeTaskStatus("task-1", { status: "DONE", doneOn: "2026-09-20" } as any, USER, NOW))
+      .rejects.toMatchObject({ statusCode: 400 })
+    expect(prisma.salesTask.update).not.toHaveBeenCalled()
+  })
+
+  it("editing the day of a done task moves the day it counts for", async () => {
+    vi.mocked(prisma.salesTask.findFirst).mockResolvedValue(task({ status: "DONE", completedAt: NOW }) as any)
+    await updateTask("task-1", { dueOn: "2026-09-02" } as any, USER)
+
+    expect(updateData().dueOn.toISOString()).toBe("2026-09-02T00:00:00.000Z")
+    expect(updateData().completedAt.getTime()).toBeLessThan(NOW.getTime() - 10 * 24 * 3600 * 1000)
+  })
+
   it("cancels it with a reason, and offers no follow-up", async () => {
     const result = await changeTaskStatus("task-1", { status: "CANCELLED", reason: "Customer went quiet" } as any, USER, NOW)
 

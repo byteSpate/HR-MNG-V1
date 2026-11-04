@@ -3404,7 +3404,7 @@ export interface UpdateTaskBody {
 }
 
 export type ChangeTaskStatusBody =
-  | { status: "DONE"; outcome?: string }
+  | { status: "DONE"; outcome?: string; doneOn?: string }
   | { status: "CANCELLED"; reason: string }
   | { status: "PENDING" }
 

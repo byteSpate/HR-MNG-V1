@@ -187,10 +187,7 @@ export function TasksPage({
       <PageHeader
         kicker="Sales"
         title="Tasks"
-        sub="Follow-ups you set yourself. Anything due or overdue is in your 00:01 email."
-        cta={can("task.create") ? "New task" : undefined}
-        onCta={can("task.create") ? () => setCreateOpen(true) : undefined}
-        ctaIcon={RiAddLine}
+        sub="Work still to do. Next steps from meetings and Opportunities come here by themselves. To record work you have done, press I did this."
       />
 
       <div role="tablist" aria-label="Tasks or Logs" className="mb-3 flex flex-wrap gap-2">
@@ -200,6 +197,12 @@ export function TasksPage({
         <Button type="button" role="tab" aria-selected={tab === "logs"} onClick={() => setTab("logs")} className={tab === "logs" ? TOGGLE_ON : TOGGLE_OFF}>
           Logs
         </Button>
+        {tab === "tasks" && can("task.create") ? (
+          <Button type="button" variant="ghost" onClick={() => setCreateOpen(true)} className="ml-auto h-9 gap-1 px-2 text-[12.5px] font-semibold">
+            <RiAddLine className="size-4" aria-hidden />
+            Add a future task
+          </Button>
+        ) : null}
       </div>
 
       {tab === "logs" ? (
