@@ -245,7 +245,8 @@ export function PanelTable({
    * reason and its way out is not an add, so it supplies its own glyph.
    */
   emptyActionIcon?: ReactNode
-  onEmptyAction: () => void
+  /** Needed only when `emptyAction` is set; without a label no button shows. */
+  onEmptyAction?: () => void
   /** A title on the table's card, as the Leave page has ("All leave requests"). Omitted, the table has none, as before. */
   title?: string
   /** What the empty list is about, as a picture. Omitted, the inbox glyph is used, as before. */

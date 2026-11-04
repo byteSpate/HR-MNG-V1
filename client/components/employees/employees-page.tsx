@@ -17,6 +17,7 @@ import { listShifts } from "@/lib/api/shifts"
 import { SalaryStructureDialog } from "@/components/employees/salary-structure-dialog"
 import { ApiError } from "@/lib/api/client"
 import { useSession } from "@/lib/auth/session-context"
+import { canManageEmployees } from "@/lib/employee-access"
 import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import { toDateString } from "@/lib/utils"
 import type {
@@ -220,7 +221,10 @@ function FormSection({ title, children }: { title: string; children: React.React
 }
 
 export function EmployeesPage() {
-  const { accessToken, status: sessionStatus } = useSession()
+  const { accessToken, user, status: sessionStatus } = useSession()
+  // Only HR Admin and Super Admin can add staff or read the shift list. The
+  // server refuses the rest, so do not offer the button or ask for the list.
+  const canManage = canManageEmployees(user?.role)
   const queryClient = useQueryClient()
   const pathname = usePathname()
   // "/hr/employees" → "hr". Derived rather than passed as a prop, so the four
@@ -271,7 +275,7 @@ export function EmployeesPage() {
     queryKey: ["shifts"],
     staleTime: REFERENCE_STALE_MS,
     queryFn: () => listShifts(accessToken!),
-    enabled: sessionStatus === "authenticated" && !!accessToken,
+    enabled: sessionStatus === "authenticated" && !!accessToken && canManage,
   })
 
   // Reporting managers come from the employee list already loaded — no second
@@ -430,8 +434,8 @@ export function EmployeesPage() {
         kicker="Management"
         title="Employees"
         sub="Everyone on the payroll, and who is missing what"
-        cta="Add employee"
-        onCta={handleOpenCreate}
+        cta={canManage ? "Add employee" : undefined}
+        onCta={canManage ? handleOpenCreate : undefined}
         aside={
           <ImportExportTools
             basePath="/api/employees"
@@ -510,11 +514,11 @@ export function EmployeesPage() {
             ? "Nothing in the directory matches this search and these filters together. Widen one of them."
             : "Once the first employee is added they appear here, along with anything their record is still missing."
         }
-        emptyAction={filtersActive ? "Clear filters" : "Add employee"}
+        emptyAction={filtersActive ? "Clear filters" : canManage ? "Add employee" : undefined}
         emptyActionIcon={
           filtersActive ? <RiFilterOffLine className="size-4" aria-hidden /> : undefined
         }
-        onEmptyAction={filtersActive ? clearFilters : handleOpenCreate}
+        onEmptyAction={filtersActive ? clearFilters : canManage ? handleOpenCreate : undefined}
       />
 
       <SalaryStructureDialog
