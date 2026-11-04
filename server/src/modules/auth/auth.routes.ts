@@ -1,5 +1,6 @@
 import { Router } from "express"
 
+import { createAuthRateLimit } from "../../middleware/authRateLimit"
 import { requireAuth } from "../../middleware/requireAuth"
 import { avatarUpload } from "../media/media.upload"
 import {
@@ -25,8 +26,8 @@ import {
 
 const router = Router()
 
-router.post("/login", loginHandler)
-router.post("/staff-login", staffLoginHandler)
+router.post("/login", createAuthRateLimit(), loginHandler)
+router.post("/staff-login", createAuthRateLimit(), staffLoginHandler)
 router.post("/refresh", refreshHandler)
 router.post("/logout", logoutHandler)
 router.post("/logout-all", requireAuth, logoutEverywhereHandler)
@@ -42,7 +43,7 @@ router.delete("/sessions/:sessionId", requireAuth, revokeSessionHandler)
 router.patch("/me", requireAuth, setDisplayNameHandler)
 router.patch("/me/avatar", requireAuth, avatarUpload, uploadOwnAvatarHandler)
 router.delete("/me/avatar", requireAuth, clearOwnAvatarHandler)
-router.post("/forgot-password", forgotPasswordHandler)
+router.post("/forgot-password", createAuthRateLimit(), forgotPasswordHandler)
 router.post("/reset-password", resetPasswordHandler)
 router.post("/change-password", requireAuth, changePasswordHandler)
 
