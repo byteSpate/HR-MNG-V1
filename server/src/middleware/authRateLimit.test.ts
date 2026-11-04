@@ -31,6 +31,20 @@ describe("createAuthRateLimit", () => {
     expect(res.headers["retry-after"]).toBeDefined()
   })
 
+  it("with skipSuccessful, only failed tries count, so a whole office can sign in", async () => {
+    const app = express()
+    app.post("/ok", createAuthRateLimit({ max: 2, windowMs: 60_000, skipSuccessful: true }), (_req, res) => {
+      res.json({ ok: true })
+    })
+    app.post("/bad", createAuthRateLimit({ max: 2, windowMs: 60_000, skipSuccessful: true }), (_req, res) => {
+      res.status(401).json({ error: "no" })
+    })
+    for (let i = 0; i < 5; i++) await request(app).post("/ok").expect(200)
+    await request(app).post("/bad").expect(401)
+    await request(app).post("/bad").expect(401)
+    await request(app).post("/bad").expect(429)
+  })
+
   it("counts each IP separately", async () => {
     const app = makeApp(1)
     await request(app).post("/x").set("X-Forwarded-For", "1.1.1.1").expect(200)

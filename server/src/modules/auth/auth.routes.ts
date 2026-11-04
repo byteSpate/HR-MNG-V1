@@ -26,8 +26,8 @@ import {
 
 const router = Router()
 
-router.post("/login", createAuthRateLimit(), loginHandler)
-router.post("/staff-login", createAuthRateLimit(), staffLoginHandler)
+router.post("/login", createAuthRateLimit({ skipSuccessful: true }), loginHandler)
+router.post("/staff-login", createAuthRateLimit({ skipSuccessful: true }), staffLoginHandler)
 router.post("/refresh", refreshHandler)
 router.post("/logout", logoutHandler)
 router.post("/logout-all", requireAuth, logoutEverywhereHandler)

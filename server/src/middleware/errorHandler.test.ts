@@ -70,6 +70,15 @@ describe("errorHandler: Prisma errors", () => {
     consoleSpy.mockRestore()
   })
 
+  it("a mapped Prisma error is still logged, with its code and the field", () => {
+    const res = mockRes()
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    const err = Object.assign(prismaError("P2002"), { meta: { target: ["serialNumber"] } })
+    errorHandler(err, {} as any, res, vi.fn())
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("P2002"), expect.anything())
+    warn.mockRestore()
+  })
+
   it("a service AppError still wins", () => {
     const res = mockRes()
     errorHandler(new AppError(409, "x"), {} as any, res, vi.fn())
@@ -98,7 +107,14 @@ describe("errorHandler: Zod messages in easy English", () => {
     const res = mockRes()
     const parsed = z.object({ name: z.string() }).safeParse({ name: null })
     errorHandler(parsed.error, {} as any, res, vi.fn())
-    expect(res.json).toHaveBeenCalledWith({ error: "name: This cannot be cleared. Write a value." })
+    expect(res.json).toHaveBeenCalledWith({ error: "name: This needs a value. Write one." })
+  })
+
+  it("a message the validator wrote itself is kept", () => {
+    const res = mockRes()
+    const parsed = z.object({ note: z.string().min(1, "A note is required") }).safeParse({ note: "" })
+    errorHandler(parsed.error, {} as any, res, vi.fn())
+    expect(res.json).toHaveBeenCalledWith({ error: "note: A note is required" })
   })
 
   it("an unknown issue passes through unchanged", () => {

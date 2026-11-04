@@ -38,15 +38,18 @@ function validationMessage(err: ZodError): string {
  * returned as null, so the caller keeps Zod's own text.
  */
 function plainIssueMessage(issue: ZodError["issues"][number]): string | null {
+  // Only Zod's own default wording is replaced. A validator that wrote its
+  // own message ("A note is required") keeps it.
+  const isZodDefault = issue.message.startsWith("Too small:") || issue.message.startsWith("Invalid input:")
+  if (!isZodDefault) return null
   if (issue.code === "too_small" && issue.origin === "string" && Number(issue.minimum) === 1) {
     return "Write a value. This cannot be empty."
   }
   if (issue.code === "invalid_type" && /received undefined/.test(issue.message)) {
     return "This is needed."
   }
-  // `null` clears a field on an edit, but only the fields that allow it.
   if (issue.code === "invalid_type" && /received null/.test(issue.message)) {
-    return "This cannot be cleared. Write a value."
+    return "This needs a value. Write one."
   }
   return null
 }
@@ -73,7 +76,7 @@ function prismaErrorResponse(err: unknown): { status: number; error: string } | 
   }
 }
 
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ error: err.message, ...err.details })
   }
@@ -85,7 +88,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return res.status(400).json({ error: validationMessage(err) })
   }
   const prismaResponse = prismaErrorResponse(err)
-  if (prismaResponse) return res.status(prismaResponse.status).json({ error: prismaResponse.error })
+  if (prismaResponse) {
+    // Not a 500, but still worth a line in the log: the message above cannot
+    // say which field clashed, and a P2025 inside a nested write is a bug.
+    console.warn(`[prisma ${(err as { code?: string }).code}] ${req.method} ${req.originalUrl}`, (err as { meta?: unknown }).meta ?? {})
+    return res.status(prismaResponse.status).json({ error: prismaResponse.error })
+  }
   console.error(err)
   return res.status(500).json({ error: "Internal server error" })
 }

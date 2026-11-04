@@ -32,9 +32,15 @@ test("a query can still ask for fresh data every time", async () => {
 })
 
 test("a refused request (4xx) is never retried, so the error shows at once", () => {
-  for (const status of [400, 401, 403, 404, 409, 429]) {
+  for (const status of [400, 401, 403, 404, 409, 422]) {
     assert.equal(shouldRetryQuery(0, { status }), false, `status ${status}`)
   }
+})
+
+test("a timeout (408) and a rate limit (429) can pass later, so they are retried", () => {
+  assert.equal(shouldRetryQuery(0, { status: 408 }), true)
+  assert.equal(shouldRetryQuery(0, { status: 429 }), true)
+  assert.equal(shouldRetryQuery(3, { status: 429 }), false)
 })
 
 test("a server fault (5xx) and a network failure are retried, up to 3 times", () => {

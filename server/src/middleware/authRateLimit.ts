@@ -5,6 +5,12 @@ interface AuthRateLimitOptions {
   /** Most tries one IP may make in one window. */
   max?: number
   windowMs?: number
+  /**
+   * Count only refused tries (status 400 and up). For sign-in routes: a whole
+   * office signing in at 9am from one IP must not lock itself out. Do not use
+   * it where success and failure look the same, such as forgot-password.
+   */
+  skipSuccessful?: boolean
 }
 
 /**
@@ -18,10 +24,12 @@ interface AuthRateLimitOptions {
 export function createAuthRateLimit({
   max = 10,
   windowMs = 15 * 60 * 1000,
+  skipSuccessful = false,
 }: AuthRateLimitOptions = {}): RequestHandler {
   return rateLimit({
     windowMs,
     limit: max,
+    skipSuccessfulRequests: skipSuccessful,
     standardHeaders: "draft-7",
     legacyHeaders: false,
     handler: (_req, res) => {
