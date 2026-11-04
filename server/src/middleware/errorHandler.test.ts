@@ -94,6 +94,13 @@ describe("errorHandler: Zod messages in easy English", () => {
     expect(res.json).toHaveBeenCalledWith({ error: "name: This is needed." })
   })
 
+  it("a null where a value is needed says it cannot be cleared", () => {
+    const res = mockRes()
+    const parsed = z.object({ name: z.string() }).safeParse({ name: null })
+    errorHandler(parsed.error, {} as any, res, vi.fn())
+    expect(res.json).toHaveBeenCalledWith({ error: "name: This cannot be cleared. Write a value." })
+  })
+
   it("an unknown issue passes through unchanged", () => {
     const res = mockRes()
     const parsed = z

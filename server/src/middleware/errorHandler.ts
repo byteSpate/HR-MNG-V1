@@ -44,6 +44,10 @@ function plainIssueMessage(issue: ZodError["issues"][number]): string | null {
   if (issue.code === "invalid_type" && /received undefined/.test(issue.message)) {
     return "This is needed."
   }
+  // `null` clears a field on an edit, but only the fields that allow it.
+  if (issue.code === "invalid_type" && /received null/.test(issue.message)) {
+    return "This cannot be cleared. Write a value."
+  }
   return null
 }
 

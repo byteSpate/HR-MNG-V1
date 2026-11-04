@@ -3,7 +3,7 @@ import test from "node:test"
 
 import { QueryClient } from "@tanstack/react-query"
 
-import { defaultQueryOptions, REFERENCE_STALE_MS } from "./default-options"
+import { defaultQueryOptions, REFERENCE_STALE_MS, shouldRetryQuery } from "./default-options"
 
 test("a list stays fresh for 30 seconds, so going back to a page does not fetch it again", () => {
   const client = new QueryClient({ defaultOptions: defaultQueryOptions })
@@ -29,6 +29,24 @@ test("a query can still ask for fresh data every time", async () => {
   await run()
 
   assert.equal(calls, 2)
+})
+
+test("a refused request (4xx) is never retried, so the error shows at once", () => {
+  for (const status of [400, 401, 403, 404, 409, 429]) {
+    assert.equal(shouldRetryQuery(0, { status }), false, `status ${status}`)
+  }
+})
+
+test("a server fault (5xx) and a network failure are retried, up to 3 times", () => {
+  assert.equal(shouldRetryQuery(0, { status: 500 }), true)
+  assert.equal(shouldRetryQuery(2, { status: 503 }), true)
+  assert.equal(shouldRetryQuery(3, { status: 500 }), false)
+  assert.equal(shouldRetryQuery(0, new Error("Failed to fetch")), true)
+  assert.equal(shouldRetryQuery(3, new Error("Failed to fetch")), false)
+})
+
+test("every query uses that retry rule unless it sets its own", () => {
+  assert.equal(defaultQueryOptions.queries?.retry, shouldRetryQuery)
 })
 
 test("settings lists stay fresh longer than an ordinary list", () => {
