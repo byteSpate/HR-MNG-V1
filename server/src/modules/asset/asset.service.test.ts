@@ -25,6 +25,7 @@ vi.mock("../../config/prisma", () => {
 })
 
 import prisma from "../../config/prisma"
+import { updateAssetSchema } from "./asset.validators"
 import { createAsset, getAsset, listAssets, markAssetLost, nextAssetTag, retireAsset, updateAsset } from "./asset.service"
 
 const tx = (prisma as unknown as { __tx: any }).__tx
@@ -111,6 +112,56 @@ describe("saving an asset that clashes or points at nothing", () => {
     tx.asset.findUnique.mockResolvedValue(existing)
     tx.asset.update.mockRejectedValue(new Error("connection lost"))
     await expect(updateAsset("a-1", { name: "New name" }, hr)).rejects.toThrow("connection lost")
+  })
+})
+
+describe("clearing an optional field on an asset", () => {
+  const existing = {
+    id: "a-1",
+    categoryId: "cat-2",
+    name: "Chair",
+    notes: "old note",
+    model: "M1",
+    vendor: "Acme",
+    location: "Floor 2",
+    warrantyExpiry: new Date("2027-01-01T00:00:00.000Z"),
+    departmentId: null,
+  }
+
+  it("null clears Notes, Model, Vendor and Location", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.asset.update.mockResolvedValue({ ...existing })
+    await updateAsset("a-1", { notes: null, model: null, vendor: null, location: null }, hr)
+    expect(tx.asset.update).toHaveBeenCalledWith({
+      where: { id: "a-1" },
+      data: { notes: null, model: null, vendor: null, location: null },
+    })
+  })
+
+  it("null clears the warranty date", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.asset.update.mockResolvedValue({ ...existing })
+    await updateAsset("a-1", { warrantyExpiry: null }, hr)
+    expect(tx.asset.update).toHaveBeenCalledWith({ where: { id: "a-1" }, data: { warrantyExpiry: null } })
+  })
+
+  it("an omitted key leaves the field alone", async () => {
+    tx.asset.findUnique.mockResolvedValue(existing)
+    tx.asset.update.mockResolvedValue({ ...existing })
+    await updateAsset("a-1", { name: "Chair 2" }, hr)
+    const data = tx.asset.update.mock.calls[0][0].data
+    expect(data).toEqual({ name: "Chair 2" })
+  })
+
+  it("clearing a field that is already empty changes nothing", async () => {
+    tx.asset.findUnique.mockResolvedValue({ ...existing, notes: null })
+    await updateAsset("a-1", { notes: null }, hr)
+    expect(tx.asset.update).not.toHaveBeenCalled()
+  })
+
+  it("the update schema accepts null for those fields and still refuses a blank name", () => {
+    expect(updateAssetSchema.safeParse({ notes: null, warrantyExpiry: null }).success).toBe(true)
+    expect(updateAssetSchema.safeParse({ name: "" }).success).toBe(false)
   })
 })
 
