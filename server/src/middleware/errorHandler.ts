@@ -76,6 +76,33 @@ function prismaErrorResponse(err: unknown): { status: number; error: string } | 
   }
 }
 
+/**
+ * Errors that body-parser (and other `http-errors` users) throw for a bad
+ * request. They carry a `type` and an HTTP `status`. Known types get their own
+ * sentence. Any other 4xx marked `expose` keeps its status. A 5xx, or a 4xx not
+ * safe to show, returns null and falls through to the logged 500.
+ */
+function clientHttpErrorResponse(err: unknown): { status: number; error: string } | null {
+  if (!(err instanceof Error)) return null
+  const e = err as { type?: unknown; status?: unknown; statusCode?: unknown; expose?: unknown }
+  switch (e.type) {
+    case "entity.too.large":
+      return { status: 413, error: "This request is too big. Send less data and try again." }
+    case "entity.parse.failed":
+    case "request.aborted":
+    case "request.size.invalid":
+      return { status: 400, error: "We could not read this request. Check it and try again." }
+    case "charset.unsupported":
+    case "encoding.unsupported":
+      return { status: 415, error: "This kind of request is not supported. Check it and try again." }
+  }
+  const status = typeof e.status === "number" ? e.status : typeof e.statusCode === "number" ? e.statusCode : null
+  if (status !== null && status >= 400 && status < 500 && e.expose === true) {
+    return { status, error: "This request could not be used. Check it and try again." }
+  }
+  return null
+}
+
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ error: err.message, ...err.details })
@@ -87,11 +114,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   if (err instanceof ZodError) {
     return res.status(400).json({ error: validationMessage(err) })
   }
-  // body-parser refuses a JSON body over the limit with this error. It is the
-  // sender's mistake, so it is a 413 and not a 500.
-  if (err instanceof Error && (err as { type?: unknown }).type === "entity.too.large") {
-    return res.status(413).json({ error: "This request is too big. Send less data and try again." })
-  }
+  // body-parser and http-errors failures (a body that is too big, broken JSON,
+  // an unsupported format) are the sender's mistake, so they are 4xx and not 500.
+  const clientError = clientHttpErrorResponse(err)
+  if (clientError) return res.status(clientError.status).json({ error: clientError.error })
   const prismaResponse = prismaErrorResponse(err)
   if (prismaResponse) {
     // Not a 500, but still worth a line in the log: the message above cannot
