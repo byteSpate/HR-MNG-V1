@@ -3022,6 +3022,36 @@ enum OpportunityStage {
   PO_RECEIVED
 }
 
+/// The customer side of an Opportunity: where the customer is in buying, next to
+/// `OpportunityStage`, which is the work we do. One enum holds every value;
+/// `sales.stages.ts` says which belong to which track and which work stages
+/// allow which of them. Networking names are management's, Software names are
+/// a proposal (spec 2026-11-05).
+enum SalesStage {
+  /// Shared by both tracks.
+  PENDING_INITIAL_MEETING
+  // Networking
+  AWARENESS
+  RESEARCH_AND_INTERNAL_EDUCATION
+  BUDGET_AND_TIMING_DETERMINATION
+  PROJECT_FUNDED_AND_KICKED_OFF
+  SOLUTION_SHARED_COMPETITIVE_POSITION
+  SOLUTION_FRONT_RUNNER
+  RECOMMENDATION_TO_FUND
+  DECISION_TO_FUND
+  PO_RECEIVED_BY_VAR
+  // Software
+  NEED_UNDERSTOOD
+  CUSTOMER_IS_COMPARING_OPTIONS
+  BUDGET_AND_TIMING_KNOWN
+  PROJECT_FUNDED_AND_SCOPE_AGREED
+  WE_ARE_ONE_OF_THE_OPTIONS
+  WE_ARE_THE_FAVOURITE
+  RECOMMENDATION_TO_BUY
+  DECISION_TO_BUY
+  WORK_ORDER_RECEIVED
+}
+
 model Opportunity {
   id             String       @id @default(uuid())
   /// BS-OPP-00001, from the same IdCounter mechanism issuing employee codes
@@ -3084,6 +3114,10 @@ model Opportunity {
   /// Stamped on every stage change, so "stuck in Technical Validation for 40 days" is
   /// one indexed comparison rather than a scan of the audit log.
   stageChangedAt DateTime         @default(now())
+  /// Where the customer is in buying. Null until somebody sets it, and never
+  /// backfilled: an old Opportunity has no honest answer. Set to the track's
+  /// last stage when the Opportunity is Won, and cleared when the track changes.
+  salesStage     SalesStage?
 
   /// The current intention, of which there is exactly one. Previous next steps
   /// live in the audit log rather than in a table of their own.
