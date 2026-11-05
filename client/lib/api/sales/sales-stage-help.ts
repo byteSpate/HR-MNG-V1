@@ -108,3 +108,13 @@ export const SALES_STAGE_HELP: Record<SalesStage, { meaning: string; example: st
     example: "Example: the signed work order arrives.",
   },
 }
+
+/**
+ * The one line the Update stage dialog shows when picking one stage moved the
+ * other (spec 2026-11-05). `moved` says which stage moved. `label` is the name
+ * of the stage it moved to.
+ */
+export function moveNote(moved: "work" | "sales" | null, label: string): string | null {
+  if (moved === null) return null
+  return `${moved === "sales" ? "Sales" : "Work"} stage moved to "${label}".`
+}

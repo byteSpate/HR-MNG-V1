@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query"
 
 import { changeOpportunityStage } from "@/lib/api/sales/opportunities"
 import { useSession } from "@/lib/auth/session-context"
-import type { OpportunityStage, OpportunitySummary } from "@/lib/api/types"
+import type { OpportunityStage, OpportunitySummary, SalesStage } from "@/lib/api/types"
 import { emptyQuoteDraft, quoteBodyOf, todayIso } from "@/lib/quotes"
 import { Field, PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { STAGE_LABEL } from "@/components/sales/shared/sales-shared"
@@ -28,6 +28,8 @@ export function StageChangeDialog({
   stage,
   ask,
   canSkipQuote,
+  salesStage,
+  pairReason,
   onClose,
   onMoved,
 }: {
@@ -35,6 +37,10 @@ export function StageChangeDialog({
   stage: OpportunityStage
   ask: "REQUIRED" | "OPTIONAL"
   canSkipQuote: boolean
+  /** The sales stage to save with this move, when it changes too (spec 2026-11-05). */
+  salesStage?: SalesStage
+  /** The reason for keeping a work stage and sales stage that do not fit. */
+  pairReason?: string
   onClose: () => void
   onMoved: () => void
 }) {
@@ -46,7 +52,7 @@ export function StageChangeDialog({
 
   const move = useMutation({
     mutationFn: (extra: Omit<Parameters<typeof changeOpportunityStage>[2], "stage"> | undefined) =>
-      changeOpportunityStage(accessToken!, deal.id, { stage, ...extra }),
+      changeOpportunityStage(accessToken!, deal.id, { stage, salesStage, pairReason, ...extra }),
     onSuccess: onMoved,
     onError: (err) => setError(toMessage(err)),
   })

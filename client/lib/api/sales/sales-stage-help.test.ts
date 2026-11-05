@@ -39,3 +39,11 @@ test("no help text uses an em-dash, and every example starts with Example", () =
     assert.ok(example.startsWith("Example: "), `${stage}: example should start with "Example: "`)
   }
 })
+
+import { moveNote } from "./sales-stage-help"
+
+test("moveNote tells the user which stage moved, in one sentence", () => {
+  assert.equal(moveNote("sales", "Recommendation to Fund F5 Purchase"), 'Sales stage moved to "Recommendation to Fund F5 Purchase".')
+  assert.equal(moveNote("work", "Commercial Proposal & Negotiation"), 'Work stage moved to "Commercial Proposal & Negotiation".')
+  assert.equal(moveNote(null, "x"), null)
+})

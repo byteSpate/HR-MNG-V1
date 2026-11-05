@@ -9,19 +9,24 @@ import {
 import { opportunityWriteKeys, planWriteKeys } from "@/lib/api/sales/keys"
 import { funnelKeys } from "@/lib/api/sales/funnel-keys"
 import { useSession } from "@/lib/auth/session-context"
-import type { OpportunityStage, OpportunitySummary } from "@/lib/api/types"
+import type { OpportunityStage, OpportunitySummary, SalesStage } from "@/lib/api/types"
 import { CheckboxField, Field, PanelAlert, PanelNotice, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { OPPORTUNITY_STATUS_LABEL, STAGE_LABEL, STAGE_WAITING_ON, daysSince } from "@/components/sales/shared/sales-shared"
-import { quoteAskFor, STAGE_LINK_FIELDS, stagesFor } from "@/lib/api/sales/stages"
+import { quoteAskFor, STAGE_LINK_FIELDS } from "@/lib/api/sales/stages"
+import { fitsPair, nextWorkStage, pickPair } from "@/lib/api/sales/sales-stages"
+import { moveNote, SALES_STAGE_HELP, SALES_STAGE_LABEL } from "@/lib/api/sales/sales-stage-help"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { Panel, PanelHeading } from "@/components/sales/shared/panel"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import { StageLinks } from "@/components/sales/opportunities/stage-links"
 import { onDate } from "@/components/sales/opportunities/lines-panel"
 import { StageChangeDialog } from "@/components/sales/opportunities/stage-change-dialog"
+import { StageUpdateDialog } from "@/components/sales/opportunities/stage-update-dialog"
+
+const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const QUIET = "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
 
 /**
  * Stage and next step. The status itself moved to the Status tab: it is a
@@ -53,7 +58,11 @@ export function WorkflowPanel({
   // the question is asked once per move, not once per render.
   const [stageChanged, setStageChanged] = useState(false)
   // A quote stage asks for the quote first (owner, 2026-10-13), in a box.
-  const [asking, setAsking] = useState<{ stage: OpportunityStage; ask: "REQUIRED" | "OPTIONAL" } | null>(null)
+  const [asking, setAsking] = useState<{ stage: OpportunityStage; ask: "REQUIRED" | "OPTIONAL"; salesStage?: SalesStage } | null>(null)
+  // The Update stage box, with both stages in it.
+  const [updating, setUpdating] = useState(false)
+  // Said once after "Move to the next work stage" when the sales stage had to move too.
+  const [movedNote, setMovedNote] = useState<string | null>(null)
 
   const isOpen = deal.status === "ONGOING"
   const invalidate = () => {
@@ -62,16 +71,28 @@ export function WorkflowPanel({
     }
     queryClient.invalidateQueries({ queryKey: funnelKeys.all })
   }
-  const pickStage = (stage: OpportunityStage) => {
+  const nextWork = nextWorkStage(deal.track, deal.stage)
+  const stagesDisagree = deal.salesStage !== null && !fitsPair(deal.track, deal.stage, deal.salesStage)
+
+  // One tap: the work stage goes on by one, and the sales stage follows only if it must.
+  const moveToNextWorkStage = () => {
+    if (!nextWork) return
     setError(null)
-    const ask = quoteAskFor(stage, deal)
-    if (ask) setAsking({ stage, ask })
-    else stageMutation.mutate(stage)
+    setMovedNote(null)
+    const pair = pickPair(deal.track, { work: deal.stage, sales: deal.salesStage }, { work: nextWork })
+    const salesStage = pair.moved === "sales" ? pair.sales! : undefined
+    const ask = quoteAskFor(nextWork, deal)
+    if (ask) setAsking({ stage: nextWork, ask, salesStage })
+    else stageMutation.mutate({ stage: nextWork, salesStage })
   }
 
   const stageMutation = useMutation({
-    mutationFn: (stage: OpportunityStage) => changeOpportunityStage(accessToken!, deal.id, { stage }),
-    onSuccess: () => { setStageChanged(true); invalidate() },
+    mutationFn: (body: Parameters<typeof changeOpportunityStage>[2]) => changeOpportunityStage(accessToken!, deal.id, body),
+    onSuccess: (_saved, body) => {
+      setStageChanged(true)
+      setMovedNote(body.salesStage ? moveNote("sales", SALES_STAGE_LABEL[body.salesStage]) : null)
+      invalidate()
+    },
     onError: (err) => setError(toMessage(err)),
   })
 
@@ -97,24 +118,39 @@ export function WorkflowPanel({
       <PanelHeading title="Workflow" />
       {error ? <PanelAlert>{error}</PanelAlert> : null}
 
-      {canManage ? (
-        <Field
-          label="Stage"
-          hint={isOpen ? STAGE_WAITING_ON[deal.stage] : `This Opportunity is ${OPPORTUNITY_STATUS_LABEL[deal.status].toLowerCase()}, so its stage stays where it ended.`}
-        >
-          <Select value={deal.stage} onValueChange={(v) => v && v !== deal.stage && pickStage(v as OpportunityStage)} disabled={!isOpen || stageMutation.isPending || !canChangeStage}>
-            <SelectTrigger className="w-full"><SelectValue>{(v: string | null) => STAGE_LABEL[(v ?? deal.stage) as OpportunityStage]}</SelectValue></SelectTrigger>
-            {/* The track decides the stages: a Networking Opportunity has no BRD to send. */}
-            <SelectContent>{stagesFor(deal.track).map((s) => <SelectItem key={s} value={s}>{STAGE_LABEL[s]}</SelectItem>)}</SelectContent>
-          </Select>
-        </Field>
-      ) : (
-        <div>
-          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Stage</div>
+      {/* The work stage is what we do. The sales stage is where the customer is (spec 2026-11-05). */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="min-w-0">
+          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Work stage (what we do)</div>
           <div className="mt-1 text-[13px] font-semibold">{STAGE_LABEL[deal.stage]}</div>
-          <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>{STAGE_WAITING_ON[deal.stage]}</div>
+          <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>
+            {isOpen ? STAGE_WAITING_ON[deal.stage] : `This Opportunity is ${OPPORTUNITY_STATUS_LABEL[deal.status].toLowerCase()}, so its stage stays where it ended.`}
+          </div>
         </div>
-      )}
+        <div className="min-w-0">
+          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Sales stage (where the customer is)</div>
+          <div className="mt-1 text-[13px] font-semibold">{deal.salesStage ? SALES_STAGE_LABEL[deal.salesStage] : "Not set"}</div>
+          <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>
+            {deal.salesStage ? SALES_STAGE_HELP[deal.salesStage].meaning : "Nobody has set this yet."}
+          </div>
+        </div>
+      </div>
+      {stagesDisagree ? (
+        <p className="mt-2 text-[12px] font-semibold text-[#8A4B00]">Check stages: these two do not fit together.</p>
+      ) : null}
+      {canManage && isOpen ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button type="button" disabled={!canChangeStage || stageMutation.isPending} onClick={() => setUpdating(true)} className={PRIMARY}>
+            Update stage
+          </Button>
+          {nextWork ? (
+            <Button type="button" variant="ghost" disabled={!canChangeStage || stageMutation.isPending} onClick={moveToNextWorkStage} className={QUIET}>
+              Move to the next work stage
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {movedNote ? <div className="mt-2"><PanelNotice>{movedNote}</PanelNotice></div> : null}
 
       {stageChanged && !STAGE_LINK_FIELDS[deal.stage] ? (
         <div className="mt-3">
@@ -131,8 +167,23 @@ export function WorkflowPanel({
           stage={asking.stage}
           ask={asking.ask}
           canSkipQuote={canSkipQuote}
+          salesStage={asking.salesStage}
           onClose={() => setAsking(null)}
-          onMoved={() => { setAsking(null); setStageChanged(true); invalidate() }}
+          onMoved={() => {
+            setAsking(null)
+            setStageChanged(true)
+            setMovedNote(asking.salesStage ? moveNote("sales", SALES_STAGE_LABEL[asking.salesStage]) : null)
+            invalidate()
+          }}
+        />
+      ) : null}
+
+      {updating ? (
+        <StageUpdateDialog
+          deal={deal}
+          canSkipQuote={canSkipQuote}
+          onClose={() => setUpdating(false)}
+          onMoved={() => { setUpdating(false); setStageChanged(true); setMovedNote(null); invalidate() }}
         />
       ) : null}
 
