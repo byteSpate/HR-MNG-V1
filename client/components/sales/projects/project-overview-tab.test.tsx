@@ -30,7 +30,7 @@ const summary = (o: Partial<ProjectSummary> = {}): ProjectSummary => ({
 
 const line = (o: Partial<ProjectLineSummary> = {}): ProjectLineSummary => ({
   id: "l1", product: "Firewall", oemBrand: null, model: null, partNo: null, quantity: 1,
-  supplierName: null, lineValue: null, marginPercent: null, note: null, done: null, ...o,
+  supplierName: null, lineValue: null, marginPercent: null, description: null, done: null, ...o,
 })
 
 const html = (p: ProjectSummary) => renderToStaticMarkup(<ProjectOverviewTab project={p} />)
