@@ -147,7 +147,10 @@ export function AccountProfile({
   const [emailOpen, setEmailOpen] = useState(false)
 
   // Their own name once set, and the email until then — never a blank heading.
-  const displayed = account.displayName ?? account.email
+  // One test for the heading and the button, so an empty name can never leave
+  // a blank heading next to an "Add your name" button.
+  const hasName = Boolean(account.displayName)
+  const displayed = account.displayName || account.email
 
   const actions = useQuery({
     queryKey: ["my-actions"],
@@ -189,14 +192,21 @@ export function AccountProfile({
             <h1 className="font-heading text-[21px] font-bold tracking-tight break-words">
               {displayed}
             </h1>
+            {/* One button. With no name the heading is the email, so it says what to
+                do in words; once a name is set it is the small pencil again. */}
             <button
               type="button"
               onClick={() => setNameOpen(true)}
-              aria-label="Edit your name"
-              title="Edit your name"
-              className="rounded p-1 text-[#7A8698] hover:bg-[#F4F6F9] hover:text-[#17191C]"
+              aria-label={hasName ? "Edit your name" : undefined}
+              title={hasName ? "Edit your name" : undefined}
+              className={
+                hasName
+                  ? "rounded p-1 text-[#7A8698] hover:bg-[#F4F6F9] hover:text-[#17191C]"
+                  : "inline-flex items-center gap-1 rounded-md border border-[#E4E9EF] px-2.5 py-1 text-[12.5px] font-semibold text-[#17191C] hover:bg-[#F4F6F9]"
+              }
             >
               <RiPencilLine className="size-3.5" aria-hidden />
+              {hasName ? null : "Add your name"}
             </button>
           </div>
           {/* The email stays visible even once a name is set: it is what they

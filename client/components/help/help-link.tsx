@@ -4,13 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { FLOW, HELP, helpKeyFor } from "@/lib/help/accounting-help"
-
-const ROLE_SEGMENTS = new Set(["admin", "finance", "hr", "manager", "employee"])
-
-function roleRootOf(pathname: string): string {
-  const first = pathname.split("/").filter(Boolean)[0]
-  return ROLE_SEGMENTS.has(first) ? `/${first}` : ""
-}
+import { guideHrefFor } from "@/lib/help/guide-link"
 
 /**
  * An inline "How does this work?" opener for empty states.
@@ -31,7 +25,9 @@ export function HelpLink({ children }: { children?: React.ReactNode }) {
 
   const entry = HELP[key]
   const step = FLOW.find((s) => s.id === entry.step)
-  const href = `${roleRootOf(pathname)}/accounting/guide#${step?.id ?? "setup"}`
+  // Only Admin and Finance have the guide page. For anyone else the link would 404.
+  const href = guideHrefFor(pathname, step?.id)
+  if (!href) return null
 
   return (
     <Link

@@ -87,6 +87,64 @@ describe("errorHandler: Prisma errors", () => {
   })
 })
 
+describe("errorHandler: a body that is too large", () => {
+  it("becomes 413 with an easy English sentence, not a 500", () => {
+    const res = mockRes()
+    const err = Object.assign(new Error("request entity too large"), { type: "entity.too.large", status: 413 })
+    errorHandler(err, {} as any, res, vi.fn())
+    expect(res.status).toHaveBeenCalledWith(413)
+    expect(res.json).toHaveBeenCalledWith({ error: "This request is too big. Send less data and try again." })
+  })
+})
+
+describe("errorHandler: other client mistakes from body-parser", () => {
+  const httpError = (message: string, type: string, status: number) =>
+    Object.assign(new Error(message), { type, status, expose: true })
+
+  it("malformed JSON is a 400 with an easy English sentence, not a 500", () => {
+    const res = mockRes()
+    errorHandler(httpError("Unexpected token", "entity.parse.failed", 400), {} as any, res, vi.fn())
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith({ error: "We could not read this request. Check it and try again." })
+  })
+
+  it("an unsupported charset or encoding is a 415", () => {
+    for (const type of ["charset.unsupported", "encoding.unsupported"]) {
+      const res = mockRes()
+      errorHandler(httpError("x", type, 415), {} as any, res, vi.fn())
+      expect(res.status).toHaveBeenCalledWith(415)
+      expect(res.json).toHaveBeenCalledWith({ error: "This kind of request is not supported. Check it and try again." })
+    }
+  })
+
+  it("a request that was cut off is a 400", () => {
+    const res = mockRes()
+    errorHandler(httpError("request aborted", "request.aborted", 400), {} as any, res, vi.fn())
+    expect(res.status).toHaveBeenCalledWith(400)
+  })
+
+  it("any other exposed 4xx keeps its status and gets a plain sentence", () => {
+    const res = mockRes()
+    errorHandler(httpError("x", "something.else", 431), {} as any, res, vi.fn())
+    expect(res.status).toHaveBeenCalledWith(431)
+    expect(res.json).toHaveBeenCalledWith({ error: "This request could not be used. Check it and try again." })
+  })
+
+  it("a 5xx error, or a 4xx that is not safe to show, stays a logged 500", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    for (const err of [
+      Object.assign(new Error("db down"), { status: 503, expose: false }),
+      Object.assign(new Error("secret"), { status: 400, expose: false }),
+    ]) {
+      const res = mockRes()
+      errorHandler(err, {} as any, res, vi.fn())
+      expect(res.status).toHaveBeenCalledWith(500)
+    }
+    expect(spy).toHaveBeenCalledTimes(2)
+    spy.mockRestore()
+  })
+})
+
 describe("errorHandler: Zod messages in easy English", () => {
   it("an empty string field says it cannot be empty", () => {
     const res = mockRes()
