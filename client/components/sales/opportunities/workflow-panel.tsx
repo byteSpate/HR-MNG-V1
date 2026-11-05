@@ -72,7 +72,8 @@ export function WorkflowPanel({
     queryClient.invalidateQueries({ queryKey: funnelKeys.all })
   }
   const nextWork = nextWorkStage(deal.track, deal.stage)
-  const stagesDisagree = deal.salesStage !== null && !fitsPair(deal.track, deal.stage, deal.salesStage)
+  // Only on an open deal: a closed one cannot be changed, so the notice would have no action.
+  const stagesDisagree = isOpen && deal.salesStage !== null && !fitsPair(deal.track, deal.stage, deal.salesStage)
 
   // One tap: the work stage goes on by one, and the sales stage follows only if it must.
   const moveToNextWorkStage = () => {

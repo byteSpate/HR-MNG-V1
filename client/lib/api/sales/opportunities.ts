@@ -99,7 +99,8 @@ export function changeOpportunityStage(
   body: {
     stage?: OpportunityStage
     /** Where the customer is in buying. Moves with or without `stage` (spec 2026-11-05). */
-    salesStage?: SalesStage
+    /** `null` clears it back to Not set. */
+    salesStage?: SalesStage | null
     /** Saves a pair that does not fit. The reason goes to History. */
     pairReason?: string
     quote?: QuoteBody

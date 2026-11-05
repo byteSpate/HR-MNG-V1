@@ -95,7 +95,7 @@ export interface StagePair {
 export function pickPair(
   track: SalesTrack,
   current: StagePair,
-  change: { work: OpportunityStage } | { sales: SalesStage }
+  change: { work: OpportunityStage } | { sales: SalesStage | null }
 ): StagePair & { moved: "work" | "sales" | null } {
   if ("work" in change) {
     const work = change.work
@@ -103,6 +103,8 @@ export function pickPair(
     return { work, sales: nearestSalesStage(track, work, current.sales), moved: "sales" }
   }
   const sales = change.sales
+  // Not set: there is nothing to fit, so the work stage stays where it is.
+  if (sales === null) return { work: current.work, sales: null, moved: null }
   if (fitsPair(track, current.work, sales)) return { work: current.work, sales, moved: null }
   return { work: nearestWorkStage(track, current.work, sales), sales, moved: "work" }
 }

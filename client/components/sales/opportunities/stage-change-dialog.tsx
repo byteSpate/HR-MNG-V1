@@ -38,7 +38,7 @@ export function StageChangeDialog({
   ask: "REQUIRED" | "OPTIONAL"
   canSkipQuote: boolean
   /** The sales stage to save with this move, when it changes too (spec 2026-11-05). */
-  salesStage?: SalesStage
+  salesStage?: SalesStage | null
   /** The reason for keeping a work stage and sales stage that do not fit. */
   pairReason?: string
   onClose: () => void

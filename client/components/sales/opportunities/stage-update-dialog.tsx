@@ -57,7 +57,7 @@ export function StageUpdateDialog({
   const [quoteFor, setQuoteFor] = useState<{ stage: OpportunityStage; ask: "REQUIRED" | "OPTIONAL" } | null>(null)
 
   const workChanged = draft.work !== deal.stage
-  const salesChanged = draft.sales !== null && draft.sales !== deal.salesStage
+  const salesChanged = draft.sales !== deal.salesStage
   const unchanged = !workChanged && !salesChanged
 
   const move = useMutation({
@@ -66,7 +66,7 @@ export function StageUpdateDialog({
     onError: (err) => setError(toMessage(err)),
   })
 
-  const pick = (change: { work: OpportunityStage } | { sales: SalesStage }) => {
+  const pick = (change: { work: OpportunityStage } | { sales: SalesStage | null }) => {
     const next = pickPair(track, draft, change)
     setUndo(draft)
     setDraft({ work: next.work, sales: next.sales })
@@ -106,7 +106,7 @@ export function StageUpdateDialog({
     if (exception && !reason.trim()) return setError("Write why these two stages go together. The reason is kept in History.")
     const body: Parameters<typeof changeOpportunityStage>[2] = {
       ...(workChanged ? { stage: draft.work } : {}),
-      ...(salesChanged ? { salesStage: draft.sales! } : {}),
+      ...(salesChanged ? { salesStage: draft.sales } : {}),
       ...(exception ? { pairReason: reason.trim() } : {}),
     }
     const ask = workChanged ? quoteAskFor(draft.work, deal) : null
@@ -123,7 +123,7 @@ export function StageUpdateDialog({
         stage={quoteFor.stage}
         ask={quoteFor.ask}
         canSkipQuote={canSkipQuote}
-        salesStage={salesChanged ? draft.sales! : undefined}
+        salesStage={salesChanged ? draft.sales : undefined}
         pairReason={exception ? reason.trim() : undefined}
         onClose={() => setQuoteFor(null)}
         onMoved={onMoved}
@@ -178,13 +178,17 @@ export function StageUpdateDialog({
           <div>
             <div className={`mb-1.5 text-[11.5px] font-semibold ${TONE.muted}`}>Sales stage (where the customer is)</div>
             <ul className="flex flex-col gap-1">
-              {draft.sales === null ? (
-                <li>
-                  <div className={`${OPTION} ${OPTION_ON}`} aria-current="true">
-                    <span className="min-w-0 flex-1">Not set</span>
-                  </div>
-                </li>
-              ) : null}
+              {/* Not set is a real answer. Picking it clears a stage set by mistake. */}
+              <li>
+                <button
+                  type="button"
+                  aria-pressed={draft.sales === null}
+                  onClick={() => pick({ sales: null })}
+                  className={`${OPTION} ${draft.sales === null ? OPTION_ON : OPTION_OFF}`}
+                >
+                  <span className="min-w-0 flex-1">Not set</span>
+                </button>
+              </li>
               {salesStagesFor(track).map((stage, index) => {
                 const on = stage === draft.sales
                 const moves = !on && !fitsPair(track, draft.work, stage)

@@ -131,7 +131,7 @@ export const PAIR_REFUSAL =
  * (1 to 10) in the track's sales list. Work stage names are unique across the
  * two tracks, so one record serves both. A guess made for management to check
  * (spec 2026-11-05). The client keeps a hand copy in
- * `client/lib/api/sales/stages.ts`.
+ * `client/lib/api/sales/sales-stages.ts`.
  */
 const SALES_RANGE: Record<OpportunityStage, readonly [number, number]> = {
   ASSIGNED_QUALIFIED: [1, 4],

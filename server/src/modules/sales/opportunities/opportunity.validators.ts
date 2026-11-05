@@ -87,9 +87,10 @@ export const changeOpportunityStageSchema = z
   .object({
     stage: opportunityStage.optional(),
     /** Where the customer is in buying (spec 2026-11-05). Moves with or without `stage`. */
-    salesStage: salesStage.optional(),
+    /** `null` clears it back to Not set. Missing leaves it as it is. */
+    salesStage: salesStage.nullable().optional(),
     /** Saves a work stage and sales stage that do not fit. The reason goes to History. */
-    pairReason: z.string().trim().min(1).max(300).optional(),
+    pairReason: z.string().trim().min(3, "Write a short reason.").max(300).optional(),
     quote: quoteSchema.optional(),
     skipQuoteReason: skipReasonSchema.optional(),
   })

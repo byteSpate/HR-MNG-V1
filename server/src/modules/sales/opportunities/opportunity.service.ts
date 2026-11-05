@@ -399,9 +399,11 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
       data.stageChangedAt = new Date()
       before.stage = current.stage
       after.stage = first
-      // The two sales lists differ, so the old sales stage means nothing on the new track.
-      data.salesStage = null
-      if (current.salesStage) {
+      // The two sales lists differ, so a sales stage means nothing on the new
+      // track, except the first one, which both tracks share.
+      const keep = current.salesStage && salesStageFitsTrack(current.salesStage, body.track) ? current.salesStage : null
+      data.salesStage = keep
+      if (current.salesStage && keep === null) {
         before.salesStage = current.salesStage
         after.salesStage = null
       }
@@ -437,11 +439,12 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
     if (body.stage !== undefined && !stageFitsTrack(body.stage, current.track)) {
       throw new AppError(400, WRONG_TRACK_STAGE[current.track])
     }
-    if (body.salesStage !== undefined && !salesStageFitsTrack(body.salesStage, current.track)) {
+    if (body.salesStage && !salesStageFitsTrack(body.salesStage, current.track)) {
       throw new AppError(400, WRONG_TRACK_SALES_STAGE[current.track])
     }
     const nextStage = body.stage ?? current.stage
-    const nextSales = body.salesStage ?? current.salesStage ?? null
+    // Missing keeps it, null clears it back to Not set.
+    const nextSales = body.salesStage === undefined ? (current.salesStage ?? null) : body.salesStage
     const workChanged = nextStage !== current.stage
     const salesChanged = nextSales !== (current.salesStage ?? null)
     if (!workChanged && !salesChanged) return presentOpportunity(current)

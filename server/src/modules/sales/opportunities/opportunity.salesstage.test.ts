@@ -29,8 +29,10 @@ import prisma from "../../../config/prisma"
 import { dec } from "../../payroll/payroll.money"
 import { PAIR_REFUSAL, WRONG_TRACK_SALES_STAGE } from "../sales.stages"
 import { changeOpportunityStage, changeOpportunityStatus, getOpportunity, updateOpportunity } from "./opportunity.service"
+import { correctOpportunityStatus } from "./opportunity.status"
 import { changeOpportunityStageSchema } from "./opportunity.validators"
 
+const ADMIN = { sub: "admin-1", role: "SUPER_ADMIN", email: "a@example.com", mustChangePassword: false, salesRole: "SALES_ADMIN" } as any
 const USER = {
   sub: "user-1", role: "EMPLOYEE", email: "sales@example.com",
   mustChangePassword: false, salesRole: "SALES_USER",
@@ -247,5 +249,72 @@ describe("reading an Opportunity", () => {
     await expect(getOpportunity("opp-1", USER)).resolves.toMatchObject({ salesStage: "AWARENESS" })
     found({ salesStage: null })
     await expect(getOpportunity("opp-1", USER)).resolves.toMatchObject({ salesStage: null })
+  })
+})
+
+describe("clearing the sales stage", () => {
+  it("accepts null, so a stage set by mistake can go back to Not set", () => {
+    expect(changeOpportunityStageSchema.safeParse({ salesStage: null }).success).toBe(true)
+  })
+
+  it("clears it, writes the change to History, and leaves the work stage alone", async () => {
+    found({ stage: "DISCOVERY_DESIGN", salesStage: "AWARENESS" })
+    await changeOpportunityStage("opp-1", { salesStage: null }, USER)
+    const data = updateData()
+    expect(data.salesStage).toBeNull()
+    expect(data).not.toHaveProperty("stage")
+    expect(auditRows()).toEqual([expect.objectContaining({ before: { salesStage: "AWARENESS" }, after: { salesStage: null } })])
+  })
+
+  it("does nothing when it is already Not set", async () => {
+    found({ salesStage: null })
+    await changeOpportunityStage("opp-1", { salesStage: null }, USER)
+    expect(prisma.opportunity.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("the reason for a pair that does not fit", () => {
+  it("needs at least three characters", () => {
+    expect(changeOpportunityStageSchema.safeParse({ salesStage: "AWARENESS", pairReason: "x" }).success).toBe(false)
+    expect(changeOpportunityStageSchema.safeParse({ salesStage: "AWARENESS", pairReason: "Paid early" }).success).toBe(true)
+  })
+})
+
+describe("changing the track keeps a sales stage that is valid on both tracks", () => {
+  it("keeps Pending Initial Meeting", async () => {
+    found({ stage: "ASSIGNED_QUALIFIED", salesStage: "PENDING_INITIAL_MEETING" })
+    await updateOpportunity("opp-1", { track: "SOFTWARE_DEVELOPMENT" } as any, USER)
+    expect(updateData().salesStage).toBe("PENDING_INITIAL_MEETING")
+  })
+})
+
+describe("correcting a status that was set by mistake", () => {
+  const wonRow = { before: { status: "ONGOING", salesStage: "AWARENESS" }, after: { status: "WON", salesStage: "PURCHASE_ORDER_RECEIVED" } }
+
+  it("puts back the sales stage the deal had before it was marked Won", async () => {
+    found({ status: "WON", closedAt: NOW, salesStage: "PURCHASE_ORDER_RECEIVED" })
+    vi.mocked(prisma.auditLog.findMany).mockResolvedValue([{ ...wonRow }] as any)
+    await correctOpportunityStatus("opp-1", { status: "ONGOING", reason: "Marked by mistake" }, ADMIN)
+    expect(updateData().salesStage).toBe("AWARENESS")
+  })
+
+  it("puts back Not set when it had none", async () => {
+    found({ status: "WON", closedAt: NOW, salesStage: "PURCHASE_ORDER_RECEIVED" })
+    vi.mocked(prisma.auditLog.findMany).mockResolvedValue([{ before: { status: "ONGOING", salesStage: null }, after: wonRow.after }] as any)
+    await correctOpportunityStatus("opp-1", { status: "LOST", reason: "Customer chose another" }, ADMIN)
+    expect(updateData().salesStage).toBeNull()
+  })
+
+  it("leaves the sales stage alone when History holds no record of the Won", async () => {
+    found({ status: "WON", closedAt: NOW, salesStage: null })
+    vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as any)
+    await correctOpportunityStatus("opp-1", { status: "ONGOING", reason: "Marked by mistake" }, ADMIN)
+    expect(updateData()).not.toHaveProperty("salesStage")
+  })
+
+  it("sets the last sales stage when a closed deal is corrected to Won", async () => {
+    found({ status: "LOST", closedAt: NOW, statusReason: "Price", salesStage: "SOLUTION_FRONT_RUNNER" })
+    await correctOpportunityStatus("opp-1", { status: "WON", reason: "Customer came back" }, ADMIN)
+    expect(updateData().salesStage).toBe("PURCHASE_ORDER_RECEIVED")
   })
 })

@@ -96,3 +96,8 @@ test("nextWorkStage is the next stage of the track, and null at the end", () => 
   assert.equal(nextWorkStage("NETWORKING", "PO_RECEIVED"), null)
   assert.equal(nextWorkStage("SOFTWARE_DEVELOPMENT", "AWAITING_DECISION"), null)
 })
+
+test("pickPair: picking Not set clears the sales stage and never moves the work stage", () => {
+  const result = pickPair("NETWORKING", { work: "DISCOVERY_DESIGN", sales: "AWARENESS" }, { sales: null })
+  assert.deepEqual(result, { work: "DISCOVERY_DESIGN", sales: null, moved: null })
+})
