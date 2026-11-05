@@ -21,7 +21,10 @@ import { presentOpportunity } from "./opportunity.present"
 import { MEETING_MODE_LABEL, MEETING_STATUS_LABEL } from "../meetings/meeting.present"
 import { presentChanges, resolveNames } from "../accounts/history.present"
 import { createTaskIn } from "../tasks/task.service"
-import { BEFORE_QUOTE_STAGES, firstStageFor, quoteAskFor, stageFitsTrack, WRONG_TRACK_STAGE } from "../sales.stages"
+import {
+  BEFORE_QUOTE_STAGES, firstStageFor, lastSalesStageFor, PAIR_REFUSAL, quoteAskFor, salesStageFitsTrack,
+  salesStageFitsWork, stageFitsTrack, WRONG_TRACK_SALES_STAGE, WRONG_TRACK_STAGE,
+} from "../sales.stages"
 import { QUIET_DAYS, QUOTE_DUE_DAYS, STUCK_DAYS } from "../sales.thresholds"
 import { canDo } from "../sales.permissions"
 import { createQuoteIn } from "./quote.write"
@@ -396,6 +399,12 @@ export async function updateOpportunity(id: string, body: UpdateOpportunityBody,
       data.stageChangedAt = new Date()
       before.stage = current.stage
       after.stage = first
+      // The two sales lists differ, so the old sales stage means nothing on the new track.
+      data.salesStage = null
+      if (current.salesStage) {
+        before.salesStage = current.salesStage
+        after.salesStage = null
+      }
     }
     stage("track", body.track, current.track)
     if (body.amount !== undefined && (await tx.opportunityQuote.count({ where: { opportunityId: id } })) > 0) {
@@ -425,15 +434,26 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
     }
     // A stage from the other track would be a value nothing downstream knows
     // how to read, so it is refused here rather than stored.
-    if (!stageFitsTrack(body.stage, current.track)) {
+    if (body.stage !== undefined && !stageFitsTrack(body.stage, current.track)) {
       throw new AppError(400, WRONG_TRACK_STAGE[current.track])
     }
-    if (current.stage === body.stage) return presentOpportunity(current)
+    if (body.salesStage !== undefined && !salesStageFitsTrack(body.salesStage, current.track)) {
+      throw new AppError(400, WRONG_TRACK_SALES_STAGE[current.track])
+    }
+    const nextStage = body.stage ?? current.stage
+    const nextSales = body.salesStage ?? current.salesStage ?? null
+    const workChanged = nextStage !== current.stage
+    const salesChanged = nextSales !== (current.salesStage ?? null)
+    if (!workChanged && !salesChanged) return presentOpportunity(current)
+    // The two stages must fit (spec 2026-11-05). An Opportunity with no sales
+    // stage has nothing to check. A real exception goes through with a reason.
+    const fits = nextSales === null || salesStageFitsWork(current.track, nextStage, nextSales)
+    if (!fits && !body.pairReason) throw new AppError(400, PAIR_REFUSAL)
     // Moving into a quote stage for the first time needs Quote 1, or a
     // reason to move without one (owner, 2026-10-13). The quote's date is the
     // Funnel date, so the Opportunity joins the Funnel here either way. A
     // revision stage may carry a new quote. Every check comes before any write.
-    const ask = quoteAskFor(body.stage, current)
+    const ask = workChanged ? quoteAskFor(nextStage, current) : null
     if (body.quote && ask === null) throw new AppError(400, "Quotes are added from a quote stage.")
     if (body.skipQuoteReason && ask !== "REQUIRED") {
       throw new AppError(400, "Only the first move to a quote stage can skip the quote.")
@@ -442,14 +462,28 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
     if (body.skipQuoteReason && !(await canDo(actor, "opportunity.skip_quote"))) throw new AppError(403, SKIP_OFF)
 
     const now = new Date()
-    await tx.opportunity.update({
-      where: { id }, data: { stage: body.stage, stageChangedAt: now, lastActivityAt: now },
-    })
+    const data: Prisma.OpportunityUpdateInput = { lastActivityAt: now }
+    const before: Record<string, unknown> = {}
+    const after: Record<string, unknown> = {}
+    // The work stage clock only runs when the work stage moves.
+    if (workChanged) {
+      data.stage = nextStage
+      data.stageChangedAt = now
+      before.stage = current.stage
+      after.stage = nextStage
+    }
+    if (salesChanged) {
+      data.salesStage = nextSales
+      before.salesStage = current.salesStage ?? null
+      after.salesStage = nextSales
+    }
+    await tx.opportunity.update({ where: { id }, data })
     await writeAudit(tx, {
       entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
-      before: { stage: current.stage }, after: { stage: body.stage },
+      before: before as Prisma.InputJsonObject, after: after as Prisma.InputJsonObject,
+      ...(fits ? {} : { note: `Pair saved with a reason: ${body.pairReason}` }),
     })
-    if (body.quote) await createQuoteIn(tx, { ...current, stage: body.stage }, body.quote, actor)
+    if (body.quote) await createQuoteIn(tx, { ...current, stage: nextStage }, body.quote, actor)
     if (body.skipQuoteReason) {
       const today = officeDateOf(now)
       await tx.opportunity.update({ where: { id }, data: { offeredOn: today } })
@@ -462,7 +496,8 @@ export async function changeOpportunityStage(id: string, body: ChangeOpportunity
     await emitEvent(tx, {
       type: "sales.opportunity.stage_changed", entity: "OPPORTUNITY", entityId: id,
       actorUserId: actor.sub, subjectEmployeeId: current.ownerEmployeeId, managerEmployeeId: null,
-      title: `${current.serial} moved to ${body.stage}`, href: `/opportunities/${id}`,
+      title: workChanged ? `${current.serial} moved to ${nextStage}` : `${current.serial} sales stage set to ${nextSales}`,
+      href: `/opportunities/${id}`,
     })
     return presentOpportunity(await tx.opportunity.findFirst({ where: { id }, include: INCLUDE }))
   })
@@ -494,6 +529,8 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
       status: body.status, lastActivityAt: now,
       statusReason: body.status === "LOST" || body.status === "CANCELLED" ? body.statusReason!.trim() : null,
       closedAt: now,
+      // Won means the customer has ordered, so it is the last sales stage (spec 2026-11-05).
+      ...(body.status === "WON" ? { salesStage: lastSalesStageFor(current.track) } : {}),
       ...(body.status === "WON" && current.wonByEmployeeId === null
         ? { wonBy: { connect: { id: current.ownerEmployeeId } } } : {}),
     }
@@ -504,7 +541,9 @@ export async function changeOpportunityStatus(id: string, body: ChangeOpportunit
     if (body.status === "WON") await ensureCustomerForAccount(tx, current.salesAccountId, "skip-on-conflict", actor.sub)
     await writeAudit(tx, {
       entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
-      before: { status: current.status }, after: { status: body.status }, note: body.statusReason,
+      before: { status: current.status, ...(body.status === "WON" ? { salesStage: current.salesStage ?? null } : {}) },
+      after: { status: body.status, ...(body.status === "WON" ? { salesStage: lastSalesStageFor(current.track) } : {}) },
+      note: body.statusReason,
     })
     await emitEvent(tx, {
       type: body.status === "WON" ? "sales.opportunity.won" : "sales.opportunity.closed",

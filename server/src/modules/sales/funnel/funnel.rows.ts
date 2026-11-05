@@ -262,6 +262,7 @@ export function composeFunnel(input: ComposeFunnelInput): FunnelGrid {
       amount: money(deal.amount),
       status: deal.status,
       stage: deal.stage,
+      salesStage: deal.salesStage,
       closingDate: iso(deal.expectedCloseDate),
       closingDateLabel: monthYearOf(deal.expectedCloseDate),
       closingDateSlipped: slip.slipped,

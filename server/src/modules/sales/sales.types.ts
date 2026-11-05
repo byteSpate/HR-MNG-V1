@@ -1,6 +1,7 @@
 import type {
   OpportunityStage,
   OpportunityStatus,
+  SalesStage,
   SalesCommentKind,
   SalesTrack,
   SalesAccountStatus,
@@ -71,6 +72,8 @@ export interface OpportunitySummary {
   closedAt: string | null
   stage: OpportunityStage
   stageChangedAt: string
+  /** Where the customer is in buying. Null until somebody sets it (spec 2026-11-05). */
+  salesStage: SalesStage | null
   nextStep: string | null
   nextStepDueOn: string | null
   /** Whether the requirement includes software (§26.9). Null until answered. */

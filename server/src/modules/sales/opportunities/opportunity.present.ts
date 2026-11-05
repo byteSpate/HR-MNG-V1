@@ -41,6 +41,8 @@ export function presentOpportunity(row: any, canManage = true, canEditQuotes = c
     oemAccountManager: row.oemAccountManager ?? null, status: row.status,
     statusReason: row.statusReason ?? null, closedAt: row.closedAt?.toISOString() ?? null,
     stage: row.stage, stageChangedAt: row.stageChangedAt.toISOString(),
+    // Where the customer is in buying. Null until somebody sets it (spec 2026-11-05).
+    salesStage: row.salesStage ?? null,
     nextStep: row.nextStep ?? null,
     nextStepDueOn: row.nextStepDueOn?.toISOString().slice(0, 10) ?? null,
     // The weekly report Application column, answered on the deal (§26.9).
