@@ -45,8 +45,8 @@ export function StageChangeDialog({
   const [error, setError] = useState<string | null>(null)
 
   const move = useMutation({
-    mutationFn: (extra: Parameters<typeof changeOpportunityStage>[3]) =>
-      changeOpportunityStage(accessToken!, deal.id, stage, extra),
+    mutationFn: (extra: Omit<Parameters<typeof changeOpportunityStage>[2], "stage"> | undefined) =>
+      changeOpportunityStage(accessToken!, deal.id, { stage, ...extra }),
     onSuccess: onMoved,
     onError: (err) => setError(toMessage(err)),
   })

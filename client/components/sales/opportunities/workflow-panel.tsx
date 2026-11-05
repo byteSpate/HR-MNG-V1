@@ -70,7 +70,7 @@ export function WorkflowPanel({
   }
 
   const stageMutation = useMutation({
-    mutationFn: (stage: OpportunityStage) => changeOpportunityStage(accessToken!, deal.id, stage),
+    mutationFn: (stage: OpportunityStage) => changeOpportunityStage(accessToken!, deal.id, { stage }),
     onSuccess: () => { setStageChanged(true); invalidate() },
     onError: (err) => setError(toMessage(err)),
   })
