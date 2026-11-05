@@ -6,16 +6,7 @@ import { RiQuestionLine } from "@remixicon/react"
 
 import { Button } from "@/components/ui/button"
 import { FLOW, HELP, helpKeyFor } from "@/lib/help/accounting-help"
-
-const ROLE_SEGMENTS = new Set(["admin", "finance", "hr", "manager", "employee"])
-
-/** `/finance/accounting/journals` → `/finance`. Falls back to the pathname's
- *  own root when the first segment is not a known role, which cannot happen
- *  from inside a role dashboard but keeps the link well-formed either way. */
-function roleRootOf(pathname: string): string {
-  const first = pathname.split("/").filter(Boolean)[0]
-  return ROLE_SEGMENTS.has(first) ? `/${first}` : ""
-}
+import { guideHrefFor } from "@/lib/help/guide-link"
 
 /**
  * The `?` control in the header.
@@ -36,7 +27,10 @@ export function HelpTrigger() {
 
   const entry = HELP[key]
   const step = FLOW.find((s) => s.id === entry.step)
-  const href = `${roleRootOf(pathname)}/accounting/guide#${step?.id ?? "setup"}`
+  // Only Admin and Finance have the guide page. For anyone else the link would
+  // 404 (HR had a `?` on Costs, Expenses, Payroll and Settlements that did).
+  const href = guideHrefFor(pathname, step?.id)
+  if (!href) return null
 
   return (
     <Button
