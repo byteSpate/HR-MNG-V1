@@ -140,6 +140,17 @@ export function StageUpdateDialog({
           <DialogTitle>Update stage</DialogTitle>
         </DialogHeader>
 
+        {/* At the top, so the answer to a pick is seen without scrolling. */}
+        {note ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#E8F5EC] px-3 py-2 text-[12.5px] text-[#1B6B3A]" role="status">
+            <span>{note}</span>
+            <span className="flex gap-1">
+              <Button type="button" variant="ghost" onClick={undoPick} className={QUIET}>Undo</Button>
+              <Button type="button" variant="ghost" onClick={keepAsPicked} className={QUIET}>Keep both as I picked</Button>
+            </span>
+          </div>
+        ) : null}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <div className={`mb-1.5 text-[11.5px] font-semibold ${TONE.muted}`}>Work stage (what we do)</div>
@@ -201,16 +212,6 @@ export function StageUpdateDialog({
             <div className="font-semibold">{SALES_STAGE_LABEL[draft.sales!]}</div>
             <div className={TONE.muted}>{salesHelp.meaning}</div>
             <div className={TONE.muted}>{salesHelp.example}</div>
-          </div>
-        ) : null}
-
-        {note ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#E8F5EC] px-3 py-2 text-[12.5px] text-[#1B6B3A]" role="status">
-            <span>{note}</span>
-            <span className="flex gap-1">
-              <Button type="button" variant="ghost" onClick={undoPick} className={QUIET}>Undo</Button>
-              <Button type="button" variant="ghost" onClick={keepAsPicked} className={QUIET}>Keep both as I picked</Button>
-            </span>
           </div>
         ) : null}
 

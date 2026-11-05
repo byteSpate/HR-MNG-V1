@@ -27,7 +27,7 @@ test("each track has ten sales stages, and the two lists share only the first", 
   assert.equal(salesStagesFor("NETWORKING"), NETWORKING_SALES_STAGES)
   assert.equal(salesStagesFor("SOFTWARE_DEVELOPMENT"), SOFTWARE_SALES_STAGES)
   assert.deepEqual(NETWORKING_SALES_STAGES.filter((s) => SOFTWARE_SALES_STAGES.includes(s)), ["PENDING_INITIAL_MEETING"])
-  assert.equal(NETWORKING_SALES_STAGES[9], "PO_RECEIVED_BY_VAR")
+  assert.equal(NETWORKING_SALES_STAGES[9], "PURCHASE_ORDER_RECEIVED")
   assert.equal(SOFTWARE_SALES_STAGES[9], "WORK_ORDER_RECEIVED")
 })
 

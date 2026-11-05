@@ -15,9 +15,9 @@ export const SALES_STAGE_LABEL: Record<SalesStage, string> = {
   PROJECT_FUNDED_AND_KICKED_OFF: "Project Funded and Kicked-Off",
   SOLUTION_SHARED_COMPETITIVE_POSITION: "Solution - Shared Competitive Position",
   SOLUTION_FRONT_RUNNER: "Solution - Front Runner",
-  RECOMMENDATION_TO_FUND: "Recommendation to Fund F5 Purchase",
-  DECISION_TO_FUND: "Decision to Fund F5 Purchase",
-  PO_RECEIVED_BY_VAR: "PO Received by VAR",
+  RECOMMENDATION_TO_FUND: "Recommendation to Fund Purchase",
+  DECISION_TO_FUND: "Decision to Fund Purchase",
+  PURCHASE_ORDER_RECEIVED: "PO Received",
   // Software
   NEED_UNDERSTOOD: "Need Understood",
   CUSTOMER_IS_COMPARING_OPTIONS: "Customer Is Comparing Options",
@@ -67,7 +67,7 @@ export const SALES_STAGE_HELP: Record<SalesStage, { meaning: string; example: st
     meaning: "The people who approve money say yes.",
     example: "Example: the ABC Bank board approves the purchase.",
   },
-  PO_RECEIVED_BY_VAR: {
+  PURCHASE_ORDER_RECEIVED: {
     meaning: "The purchase order has arrived.",
     example: "Example: ABC Bank's purchase order is in our hands.",
   },

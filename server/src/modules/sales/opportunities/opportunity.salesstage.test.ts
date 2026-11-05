@@ -126,7 +126,7 @@ describe("moving the sales stage", () => {
 describe("a pair that does not fit", () => {
   it("is refused with plain words, and nothing is written", async () => {
     found({ stage: "DISCOVERY_DESIGN" })
-    await expect(changeOpportunityStage("opp-1", { salesStage: "PO_RECEIVED_BY_VAR" }, USER))
+    await expect(changeOpportunityStage("opp-1", { salesStage: "PURCHASE_ORDER_RECEIVED" }, USER))
       .rejects.toMatchObject({ statusCode: 400, message: PAIR_REFUSAL })
     expect(prisma.opportunity.update).not.toHaveBeenCalled()
     expect(prisma.auditLog.create).not.toHaveBeenCalled()
@@ -134,8 +134,8 @@ describe("a pair that does not fit", () => {
 
   it("is saved when a reason is given, and the reason goes to History", async () => {
     found({ stage: "DISCOVERY_DESIGN" })
-    await changeOpportunityStage("opp-1", { salesStage: "PO_RECEIVED_BY_VAR", pairReason: "Customer paid in advance" }, USER)
-    expect(updateData().salesStage).toBe("PO_RECEIVED_BY_VAR")
+    await changeOpportunityStage("opp-1", { salesStage: "PURCHASE_ORDER_RECEIVED", pairReason: "Customer paid in advance" }, USER)
+    expect(updateData().salesStage).toBe("PURCHASE_ORDER_RECEIVED")
     expect(auditRows()[0].note).toContain("Customer paid in advance")
   })
 
@@ -194,7 +194,7 @@ describe("Won, Lost and Cancelled", () => {
   it("Won sets the last Networking sales stage in the same write as the status", async () => {
     found({ stage: "DISCOVERY_DESIGN", salesStage: "AWARENESS" })
     await changeOpportunityStatus("opp-1", { status: "WON" }, USER)
-    expect(updateData()).toMatchObject({ status: "WON", salesStage: "PO_RECEIVED_BY_VAR" })
+    expect(updateData()).toMatchObject({ status: "WON", salesStage: "PURCHASE_ORDER_RECEIVED" })
     expect(prisma.opportunity.update).toHaveBeenCalledTimes(1)
   })
 
@@ -215,7 +215,7 @@ describe("Won, Lost and Cancelled", () => {
     await changeOpportunityStatus("opp-1", { status: "WON" }, USER)
     const row = auditRows()[0]
     expect(row.before).toMatchObject({ status: "ONGOING", salesStage: "DECISION_TO_FUND" })
-    expect(row.after).toMatchObject({ status: "WON", salesStage: "PO_RECEIVED_BY_VAR" })
+    expect(row.after).toMatchObject({ status: "WON", salesStage: "PURCHASE_ORDER_RECEIVED" })
   })
 
   for (const status of ["LOST", "CANCELLED"] as const) {

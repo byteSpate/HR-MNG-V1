@@ -94,7 +94,7 @@ describe("sales stages (the customer side)", () => {
     expect(NETWORKING_SALES_STAGES).toHaveLength(10)
     expect(NETWORKING_SALES_STAGES[0]).toBe("PENDING_INITIAL_MEETING")
     expect(NETWORKING_SALES_STAGES[4]).toBe("PROJECT_FUNDED_AND_KICKED_OFF")
-    expect(NETWORKING_SALES_STAGES[9]).toBe("PO_RECEIVED_BY_VAR")
+    expect(NETWORKING_SALES_STAGES[9]).toBe("PURCHASE_ORDER_RECEIVED")
     expect(salesStagesFor("NETWORKING")).toBe(NETWORKING_SALES_STAGES)
   })
 
@@ -115,7 +115,7 @@ describe("sales stages (the customer side)", () => {
   })
 
   it("names the last stage of each track (used when an Opportunity is Won)", () => {
-    expect(lastSalesStageFor("NETWORKING")).toBe("PO_RECEIVED_BY_VAR")
+    expect(lastSalesStageFor("NETWORKING")).toBe("PURCHASE_ORDER_RECEIVED")
     expect(lastSalesStageFor("SOFTWARE_DEVELOPMENT")).toBe("WORK_ORDER_RECEIVED")
   })
 

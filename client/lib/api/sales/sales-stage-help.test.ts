@@ -20,7 +20,7 @@ test("Networking names are management's, exactly as written", () => {
     "Pending Initial Meeting", "Awareness", "Research and Internal Education",
     "Budget and Timing Determination", "Project Funded and Kicked-Off",
     "Solution - Shared Competitive Position", "Solution - Front Runner",
-    "Recommendation to Fund F5 Purchase", "Decision to Fund F5 Purchase", "PO Received by VAR",
+    "Recommendation to Fund Purchase", "Decision to Fund Purchase", "PO Received",
   ])
 })
 
@@ -43,7 +43,7 @@ test("no help text uses an em-dash, and every example starts with Example", () =
 import { moveNote } from "./sales-stage-help"
 
 test("moveNote tells the user which stage moved, in one sentence", () => {
-  assert.equal(moveNote("sales", "Recommendation to Fund F5 Purchase"), 'Sales stage moved to "Recommendation to Fund F5 Purchase".')
+  assert.equal(moveNote("sales", "Recommendation to Fund Purchase"), 'Sales stage moved to "Recommendation to Fund Purchase".')
   assert.equal(moveNote("work", "Commercial Proposal & Negotiation"), 'Work stage moved to "Commercial Proposal & Negotiation".')
   assert.equal(moveNote(null, "x"), null)
 })
