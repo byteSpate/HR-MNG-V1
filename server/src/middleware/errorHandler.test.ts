@@ -87,6 +87,16 @@ describe("errorHandler: Prisma errors", () => {
   })
 })
 
+describe("errorHandler: a body that is too large", () => {
+  it("becomes 413 with an easy English sentence, not a 500", () => {
+    const res = mockRes()
+    const err = Object.assign(new Error("request entity too large"), { type: "entity.too.large", status: 413 })
+    errorHandler(err, {} as any, res, vi.fn())
+    expect(res.status).toHaveBeenCalledWith(413)
+    expect(res.json).toHaveBeenCalledWith({ error: "This request is too big. Send less data and try again." })
+  })
+})
+
 describe("errorHandler: Zod messages in easy English", () => {
   it("an empty string field says it cannot be empty", () => {
     const res = mockRes()

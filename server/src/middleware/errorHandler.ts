@@ -87,6 +87,11 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   if (err instanceof ZodError) {
     return res.status(400).json({ error: validationMessage(err) })
   }
+  // body-parser refuses a JSON body over the limit with this error. It is the
+  // sender's mistake, so it is a 413 and not a 500.
+  if (err instanceof Error && (err as { type?: unknown }).type === "entity.too.large") {
+    return res.status(413).json({ error: "This request is too big. Send less data and try again." })
+  }
   const prismaResponse = prismaErrorResponse(err)
   if (prismaResponse) {
     // Not a 500, but still worth a line in the log: the message above cannot

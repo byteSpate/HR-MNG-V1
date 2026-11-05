@@ -43,6 +43,14 @@ import payrollRoutes from "./modules/payroll/payroll.routes"
 import statementRoutes from "./modules/statements/statements.routes"
 import postingRoutes from "./modules/posting/posting.routes"
 
+/**
+ * The most JSON a request body may carry. The biggest real body is an
+ * announcement of 10,000 characters (about 40 KB in the worst text), so 256 KB
+ * is about six times that. File uploads (imports, photos) go through multer
+ * and do not use this limit.
+ */
+export const JSON_BODY_LIMIT_BYTES = 256 * 1024
+
 const app = express()
 
 // Heroku terminates TLS at its router and forwards the real client address in
@@ -64,7 +72,7 @@ app.use(
   })
 )
 app.use(cookieParser())
-app.use(express.json())
+app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }))
 // After the body parser on purpose: see request-metrics.ts.
 app.use(requestMetrics({ log: env.PERF_LOG === "on" }))
 // "dev" colours the line for a terminal. On Heroku that would put colour codes
