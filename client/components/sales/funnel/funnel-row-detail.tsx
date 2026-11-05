@@ -21,6 +21,7 @@ import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import type { FunnelCellField, FunnelRemark, FunnelRow } from "@/lib/api/types"
 import { longDay, quoteTitle } from "@/lib/quotes"
+import { SALES_STAGE_LABEL } from "@/lib/api/sales/sales-stage-help"
 import { taka } from "@/components/sales/shared/sales-shared"
 import { FunnelCell } from "./funnel-cell"
 import { cn } from "@/lib/utils"
@@ -128,6 +129,8 @@ export function FunnelRowDetail({
         <dl className="grid grid-cols-[8rem_1fr] items-start gap-x-3 gap-y-1.5 text-sm">
           <dt className={label}>Stage</dt>
           <dd>{STAGE_LABEL[row.stage] ?? row.stage}</dd>
+          <dt className={label}>Sales Stage</dt>
+          <dd>{row.salesStage ? SALES_STAGE_LABEL[row.salesStage] : <span className={TONE.muted}>Not set</span>}</dd>
           <dt className={label}>Use Case</dt>
           <dd><FunnelCell value={row.useCase} editable={editable} placeholder="Add" onSave={save("useCase")} /></dd>
           <dt className={label}>Next Step</dt>

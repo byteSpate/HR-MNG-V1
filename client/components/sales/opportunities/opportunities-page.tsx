@@ -21,6 +21,7 @@ import {
 } from "@/lib/api/sales/opportunities"
 import { salesKeys } from "@/lib/api/sales/keys"
 import { TRACK_LABEL } from "@/lib/api/sales/stages"
+import { SALES_STAGE_LABEL } from "@/lib/api/sales/sales-stage-help"
 import { useSession } from "@/lib/auth/session-context"
 import type { OpportunityStage, OpportunityStatus, OpportunitySummary } from "@/lib/api/types"
 import { PageHeader } from "@/components/dashboard/page-header"
@@ -97,6 +98,7 @@ type ColumnKey =
   | "account"
   | "name"
   | "stage"
+  | "salesStage"
   | "status"
   | "value"
   | "close"
@@ -112,6 +114,7 @@ const COLUMN_LABEL: Record<ColumnKey, string> = {
   account: "Account",
   name: "Opportunity",
   stage: "Stage",
+  salesStage: "Sales stage",
   status: "Status",
   value: "Value",
   close: "Expected close",
@@ -129,6 +132,7 @@ const COLUMN_WIDTH: Record<ColumnKey, string> = {
   account: "minmax(0,1.2fr)",
   name: "minmax(0,1.4fr)",
   stage: "minmax(0,1fr)",
+  salesStage: "minmax(0,1fr)",
   status: "auto",
   value: "auto",
   close: "auto",
@@ -193,6 +197,16 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
           <span className="block min-w-0">
             <span className="block truncate">{stageSentence(deal.status, deal.stage)}</span>
             <StageBar status={deal.status} stage={deal.stage} track={deal.track} className="mt-1 max-w-[9rem]" />
+          </span>
+        ),
+      }
+    case "salesStage":
+      // Where the customer is in buying (spec 2026-11-05). "Not set" is a real
+      // answer for an Opportunity nobody has placed yet, so it is never blank.
+      return {
+        node: (
+          <span className={`block truncate ${deal.salesStage ? "" : TONE.muted}`}>
+            {deal.salesStage ? SALES_STAGE_LABEL[deal.salesStage] : "Not set"}
           </span>
         ),
       }
