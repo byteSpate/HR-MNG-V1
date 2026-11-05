@@ -50,6 +50,7 @@ const FIELD_LABEL: Record<string, string> = {
   expectedQuoteOn: "Expected quote date",
   oemAccountManager: "OEM account manager",
   stage: "Stage",
+  salesStage: "Sales stage",
   nextStep: "Next step",
   nextStepDueOn: "Next step due",
 }
@@ -85,7 +86,7 @@ const isIdField = (field: string) => EMPLOYEE_ID_FIELDS.has(field) || USER_ID_FI
  * NGO as "Ngo". Whether a value is an enum is a fact about the column, never
  * about how the text happens to be capitalised.
  */
-const ENUM_FIELDS = new Set(["status", "salesRole", "employmentStatus", "exitReason", "channel", "stage", "track"])
+const ENUM_FIELDS = new Set(["status", "salesRole", "employmentStatus", "exitReason", "channel", "stage", "salesStage", "track"])
 
 /** ACTIVE → Active, DO_NOT_CONTACT → Do not contact. */
 function humaniseEnum(value: string): string {
