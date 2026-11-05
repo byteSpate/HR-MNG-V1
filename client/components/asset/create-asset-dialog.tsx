@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { formatAssetDate } from "@/components/asset/asset-shared"
+import { editDate, editText } from "@/lib/forms"
 import { PanelAlert } from "@/components/dashboard/record-kit"
 
 /** `<input type="date">` wants YYYY-MM-DD; the API sends a full ISO string. */
@@ -159,6 +160,24 @@ function AssetForm({
 
   const saveMutation = useMutation({
     mutationFn: () => {
+      if (asset) {
+        // An edit sends `null` for a box the user emptied, and leaves out a
+        // box that did not change, so a field can be cleared.
+        return updateAsset(accessToken!, asset.id, {
+          categoryId,
+          name: name.trim(),
+          serialNumber: serialNumber.trim() || undefined,
+          model: editText(model, asset.model),
+          notes: editText(notes, asset.notes),
+          purchaseDate: purchaseDate || undefined,
+          purchaseCost: purchaseCost ? Number(purchaseCost) : undefined,
+          currency,
+          vendor: editText(vendor, asset.vendor),
+          warrantyExpiry: editDate(warrantyExpiry, toDateInput(asset.warrantyExpiry)),
+          departmentId: departmentId || undefined,
+          location: editText(location, asset.location),
+        })
+      }
       const input = {
         categoryId,
         name: name.trim(),
@@ -173,7 +192,7 @@ function AssetForm({
         departmentId: departmentId || undefined,
         location: location.trim() || undefined,
       }
-      return asset ? updateAsset(accessToken!, asset.id, input) : createAsset(accessToken!, input)
+      return createAsset(accessToken!, input)
     },
     onSuccess: () => {
       onOpenChange(false)

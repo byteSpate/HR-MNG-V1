@@ -1324,7 +1324,17 @@ export interface CreateAssetInput {
   location?: string
 }
 
-export type UpdateAssetInput = Partial<CreateAssetInput>
+// On an edit, a missing key keeps the field and `null` clears it. Only these
+// five can be cleared; the server refuses `null` for the rest.
+export type UpdateAssetInput = Partial<
+  Omit<CreateAssetInput, "model" | "notes" | "vendor" | "location" | "warrantyExpiry">
+> & {
+  model?: string | null
+  notes?: string | null
+  vendor?: string | null
+  location?: string | null
+  warrantyExpiry?: string | null
+}
 
 /**
  * Required on retire and mark-lost. Retiring an asset is a write-off and

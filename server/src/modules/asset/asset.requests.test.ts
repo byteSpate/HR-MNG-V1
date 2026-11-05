@@ -495,7 +495,7 @@ describe("submitRequest — supplies and quantity", () => {
       submitRequest({ kind: "NEW_ITEM", categoryId: "cat-m", quantity: 2, reason: "Dual screen" }, emp)
     ).rejects.toMatchObject({
       statusCode: 400,
-      message: "Monitor is issued one at a time — submit one request per item.",
+      message: "Monitor is issued one at a time. Submit one request for each item.",
     })
   })
 })

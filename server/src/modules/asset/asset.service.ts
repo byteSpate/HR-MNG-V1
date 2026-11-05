@@ -491,7 +491,9 @@ export async function updateAsset(
       if (input.warrantyExpiry !== oldIso) {
         before.warrantyExpiry = oldIso
         after.warrantyExpiry = input.warrantyExpiry
-        data.warrantyExpiry = new Date(`${input.warrantyExpiry}T00:00:00.000Z`)
+        // `null` clears the date.
+        data.warrantyExpiry =
+          input.warrantyExpiry === null ? null : new Date(`${input.warrantyExpiry}T00:00:00.000Z`)
       }
     }
     if (input.departmentId !== undefined && input.departmentId !== existing.departmentId) {

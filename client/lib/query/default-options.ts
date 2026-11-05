@@ -12,7 +12,26 @@ export const defaultQueryOptions: DefaultOptions = {
   queries: {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    retry: shouldRetryQuery,
   },
+}
+
+/**
+ * A refused request (a 4xx answer) says "no" about the request itself. Asking
+ * again gives the same answer, so retrying only made the error screen wait
+ * about 20 seconds. A server fault (5xx), a lost connection, a timeout (408)
+ * and a rate limit (429) can pass on a later try, so those keep TanStack's
+ * default of 3 retries.
+ *
+ * It reads `status` instead of using `instanceof ApiError`, so this file does
+ * not pull in the token code. A query that sets its own `retry` still wins.
+ */
+export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status
+  if (typeof status === "number" && status >= 400 && status < 500 && status !== 408 && status !== 429) {
+    return false
+  }
+  return failureCount < 3
 }
 
 /**

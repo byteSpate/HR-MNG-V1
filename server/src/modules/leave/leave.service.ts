@@ -740,7 +740,7 @@ export async function approveLeaveRequest(
     const entitlement = balance?.entitlement ?? 0
     const alreadyApproved = balance?.used ?? 0
     if (alreadyApproved + days > entitlement) {
-      throw new AppError(409, "Balance is no longer sufficient — another request was approved first")
+      throw new AppError(409, "The balance is not enough now. Another request was approved first.")
     }
   }
 

@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { RiKey2Line } from "@remixicon/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { cancelNationalIdChangeRequest, getMyProfile } from "@/lib/api/employees"
@@ -121,15 +123,26 @@ function StaffProfile({
         avatarEditable={employee.editableFields.length > 0}
         onAvatarChanged={onRefresh}
         action={
-          canEdit ? (
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
-              onClick={() => setEditOpen(true)}
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/change-password" />}
             >
-              Edit my details
+              <RiKey2Line className="size-4" aria-hidden />
+              Change password
             </Button>
-          ) : null
+            {canEdit ? (
+              <Button
+                type="button"
+                className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+                onClick={() => setEditOpen(true)}
+              >
+                Edit my details
+              </Button>
+            ) : null}
+          </div>
         }
       />
 

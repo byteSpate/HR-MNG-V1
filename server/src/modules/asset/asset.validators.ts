@@ -18,7 +18,16 @@ export const createAssetSchema = z.object({
   location: z.string().trim().max(200).optional(),
 })
 
-export const updateAssetSchema = createAssetSchema.partial()
+// On an edit, a missing key means "keep" and `null` means "clear". Only the
+// optional text fields and the warranty date can be cleared; name, tag and
+// serial number keep their rules.
+export const updateAssetSchema = createAssetSchema.partial().extend({
+  model: createAssetSchema.shape.model.nullable(),
+  notes: createAssetSchema.shape.notes.nullable(),
+  vendor: createAssetSchema.shape.vendor.nullable(),
+  location: createAssetSchema.shape.location.nullable(),
+  warrantyExpiry: isoDate.nullable().optional(),
+})
 
 // A note is required, not optional. Retiring an asset is a write-off and
 // marking one lost is an accusation; neither should be possible without a
