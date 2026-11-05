@@ -189,15 +189,28 @@ export function AccountProfile({
             <h1 className="font-heading text-[21px] font-bold tracking-tight break-words">
               {displayed}
             </h1>
-            <button
-              type="button"
-              onClick={() => setNameOpen(true)}
-              aria-label="Edit your name"
-              title="Edit your name"
-              className="rounded p-1 text-[#7A8698] hover:bg-[#F4F6F9] hover:text-[#17191C]"
-            >
-              <RiPencilLine className="size-3.5" aria-hidden />
-            </button>
+            {account.displayName ? (
+              <button
+                type="button"
+                onClick={() => setNameOpen(true)}
+                aria-label="Edit your name"
+                title="Edit your name"
+                className="rounded p-1 text-[#7A8698] hover:bg-[#F4F6F9] hover:text-[#17191C]"
+              >
+                <RiPencilLine className="size-3.5" aria-hidden />
+              </button>
+            ) : (
+              // No name yet, so the heading is the email. A clear words-button
+              // says what to do; the small pencil was easy to miss.
+              <button
+                type="button"
+                onClick={() => setNameOpen(true)}
+                className="inline-flex items-center gap-1 rounded-md border border-[#E4E9EF] px-2.5 py-1 text-[12.5px] font-semibold text-[#17191C] hover:bg-[#F4F6F9]"
+              >
+                <RiPencilLine className="size-3.5" aria-hidden />
+                Add your name
+              </button>
+            )}
           </div>
           {/* The email stays visible even once a name is set: it is what they
               sign in with, and the heading no longer says it. */}
