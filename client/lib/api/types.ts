@@ -2802,6 +2802,35 @@ export type OpportunityStage =
   | "CUSTOMER_PROCUREMENT"
   | "PO_RECEIVED"
 
+/**
+ * Where the customer is in buying (spec 2026-11-05). It sits next to
+ * `OpportunityStage`, which is the work we do. A hand copy of the server's
+ * `SalesStage` enum; `lib/api/sales/sales-stages.ts` says which belongs to
+ * which track.
+ */
+export type SalesStage =
+  | "PENDING_INITIAL_MEETING"
+  // Networking
+  | "AWARENESS"
+  | "RESEARCH_AND_INTERNAL_EDUCATION"
+  | "BUDGET_AND_TIMING_DETERMINATION"
+  | "PROJECT_FUNDED_AND_KICKED_OFF"
+  | "SOLUTION_SHARED_COMPETITIVE_POSITION"
+  | "SOLUTION_FRONT_RUNNER"
+  | "RECOMMENDATION_TO_FUND"
+  | "DECISION_TO_FUND"
+  | "PURCHASE_ORDER_RECEIVED"
+  // Software
+  | "NEED_UNDERSTOOD"
+  | "CUSTOMER_IS_COMPARING_OPTIONS"
+  | "BUDGET_AND_TIMING_KNOWN"
+  | "PROJECT_FUNDED_AND_SCOPE_AGREED"
+  | "WE_ARE_ONE_OF_THE_OPTIONS"
+  | "WE_ARE_THE_FAVOURITE"
+  | "RECOMMENDATION_TO_BUY"
+  | "DECISION_TO_BUY"
+  | "WORK_ORDER_RECEIVED"
+
 export interface OpportunityLineSummary {
   id: string
   opportunityId: string
@@ -2872,6 +2901,8 @@ export interface OpportunitySummary {
   closedAt: string | null
   stage: OpportunityStage
   stageChangedAt: string
+  /** Where the customer is in buying. Null until somebody sets it (spec 2026-11-05). */
+  salesStage: SalesStage | null
   nextStep: string | null
   nextStepDueOn: string | null
   ownerEmployeeId: string
@@ -3504,6 +3535,8 @@ export interface FunnelRow {
   amount: string | null
   status: OpportunityStatus
   stage: OpportunityStage
+  /** Where the customer is in buying, next to the work stage. Null until set. */
+  salesStage: SalesStage | null
   closingDate: string | null
   /** "Oct 2026", or empty. Never a day number (§27.6). */
   closingDateLabel: string

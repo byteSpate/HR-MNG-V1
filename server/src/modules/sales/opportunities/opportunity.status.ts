@@ -1,5 +1,6 @@
 import prisma from "../../../config/prisma"
-import type { Prisma } from "../../../generated/prisma/client"
+import type { Prisma, SalesStage } from "../../../generated/prisma/client"
+import { lastSalesStageFor } from "../sales.stages"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
 import type { AccessTokenPayload } from "../../auth/auth.types"
@@ -58,11 +59,36 @@ export async function correctOpportunityStatus(id: string, body: CorrectOpportun
       ...(body.status === "WON" && current.wonByEmployeeId === null
         ? { wonBy: { connect: { id: current.ownerEmployeeId } } } : {}),
     }
+    // Won sets the last sales stage (spec 2026-11-05), so taking Won back must
+    // take that back too. History holds the stage the deal had before it was Won.
+    const salesChange: { before?: Record<string, unknown>; after?: Record<string, unknown> } = {}
+    if (body.status === "WON") {
+      data.salesStage = lastSalesStageFor(current.track)
+      salesChange.before = { salesStage: current.salesStage ?? null }
+      salesChange.after = { salesStage: data.salesStage }
+    } else if (current.status === "WON") {
+      const rows = await tx.auditLog.findMany({
+        where: { entity: "OPPORTUNITY", entityId: id }, orderBy: { changedAt: "desc" }, take: 100,
+      })
+      const wonRow = rows.find((row) => {
+        const after = (row.after ?? {}) as Record<string, unknown>
+        const before = (row.before ?? {}) as Record<string, unknown>
+        return after.status === "WON" && "salesStage" in before
+      })
+      if (wonRow) {
+        const restored = ((wonRow.before ?? {}) as Record<string, unknown>).salesStage ?? null
+        data.salesStage = restored as SalesStage | null
+        salesChange.before = { salesStage: current.salesStage ?? null }
+        salesChange.after = { salesStage: restored }
+      }
+    }
     const updated = await tx.opportunity.update({ where: { id }, data, include: INCLUDE })
     if (body.status === "WON") await ensureCustomerForAccount(tx, current.salesAccountId, "skip-on-conflict", actor.sub)
     await writeAudit(tx, {
       entity: "OPPORTUNITY", entityId: id, action: "UPDATE", changedBy: actor.sub,
-      before: { status: current.status }, after: { status: body.status }, note: `Corrected: ${reason}`,
+      before: { status: current.status, ...salesChange.before } as Prisma.InputJsonObject,
+      after: { status: body.status, ...salesChange.after } as Prisma.InputJsonObject,
+      note: `Corrected: ${reason}`,
     })
     await emitEvent(tx, {
       type: "sales.opportunity.status_corrected", entity: "OPPORTUNITY", entityId: id,

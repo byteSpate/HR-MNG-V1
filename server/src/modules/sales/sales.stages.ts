@@ -1,4 +1,4 @@
-import type { OpportunityStage, SalesTrack } from "../../generated/prisma/client"
+import type { OpportunityStage, SalesStage, SalesTrack } from "../../generated/prisma/client"
 
 /**
  * Which stages belong to which track (spec 2026-09-28 §2.4, 2026-09-30). The
@@ -82,4 +82,77 @@ export function quoteAskFor(
   if (QUOTED_STAGES.has(stage) && !opp.offeredOn) return "REQUIRED"
   if (REVISION_STAGES.has(stage)) return "OPTIONAL"
   return null
+}
+
+// ── Sales stages: where the customer is in buying (spec 2026-11-05) ──
+//
+// They sit next to the work stages above and never replace them. The enum holds
+// every value; these lists say which belong to which track. Networking names are
+// management's. Software names are a proposal that management still checks.
+
+export const NETWORKING_SALES_STAGES: readonly SalesStage[] = [
+  "PENDING_INITIAL_MEETING", "AWARENESS", "RESEARCH_AND_INTERNAL_EDUCATION",
+  "BUDGET_AND_TIMING_DETERMINATION", "PROJECT_FUNDED_AND_KICKED_OFF",
+  "SOLUTION_SHARED_COMPETITIVE_POSITION", "SOLUTION_FRONT_RUNNER",
+  "RECOMMENDATION_TO_FUND", "DECISION_TO_FUND", "PURCHASE_ORDER_RECEIVED",
+]
+
+export const SOFTWARE_SALES_STAGES: readonly SalesStage[] = [
+  "PENDING_INITIAL_MEETING", "NEED_UNDERSTOOD", "CUSTOMER_IS_COMPARING_OPTIONS",
+  "BUDGET_AND_TIMING_KNOWN", "PROJECT_FUNDED_AND_SCOPE_AGREED",
+  "WE_ARE_ONE_OF_THE_OPTIONS", "WE_ARE_THE_FAVOURITE",
+  "RECOMMENDATION_TO_BUY", "DECISION_TO_BUY", "WORK_ORDER_RECEIVED",
+]
+
+export function salesStagesFor(track: SalesTrack): readonly SalesStage[] {
+  return track === "SOFTWARE_DEVELOPMENT" ? SOFTWARE_SALES_STAGES : NETWORKING_SALES_STAGES
+}
+
+export function salesStageFitsTrack(stage: SalesStage, track: SalesTrack): boolean {
+  return salesStagesFor(track).includes(stage)
+}
+
+/** Stage 10 of the track. An Opportunity that is Won gets it. */
+export function lastSalesStageFor(track: SalesTrack): SalesStage {
+  const list = salesStagesFor(track)
+  return list[list.length - 1]
+}
+
+export const WRONG_TRACK_SALES_STAGE: Record<SalesTrack, string> = {
+  NETWORKING: "That sales stage is for Software Development Opportunities. Pick a Networking sales stage.",
+  SOFTWARE_DEVELOPMENT: "That sales stage is for Networking Opportunities. Pick a Software Development sales stage.",
+}
+
+export const PAIR_REFUSAL =
+  "These two stages do not fit together. Pick a sales stage that fits this work stage, or save with a reason."
+
+/**
+ * Which sales stages each work stage allows, as the first and last position
+ * (1 to 10) in the track's sales list. Work stage names are unique across the
+ * two tracks, so one record serves both. A guess made for management to check
+ * (spec 2026-11-05). The client keeps a hand copy in
+ * `client/lib/api/sales/sales-stages.ts`.
+ */
+const SALES_RANGE: Record<OpportunityStage, readonly [number, number]> = {
+  ASSIGNED_QUALIFIED: [1, 4],
+  DISCOVERY_DESIGN: [2, 5],
+  TECHNICAL_VALIDATION: [2, 7],
+  COMMERCIAL_NEGOTIATION: [5, 9],
+  CUSTOMER_PROCUREMENT: [8, 9],
+  PO_RECEIVED: [10, 10],
+  REQUIREMENT_RECEIVED: [1, 4],
+  REQUIREMENT_GATHERING: [2, 4],
+  BRD_SENT: [2, 7],
+  SRS_SENT: [2, 7],
+  PROPOSAL_SUBMITTED: [2, 9],
+  PROPOSAL_REVISION: [5, 9],
+  NEGOTIATION: [5, 9],
+  AWAITING_DECISION: [5, 9],
+}
+
+export function salesStageFitsWork(track: SalesTrack, work: OpportunityStage, sales: SalesStage): boolean {
+  const position = salesStagesFor(track).indexOf(sales) + 1
+  if (position === 0) return false
+  const [min, max] = SALES_RANGE[work]
+  return position >= min && position <= max
 }

@@ -65,6 +65,7 @@ const opportunity = (overrides: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(prisma.$transaction).mockImplementation(async (fn: any) => fn(prisma))
+  vi.mocked(prisma.auditLog.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.customerPo.count).mockResolvedValue(0)
   vi.mocked(prisma.supplierBill.count).mockResolvedValue(0)
   vi.mocked(prisma.project.count).mockResolvedValue(0)

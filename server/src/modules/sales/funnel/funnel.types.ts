@@ -7,7 +7,7 @@
  * ever being written down (§27.8, §27.15).
  */
 
-import type { OpportunityStage, OpportunityStatus, SalesCommentKind } from "../../../generated/prisma/client"
+import type { OpportunityStage, OpportunityStatus, SalesCommentKind, SalesStage } from "../../../generated/prisma/client"
 
 /** Who took a deal we lost, and with what (§27.4). */
 export interface FunnelLostTo {
@@ -78,6 +78,8 @@ export interface FunnelRow {
   amount: string | null
   status: OpportunityStatus
   stage: OpportunityStage
+  /** Where the customer is in buying, next to the work stage. Null until set. */
+  salesStage: SalesStage | null
 
   /** The raw date, for editing. */
   closingDate: string | null
@@ -205,6 +207,7 @@ export interface FunnelDealInput {
   amount: unknown
   status: OpportunityStatus
   stage: OpportunityStage
+  salesStage: SalesStage | null
   expectedCloseDate: Date | null
   lostToPartner: string | null
   lostToAmount: unknown

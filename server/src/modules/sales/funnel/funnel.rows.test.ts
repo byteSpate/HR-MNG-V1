@@ -27,6 +27,7 @@ const deal = (over: Partial<FunnelDealInput> = {}): FunnelDealInput => ({
   amount: "35536.00",
   status: "ONGOING",
   stage: "COMMERCIAL_NEGOTIATION",
+  salesStage: null,
   expectedCloseDate: day("2026-10-15"),
   lostToPartner: null,
   lostToAmount: null,
@@ -408,5 +409,17 @@ describe("quotes, quarter and days on a row (owner, 2026-10-13)", () => {
     const g = grid()
     expect(g.rows[0].ownerName).toBe("Rahim Uddin")
     expect(g.summary).toEqual(SUMMARY)
+  })
+})
+
+describe("composeFunnel: the sales stage", () => {
+  it("carries the customer-side stage next to the work stage", () => {
+    const row = grid({ deals: [deal({ salesStage: "SOLUTION_FRONT_RUNNER" })] }).rows[0]
+    expect(row.stage).toBe("COMMERCIAL_NEGOTIATION")
+    expect(row.salesStage).toBe("SOLUTION_FRONT_RUNNER")
+  })
+
+  it("keeps null for an Opportunity that has none, and never invents one", () => {
+    expect(grid().rows[0].salesStage).toBeNull()
   })
 })

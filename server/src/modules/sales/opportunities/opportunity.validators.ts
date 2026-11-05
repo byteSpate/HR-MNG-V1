@@ -15,6 +15,15 @@ const opportunityStage = z.enum([
   "ASSIGNED_QUALIFIED", "DISCOVERY_DESIGN", "TECHNICAL_VALIDATION",
   "COMMERCIAL_NEGOTIATION", "CUSTOMER_PROCUREMENT", "PO_RECEIVED",
 ])
+const salesStage = z.enum([
+  "PENDING_INITIAL_MEETING",
+  "AWARENESS", "RESEARCH_AND_INTERNAL_EDUCATION", "BUDGET_AND_TIMING_DETERMINATION",
+  "PROJECT_FUNDED_AND_KICKED_OFF", "SOLUTION_SHARED_COMPETITIVE_POSITION", "SOLUTION_FRONT_RUNNER",
+  "RECOMMENDATION_TO_FUND", "DECISION_TO_FUND", "PURCHASE_ORDER_RECEIVED",
+  "NEED_UNDERSTOOD", "CUSTOMER_IS_COMPARING_OPTIONS", "BUDGET_AND_TIMING_KNOWN",
+  "PROJECT_FUNDED_AND_SCOPE_AGREED", "WE_ARE_ONE_OF_THE_OPTIONS", "WE_ARE_THE_FAVOURITE",
+  "RECOMMENDATION_TO_BUY", "DECISION_TO_BUY", "WORK_ORDER_RECEIVED",
+])
 const salesTrack = z.enum(["NETWORKING", "SOFTWARE_DEVELOPMENT"])
 const opportunityStatus = z.enum(["ONGOING", "WON", "LOST", "CANCELLED"])
 
@@ -75,7 +84,17 @@ export type UpdateOpportunityBody = z.infer<typeof updateOpportunitySchema>
  * stage may carry a new quote.
  */
 export const changeOpportunityStageSchema = z
-  .object({ stage: opportunityStage, quote: quoteSchema.optional(), skipQuoteReason: skipReasonSchema.optional() })
+  .object({
+    stage: opportunityStage.optional(),
+    /** Where the customer is in buying (spec 2026-11-05). Moves with or without `stage`. */
+    /** `null` clears it back to Not set. Missing leaves it as it is. */
+    salesStage: salesStage.nullable().optional(),
+    /** Saves a work stage and sales stage that do not fit. The reason goes to History. */
+    pairReason: z.string().trim().min(3, "Write a short reason.").max(300).optional(),
+    quote: quoteSchema.optional(),
+    skipQuoteReason: skipReasonSchema.optional(),
+  })
+  .refine((b) => b.stage !== undefined || b.salesStage !== undefined, "Pick a work stage or a sales stage to move to.")
   .refine((b) => !(b.quote && b.skipQuoteReason), "Add a quote or move without one, not both.")
 
 /** Handing the software part to the Software team (spec §2.5). */

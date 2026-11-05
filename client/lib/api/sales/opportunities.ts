@@ -10,6 +10,7 @@ import type {
   OpportunityStage,
   OpportunityStatus,
   OpportunitySummary,
+  SalesStage,
   QuoteBody,
   UpdateOpportunityBody,
   UpdateOpportunityLineBody,
@@ -95,13 +96,21 @@ export function updateOpportunity(
 export function changeOpportunityStage(
   accessToken: string,
   id: string,
-  stage: OpportunityStage,
-  extra?: { quote?: QuoteBody; skipQuoteReason?: string }
+  body: {
+    stage?: OpportunityStage
+    /** Where the customer is in buying. Moves with or without `stage` (spec 2026-11-05). */
+    /** `null` clears it back to Not set. */
+    salesStage?: SalesStage | null
+    /** Saves a pair that does not fit. The reason goes to History. */
+    pairReason?: string
+    quote?: QuoteBody
+    skipQuoteReason?: string
+  }
 ): Promise<OpportunitySummary> {
   return apiFetch<OpportunitySummary>(`/api/sales/opportunities/${id}/stage`, {
     method: "PATCH",
     accessToken,
-    body: JSON.stringify({ stage, ...extra }),
+    body: JSON.stringify(body),
   })
 }
 
