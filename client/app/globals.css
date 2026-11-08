@@ -73,6 +73,48 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+@theme {
+    --color-ink: #17191c;
+    --color-ink-strong: #0e1012;
+    --color-ink-body: #1c2733;
+    --color-ink-soft: #3d4756;
+    --color-ink-muted: #5f6b7c;
+    --color-line: #e4e9ef;
+    --color-line-strong: #cfd6e0;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #f7f9fb;
+    --color-surface-sunken: #eef1f5;
+    --color-surface-hover: #f1f4f8;
+    --color-info: #2d6cb5;
+    --color-info-ink: #1f4e79;
+    --color-info-tint: #eaf2fb;
+    --color-success: #1e7a3c;
+    --color-success-tint: #e6f4ea;
+    --color-success-line: #cde7d4;
+    --color-warning: #8a5e0c;
+    --color-warning-tint: #fdf8ee;
+    --color-warning-line: #f5e0be;
+    --color-danger: #b03a3a;
+    --color-danger-tint: #fdf6f6;
+    --color-danger-line: #f0d9d9;
+    --text-caption: 12px;
+    --text-caption--line-height: 1.6;
+    --text-body-sm: 13px;
+    --text-body-sm--line-height: 1.6;
+    --text-body: 14px;
+    --text-body--line-height: 1.6;
+    --text-lead: 15px;
+    --text-lead--line-height: 1.5;
+    --text-title-sm: 16px;
+    --text-title-sm--line-height: 1.5;
+    --text-title: 18px;
+    --text-title--line-height: 1.5;
+    --text-heading: 22px;
+    --text-heading--line-height: 1.25;
+    --text-display: 28px;
+    --text-display--line-height: 1.25;
+}
+
 @theme inline {
     --font-sans: var(--font-sans);
     --font-heading: var(--font-heading);
