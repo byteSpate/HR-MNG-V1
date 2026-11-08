@@ -58,7 +58,7 @@ export function ProfileHeader({
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <Heading level="page">
+          <Heading level="page" as="h2">
             {employee.work.fullName}
           </Heading>
           {onEditName ? (
