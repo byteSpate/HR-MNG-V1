@@ -109,7 +109,7 @@ export function PanelFrame({
           <h2 className="font-heading text-[16px] font-bold tracking-tight">{title}</h2>
           <p className={cn("mt-1 max-w-[64ch] text-[12.5px] leading-relaxed", TONE.muted)}>{sub}</p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
           {extra}
           <Button
             onClick={onAction}
@@ -374,7 +374,7 @@ export type RowAction =
 
 /** The quiet-until-hover treatment every row action shares. */
 const ROW_ACTION =
-  "h-auto rounded-md px-2 py-1 text-[12px] font-semibold transition-colors text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+  "h-auto rounded-md px-2 py-1 pointer-coarse:min-h-10 pointer-coarse:px-3 text-[12px] font-semibold transition-colors text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
 
 /**
  * Actions were previously two underlined links per row, the second of them

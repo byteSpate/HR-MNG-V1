@@ -160,7 +160,7 @@ export function SettingsPage() {
           /* `h-auto!` is load-bearing: the primitive pins a horizontal list to
              `h-8` through `group-data-horizontal/tabs:h-8`, which outranks a
              plain utility on specificity. */
-          className="h-auto! w-full justify-start gap-6 rounded-none border-b border-[#E4E9EF] bg-transparent p-0"
+          className="h-auto! w-full justify-start gap-6 overflow-x-auto overflow-y-hidden rounded-none border-b border-[#E4E9EF] bg-transparent p-0"
         >
           {visible.map(({ value, label, icon: Icon }) => (
             <TabsTrigger
@@ -170,7 +170,7 @@ export function SettingsPage() {
                  bottom border so the active tab sits on the list's hairline.
                  The colour is set on `border-b` alone, because `data-active:
                  border-*` would paint all four sides of the trigger. */
-              className="h-auto flex-none gap-2 rounded-none border-b-2 border-transparent px-0 pt-0 pb-2.5 text-[13px] font-semibold text-[#5F6B7C] transition-colors after:hidden hover:text-[#1C2733] data-active:border-b-[#17191C] data-active:bg-transparent data-active:text-[#1C2733]"
+              className="h-auto flex-none gap-2 rounded-none border-b-2 border-transparent px-0 pt-0 pb-2.5 pointer-coarse:min-h-10 text-[13px] font-semibold text-[#5F6B7C] transition-colors after:hidden hover:text-[#1C2733] data-active:border-b-[#17191C] data-active:bg-transparent data-active:text-[#1C2733]"
             >
               <Icon className="size-4 shrink-0" aria-hidden />
               {label}
