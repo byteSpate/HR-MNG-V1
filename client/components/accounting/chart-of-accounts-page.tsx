@@ -66,7 +66,7 @@ function Row({
             type="button"
             onClick={() => onToggle(node.id)}
             aria-label={isOpen ? "Collapse" : "Expand"}
-            className="rounded p-0.5 hover:bg-muted"
+            className="rounded p-0.5 pointer-coarse:p-3 hover:bg-muted"
           >
             {isOpen ? (
               <RiArrowDownSLine className="size-4" />

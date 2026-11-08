@@ -122,6 +122,8 @@ const MEASURE = () => {
   const inlineLink = (el) => el.tagName === "A" && getComputedStyle(el).display === "inline"
   const tiny = taps.filter((el) => {
     const r = el.getBoundingClientRect()
+    // A checkbox draws small but its hit area is grown by an ::after box (see ui/checkbox.tsx).
+    if (el.matches('[data-slot=checkbox]')) return false
     return !inlineLink(el) && (r.height < 28 || r.width < 28)
   })
   const smallText = all.filter((el) => {

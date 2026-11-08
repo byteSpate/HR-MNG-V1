@@ -34,7 +34,7 @@ const tabsListVariants = cva(
   // `justify-start`, not `justify-center`: the list is `w-fit`, so when the
   // tabs fit it hugs them and justification is a no-op. When they overflow,
   // centering clips *both* ends and leaves the first tab unreachable.
-  "group/tabs-list inline-flex w-fit max-w-full items-center justify-start overflow-x-auto rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none data-[variant=line]:pr-3",
+  "group/tabs-list inline-flex w-fit max-w-full items-center justify-start overflow-x-auto rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 pointer-coarse:group-data-horizontal/tabs:h-11 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none data-[variant=line]:pr-3",
   {
     variants: {
       variant: {

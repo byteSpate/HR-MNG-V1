@@ -202,7 +202,7 @@ export function AccountProfile({
               title={hasName ? "Edit your name" : undefined}
               className={
                 hasName
-                  ? "rounded p-1 text-ink-muted hover:bg-surface-hover hover:text-ink"
+                  ? "rounded p-1 pointer-coarse:p-3 text-ink-muted hover:bg-surface-hover hover:text-ink"
                   : "inline-flex items-center gap-1 rounded-md border border-line px-2.5 py-1 text-caption font-semibold text-ink hover:bg-surface-hover"
               }
             >

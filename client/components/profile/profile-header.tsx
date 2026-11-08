@@ -70,7 +70,7 @@ export function ProfileHeader({
               onClick={onEditName}
               aria-label="Edit name"
               title="Edit name"
-              className="rounded p-1 text-ink-muted hover:bg-surface-hover hover:text-ink"
+              className="rounded p-1 pointer-coarse:p-3 text-ink-muted hover:bg-surface-hover hover:text-ink"
             >
               <svg
                 width="14"

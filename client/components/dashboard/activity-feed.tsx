@@ -25,7 +25,7 @@ export function ActivityFeed({
     <div className="min-w-0 rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
       <div className="mb-3.5 flex items-center justify-between">
         <div className="text-lead font-bold">Recent activity</div>
-        <Link href={viewAllHref} className="text-caption font-semibold hover:underline">
+        <Link href={viewAllHref} className="text-caption font-semibold hover:underline pointer-coarse:py-3">
           View all
         </Link>
       </div>
