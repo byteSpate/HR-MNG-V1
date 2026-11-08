@@ -6,8 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test": "tsx --test \"lib/**/*.test.ts\" \"components/**/*.test.ts\" \"proxy.test.ts\""
+    "lint": "eslint && npm run check:design",
+    "test": "tsx --test \"lib/**/*.test.ts\" \"components/**/*.test.ts\" \"tools/**/*.test.ts\" \"proxy.test.ts\"",
+    "check:design": "node tools/design-ratchet.mjs",
+    "audit:mobile": "node tools/mobile-audit.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
