@@ -53,7 +53,7 @@ export function LinesList({
                 c.align === "right" && "md:text-right",
               )}
             >
-              {c.label ? <div className={cx("mb-0.5 text-caption font-bold text-ink-muted md:hidden", c.labelClassName)}>{c.label}</div> : null}
+              {c.label ? <div className={cx("mb-0.5 text-caption font-bold md:hidden", c.labelClassName ?? "text-ink-muted")}>{c.label}</div> : null}
               {row[c.key]}
             </div>
           ))}

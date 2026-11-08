@@ -63,7 +63,7 @@ export function NotesPage() {
                       <span className="col-span-2 min-w-0 md:col-span-1">
                         {r.code} {r.name}
                       </span>
-                      <Amount value={r.current} mode="signed" />
+                      <Amount value={r.current} mode="signed" className="max-md:text-left" />
                       <Amount value={r.comparative} mode="signed" tone="muted" />
                     </div>
                   ))}
