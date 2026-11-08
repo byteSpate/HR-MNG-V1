@@ -335,7 +335,7 @@ function BackLink() {
   return (
     <Link
       href="/sales/meetings/minutes"
-      className="mb-3 inline-flex items-center gap-1 text-caption font-bold text-ink-muted hover:text-ink-body hover:underline"
+      className="mb-3 inline-flex items-center gap-1 pointer-coarse:py-3 text-caption font-bold text-ink-muted hover:text-ink-body hover:underline"
     >
       <RiArrowLeftLine className="size-4" aria-hidden />
       Meeting Minutes

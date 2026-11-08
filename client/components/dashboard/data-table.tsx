@@ -111,7 +111,7 @@ export function DataTable({
           {actionHref ? (
             <Link
               href={actionHref}
-              className="shrink-0 text-caption font-semibold hover:underline"
+              className="shrink-0 text-caption font-semibold hover:underline pointer-coarse:py-3"
             >
               {action}
             </Link>

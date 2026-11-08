@@ -88,10 +88,10 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
               <Tag label={PROJECT_STATUS_LABEL[project.status]} tone={PROJECT_STATUS_TONE[project.status]} />
             </div>
             <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
-              <Link href={`/sales/accounts/${project.salesAccount.id}`} className="font-semibold hover:underline">
+              <Link href={`/sales/accounts/${project.salesAccount.id}`} className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3">
                 {project.salesAccount.name}
               </Link>
-              <Link href={`/sales/opportunities/${project.opportunity.id}`} className="font-semibold hover:underline">
+              <Link href={`/sales/opportunities/${project.opportunity.id}`} className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3">
                 {project.opportunity.serial}
               </Link>
               <span>Project Manager: {project.manager.fullName}</span>

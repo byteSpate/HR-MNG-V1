@@ -151,7 +151,7 @@ export function TasksPage({
     },
     {
       node: task.salesAccountId ? (
-        <Link href={`/sales/accounts/${task.salesAccountId}`} className="block truncate hover:underline">
+        <Link href={`/sales/accounts/${task.salesAccountId}`} className="block truncate hover:underline pointer-coarse:py-3">
           {task.salesAccountName}
         </Link>
       ) : (

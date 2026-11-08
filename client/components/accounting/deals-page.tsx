@@ -30,7 +30,7 @@ const PAGE_SIZE = 50
 function dealCell(href: string, content: ReactNode): TableCell {
   return {
     node: (
-      <Link href={href} className="block w-full cursor-pointer truncate pointer-coarse:py-3">
+      <Link href={href} className="block w-full cursor-pointer truncate pointer-coarse:min-w-10 pointer-coarse:py-3">
         {content}
       </Link>
     ),

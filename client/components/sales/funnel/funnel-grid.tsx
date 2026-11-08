@@ -136,7 +136,7 @@ export function FunnelGridTable({
         <button
           type="button"
           onClick={() => onSort(target)}
-          className="inline-flex items-center gap-1 hover:text-info-ink"
+          className="inline-flex items-center gap-1 hover:text-info-ink pointer-coarse:py-3"
         >
           {label}
           {active ? (

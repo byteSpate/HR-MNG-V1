@@ -149,7 +149,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
             <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
               <Link
                 href={`/sales/accounts/${deal.salesAccountId}`}
-                className="font-semibold hover:underline"
+                className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
               >
                 {deal.salesAccountName}
               </Link>
@@ -174,7 +174,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
                 Software work:{" "}
                 <Link
                   href={`/sales/opportunities/${deal.handedOverTo.id}`}
-                  className="font-semibold hover:underline"
+                  className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                 >
                   {deal.handedOverTo.serial} {deal.handedOverTo.name}
                 </Link>
@@ -185,7 +185,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
                 Handed over from{" "}
                 <Link
                   href={`/sales/opportunities/${deal.handedOverFrom.id}`}
-                  className="font-semibold hover:underline"
+                  className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                 >
                   {deal.handedOverFrom.serial} {deal.handedOverFrom.name}
                 </Link>

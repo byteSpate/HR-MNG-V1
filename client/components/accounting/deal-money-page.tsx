@@ -92,7 +92,7 @@ function DealMoneyPageInner({ opportunityId }: { opportunityId: string }) {
         aside={
           <Link
             href={`/sales/opportunities/${opportunityId}`}
-            className="inline-flex items-center gap-1 text-caption font-semibold text-ink-muted hover:text-ink-body hover:underline"
+            className="inline-flex items-center gap-1 text-caption font-semibold text-ink-muted hover:text-ink-body hover:underline pointer-coarse:py-3"
           >
             Open in Sales Hub
             <RiArrowRightUpLine className="size-3.5" aria-hidden />

@@ -475,7 +475,7 @@ export function FunnelPage() {
                 type="checkbox"
                 checked={Boolean(filters.inQuarter)}
                 onChange={(e) => setFilters((prev) => ({ ...prev, inQuarter: e.target.checked || undefined }))}
-                className="size-4 rounded border-line-strong"
+                className="size-4 rounded border-line-strong pointer-coarse:size-7"
               />
               Only rows closing in this quarter
             </label>

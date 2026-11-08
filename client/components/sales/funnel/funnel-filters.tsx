@@ -142,7 +142,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             type="checkbox"
             checked={Boolean(value.hideClosed)}
             onChange={(e) => set({ hideClosed: e.target.checked })}
-            className="size-4 rounded border-line-strong"
+            className="size-4 rounded border-line-strong pointer-coarse:size-7"
           />
           Hide lost and cancelled
         </label>
@@ -152,7 +152,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             type="checkbox"
             checked={Boolean(value.changedLastWeek)}
             onChange={(e) => set({ changedLastWeek: e.target.checked })}
-            className="size-4 rounded border-line-strong"
+            className="size-4 rounded border-line-strong pointer-coarse:size-7"
           />
           Changed in the last week
         </label>

@@ -32,7 +32,7 @@ function formatDate(iso: string): string {
 function approvalCell(href: string, content: ReactNode): TableCell {
   return {
     node: (
-      <Link href={href} className="block w-full cursor-pointer truncate pointer-coarse:py-3">
+      <Link href={href} className="block w-full cursor-pointer truncate pointer-coarse:min-w-10 pointer-coarse:py-3">
         {content}
       </Link>
     ),

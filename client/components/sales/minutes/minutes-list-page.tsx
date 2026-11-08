@@ -79,7 +79,7 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
     {
       node: (
         // Above the whole-row link, so it still opens the account.
-        <Link href={`/sales/accounts/${item.salesAccountId}`} className="relative z-10 block truncate hover:underline">
+        <Link href={`/sales/accounts/${item.salesAccountId}`} className="relative z-10 block truncate hover:underline pointer-coarse:py-3">
           {item.salesAccountName}
         </Link>
       ),
@@ -248,7 +248,7 @@ function WaitingForMinutes({
                   <div className="mt-0.5 text-caption text-ink-muted">
                     {[meetingWhen(meeting.scheduledAt), MEETING_MODE_LABEL[meeting.mode]].join(" · ")}
                     {" · "}
-                    <Link href={`/sales/accounts/${meeting.salesAccountId}`} className="font-semibold hover:underline">
+                    <Link href={`/sales/accounts/${meeting.salesAccountId}`} className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3">
                       {meeting.salesAccountName}
                     </Link>
                   </div>

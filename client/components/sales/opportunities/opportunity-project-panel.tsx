@@ -36,7 +36,7 @@ export function OpportunityProjectPanel({ deal, canStart }: { deal: OpportunityS
       {error ? <PanelAlert>{error}</PanelAlert> : null}
       {deal.project ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/sales/projects/${deal.project.id}`} className="text-body-sm font-semibold hover:underline">
+          <Link href={`/sales/projects/${deal.project.id}`} className="text-body-sm font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3">
             {deal.project.name}
           </Link>
           <span className={`text-caption ${TONE.muted}`}>{deal.project.serial}</span>
