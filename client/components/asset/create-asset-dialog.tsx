@@ -10,13 +10,13 @@ import { useSession } from "@/lib/auth/session-context"
 import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { AssetDetail, Currency } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
+import { Dialog } from "@/components/ui/dialog"
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  AppDialogBody,
+  AppDialogFooter,
+  AppDialogFrame,
+  AppDialogHeader,
+} from "@/components/ds/app-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -212,9 +212,8 @@ function AssetForm({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{asset ? "Edit asset" : "Add an asset"}</DialogTitle>
-      </DialogHeader>
+      <AppDialogHeader title={asset ? "Edit asset" : "Add an asset"} />
+      <AppDialogBody>
 
       {/* Says why the dialog opened, so a prefilled category does not look
           like a stray default. Deliberately does not promise to assign it:
@@ -396,8 +395,9 @@ function AssetForm({
 
         {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
       </div>
+      </AppDialogBody>
 
-      <DialogFooter>
+      <AppDialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saveMutation.isPending}>
           Cancel
         </Button>
@@ -410,7 +410,7 @@ function AssetForm({
               ? "Save changes"
               : "Add asset"}
         </Button>
-      </DialogFooter>
+      </AppDialogFooter>
     </>
   )
 }
@@ -467,18 +467,17 @@ export function CreateAssetDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* No max-h/overflow here: DialogContent already carries
-          `max-h-[85svh] overflow-y-auto`, and re-declaring it made the whole
-          popup — header and footer included — the scroll container, so the
-          track spanned the full dialog. Widening to 2xl and laying the form
-          two-up fits every field inside 85svh, so the base overflow stays as
-          a safety net for short windows without ever appearing. */}
-      <DialogContent className="sm:max-w-2xl">
+      <AppDialogFrame size="lg">
         {!open ? null : editing && !assetQuery.data ? (
-          <div className="space-y-3 py-2">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-32 w-full" />
-          </div>
+          <>
+            <AppDialogHeader title="Edit asset" />
+            <AppDialogBody>
+              <div className="space-y-3 py-2">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            </AppDialogBody>
+          </>
         ) : (
           <AssetForm
             asset={assetQuery.data ?? null}
@@ -490,7 +489,7 @@ export function CreateAssetDialog({
             onReturn={onReturn}
           />
         )}
-      </DialogContent>
+      </AppDialogFrame>
     </Dialog>
   )
 }
