@@ -22,9 +22,9 @@ function Bar({ percent, label }: { percent: number; label: string }) {
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={percent}
-      className="h-1.5 w-full rounded-full bg-[#E4E9EF]"
+      className="h-1.5 w-full rounded-full bg-line"
     >
-      <div className="h-full rounded-full bg-[#17191C]" style={{ width: `${percent}%` }} />
+      <div className="h-full rounded-full bg-ink" style={{ width: `${percent}%` }} />
     </div>
   )
 }
@@ -32,8 +32,8 @@ function Bar({ percent, label }: { percent: number; label: string }) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-x-4 gap-y-0.5 py-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-      <dt className={`text-[12.5px] ${TONE.muted}`}>{label}</dt>
-      <dd className="text-[13px] font-semibold [overflow-wrap:anywhere]">{children}</dd>
+      <dt className={`text-caption ${TONE.muted}`}>{label}</dt>
+      <dd className="text-body-sm font-semibold [overflow-wrap:anywhere]">{children}</dd>
     </div>
   )
 }
@@ -58,7 +58,7 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
   return (
     <div className="grid gap-4">
       {quiet ? (
-        <p className="flex items-start gap-1.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2 text-[12.5px] leading-relaxed text-[#8A5E0C]">
+        <p className="flex items-start gap-1.5 rounded-md border border-warning-line bg-warning-tint px-3 py-2 text-caption leading-relaxed text-warning">
           <RiAlertLine className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           <span>
             {quiet}. Nobody has written a Daily Log line, changed a task or ticked anything. Ask the Project Manager
@@ -74,45 +74,45 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
             {project.health ? (
               <Tag label={HEALTH_LABEL[project.health]} tone={HEALTH_TONE[project.health]} />
             ) : (
-              <span className={`text-[12.5px] ${TONE.muted}`}>No health to show yet</span>
+              <span className={`text-caption ${TONE.muted}`}>No health to show yet</span>
             )}
             <span
-              className={`text-[13px] font-semibold ${project.daysLeft !== null && project.daysLeft < 0 ? "text-[#B03A3A]" : ""}`}
+              className={`text-body-sm font-semibold ${project.daysLeft !== null && project.daysLeft < 0 ? "text-danger" : ""}`}
             >
               {daysLeftText(project.daysLeft, project.status)}
             </span>
             {/* With no date the days-left words already say "No finish date". */}
-            {project.dueOn ? <span className={`text-[12px] ${TONE.muted}`}>Finish date {dayText(project.dueOn)}</span> : null}
+            {project.dueOn ? <span className={`text-caption ${TONE.muted}`}>Finish date {dayText(project.dueOn)}</span> : null}
           </div>
           <div className="mt-3">
             {project.progress ? (
               <>
                 <Bar percent={project.progress.percent} label="Tasks done" />
-                <div className={`mt-1.5 text-[12.5px] ${TONE.muted}`}>
+                <div className={`mt-1.5 text-caption ${TONE.muted}`}>
                   {project.progress.done} of {countText(project.progress.total, "task")} done ({project.progress.percent}%)
                 </div>
               </>
             ) : (
-              <div className={`text-[12.5px] ${TONE.muted}`}>No tasks yet, so there is no progress to show.</div>
+              <div className={`text-caption ${TONE.muted}`}>No tasks yet, so there is no progress to show.</div>
             )}
           </div>
-          <div className="mt-2 text-[12.5px]">{countText(project.openTaskCount, "open task")}</div>
+          <div className="mt-2 text-caption">{countText(project.openTaskCount, "open task")}</div>
         </Panel>
 
         <Panel>
           <PanelHeading title="Right now" />
-          <dl className="divide-y divide-[#E4E9EF]">
+          <dl className="divide-y divide-line">
             <Row label="Status">
               {PROJECT_STATUS_LABEL[project.status]}
               {project.statusReason ? (
-                <span className={`block text-[12.5px] font-normal ${TONE.muted}`}>{project.statusReason}</span>
+                <span className={`block text-caption font-normal ${TONE.muted}`}>{project.statusReason}</span>
               ) : null}
             </Row>
             <Row label="Next milestone">
               {next ? (
                 <>
                   {next.title}
-                  <span className={`block text-[12.5px] font-normal ${TONE.muted}`}>Due {dayText(next.dueOn)}</span>
+                  <span className={`block text-caption font-normal ${TONE.muted}`}>Due {dayText(next.dueOn)}</span>
                 </>
               ) : (
                 <span className={`font-normal ${TONE.muted}`}>
@@ -124,7 +124,7 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
               {log ? (
                 <>
                   {log.noWork ? "No work on this day" : log.text}
-                  <span className={`block text-[12.5px] font-normal ${TONE.muted}`}>
+                  <span className={`block text-caption font-normal ${TONE.muted}`}>
                     {log.byName ?? "Someone"} · {dayText(log.date)}
                   </span>
                 </>
@@ -137,13 +137,13 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
 
         <Panel>
           <PanelHeading title="People" />
-          <ul className="divide-y divide-[#E4E9EF]">
+          <ul className="divide-y divide-line">
             {project.people.map((person) => (
-              <li key={person.employeeId} className="flex flex-wrap items-center justify-between gap-2 py-2 text-[13px]">
+              <li key={person.employeeId} className="flex flex-wrap items-center justify-between gap-2 py-2 text-body-sm">
                 <span className="font-semibold">{person.fullName}</span>
                 <span className={TONE.muted}>
                   {person.open} open
-                  {person.late > 0 ? <span className="font-semibold text-[#B03A3A]"> · {person.late} late</span> : null}
+                  {person.late > 0 ? <span className="font-semibold text-danger"> · {person.late} late</span> : null}
                 </span>
               </li>
             ))}
@@ -153,11 +153,11 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
         <Panel>
           <PanelHeading title={`${noun} delivered`} />
           {total === 0 ? (
-            <div className={`text-[12.5px] ${TONE.muted}`}>The Opportunity has no {noun.toLowerCase()} yet.</div>
+            <div className={`text-caption ${TONE.muted}`}>The Opportunity has no {noun.toLowerCase()} yet.</div>
           ) : (
             <>
               <Bar percent={Math.round((done / total) * 100)} label={`${noun} delivered`} />
-              <div className="mt-1.5 text-[12.5px]">
+              <div className="mt-1.5 text-caption">
                 {done} of {countText(total, oneNoun)} done
               </div>
             </>
@@ -167,7 +167,7 @@ export function ProjectOverviewTab({ project }: { project: ProjectSummary }) {
 
       <Panel>
         <PanelHeading title="Money" />
-        <dl className="divide-y divide-[#E4E9EF]">
+        <dl className="divide-y divide-line">
           <Row label="Opportunity value">{money(project.value)}</Row>
           <Row label="Budget">{money(project.budget)}</Row>
           <Row label="Planned cost">{money(project.plannedCost)}</Row>

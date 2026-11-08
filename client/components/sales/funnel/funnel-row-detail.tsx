@@ -54,9 +54,9 @@ const KIND_LABEL: Record<FunnelRemark["kind"], string> = {
 }
 
 const KIND_TONE: Record<FunnelRemark["kind"], string> = {
-  GENERAL: "bg-slate-100 text-[#5F6B7C]",
-  CUSTOMER_FEEDBACK: "bg-[#EAF2FB] text-[#1F4E79]",
-  MANAGEMENT_NOTE: "bg-[#FDF3E2] text-[#8A5E0C]",
+  GENERAL: "bg-slate-100 text-ink-muted",
+  CUSTOMER_FEEDBACK: "bg-info-tint text-info-ink",
+  MANAGEMENT_NOTE: "bg-warning-tint text-warning",
 }
 
 function when(iso: string): string {
@@ -97,7 +97,7 @@ export function FunnelRowDetail({
   }
 
   const save = (field: FunnelCellField) => (value: string | null) => onEdit(row.opportunityId, field, value)
-  const label = "text-xs font-medium uppercase tracking-wide text-[#5F6B7C]"
+  const label = "text-xs font-medium uppercase tracking-wide text-ink-muted"
 
   return (
     <div className="grid gap-6">
@@ -111,9 +111,9 @@ export function FunnelRowDetail({
           ) : (
             <ul className="mt-2 space-y-2">
               {row.quotes.map((q, i) => (
-                <li key={q.id} className="rounded-md bg-white px-3 py-2 ring-1 ring-[#E4E9EF]">
+                <li key={q.id} className="rounded-md bg-white px-3 py-2 ring-1 ring-line">
                   <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                    <span className="font-medium text-[#1B2733]">{quoteTitle(i, row.quotes.length)}</span>
+                    <span className="font-medium text-ink-body">{quoteTitle(i, row.quotes.length)}</span>
                     <span className="tabular-nums">{taka(q.amount)}</span>
                     <span className={cn("text-xs", TONE.muted)}>
                       {[longDay(q.quotedOn), q.reference, STAGE_LABEL[q.stage] ?? q.stage].filter(Boolean).join(" · ")}
@@ -158,14 +158,14 @@ export function FunnelRowDetail({
 
       <div className="grid gap-6 md:grid-cols-2">
       <div>
-        <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
+        <h4 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
           Remarks on this Opportunity
         </h4>
 
         {/* Derived, never stored (§27.8). It sits above the remarks because it
             is the fact they are all about. */}
         {row.offerLine ? (
-          <p className="mt-2 rounded-md bg-white px-3 py-2 text-sm text-[#1B2733] ring-1 ring-[#E4E9EF]">
+          <p className="mt-2 rounded-md bg-white px-3 py-2 text-sm text-ink-body ring-1 ring-line">
             {row.offerLine}
           </p>
         ) : null}
@@ -178,11 +178,11 @@ export function FunnelRowDetail({
         ) : (
           <ul className="mt-2 space-y-2">
             {row.remarks.map((remark) => (
-              <li key={remark.id} className="rounded-md bg-white px-3 py-2 ring-1 ring-[#E4E9EF]">
+              <li key={remark.id} className="rounded-md bg-white px-3 py-2 ring-1 ring-line">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      "rounded-full px-2 py-0.5 text-caption font-medium",
                       KIND_TONE[remark.kind]
                     )}
                   >
@@ -197,15 +197,15 @@ export function FunnelRowDetail({
                     <span className={cn("text-xs", TONE.muted)}>· at a funnel meeting</span>
                   ) : null}
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-[#1B2733]">{remark.body}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-ink-body">{remark.body}</p>
               </li>
             ))}
           </ul>
         )}
 
         {canAddManagementNote ? (
-          <div className="mt-3 border-t border-[#E4E9EF] pt-3">
-            <label htmlFor={`management-note-${row.opportunityId}`} className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
+          <div className="mt-3 border-t border-line pt-3">
+            <label htmlFor={`management-note-${row.opportunityId}`} className="text-xs font-medium uppercase tracking-wide text-ink-muted">
               Management note
             </label>
             <textarea
@@ -215,7 +215,7 @@ export function FunnelRowDetail({
               rows={3}
               maxLength={4000}
               placeholder="What is blocking this Opportunity?"
-              className="mt-2 w-full rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5]"
+              className="mt-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-info"
             />
             {error ? <PanelAlert>{toMessage(error)}</PanelAlert> : null}
             <Button
@@ -232,7 +232,7 @@ export function FunnelRowDetail({
       </div>
 
       <div>
-        <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
+        <h4 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
           Products on this Opportunity
         </h4>
 
@@ -245,15 +245,15 @@ export function FunnelRowDetail({
             {row.lines.map((line, index) => (
               <li
                 key={index}
-                className="flex items-baseline justify-between gap-3 rounded-md bg-white px-3 py-2 ring-1 ring-[#E4E9EF]"
+                className="flex items-baseline justify-between gap-3 rounded-md bg-white px-3 py-2 ring-1 ring-line"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[#1B2733]">{line.product}</p>
+                  <p className="truncate text-sm font-medium text-ink-body">{line.product}</p>
                   <p className={cn("truncate text-xs", TONE.muted)}>
                     {[line.brand, line.model].filter(Boolean).join(" · ") || "No brand or model"}
                   </p>
                 </div>
-                <span className="shrink-0 text-sm tabular-nums text-[#1B2733]">
+                <span className="shrink-0 text-sm tabular-nums text-ink-body">
                   {line.quantity === null ? (
                     <span className={cn("text-xs", TONE.muted)}>No quantity</span>
                   ) : (
@@ -270,7 +270,7 @@ export function FunnelRowDetail({
             than growing a second half-copy of the deal page (§27.7). */}
         <Link
           href={`/sales/opportunities/${row.opportunityId}`}
-          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#1F4E79] hover:underline"
+          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-info-ink hover:underline"
         >
           Open the Opportunity
           <RiArrowRightLine className="size-4" aria-hidden />

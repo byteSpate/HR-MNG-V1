@@ -32,18 +32,18 @@ export function CostingLinkList({
   return (
     <div className="grid gap-1">
       {open.length > 0 ? (
-        <ul className="divide-y divide-[#E4E9EF]">
+        <ul className="divide-y divide-line">
           {open.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-2 py-1.5">
               <a
                 href={d.url!}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[13px] font-semibold hover:underline"
+                className="inline-flex items-center gap-1 text-body-sm font-semibold hover:underline"
               >
                 {d.name} <RiExternalLinkLine className="size-3.5" aria-hidden />
               </a>
-              <span className={`text-[12px] ${TONE.muted}`}>
+              <span className={`text-caption ${TONE.muted}`}>
                 {[showQuote ? (quoteName(d.quoteId) ?? "No quote") : null, d.createdByName ?? "Someone", new Date(d.createdAt).toLocaleDateString()]
                   .filter(Boolean)
                   .join(" · ")}
@@ -52,7 +52,7 @@ export function CostingLinkList({
           ))}
         </ul>
       ) : null}
-      {locked > 0 ? <p className={`text-[12px] ${TONE.muted}`}>{lockedLine(locked)}</p> : null}
+      {locked > 0 ? <p className={`text-caption ${TONE.muted}`}>{lockedLine(locked)}</p> : null}
     </div>
   )
 }

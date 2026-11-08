@@ -27,29 +27,29 @@ export function OpportunityHistoryPanel({ opportunityId }: { opportunityId: stri
         <PanelAlert>
           <span className="flex flex-wrap items-center gap-2">
             <span>{toMessage(query.error)}</span>
-            <Button type="button" variant="link" onClick={() => query.refetch()} className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline">Try again</Button>
+            <Button type="button" variant="link" onClick={() => query.refetch()} className="h-auto p-0 text-caption font-bold text-danger underline">Try again</Button>
           </span>
         </PanelAlert>
       ) : (query.data?.items.length ?? 0) === 0 ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>No field changes have been recorded yet.</p>
+        <p className={`text-caption ${TONE.muted}`}>No field changes have been recorded yet.</p>
       ) : (
         <>
           {query.data?.truncated ? <PanelNotice>Showing the newest {query.data.limit} changes.</PanelNotice> : null}
           <ul>
             {query.data!.items.map((entry) => (
-              <li key={entry.id} className="border-b border-[#EEF1F5] py-2.5 last:border-b-0">
-                <div className={`text-[11.5px] ${TONE.muted}`}>
+              <li key={entry.id} className="border-b border-surface-sunken py-2.5 last:border-b-0">
+                <div className={`text-caption ${TONE.muted}`}>
                   {[entry.changedByName, new Date(entry.changedAt).toLocaleString("en-GB")].filter(Boolean).join(" · ")}
                 </div>
                 <ul className="mt-1 space-y-1">
                   {entry.changes.map((change) => (
-                    <li key={change.field} className="text-[12.5px]">
+                    <li key={change.field} className="text-caption">
                       <span className="font-semibold">{change.label}:</span>{" "}
                       {change.before === null ? change.after : <>{change.before} → {change.after}</>}
                     </li>
                   ))}
                 </ul>
-                {entry.note ? <p className={`mt-1 text-[12px] ${TONE.muted}`}>{entry.note}</p> : null}
+                {entry.note ? <p className={`mt-1 text-caption ${TONE.muted}`}>{entry.note}</p> : null}
               </li>
             ))}
           </ul>

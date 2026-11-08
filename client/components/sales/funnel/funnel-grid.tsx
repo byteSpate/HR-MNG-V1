@@ -33,10 +33,10 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STATUS_TONE: Record<string, string> = {
-  ONGOING: "bg-[#EAF2FB] text-[#1F4E79]",
-  WON: "bg-[#E6F4EA] text-[#0B7A3B]",
-  LOST: "bg-[#FBEAEA] text-[#B03A3A]",
-  CANCELLED: "bg-slate-100 text-[#5F6B7C]",
+  ONGOING: "bg-info-tint text-info-ink",
+  WON: "bg-success-tint text-success",
+  LOST: "bg-warning-tint text-danger",
+  CANCELLED: "bg-slate-100 text-ink-muted",
 }
 
 /** The five sorts the header offers (§27.9), given to everyone. The Quote
@@ -94,10 +94,10 @@ export function FunnelGridTable({
   // facts, so they get different sentences.
   if (grid.rows.length === 0) {
     return (
-      <div className="rounded-lg border border-[#E4E9EF] bg-white px-6 py-10 text-center">
+      <div className="rounded-lg border border-line bg-white px-6 py-10 text-center">
         {filtersActive ? (
           <>
-            <p className="text-sm font-medium text-[#1B2733]">No Opportunities match these filters</p>
+            <p className="text-sm font-medium text-ink-body">No Opportunities match these filters</p>
             <p className={cn("mt-1 text-sm", TONE.muted)}>
               Opportunities are quoted, but none of them passes the filters above.
             </p>
@@ -107,7 +107,7 @@ export function FunnelGridTable({
           </>
         ) : (
           <>
-            <p className="text-sm font-medium text-[#1B2733]">Nothing quoted yet</p>
+            <p className="text-sm font-medium text-ink-body">Nothing quoted yet</p>
             <p className={cn("mt-1 text-sm", TONE.muted)}>
               An Opportunity joins the funnel when its quotation is submitted, and stays here afterwards.
             </p>
@@ -136,7 +136,7 @@ export function FunnelGridTable({
         <button
           type="button"
           onClick={() => onSort(target)}
-          className="inline-flex items-center gap-1 hover:text-[#1F4E79]"
+          className="inline-flex items-center gap-1 hover:text-info-ink"
         >
           {label}
           {active ? (
@@ -162,11 +162,11 @@ export function FunnelGridTable({
         </PanelNotice>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
+      <div className="overflow-hidden rounded-lg border border-line bg-white">
         {/* The grid scrolls in here. The page body never scrolls sideways. */}
         <div className="overflow-x-auto">
           <table className="w-full min-w-325 border-collapse text-sm">
-            <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
+            <thead className="bg-surface-subtle text-xs uppercase tracking-wide text-ink-muted">
               <tr>
                 {head("sn", "S/N", "w-14 text-center")}
                 {head("date", "Date", "w-28")}
@@ -239,8 +239,8 @@ function FunnelGridRow({
 
   return (
     <>
-      <tr className="border-t border-[#EEF1F5] align-top hover:bg-[#FAFBFC]">
-        <td className="px-2 py-1.5 text-center tabular-nums text-[#5F6B7C]">{row.serialNo}</td>
+      <tr className="border-t border-surface-sunken align-top hover:bg-surface-subtle">
+        <td className="px-2 py-1.5 text-center tabular-nums text-ink-muted">{row.serialNo}</td>
 
         {/* The Funnel date is Quote 1's date, so it changes with the quote, not here. */}
         <td className="px-2 py-1.5 whitespace-nowrap tabular-nums">
@@ -249,7 +249,7 @@ function FunnelGridRow({
 
         <td className="px-2 py-1.5">
           <button type="button" onClick={onToggle} className="text-left hover:underline">
-            <span className="block truncate font-medium text-[#1B2733]">{row.accountName}</span>
+            <span className="block truncate font-medium text-ink-body">{row.accountName}</span>
             <span className={cn("block text-xs tabular-nums", TONE.muted)}>{row.serial}</span>
           </button>
         </td>
@@ -267,7 +267,7 @@ function FunnelGridRow({
           <button type="button" onClick={onToggle} className="block w-full text-right hover:underline">
             {row.latestQuote ? (
               <>
-                <span className="block font-medium tabular-nums text-[#1B2733]">{taka(row.latestQuote.amount)}</span>
+                <span className="block font-medium tabular-nums text-ink-body">{taka(row.latestQuote.amount)}</span>
                 <span className={cn("block text-xs whitespace-nowrap", TONE.muted)}>
                   {longDay(row.latestQuote.quotedOn)} · Quote {row.quoteCount}
                 </span>
@@ -275,7 +275,7 @@ function FunnelGridRow({
             ) : (
               <>
                 <span className={cn("block", TONE.muted)}>No price yet</span>
-                <span className="mt-0.5 inline-block rounded-full bg-[#FDF3E2] px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-[#8A5E0C]">
+                <span className="mt-0.5 inline-block rounded-full bg-warning-tint px-2 py-0.5 text-caption font-medium whitespace-nowrap text-warning">
                   Quote missing
                 </span>
               </>
@@ -300,14 +300,14 @@ function FunnelGridRow({
             {/* The sheet's red date, derived from the audit log (§27.15). */}
             {row.closingDateSlipped ? (
               <RiErrorWarningLine
-                className="size-4 shrink-0 text-[#B03A3A]"
+                className="size-4 shrink-0 text-danger"
                 aria-label={`Pushed back from ${row.previousClosingDate ?? "an earlier date"}`}
               />
             ) : null}
           </div>
         </td>
 
-        <td className={cn("px-2 py-1.5 whitespace-nowrap tabular-nums", row.daysLeft !== null && row.daysLeft < 0 ? "font-medium text-[#B03A3A]" : row.daysLeft === null ? TONE.muted : undefined)}>
+        <td className={cn("px-2 py-1.5 whitespace-nowrap tabular-nums", row.daysLeft !== null && row.daysLeft < 0 ? "font-medium text-danger" : row.daysLeft === null ? TONE.muted : undefined)}>
           {daysLeftText(row.daysLeft)}
         </td>
 
@@ -352,7 +352,7 @@ function FunnelGridRow({
       </tr>
 
       {open ? (
-        <tr className="border-t border-[#EEF1F5] bg-[#FAFBFC]">
+        <tr className="border-t border-surface-sunken bg-surface-subtle">
           <td colSpan={13} className="px-4 py-3">
             <FunnelRowDetail
               row={row}

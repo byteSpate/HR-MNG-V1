@@ -71,7 +71,7 @@ export function StatusPanel({ deal, canManage, isSalesAdmin }: { deal: Opportuni
       {error ? <PanelAlert>{error}</PanelAlert> : null}
       {done ? <PanelNotice>{done}</PanelNotice> : null}
 
-      <p className="text-[13px]">
+      <p className="text-body-sm">
         {stageSentence(deal.status, deal.stage)}
         {deal.statusReason ? `. Reason: ${deal.statusReason}` : ""}
       </p>
@@ -79,7 +79,7 @@ export function StatusPanel({ deal, canManage, isSalesAdmin }: { deal: Opportuni
       {isOpen && canManage ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {CLOSING.map((s) => (
-            <Button key={s} type="button" variant="outline" onClick={() => { setClosing(s); setReason(""); setDone(null) }} className="h-8 text-[12px] font-bold">
+            <Button key={s} type="button" variant="outline" onClick={() => { setClosing(s); setReason(""); setDone(null) }} className="h-8 text-caption font-bold">
               Mark {OPPORTUNITY_STATUS_LABEL[s]}
             </Button>
           ))}
@@ -87,17 +87,17 @@ export function StatusPanel({ deal, canManage, isSalesAdmin }: { deal: Opportuni
       ) : null}
 
       {closing ? (
-        <div className="mt-3 space-y-2 rounded-md border border-[#E4E9EF] bg-[#F7F9FB] p-3">
+        <div className="mt-3 space-y-2 rounded-md border border-line bg-surface-subtle p-3">
           {closing !== "WON" ? (
             <Field label="Reason" htmlFor="close-reason" help={REASON_HELP[closing]}>
               <Input id="close-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
             </Field>
           ) : null}
           <div className="flex gap-2">
-            <Button type="button" disabled={closing !== "WON" && !reason.trim()} onClick={() => setConfirming(true)} className="h-8 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]">
+            <Button type="button" disabled={closing !== "WON" && !reason.trim()} onClick={() => setConfirming(true)} className="h-8 bg-ink text-caption font-bold text-white hover:bg-ink-strong">
               Mark {OPPORTUNITY_STATUS_LABEL[closing]}
             </Button>
-            <Button type="button" variant="link" onClick={() => setClosing(null)} className="h-8 p-0 text-[12px] font-bold text-[#5F6B7C]">
+            <Button type="button" variant="link" onClick={() => setClosing(null)} className="h-8 p-0 text-caption font-bold text-ink-muted">
               Go back
             </Button>
           </div>
@@ -115,27 +115,27 @@ export function StatusPanel({ deal, canManage, isSalesAdmin }: { deal: Opportuni
       />
 
       {!isOpen && isSalesAdmin ? (
-        <div className="mt-4 border-t border-[#E4E9EF] pt-4">
-          <p className={`text-[12px] ${TONE.muted}`}>
+        <div className="mt-4 border-t border-line pt-4">
+          <p className={`text-caption ${TONE.muted}`}>
             Was this status a mistake? You can correct it. It is refused if the Opportunity has money or a Project on it.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {(["ONGOING", ...CLOSING] as OpportunityStatus[]).filter((s) => s !== deal.status).map((s) => (
-              <Button key={s} type="button" variant="outline" onClick={() => { setCorrecting(s); setCorrectReason(""); setDone(null) }} className="h-8 text-[12px] font-bold">
+              <Button key={s} type="button" variant="outline" onClick={() => { setCorrecting(s); setCorrectReason(""); setDone(null) }} className="h-8 text-caption font-bold">
                 Correct to {OPPORTUNITY_STATUS_LABEL[s]}
               </Button>
             ))}
           </div>
           {correcting ? (
-            <div className="mt-3 space-y-2 rounded-md border border-[#E4E9EF] bg-[#F7F9FB] p-3">
+            <div className="mt-3 space-y-2 rounded-md border border-line bg-surface-subtle p-3">
               <Field label="Why is this being corrected?" htmlFor="correct-reason">
                 <Input id="correct-reason" value={correctReason} onChange={(e) => setCorrectReason(e.target.value)} />
               </Field>
               <div className="flex gap-2">
-                <Button type="button" disabled={correctReason.trim().length < 2 || correct.isPending} onClick={() => correct.mutate(correcting)} className="h-8 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]">
+                <Button type="button" disabled={correctReason.trim().length < 2 || correct.isPending} onClick={() => correct.mutate(correcting)} className="h-8 bg-ink text-caption font-bold text-white hover:bg-ink-strong">
                   {correct.isPending ? "Saving…" : `Correct to ${OPPORTUNITY_STATUS_LABEL[correcting]}`}
                 </Button>
-                <Button type="button" variant="link" onClick={() => setCorrecting(null)} className="h-8 p-0 text-[12px] font-bold text-[#5F6B7C]">
+                <Button type="button" variant="link" onClick={() => setCorrecting(null)} className="h-8 p-0 text-caption font-bold text-ink-muted">
                   Go back
                 </Button>
               </div>

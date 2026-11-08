@@ -273,7 +273,7 @@ export function FunnelPage() {
   }
 
   if (!isAuthed) {
-    return <Skeleton className="h-64 w-full bg-[#E4E9EF]" />
+    return <Skeleton className="h-64 w-full bg-line" />
   }
 
   // ── the admin's team list ──
@@ -298,14 +298,14 @@ export function FunnelPage() {
                 A Sales User who may read the team (`team.funnel`) gets the
                 list alone, with no control that cannot work for them. */}
             {!isAdmin ? null : meetingQuery.isError && meetingQuery.data === undefined ? (
-              <div className="space-y-2 rounded-lg border border-[#E4E9EF] bg-white px-4 py-4">
+              <div className="space-y-2 rounded-lg border border-line bg-white px-4 py-4">
                 <PanelAlert>{toMessage(meetingQuery.error)}</PanelAlert>
                 <Button variant="outline" size="sm" onClick={() => void meetingQuery.refetch()}>
                   Try again
                 </Button>
               </div>
             ) : meetingQuery.isLoading ? (
-              <Skeleton className="h-28 w-full bg-[#E4E9EF]" />
+              <Skeleton className="h-28 w-full bg-line" />
             ) : (
               <FunnelMeetingPanel
                 meeting={meetingQuery.data ?? null}
@@ -327,7 +327,7 @@ export function FunnelPage() {
         ) : teamQuery.isError ? null : (
           // Loading, empty and broken are three different screens. No counts
           // are shown beside a skeleton, and a failure shows its alert alone.
-          <Skeleton className="h-64 w-full bg-[#E4E9EF]" />
+          <Skeleton className="h-64 w-full bg-line" />
         )}
       </div>
     )
@@ -362,7 +362,7 @@ export function FunnelPage() {
         {isAdmin && meetingOpen && grid ? (
           alreadyWalked ? (
             <>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#E6F4EA] px-3 py-1 text-sm font-medium text-[#0B7A3B]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-success-tint px-3 py-1 text-sm font-medium text-success">
                 <RiCheckLine className="size-4" aria-hidden />
                 Walked this week
               </span>
@@ -431,8 +431,8 @@ export function FunnelPage() {
               onClick={() => setFunnelView(view)}
               className={
                 funnelView === view
-                  ? "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-                  : "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                  ? "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
+                  : "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
               }
             >
               {view === "QUOTED" ? "Quoted" : "Before Quotation"}
@@ -463,7 +463,7 @@ export function FunnelPage() {
       {/* The quarter strip (owner, 2026-10-13). Hidden while a new view loads,
           for the same reason as the totals. */}
       {firstPageSeen ? (
-        <div className="space-y-3 rounded-lg border border-[#E4E9EF] bg-[#F9FAFB] px-4 py-3">
+        <div className="space-y-3 rounded-lg border border-line bg-surface-subtle px-4 py-3">
           <div className="flex flex-wrap items-end gap-4">
             <QuarterPicker
               value={filters.quarter ?? quarters[0].value}
@@ -475,7 +475,7 @@ export function FunnelPage() {
                 type="checkbox"
                 checked={Boolean(filters.inQuarter)}
                 onChange={(e) => setFilters((prev) => ({ ...prev, inQuarter: e.target.checked || undefined }))}
-                className="size-4 rounded border-[#C9D2DC]"
+                className="size-4 rounded border-line-strong"
               />
               Only rows closing in this quarter
             </label>
@@ -526,7 +526,7 @@ export function FunnelPage() {
       ) : gridQuery.isError ? null : (
         // Broken shows its alert alone; a skeleton beside it would read as
         // still loading.
-        <Skeleton className="h-96 w-full bg-[#E4E9EF]" />
+        <Skeleton className="h-96 w-full bg-line" />
       )}
       </>
       ) : null}

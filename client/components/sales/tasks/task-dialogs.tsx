@@ -333,7 +333,7 @@ export function TaskStatusDialog({
         </DialogHeader>
         {task && action && followUpOn ? (
           <>
-            <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+            <p className="text-caption leading-relaxed text-ink-muted">
               Done. Here is the next follow-up, due in 15 days. Change anything, or cancel to skip it.
             </p>
             <TaskForm
@@ -392,7 +392,7 @@ function TaskStatusForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="text-[12.5px] font-semibold text-[#1C2733]">{task.title}</p>
+      <p className="text-caption font-semibold text-ink-body">{task.title}</p>
       {action === "CANCELLED" ? (
         <Field label="Why is it cancelled?" htmlFor="task-reason">
           <Input id="task-reason" value={text} onChange={(e) => setText(e.target.value)} />

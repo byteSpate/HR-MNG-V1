@@ -39,28 +39,28 @@ function TimelineRow({ item, delayMs }: { item: TimelineItem; delayMs: number })
           ? TASK_ICON
           : EVENT_ICON
   return (
-    <li className="rise-in border-b border-[#EEF1F5] py-3 last:border-b-0" style={{ animationDelay: `${delayMs}ms` }}>
+    <li className="rise-in border-b border-surface-sunken py-3 last:border-b-0" style={{ animationDelay: `${delayMs}ms` }}>
       <div className="flex items-start gap-2">
         <span
           className={
             item.kind === "communication"
-              ? "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#EEF3FC] text-[#3B67C4]"
-              : "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#F1F4F8] text-[#6B7789]"
+              ? "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-info-tint text-info"
+              : "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-hover text-ink-muted"
           }
         >
           <Icon className="size-3" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-[#1C2733]">{item.title}</div>
-          <div className="mt-0.5 text-[11.5px] text-[#6B7789]">
+          <div className="text-body-sm font-semibold text-ink-body">{item.title}</div>
+          <div className="mt-0.5 text-caption text-ink-muted">
             {formatMoment(item.at)}
             {item.by ? ` · ${item.by}` : ""}
           </div>
-          {item.meta ? <div className="mt-1 text-[12px] text-[#3D4756]">{item.meta}</div> : null}
+          {item.meta ? <div className="mt-1 text-caption text-ink-soft">{item.meta}</div> : null}
           {/* The bug this fixes: the long-form note a caller typed into "Log a
               call" was saved but never shown back to them. */}
           {item.detail ? (
-            <div className="mt-1.5 rounded-md bg-[#F7F9FB] px-2.5 py-2 text-[12px] leading-relaxed whitespace-pre-wrap text-[#3D4756]">
+            <div className="mt-1.5 rounded-md bg-surface-subtle px-2.5 py-2 text-caption leading-relaxed whitespace-pre-wrap text-ink-soft">
               {item.detail}
             </div>
           ) : null}
@@ -152,7 +152,7 @@ export function AccountTimelinePanel({
                 resetForm()
                 setLogOpen(true)
               }}
-              className="h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-auto rounded-md bg-ink px-2.5 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
             >
               Log a call
             </Button>
@@ -165,14 +165,14 @@ export function AccountTimelinePanel({
           is already told why by the notice in the page header, and this
           sentence would be the wrong reason for them. */}
       {canManage && !canLog ? (
-        <p className="mb-3 rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 py-2 text-[12px] leading-relaxed text-[#5F6B7C]">
+        <p className="mb-3 rounded-md border border-line bg-surface-subtle px-3 py-2 text-caption leading-relaxed text-ink-muted">
           Logging a call records who made it, so it needs an employee record.
           Your account is an administrative login and has none.
         </p>
       ) : null}
 
       {items.length === 0 ? (
-        <p className="py-4 text-center text-[12.5px] text-[#5F6B7C]">
+        <p className="py-4 text-center text-caption text-ink-muted">
           Nothing has happened on this account yet.
         </p>
       ) : (

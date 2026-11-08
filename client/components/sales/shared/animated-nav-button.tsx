@@ -90,7 +90,7 @@ export function AnimatedNavButton({
       href={href}
       aria-label={ariaLabel}
       onClick={handleClick}
-      className="group relative isolate inline-flex shrink-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#17191C]/60"
+      className="group relative isolate inline-flex shrink-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-ink/60"
     >
       {/* The clipped ring frame. Centred, fixed-size square well past the
           pill's own footprint — large enough that rotating it never opens a
@@ -111,7 +111,7 @@ export function AnimatedNavButton({
       {/* The pill — in normal flow, so it is what sizes the Link. */}
       <span
         className={
-          "relative z-10 flex h-8.5 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-bold transition-[background-color,transform,box-shadow] duration-150 ease-out-quint group-hover:-translate-y-0.5 group-hover:shadow-[0_10px_20px_-10px_rgba(23,25,28,0.45)] group-active:translate-y-0 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 " +
+          "relative z-10 flex h-8.5 items-center gap-1.5 rounded-full px-3.5 text-caption font-bold transition-[background-color,transform,box-shadow] duration-150 ease-out-quint group-hover:-translate-y-0.5 group-hover:shadow-[0_10px_20px_-10px_rgba(23,25,28,0.45)] group-active:translate-y-0 group-active:scale-95 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 " +
           pillClassName
         }
       >

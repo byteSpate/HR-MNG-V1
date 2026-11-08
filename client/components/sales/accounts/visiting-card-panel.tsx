@@ -50,17 +50,17 @@ function CardImage({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-md border border-[#E4E9EF] bg-[#F7F9FB] p-2",
+        "relative overflow-hidden rounded-md border border-line bg-surface-subtle p-2",
         !loaded && !failed && "min-h-44",
       )}
     >
       {!loaded && !failed ? <Skeleton className="absolute inset-2 rounded-md" /> : null}
       {failed ? (
         <div className="flex min-h-44 flex-col items-center justify-center gap-2 text-center">
-          <span className="flex size-8 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+          <span className="flex size-8 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiImageLine className="size-4" aria-hidden />
           </span>
-          <div className="text-[12.5px] font-semibold text-[#5F6B7C]">The picture could not be loaded.</div>
+          <div className="text-caption font-semibold text-ink-muted">The picture could not be loaded.</div>
           <Button
             type="button"
             variant="outline"
@@ -68,7 +68,7 @@ function CardImage({
               setFailed(false)
               setAttempt((n) => n + 1)
             }}
-            className="h-8 gap-1.5 px-2.5 text-[12px] font-bold"
+            className="h-8 gap-1.5 px-2.5 text-caption font-bold"
           >
             <RiRefreshLine className="size-3.5" aria-hidden />
             Try again
@@ -91,7 +91,7 @@ function CardImage({
         />
       )}
       {uploading ? (
-        <div className="absolute inset-x-0 bottom-2 text-center text-[12px] font-semibold text-[#33373D]" role="status">
+        <div className="absolute inset-x-0 bottom-2 text-center text-caption font-semibold text-ink-body" role="status">
           Uploading…
         </div>
       ) : null}
@@ -146,10 +146,10 @@ export function VisitingCardPanel({ account }: { account: SalesAccountSummary })
   return (
     <Panel>
       <div className="mb-3 flex items-center gap-2">
-        <span className="flex size-6 items-center justify-center rounded-md bg-[#F1F4F8] text-[#33373D]">
+        <span className="flex size-6 items-center justify-center rounded-md bg-surface-hover text-ink-body">
           <RiIdCardLine className="size-3.5" aria-hidden />
         </span>
-        <div className="text-[13.5px] font-bold">Visiting card</div>
+        <div className="text-body-sm font-bold">Visiting card</div>
       </div>
 
       {error ? (
@@ -168,7 +168,7 @@ export function VisitingCardPanel({ account }: { account: SalesAccountSummary })
               type="button"
               variant="outline"
               onClick={() => setZoom(true)}
-              className="h-8 gap-1.5 px-2.5 text-[12px] font-bold"
+              className="h-8 gap-1.5 px-2.5 text-caption font-bold"
             >
               <RiFullscreenLine className="size-3.5" aria-hidden />
               View full size
@@ -180,7 +180,7 @@ export function VisitingCardPanel({ account }: { account: SalesAccountSummary })
                   variant="outline"
                   disabled={upload.isPending}
                   onClick={() => inputRef.current?.click()}
-                  className="h-8 gap-1.5 px-2.5 text-[12px] font-bold"
+                  className="h-8 gap-1.5 px-2.5 text-caption font-bold"
                 >
                   <RiUploadLine className="size-3.5" aria-hidden />
                   Replace
@@ -190,7 +190,7 @@ export function VisitingCardPanel({ account }: { account: SalesAccountSummary })
                   variant="link"
                   disabled={upload.isPending}
                   onClick={() => setConfirmRemove(true)}
-                  className="h-8 gap-1.5 px-2 text-[12px] font-bold text-[#B03A3A] underline"
+                  className="h-8 gap-1.5 px-2 text-caption font-bold text-danger underline"
                 >
                   <RiDeleteBinLine className="size-3.5" aria-hidden />
                   Remove
@@ -203,7 +203,7 @@ export function VisitingCardPanel({ account }: { account: SalesAccountSummary })
         upload.isPending ? (
           <div className="space-y-2" role="status">
             <Skeleton className="h-[74px] w-full" />
-            <div className={cn("text-[12px] font-semibold", TONE.muted)}>Uploading…</div>
+            <div className={cn("text-caption font-semibold", TONE.muted)}>Uploading…</div>
           </div>
         ) : (
           <CardDropZone
@@ -214,11 +214,11 @@ export function VisitingCardPanel({ account }: { account: SalesAccountSummary })
           />
         )
       ) : (
-        <div className="flex items-center gap-3 rounded-md border border-dashed border-[#E4E9EF] px-4 py-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+        <div className="flex items-center gap-3 rounded-md border border-dashed border-line px-4 py-4">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
             <RiIdCardLine className="size-5" aria-hidden />
           </span>
-          <div className={cn("text-[12.5px]", TONE.muted)}>No visiting card has been added for this account.</div>
+          <div className={cn("text-caption", TONE.muted)}>No visiting card has been added for this account.</div>
         </div>
       )}
 

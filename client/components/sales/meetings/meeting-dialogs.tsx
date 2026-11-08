@@ -131,7 +131,7 @@ export function AccountPicker({
             type="button"
             variant="link"
             onClick={() => query.refetch()}
-            className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+            className="h-auto p-0 text-caption font-bold text-danger underline"
           >
             Try again
           </Button>
@@ -142,7 +142,7 @@ export function AccountPicker({
   const accounts = (query.data ?? []).filter((account) => account.canManage)
   if (query.isSuccess && accounts.length === 0 && !noneLabel) {
     return (
-      <p className="text-[12px] leading-relaxed text-[#5F6B7C]">
+      <p className="text-caption leading-relaxed text-ink-muted">
         You do not work any account yet. A meeting or a task always sits on an account you own or collaborate on.
       </p>
     )
@@ -479,16 +479,16 @@ function MeetingForm({
                   type="button"
                   variant="link"
                   onClick={() => attendeeQuery.refetch()}
-                  className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+                  className="h-auto p-0 text-caption font-bold text-danger underline"
                 >
                   Try again
                 </Button>
               </span>
             </PanelAlert>
           ) : attendeeQuery.isPending ? (
-            <p className="text-[12px] text-[#5F6B7C]">Loading the people who can attend…</p>
+            <p className="text-caption text-ink-muted">Loading the people who can attend…</p>
           ) : people.length === 0 ? (
-            <p className="text-[12px] text-[#5F6B7C]">Nobody else has Sales Hub access yet.</p>
+            <p className="text-caption text-ink-muted">Nobody else has Sales Hub access yet.</p>
           ) : (
             <div className="grid max-h-56 gap-0.5 overflow-y-auto sm:grid-cols-2">
               {people.map((person) => (
@@ -521,13 +521,13 @@ function MeetingForm({
           {typed.length > 0 ? (
             <ul className="mt-1 space-y-1">
               {typed.map((person, index) => (
-                <li key={`${person.name}-${index}`} className="flex items-center justify-between gap-2 text-[12.5px]">
+                <li key={`${person.name}-${index}`} className="flex items-center justify-between gap-2 text-caption">
                   <span>{person.designation ? `${person.name}, ${person.designation}` : person.name}</span>
                   <Button
                     type="button"
                     variant="link"
                     onClick={() => setTyped(typed.filter((_, i) => i !== index))}
-                    className="h-auto p-0 text-[12px] font-bold text-[#5F6B7C]"
+                    className="h-auto p-0 text-caption font-bold text-ink-muted"
                   >
                     Remove
                   </Button>
@@ -556,7 +556,7 @@ function MeetingForm({
                 setNewName("")
                 setNewDesignation("")
               }}
-              className="h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              className="h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
             >
               Add
             </Button>
@@ -626,8 +626,8 @@ function NextStepsBox({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-[12.5px] font-semibold text-[#1C2733]">Next steps</p>
-      <p className="text-[12px] leading-snug text-[#5F6B7C]">
+      <p className="text-caption font-semibold text-ink-body">Next steps</p>
+      <p className="text-caption leading-snug text-ink-muted">
         Optional. Each next step is added to your tasks and is linked to this meeting.
       </p>
       {steps.map((step, i) => (
@@ -638,20 +638,20 @@ function NextStepsBox({
             value={step.title}
             maxLength={180}
             onChange={(e) => onChange(steps.map((s, j) => (j === i ? { ...s, title: e.target.value } : s)))}
-            className="min-w-0 flex-1 basis-56 text-[12.5px]"
+            className="min-w-0 flex-1 basis-56 text-caption"
           />
           <Input
             type="date"
             aria-label={`Due day for next step ${i + 1}`}
             value={step.dueOn}
             onChange={(e) => onChange(steps.map((s, j) => (j === i ? { ...s, dueOn: e.target.value } : s)))}
-            className="w-40 text-[12.5px]"
+            className="w-40 text-caption"
           />
           <Button
             type="button"
             variant="ghost"
             onClick={() => onChange(steps.filter((_, j) => j !== i))}
-            className="h-auto rounded-md px-2.5 py-1.5 text-[12px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+            className="h-auto rounded-md px-2.5 py-1.5 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
           >
             Remove
           </Button>
@@ -662,7 +662,7 @@ function NextStepsBox({
           type="button"
           variant="outline"
           onClick={onAdd}
-          className="h-auto rounded-md px-3 py-1.5 text-[12.5px] font-bold"
+          className="h-auto rounded-md px-3 py-1.5 text-caption font-bold"
         >
           {steps.length === 0 ? "Add a next step" : "Add another"}
         </Button>
@@ -722,11 +722,11 @@ function MeetingStatusForm({
   if (completed) {
     return (
       <div className="space-y-4">
-        <p className="text-[12.5px] leading-relaxed text-[#1C2733]">
+        <p className="text-caption leading-relaxed text-ink-body">
           <span className="font-semibold">{meeting.title}</span> is marked completed.
           {stepsMade > 0 ? ` ${stepsMade === 1 ? "1 next step was" : `${stepsMade} next steps were`} added to your tasks.` : ""}
         </p>
-        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <p className="text-caption leading-relaxed text-ink-muted">
           The minutes are the written record you send the customer. They start with the people who came
           {text.trim() ? " and your note" : ""}. Write them now, or later from the meeting.
         </p>
@@ -737,7 +737,7 @@ function MeetingStatusForm({
             variant="ghost"
             onClick={onDone}
             disabled={start.isPending}
-            className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+            className="h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
           >
             Not now
           </Button>
@@ -745,7 +745,7 @@ function MeetingStatusForm({
             type="button"
             onClick={() => start.mutate(meeting.id)}
             disabled={start.isPending}
-            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             {start.isPending ? "Opening…" : "Write the minutes"}
           </Button>
@@ -756,7 +756,7 @@ function MeetingStatusForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="text-[12.5px] font-semibold text-[#1C2733]">{meeting.title}</p>
+      <p className="text-caption font-semibold text-ink-body">{meeting.title}</p>
       {action === "CANCELLED" ? (
         <Field
           label="Why is it cancelled?"

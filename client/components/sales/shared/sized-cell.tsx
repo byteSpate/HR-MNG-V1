@@ -7,5 +7,5 @@ import type { TableCell } from "@/components/dashboard/types"
  * are already sized by the table and pass through unchanged.
  */
 export function sized(cell: TableCell): TableCell {
-  return cell.node ? { ...cell, node: <div className="min-w-0 text-[13px]">{cell.node}</div> } : cell
+  return cell.node ? { ...cell, node: <div className="min-w-0 text-body-sm">{cell.node}</div> } : cell
 }

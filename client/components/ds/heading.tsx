@@ -17,14 +17,16 @@ const DEFAULT_TAG: Record<HeadingLevel, "h1" | "h2" | "h3"> = {
 export function Heading({
   level,
   as,
+  id,
   className,
   children,
 }: {
   level: HeadingLevel
   as?: "h1" | "h2" | "h3" | "h4"
+  id?: string
   className?: string
   children: ReactNode
 }) {
   const Tag: ElementType = as ?? DEFAULT_TAG[level]
-  return <Tag className={cx(headingClass(level), className)}>{children}</Tag>
+  return <Tag id={id} className={cx(headingClass(level), className)}>{children}</Tag>
 }

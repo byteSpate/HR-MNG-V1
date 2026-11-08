@@ -27,8 +27,9 @@ import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { useSalesPermissions } from "@/components/sales/shared/use-sales-permissions"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Heading } from "@/components/ds/heading"
 
-const SMALL = "h-auto rounded-md px-2.5 py-1 text-[12px] font-bold"
+const SMALL = "h-auto rounded-md px-2.5 py-1 text-caption font-bold"
 
 /** The newest request for each collaborator. The list is newest first. */
 function latestByPerson(rows: SalesRemovalRequest[]): Map<string, SalesRemovalRequest> {
@@ -99,17 +100,17 @@ export function CollaboratorsSection({ account }: { account: SalesAccountSummary
   return (
     <section className={`space-y-3 border-t pt-4 ${TONE.line}`} aria-labelledby="collaborators-heading">
       <div>
-        <h3 id="collaborators-heading" className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>
+        <Heading level="label" id="collaborators-heading">
           Collaborators
-        </h3>
-        <p className={`mt-1 text-[12px] leading-relaxed ${TONE.muted}`}>
+        </Heading>
+        <p className={`mt-1 text-caption leading-relaxed ${TONE.muted}`}>
           Each change here is saved at once. You do not need to press Save changes.
         </p>
       </div>
       {error ? <PanelAlert>{error}</PanelAlert> : null}
 
       {account.assignees.length === 0 ? (
-        <p className={`text-[13px] ${TONE.muted}`}>This Sales Account has no collaborators yet.</p>
+        <p className={`text-body-sm ${TONE.muted}`}>This Sales Account has no collaborators yet.</p>
       ) : (
         <ul className="grid gap-2" data-testid="collaborator-list">
           {account.assignees.map((person) => {
@@ -117,12 +118,12 @@ export function CollaboratorsSection({ account }: { account: SalesAccountSummary
             const waiting = request?.status === "PENDING" ? request : null
             const refused = request?.status === "REFUSED" ? request : null
             return (
-              <li key={person.id} className="flex flex-wrap items-center justify-between gap-2 text-[13px]">
+              <li key={person.id} className="flex flex-wrap items-center justify-between gap-2 text-body-sm">
                 <div className="min-w-0">
                   <span className="font-semibold">{person.fullName}</span>
-                  {waiting ? <span className={`ml-2 text-[12px] ${TONE.muted}`}>Waiting for a Sales Admin</span> : null}
+                  {waiting ? <span className={`ml-2 text-caption ${TONE.muted}`}>Waiting for a Sales Admin</span> : null}
                   {refused?.refusalReason ? (
-                    <div className={`text-[12px] ${TONE.muted}`}>A Sales Admin said no: {refused.refusalReason}</div>
+                    <div className={`text-caption ${TONE.muted}`}>A Sales Admin said no: {refused.refusalReason}</div>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
@@ -138,14 +139,14 @@ export function CollaboratorsSection({ account }: { account: SalesAccountSummary
                   ) : null}
                   {confirming === person.id ? (
                     <>
-                      <span className={`text-[12px] ${TONE.muted}`}>
+                      <span className={`text-caption ${TONE.muted}`}>
                         {isAdmin ? `Remove ${person.fullName} now?` : `Ask a Sales Admin to remove ${person.fullName}?`}
                       </span>
                       <Button
                         type="button"
                         disabled={removeNow.isPending || ask.isPending}
                         onClick={() => (isAdmin ? removeNow.mutate(person.id) : ask.mutate(person.id))}
-                        className={`${SMALL} bg-[#17191C] text-white hover:bg-[#0E1012]`}
+                        className={`${SMALL} bg-ink text-white hover:bg-ink-strong`}
                       >
                         {isAdmin ? "Remove" : "Send the request"}
                       </Button>
@@ -183,12 +184,12 @@ export function CollaboratorsSection({ account }: { account: SalesAccountSummary
             type="button"
             disabled={!pick || add.isPending}
             onClick={() => add.mutate(pick)}
-            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             Add collaborator
           </Button>
           {optionsQuery.isSuccess && options.length === 0 ? (
-            <span className={`text-[12px] ${TONE.muted}`}>Nobody else can be added right now.</span>
+            <span className={`text-caption ${TONE.muted}`}>Nobody else can be added right now.</span>
           ) : null}
         </div>
       ) : null}

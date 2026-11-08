@@ -34,8 +34,8 @@ function Money({ amount }: { amount: string | null }) {
 export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
   if (team.rows.length === 0) {
     return (
-      <div className="rounded-lg border border-[#E4E9EF] bg-white px-6 py-10 text-center">
-        <p className="text-sm font-medium text-[#1B2733]">Nobody is in the Sales Hub yet</p>
+      <div className="rounded-lg border border-line bg-white px-6 py-10 text-center">
+        <p className="text-sm font-medium text-ink-body">Nobody is in the Sales Hub yet</p>
         <p className={cn("mt-1 text-sm", TONE.muted)}>
           Give somebody a sales role and their funnel will appear here.
         </p>
@@ -51,11 +51,11 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
         Reviewing the week of {team.weekStart}. {walked} of {team.rows.length} walked so far. Targets are for {team.quarterLabel}.
       </p>
 
-      <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
+      <div className="overflow-hidden rounded-lg border border-line bg-white">
         <div className="overflow-x-auto">
           {/* One line per value, so rows stay one height (owner, 2026-10-19). */}
           <table className="w-full min-w-350 border-collapse text-sm [&_td]:whitespace-nowrap">
-            <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
+            <thead className="bg-surface-subtle text-xs uppercase tracking-wide text-ink-muted">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">
                   Person
@@ -92,16 +92,16 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                 <tr
                   key={row.employeeId}
                   onClick={() => onOpen(row.employeeId)}
-                  className="cursor-pointer border-t border-[#EEF1F5] hover:bg-[#F5F7FA]"
+                  className="cursor-pointer border-t border-surface-sunken hover:bg-surface-subtle"
                 >
-                  <td className="px-4 py-2.5 font-medium text-[#1B2733]">
+                  <td className="px-4 py-2.5 font-medium text-ink-body">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
                         onOpen(row.employeeId)
                       }}
-                      className="text-left hover:underline focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                      className="text-left hover:underline focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
                     >
                       {row.employeeName}
                     </button>
@@ -113,7 +113,7 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                   <td className="px-4 py-2.5 text-right tabular-nums">
                     <Money amount={row.quoted} />
                   </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-[#0B7A3B]">
+                  <td className="px-4 py-2.5 text-right tabular-nums text-success">
                     <Money amount={row.stillOpen} />
                   </td>
                   {/* The quarter against the target (owner, 2026-10-13). A missing
@@ -140,12 +140,12 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                   <td className="px-4 py-2.5 text-right tabular-nums">
                     <span className={cn(row.summary.coverage === null && "text-xs " + TONE.muted)}>{coverageText(row.summary)}</span>
                   </td>
-                  <td className={cn("px-4 py-2.5 text-right tabular-nums", row.summary.quoteMissingCount > 0 && "font-medium text-[#8A5E0C]")}>
+                  <td className={cn("px-4 py-2.5 text-right tabular-nums", row.summary.quoteMissingCount > 0 && "font-medium text-warning")}>
                     {row.summary.quoteMissingCount}
                   </td>
                   <td className="px-4 py-2.5">
                     {row.reviewed ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#E6F4EA] px-2 py-0.5 text-xs font-medium text-[#0B7A3B]">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success-tint px-2 py-0.5 text-xs font-medium text-success">
                         <RiCheckLine className="size-3.5" aria-hidden />
                         Walked
                       </span>

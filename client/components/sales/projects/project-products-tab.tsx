@@ -43,8 +43,8 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
       node: (
         <span className="block min-w-0">
           <span className="block truncate font-semibold">{l.product}</span>
-          {l.model ? <span className="block truncate text-[11.5px] text-[#6B7789]">{l.model}</span> : null}
-          {l.partNo ? <span className="block truncate text-[11.5px] text-[#6B7789]">Part no {l.partNo}</span> : null}
+          {l.model ? <span className="block truncate text-caption text-ink-muted">{l.model}</span> : null}
+          {l.partNo ? <span className="block truncate text-caption text-ink-muted">Part no {l.partNo}</span> : null}
         </span>
       ),
     },
@@ -68,7 +68,7 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
                 disabled={tick.isPending}
                 onCheckedChange={(v) => tick.mutate({ lineId: l.id, on: v === true })}
               />
-              {l.done ? <span className={`text-[11.5px] ${TONE.muted}`}>{onDate(l.done.at)}</span> : null}
+              {l.done ? <span className={`text-caption ${TONE.muted}`}>{onDate(l.done.at)}</span> : null}
             </span>
           ),
         }
@@ -84,9 +84,9 @@ export function ProjectProductsTab({ project, onSaved }: { project: ProjectSumma
   return (
     <div>
       {error ? <PanelAlert>{error}</PanelAlert> : null}
-      <p className={`mb-3 text-[12.5px] ${TONE.muted}`}>
+      <p className={`mb-3 text-caption ${TONE.muted}`}>
         These are the Opportunity&apos;s own products. To change a product, edit it on the{" "}
-        <Link href={`/sales/opportunities/${project.opportunity.id}?tab=products`} className="font-semibold text-[#17191C] underline">
+        <Link href={`/sales/opportunities/${project.opportunity.id}?tab=products`} className="font-semibold text-ink underline">
           Opportunity
         </Link>
         .

@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 
-const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-const QUIET = "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+const PRIMARY = "h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
+const QUIET = "h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
 
 /**
  * The stage change box for a quote stage (owner, 2026-10-13). REQUIRED: the
@@ -84,14 +84,14 @@ export function StageChangeDialog({
           </Field>
         ) : (
           <>
-            <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
+            <p className={`text-caption leading-relaxed ${TONE.muted}`}>
               {ask === "REQUIRED"
                 ? "This is a quote stage. Write the price you sent. The Funnel and targets use it."
                 : "Did the price change? Save the new quote. If only the terms changed, just move."}
             </p>
             <QuoteFields draft={draft} onChange={setDraft} idPrefix="stage-quote" />
             {ask === "REQUIRED" && !canSkipQuote ? (
-              <p className={`text-[11.5px] ${TONE.muted}`}>A Sales Admin has turned off moving without a quote.</p>
+              <p className={`text-caption ${TONE.muted}`}>A Sales Admin has turned off moving without a quote.</p>
             ) : null}
           </>
         )}

@@ -37,11 +37,11 @@ function LogRow({ task, onEdit }: { task: SalesTaskSummary; onEdit: () => void }
   const about = [task.salesAccountName, task.opportunitySerial].filter(Boolean).join(" · ")
   const given = task.givenByName ? `Take-out from ${task.givenByName}${task.givenOn ? `, ${onDay(task.givenOn)}` : ""}` : null
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[#EFF2F6] px-4 py-2.5 first:border-t-0">
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-surface-sunken px-4 py-2.5 first:border-t-0">
       <span className="min-w-0 flex-1 basis-60">
-        <span className="block text-[13px] font-semibold [overflow-wrap:anywhere]">{task.title}</span>
+        <span className="block text-body-sm font-semibold [overflow-wrap:anywhere]">{task.title}</span>
         {about || given || task.detail ? (
-          <span className={`block text-[11.5px] ${TONE.muted} [overflow-wrap:anywhere]`}>
+          <span className={`block text-caption ${TONE.muted} [overflow-wrap:anywhere]`}>
             {[about, given, task.detail].filter(Boolean).join(" · ")}
           </span>
         ) : null}
@@ -49,7 +49,7 @@ function LogRow({ task, onEdit }: { task: SalesTaskSummary; onEdit: () => void }
       <Tag label={TASK_TYPE_LABEL[task.type]} tone="neutral" />
       <Tag label={TASK_STATUS_LABEL[task.status]} tone={TASK_STATUS_TONE[task.status]} />
       {task.canManage ? (
-        <Button type="button" variant="outline" onClick={onEdit} className="h-auto rounded-md px-3 py-1.5 text-[12px] font-bold">
+        <Button type="button" variant="outline" onClick={onEdit} className="h-auto rounded-md px-3 py-1.5 text-caption font-bold">
           Edit
         </Button>
       ) : null}
@@ -96,16 +96,16 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
 
   return (
     <section aria-label="Logs" className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
         <Button type="button" variant="outline" aria-label="Earlier week" onClick={() => setWeekStart(shiftWeek(weekStart, -1))} className="h-9 px-2">
           <RiArrowLeftSLine className="size-4" aria-hidden />
         </Button>
-        <span className="min-w-[10rem] text-center text-[13px] font-bold tabular-nums">{weekLabel(weekStart)}</span>
+        <span className="min-w-[10rem] text-center text-body-sm font-bold tabular-nums">{weekLabel(weekStart)}</span>
         <Button type="button" variant="outline" aria-label="Later week" onClick={() => setWeekStart(shiftWeek(weekStart, 1))} className="h-9 px-2">
           <RiArrowRightSLine className="size-4" aria-hidden />
         </Button>
         {weekStart !== thisWeek ? (
-          <Button type="button" variant="link" onClick={() => setWeekStart(thisWeek)} className="h-9 p-0 text-[12.5px] font-bold text-[#5F6B7C]">
+          <Button type="button" variant="link" onClick={() => setWeekStart(thisWeek)} className="h-9 p-0 text-caption font-bold text-ink-muted">
             This week
           </Button>
         ) : null}
@@ -147,7 +147,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
         <div className="grid gap-2">
           <PanelAlert>{toMessage(query.error)}</PanelAlert>
           <div>
-            <Button type="button" onClick={() => query.refetch()} className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]">
+            <Button type="button" onClick={() => query.refetch()} className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong">
               Try again
             </Button>
           </div>
@@ -155,7 +155,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
       ) : isLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : items.length === 0 ? (
-        <p className={`rounded-md border border-[#E4E9EF] bg-white px-4 py-4 text-[12.5px] ${TONE.muted}`}>
+        <p className={`rounded-md border border-line bg-white px-4 py-4 text-caption ${TONE.muted}`}>
           {ownLog && !isSalesAdmin
             ? "Nothing logged this week yet. Press I did this to record work you have done."
             : "Nothing logged for this person this week."}
@@ -163,13 +163,13 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
       ) : (
         <div className="grid gap-3">
           {slots.map((slot) => (
-            <section key={slot.date} aria-label={slot.label} className="overflow-hidden rounded-md border border-[#E4E9EF] bg-white">
-              <Heading level="card" className="flex items-baseline justify-between gap-2 bg-[#F8FAFC] px-4 py-2">
+            <section key={slot.date} aria-label={slot.label} className="overflow-hidden rounded-md border border-line bg-white">
+              <Heading level="card" className="flex items-baseline justify-between gap-2 bg-surface-subtle px-4 py-2">
                 <span>{slot.label}</span>
                 <span className={`font-semibold tabular-nums ${TONE.muted}`}>{onDay(slot.date)}</span>
               </Heading>
               {slot.tasks.length === 0 ? (
-                <p className={`px-4 py-2.5 text-[12px] ${TONE.muted}`}>Nothing logged.</p>
+                <p className={`px-4 py-2.5 text-caption ${TONE.muted}`}>Nothing logged.</p>
               ) : (
                 <ul>
                   {slot.tasks.map((task) => (

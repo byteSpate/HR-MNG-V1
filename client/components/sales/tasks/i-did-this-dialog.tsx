@@ -131,8 +131,8 @@ function IDidThisForm({
   if (savedFor) {
     return (
       <div className="space-y-4">
-        <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[#1C2733]">
-          <RiCheckboxCircleLine className="mt-0.5 size-4 shrink-0 text-[#17673A]" aria-hidden />
+        <p className="flex items-start gap-2 text-body-sm leading-relaxed text-ink-body">
+          <RiCheckboxCircleLine className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
           <span>
             Saved. It is in your log for <span className="font-semibold">{onDay(savedFor)}</span>.
           </span>
@@ -142,14 +142,14 @@ function IDidThisForm({
             type="button"
             variant="outline"
             onClick={another}
-            className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold"
+            className="h-auto rounded-md px-3.5 py-2 text-caption font-bold"
           >
             Add another
           </Button>
           <Button
             type="button"
             onClick={onDone}
-            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             Done
           </Button>
@@ -268,7 +268,7 @@ export function IDidThisButton() {
       <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-4 z-30 h-auto gap-1.5 rounded-full bg-[#17191C] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg hover:bg-[#0E1012] motion-reduce:transition-none sm:right-6 sm:bottom-6"
+        className="fixed right-4 bottom-4 z-30 h-auto gap-1.5 rounded-full bg-ink px-4 py-2.5 text-caption font-bold text-white shadow-lg hover:bg-ink-strong motion-reduce:transition-none sm:right-6 sm:bottom-6"
       >
         <RiCheckboxCircleLine className="size-4" aria-hidden />
         I did this

@@ -83,7 +83,7 @@ export function RowPanel({
             <Skeleton className="h-40 w-full" />
           ) : (
             <>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[12.5px]">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-caption">
                 <dt className={TONE.muted}>Stage</dt>
                 <dd className="font-semibold">{stageSentence(data.status, data.stage)}</dd>
                 <dt className={TONE.muted}>Owner</dt>
@@ -96,11 +96,11 @@ export function RowPanel({
 
               {showQuotes ? (
                 <div>
-                  <h4 className="mb-1 text-[12px] font-bold">Quotes</h4>
+                  <h4 className="mb-1 text-caption font-bold">Quotes</h4>
                   {data.quotes.length === 0 ? (
-                    <p className={cn("text-[12px]", TONE.muted)}>No quote yet.</p>
+                    <p className={cn("text-caption", TONE.muted)}>No quote yet.</p>
                   ) : (
-                    <ul className="grid gap-1 text-[12.5px]">
+                    <ul className="grid gap-1 text-caption">
                       {data.quotes.map((quote, index) => (
                         <li key={quote.id} className="flex flex-wrap justify-between gap-2">
                           <span>{`Quote ${data.quotes.length - index}`}</span>
@@ -115,15 +115,15 @@ export function RowPanel({
               <StageLinks deal={data} canManage={isAdmin} />
 
               <div>
-                <h4 className="mb-1 text-[12px] font-bold">Open tasks</h4>
+                <h4 className="mb-1 text-caption font-bold">Open tasks</h4>
                 {tasks.isError ? (
                   <PanelAlert>{toMessage(tasks.error)}</PanelAlert>
                 ) : tasks.isPending ? (
                   <Skeleton className="h-10 w-full" />
                 ) : (tasks.data?.items ?? []).length === 0 ? (
-                  <p className={cn("text-[12px]", TONE.muted)}>Nothing open on this Opportunity.</p>
+                  <p className={cn("text-caption", TONE.muted)}>Nothing open on this Opportunity.</p>
                 ) : (
-                  <ul className="grid gap-1 text-[12.5px]">
+                  <ul className="grid gap-1 text-caption">
                     {(tasks.data?.items ?? []).map((task) => (
                       <li key={task.id} className="flex flex-wrap items-baseline justify-between gap-2">
                         <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{task.title}</span>
@@ -136,19 +136,19 @@ export function RowPanel({
               </div>
 
               <div>
-                <h4 className="mb-1 text-[12px] font-bold">Take-outs for {employeeName}</h4>
+                <h4 className="mb-1 text-caption font-bold">Take-outs for {employeeName}</h4>
                 {takeOuts.isError ? (
                   <PanelAlert>{toMessage(takeOuts.error)}</PanelAlert>
                 ) : takeOuts.isPending ? (
                   <Skeleton className="h-10 w-full" />
                 ) : (takeOuts.data?.items ?? []).length === 0 ? (
-                  <p className={cn("text-[12px]", TONE.muted)}>No take-out on this Opportunity yet.</p>
+                  <p className={cn("text-caption", TONE.muted)}>No take-out on this Opportunity yet.</p>
                 ) : (
-                  <ul className="grid gap-1 text-[12.5px]">
+                  <ul className="grid gap-1 text-caption">
                     {(takeOuts.data?.items ?? []).map((task) => (
                       <li key={task.id}>
                         <span className="font-semibold [overflow-wrap:anywhere]">{task.title}</span>
-                        <span className={cn("block text-[11.5px]", TONE.muted)}>
+                        <span className={cn("block text-caption", TONE.muted)}>
                           {`${task.givenByName ?? "An admin"}, ${task.givenOn ? onDay(task.givenOn) : ""} · ${task.status === "DONE" ? "Done" : `due ${onDay(task.dueOn)}`}`}
                         </span>
                       </li>
@@ -164,7 +164,7 @@ export function RowPanel({
 
               <Link
                 href={`/sales/opportunities/${data.id}`}
-                className="inline-flex items-center gap-1 text-[12.5px] font-bold hover:underline"
+                className="inline-flex items-center gap-1 text-caption font-bold hover:underline"
               >
                 Open the Opportunity
                 <RiExternalLinkLine className="size-3.5" aria-hidden />

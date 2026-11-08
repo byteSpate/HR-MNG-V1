@@ -74,7 +74,7 @@ export function TakeOutBox({
           }}
           aria-label={`Take-out for ${employeeName}`}
           placeholder={`A take-out for ${employeeName}`}
-          className="min-w-0 flex-1 basis-60 text-[12.5px]"
+          className="min-w-0 flex-1 basis-60 text-caption"
         />
         <Input
           type="date"
@@ -82,12 +82,12 @@ export function TakeOutBox({
           onChange={(e) => setDueOn(e.target.value)}
           aria-label="Due day, or leave empty for next Saturday"
           title="Due day. Left empty, it is due next Saturday."
-          className="w-40 text-[12.5px]"
+          className="w-40 text-caption"
         />
         <Button
           type="submit"
           disabled={title.trim().length < 1 || save.isPending}
-          className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+          className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
         >
           {save.isPending ? "Saving…" : "Give take-out"}
         </Button>

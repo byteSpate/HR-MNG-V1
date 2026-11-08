@@ -34,7 +34,7 @@ export function SalesStatRow({
     return (
       <div className={GRID} aria-hidden>
         {Array.from({ length: stats.length }, (_, i) => (
-          <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+          <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="mt-2.5 h-6 w-14" />
             <Skeleton className="mt-2 h-3 w-32" />

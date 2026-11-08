@@ -97,7 +97,7 @@ const RichTextEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-28 animate-pulse rounded-md border border-[#E4E9EF] bg-[#F7F9FB]" aria-hidden />
+      <div className="min-h-28 animate-pulse rounded-md border border-line bg-surface-subtle" aria-hidden />
     ),
   }
 )
@@ -106,12 +106,12 @@ const RichTextEditor = dynamic(
 const FOLLOW_UP_DAYS = 15
 const KINDS = Object.keys(MINUTES_KIND_LABEL) as MinutesKind[]
 
-const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const PRIMARY = "h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
 const OUTLINE =
-  "h-auto rounded-md border border-[#E4E9EF] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+  "h-auto rounded-md border border-line bg-white px-3.5 py-2 text-caption font-bold text-ink hover:bg-surface-subtle"
 const QUIET =
-  "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
-const ADD = "h-auto px-2 py-1 text-[12px] font-bold text-[#3D4756] hover:bg-[#F1F4F8]"
+  "h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
+const ADD = "h-auto px-2 py-1 text-caption font-bold text-ink-soft hover:bg-surface-hover"
 
 // ── the draft ────────────────────────────────────────────────────────────────
 
@@ -335,7 +335,7 @@ function BackLink() {
   return (
     <Link
       href="/sales/meetings/minutes"
-      className="mb-3 inline-flex items-center gap-1 text-[12.5px] font-bold text-[#5F6B7C] hover:text-[#1C2733] hover:underline"
+      className="mb-3 inline-flex items-center gap-1 text-caption font-bold text-ink-muted hover:text-ink-body hover:underline"
     >
       <RiArrowLeftLine className="size-4" aria-hidden />
       Meeting Minutes
@@ -356,7 +356,7 @@ export function MinutesEditor({ minutesId }: { minutesId: string }) {
       <>
         <BackLink />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="space-y-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-5">
+          <div className="space-y-4 rounded-md border border-line bg-white px-5 py-5">
             <Skeleton className="mx-auto h-5 w-72" />
             <Skeleton className="h-3.5 w-1/2" />
             <Skeleton className="h-3.5 w-2/3" />
@@ -575,10 +575,10 @@ function MinutesDocument({
         <aside className="grid content-start gap-4 lg:sticky lg:top-4 lg:self-start">
           <Card>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[13.5px] font-bold">This document</span>
+              <span className="text-body-sm font-bold">This document</span>
               <Tag label={MINUTES_STATUS_LABEL[detail.status]} tone={MINUTES_STATUS_TONE[detail.status]} />
             </div>
-            <p className={`mt-1 text-[12px] ${TONE.muted}`}>
+            <p className={`mt-1 text-caption ${TONE.muted}`}>
               {detail.lastSentAt ? `Last sent ${stamp(detail.lastSentAt)}` : "Not sent yet"}
             </p>
 
@@ -607,7 +607,7 @@ function MinutesDocument({
               ) : null}
             </div>
 
-            <div className="mt-4 grid gap-2 border-t border-[#EEF1F5] pt-4">
+            <div className="mt-4 grid gap-2 border-t border-surface-sunken pt-4">
               <Button type="button" onClick={openPreview} disabled={dirty || previewing} className={OUTLINE}>
                 <RiEyeLine className="size-4" aria-hidden />
                 {previewing ? "Making the preview…" : "Preview"}
@@ -617,13 +617,13 @@ function MinutesDocument({
                 Download for sending
               </Button>
               {blockers.length > 0 ? (
-                <ul className="list-disc space-y-0.5 pl-4 text-[11.5px] leading-relaxed text-[#8A5E0C]">
+                <ul className="list-disc space-y-0.5 pl-4 text-caption leading-relaxed text-warning">
                   {blockers.map((line) => (
                     <li key={line}>{line}</li>
                   ))}
                 </ul>
               ) : null}
-              <p className={`text-[11.5px] leading-relaxed ${TONE.muted}`}>
+              <p className={`text-caption leading-relaxed ${TONE.muted}`}>
                 Preview marks every page DRAFT. Download for sending keeps that exact copy here and marks the minutes
                 sent. You send it from your own email; the app does not email the customer.
               </p>
@@ -633,13 +633,13 @@ function MinutesDocument({
 
           <Card title="Sent copies">
             {detail.sends.length === 0 ? (
-              <p className={`text-[12.5px] ${TONE.muted}`}>None yet. Each copy you download for sending is kept here.</p>
+              <p className={`text-caption ${TONE.muted}`}>None yet. Each copy you download for sending is kept here.</p>
             ) : (
               <ul className="grid gap-2.5">
                 {detail.sends.map((send) => (
-                  <li key={send.id} className="flex items-start justify-between gap-2 text-[12px]">
+                  <li key={send.id} className="flex items-start justify-between gap-2 text-caption">
                     <div className="min-w-0">
-                      <div className="font-semibold text-[#1C2733]">{stamp(send.sentAt)}</div>
+                      <div className="font-semibold text-ink-body">{stamp(send.sentAt)}</div>
                       <div className={TONE.muted}>
                         {[send.sentByName, send.sentTo ? `to ${send.sentTo}` : null].filter(Boolean).join(", ")}
                       </div>
@@ -649,7 +649,7 @@ function MinutesDocument({
                       variant="ghost"
                       disabled={copy.isPending}
                       onClick={() => copy.mutate(send)}
-                      className="h-auto shrink-0 px-2 py-1 text-[12px] font-bold text-[#3D4756] hover:bg-[#F1F4F8]"
+                      className="h-auto shrink-0 px-2 py-1 text-caption font-bold text-ink-soft hover:bg-surface-hover"
                     >
                       Download
                     </Button>
@@ -661,12 +661,12 @@ function MinutesDocument({
 
           <Card title="History">
             {detail.history.length === 0 ? (
-              <p className={`text-[12.5px] ${TONE.muted}`}>Nothing yet.</p>
+              <p className={`text-caption ${TONE.muted}`}>Nothing yet.</p>
             ) : (
               <ul className="grid gap-2">
                 {detail.history.map((line) => (
-                  <li key={line.id} className="text-[12px]">
-                    <div className="font-semibold text-[#1C2733]">{line.text}</div>
+                  <li key={line.id} className="text-caption">
+                    <div className="font-semibold text-ink-body">{line.text}</div>
                     <div className={TONE.muted}>{[line.byName, stamp(line.at)].filter(Boolean).join(" · ")}</div>
                   </li>
                 ))}
@@ -679,7 +679,7 @@ function MinutesDocument({
               type="button"
               variant="ghost"
               onClick={() => setDeleteOpen(true)}
-              className="h-auto justify-self-start rounded-md px-3 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#FDF1F1] hover:text-[#B03A3A]"
+              className="h-auto justify-self-start rounded-md px-3 py-2 text-caption font-bold text-ink-muted hover:bg-danger-tint hover:text-danger"
             >
               <RiDeleteBinLine className="size-4" aria-hidden />
               Delete these minutes
@@ -728,7 +728,7 @@ function MinutesDocument({
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+    <section className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
       {title ? <Heading level="section" className="mb-3">{title}</Heading> : null}
       {children}
     </section>
@@ -751,8 +751,8 @@ function HeaderCard({
   return (
     <Card>
       <Heading level="section" className="text-center text-balance">{detail.title}</Heading>
-      <p className={`mt-0.5 text-center text-[13px] ${TONE.muted}`}>{detail.subtitle}</p>
-      <dl className="mt-4 grid gap-1 text-[13px]">
+      <p className={`mt-0.5 text-center text-body-sm ${TONE.muted}`}>{detail.subtitle}</p>
+      <dl className="mt-4 grid gap-1 text-body-sm">
         {lines.map((line) => (
           <div key={line.label}>
             <dt className="inline font-bold">{line.label}:</dt> <dd className="inline">{line.value}</dd>
@@ -781,7 +781,7 @@ function HeaderCard({
           />
         </Field>
       </div>
-      <p className={`mt-3 text-[12px] leading-relaxed ${TONE.muted}`}>
+      <p className={`mt-3 text-caption leading-relaxed ${TONE.muted}`}>
         The date, time, place and people come from the meeting, and stay in step with it until the minutes are sent.
         To change them,{" "}
         <Link href={`/sales/accounts/${detail.meeting.salesAccountId}`} className="font-semibold underline">
@@ -802,13 +802,13 @@ function AttendeesCard({ detail }: { detail: SalesMinutesDetail }) {
   return (
     <Card title="Attendees">
       {groups.length === 0 ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>Nobody is listed on the meeting.</p>
+        <p className={`text-caption ${TONE.muted}`}>Nobody is listed on the meeting.</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {groups.map((group) => (
             <div key={group.label}>
-              <div className="text-[12.5px] font-bold">{group.label}:</div>
-              <ul className="mt-1 list-disc pl-5 text-[12.5px] leading-relaxed">
+              <div className="text-caption font-bold">{group.label}:</div>
+              <ul className="mt-1 list-disc pl-5 text-caption leading-relaxed">
                 {group.people.map((person, i) => (
                   <li key={`${person.name}-${i}`}>{named(person)}</li>
                 ))}
@@ -817,7 +817,7 @@ function AttendeesCard({ detail }: { detail: SalesMinutesDetail }) {
           ))}
         </div>
       )}
-      <p className={`mt-3 text-[12px] ${TONE.muted}`}>
+      <p className={`mt-3 text-caption ${TONE.muted}`}>
         From the meeting. Somebody who did not come is taken off the meeting itself.
       </p>
     </Card>
@@ -842,17 +842,17 @@ function RequirementCard({
   const dealMade = detail.originatedDeals.length > 0
   const choice = (value: boolean) =>
     found === value
-      ? "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-      : "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+      ? "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
+      : "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
   return (
     <Card title="Was a requirement found?">
-      <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
+      <p className={`text-caption leading-relaxed ${TONE.muted}`}>
         This meeting has no Opportunity yet. Say whether the customer has a requirement. Yes makes an
         Opportunity from this meeting. No makes a follow-up task. You must answer before you send. The
         answer is fixed once the minutes are sent.
       </p>
       {detail.requirementLocked ? (
-        <p className="mt-3 text-[12.5px] font-semibold">
+        <p className="mt-3 text-caption font-semibold">
           {found ? "Yes, a requirement was found." : "No requirement was found."}
         </p>
       ) : (
@@ -878,18 +878,18 @@ function RequirementCard({
             </Button>
           </div>
           {found === false ? (
-            <p className={`mt-2 text-[12px] ${TONE.muted}`}>
+            <p className={`mt-2 text-caption ${TONE.muted}`}>
               Answered: no requirement. Press No requirement again to open the follow-up task form.
             </p>
           ) : found === true && !dealMade ? (
-            <p className={`mt-2 text-[12px] ${TONE.muted}`}>
+            <p className={`mt-2 text-caption ${TONE.muted}`}>
               Answered: a requirement was found. Press Yes, a requirement again to open the Opportunity form.
             </p>
           ) : null}
         </>
       )}
       {detail.originatedDeals.length > 0 ? (
-        <p className="mt-3 text-[12.5px]">
+        <p className="mt-3 text-caption">
           {detail.originatedDeals.length > 1 ? "Opportunities" : "Opportunity"} made from this meeting:{" "}
           {detail.originatedDeals.map((deal, i) => (
             <span key={deal.id}>
@@ -928,7 +928,7 @@ function SectionsCard({
 
   return (
     <Card title="Sections">
-      <p className={`-mt-1 mb-3 text-[12px] leading-relaxed ${TONE.muted}`}>
+      <p className={`-mt-1 mb-3 text-caption leading-relaxed ${TONE.muted}`}>
         Numbered in the PDF by their order; an empty section is left out. To make words bold, put two stars on each
         side: **like this**. For more, like italics, lists or a table, switch a section to formatted text and use its
         toolbar.
@@ -951,7 +951,7 @@ function SectionsCard({
         ))}
       </div>
 
-      <div className="mt-4 grid gap-2 border-t border-[#EEF1F5] pt-4 sm:grid-cols-[minmax(0,1fr)_14rem_auto]">
+      <div className="mt-4 grid gap-2 border-t border-surface-sunken pt-4 sm:grid-cols-[minmax(0,1fr)_14rem_auto]">
         <Input
           aria-label="Heading of a new section"
           placeholder="Add a section, like Client Feedback"
@@ -1021,16 +1021,16 @@ function SectionCard({
   }
 
   return (
-    <div className="rounded-md border border-[#EEF1F5] px-3 py-3 sm:px-4">
+    <div className="rounded-md border border-surface-sunken px-3 py-3 sm:px-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="w-5 text-[13px] font-bold text-[#5F6B7C] tabular-nums">{number}.</span>
+        <span className="w-5 text-body-sm font-bold text-ink-muted tabular-nums">{number}.</span>
         <Input
           aria-label={`Heading of section ${number}`}
           value={section.heading}
           onChange={(e) => onChange({ ...section, heading: e.target.value })}
           className="h-9 min-w-[10rem] flex-1 font-semibold"
         />
-        <span className={`text-[11.5px] ${TONE.muted}`}>{MINUTES_KIND_LABEL[section.kind]}</span>
+        <span className={`text-caption ${TONE.muted}`}>{MINUTES_KIND_LABEL[section.kind]}</span>
         {section.kind === "PARAGRAPHS" || section.kind === "BULLETS" || section.kind === "SUBTOPICS" ? (
           <Button type="button" variant="ghost" onClick={switchToRich} className={ADD}>
             Switch to formatted text
@@ -1097,7 +1097,7 @@ function IconButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="h-8 w-8 shrink-0 p-0 text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+      className="h-8 w-8 shrink-0 p-0 text-ink-muted hover:bg-surface-hover hover:text-ink-body"
     >
       {children}
     </Button>
@@ -1141,7 +1141,7 @@ function BulletsEditor({ bullets, onChange }: { bullets: MinutesBullet[]; onChan
       {list.map((bullet, i) => (
         <div key={i} className="grid gap-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 text-center text-[#5F6B7C]" aria-hidden>
+            <span className="w-3 text-center text-ink-muted" aria-hidden>
               •
             </span>
             <Input
@@ -1166,7 +1166,7 @@ function BulletsEditor({ bullets, onChange }: { bullets: MinutesBullet[]; onChan
           </div>
           {bullet.sub.map((sub, j) => (
             <div key={j} className="flex items-center gap-1.5 pl-6">
-              <span className="w-3 text-center text-[12px] text-[#5F6B7C]" aria-hidden>
+              <span className="w-3 text-center text-caption text-ink-muted" aria-hidden>
                 o
               </span>
               <Input
@@ -1213,9 +1213,9 @@ function TopicsEditor({
   return (
     <div className="grid gap-3">
       {list.map((topic, i) => (
-        <div key={i} className="grid gap-2 rounded-md bg-[#F7F9FB] px-3 py-3">
+        <div key={i} className="grid gap-2 rounded-md bg-surface-subtle px-3 py-3">
           <div className="flex items-center gap-1.5">
-            <span className="w-8 text-[12.5px] font-bold text-[#5F6B7C] tabular-nums">
+            <span className="w-8 text-caption font-bold text-ink-muted tabular-nums">
               {number}.{i + 1}
             </span>
             <Input
@@ -1267,7 +1267,7 @@ function TableEditor({ rows, onChange }: { rows: MinutesTableRowBody[]; onChange
   const update = (i: number, next: MinutesTableRowBody) => onChange(replaceAt(list, i, next))
   return (
     <div className="grid gap-2">
-      <div className="hidden gap-2 text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase sm:grid sm:grid-cols-[2rem_minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1fr)_2rem]">
+      <div className="hidden gap-2 text-caption font-bold tracking-wide text-ink-muted uppercase sm:grid sm:grid-cols-[2rem_minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1fr)_2rem]">
         <span>SL</span>
         <span>Action item</span>
         <span>Responsible person/team</span>
@@ -1275,9 +1275,9 @@ function TableEditor({ rows, onChange }: { rows: MinutesTableRowBody[]; onChange
         <span />
       </div>
       {list.map((row, i) => (
-        <div key={i} className="grid gap-1.5 rounded-md border border-[#EEF1F5] p-2 sm:border-0 sm:p-0">
+        <div key={i} className="grid gap-1.5 rounded-md border border-surface-sunken p-2 sm:border-0 sm:p-0">
           <div className="grid items-center gap-2 sm:grid-cols-[2rem_minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1fr)_2rem]">
-            <span className="text-[12.5px] font-bold text-[#5F6B7C] tabular-nums">{i + 1}</span>
+            <span className="text-caption font-bold text-ink-muted tabular-nums">{i + 1}</span>
             <Input
               aria-label={`Action item ${i + 1}`}
               value={row.actionItem}
@@ -1307,7 +1307,7 @@ function TableEditor({ rows, onChange }: { rows: MinutesTableRowBody[]; onChange
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:pl-10">
             {row.taskId ? (
-              <span className="inline-flex items-center gap-1.5 text-[12px] text-[#3D4756]">
+              <span className="inline-flex items-center gap-1.5 text-caption text-ink-soft">
                 <Tag label="Task made" tone="green" />A task was made from this row.
               </span>
             ) : (
@@ -1321,7 +1321,7 @@ function TableEditor({ rows, onChange }: { rows: MinutesTableRowBody[]; onChange
                   }
                 />
                 {row.newTask ? (
-                  <label className="flex items-center gap-1.5 text-[12px] text-[#3D4756]">
+                  <label className="flex items-center gap-1.5 text-caption text-ink-soft">
                     Due
                     <Input
                       type="date"
@@ -1374,15 +1374,15 @@ function PreparersCard({
   return (
     <Card title="Prepared by">
       {preparers.length === 0 ? (
-        <p className="text-[12.5px] leading-relaxed text-[#8A5E0C]">
+        <p className="text-caption leading-relaxed text-warning">
           Nobody yet. The minutes cannot be sent until somebody is named here.
         </p>
       ) : (
         <ul className="grid gap-3">
           {preparers.map((person, i) => (
             <li key={person.employeeId} className="grid gap-1.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2rem] sm:items-start">
-              <div className="text-[12.5px] leading-relaxed">
-                <div className="font-bold text-[#1C2733]">{person.name}</div>
+              <div className="text-caption leading-relaxed">
+                <div className="font-bold text-ink-body">{person.name}</div>
                 <div className={TONE.muted}>{person.title ?? "No job title on file"}</div>
                 <div className={TONE.muted}>{companyName}</div>
               </div>
@@ -1401,7 +1401,7 @@ function PreparersCard({
         </ul>
       )}
 
-      <div className="mt-4 border-t border-[#EEF1F5] pt-4">
+      <div className="mt-4 border-t border-surface-sunken pt-4">
         {options.isError ? (
           <PanelAlert>
             <span className="flex flex-wrap items-center gap-2">
@@ -1410,7 +1410,7 @@ function PreparersCard({
                 type="button"
                 variant="link"
                 onClick={() => options.refetch()}
-                className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+                className="h-auto p-0 text-caption font-bold text-danger underline"
               >
                 Try again
               </Button>
@@ -1445,7 +1445,7 @@ function PreparersCard({
             </Button>
           </div>
         )}
-        <p className={`mt-2 text-[11.5px] leading-relaxed ${TONE.muted}`}>
+        <p className={`mt-2 text-caption leading-relaxed ${TONE.muted}`}>
           Their job title comes from their HR record. The extra line prints under it, on these minutes only.
         </p>
       </div>
@@ -1489,7 +1489,7 @@ function SendDialog({
           <DialogTitle>Download for sending</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-[12.5px] leading-relaxed text-[#3D4756]">
+          <p className="text-caption leading-relaxed text-ink-soft">
             This keeps this exact copy here, marks the minutes sent, and downloads the file. Send it from your own
             email: the app does not email the customer.
             {detail.lastSentAt ? " Every earlier copy stays listed." : ""}

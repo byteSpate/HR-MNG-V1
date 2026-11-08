@@ -55,9 +55,9 @@ export function RemovalRequestsPanel() {
   if (!isAdmin) return null
 
   return (
-    <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5" data-testid="removal-requests">
+    <section className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5" data-testid="removal-requests">
       <Heading level="section">Removal requests</Heading>
-      <p className={`mt-1 text-[12.5px] ${TONE.muted}`}>
+      <p className={`mt-1 text-caption ${TONE.muted}`}>
         An Owner asked to take a collaborator off a Sales Account. The collaborator keeps their access until you
         approve. Only Sales Admins can decide.
       </p>
@@ -70,12 +70,12 @@ export function RemovalRequestsPanel() {
         ) : query.isError ? (
           <PanelAlert>{toMessage(query.error)}</PanelAlert>
         ) : query.data.items.length === 0 ? (
-          <p className={`text-[13px] ${TONE.muted}`}>Nothing is waiting.</p>
+          <p className={`text-body-sm ${TONE.muted}`}>Nothing is waiting.</p>
         ) : (
           <ul className="grid gap-3">
             {query.data.items.map((row) => (
-              <li key={row.id} className="grid gap-2 border-b border-[#EEF1F5] pb-3 last:border-0 last:pb-0">
-                <div className="text-[13px]">
+              <li key={row.id} className="grid gap-2 border-b border-surface-sunken pb-3 last:border-0 last:pb-0">
+                <div className="text-body-sm">
                   <span className="font-semibold">{row.requestedByName ?? "An Owner"}</span> asked to remove{" "}
                   <span className="font-semibold">{row.employeeName}</span> from{" "}
                   <span className="font-semibold">{row.accountName}</span>.
@@ -93,11 +93,11 @@ export function RemovalRequestsPanel() {
                       type="button"
                       disabled={reason.trim().length < 3 || refuse.isPending}
                       onClick={() => refuse.mutate(row.id)}
-                      className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+                      className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
                     >
                       Send the refusal
                     </Button>
-                    <Button type="button" variant="ghost" onClick={() => setRefusing(null)} className="h-auto px-2.5 py-1.5 text-[12px] font-bold">
+                    <Button type="button" variant="ghost" onClick={() => setRefusing(null)} className="h-auto px-2.5 py-1.5 text-caption font-bold">
                       Back
                     </Button>
                   </div>
@@ -107,11 +107,11 @@ export function RemovalRequestsPanel() {
                       type="button"
                       disabled={approve.isPending}
                       onClick={() => approve.mutate(row.id)}
-                      className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+                      className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
                     >
                       Approve
                     </Button>
-                    <Button type="button" variant="ghost" onClick={() => { setRefusing(row.id); setReason("") }} className="h-auto px-2.5 py-1.5 text-[12px] font-bold">
+                    <Button type="button" variant="ghost" onClick={() => { setRefusing(row.id); setReason("") }} className="h-auto px-2.5 py-1.5 text-caption font-bold">
                       Refuse
                     </Button>
                   </div>

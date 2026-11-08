@@ -52,7 +52,7 @@ export function AccountHeatmapPanel({ accountId }: { accountId: string }) {
     return (
       <Panel>
         <PanelHeading title="Heatmap" />
-        <p className={`text-[12.5px] ${TONE.muted}`}>The heatmap list is empty. A Sales Admin can add products in Sales Settings.</p>
+        <p className={`text-caption ${TONE.muted}`}>The heatmap list is empty. A Sales Admin can add products in Sales Settings.</p>
       </Panel>
     )
   }
@@ -61,11 +61,11 @@ export function AccountHeatmapPanel({ accountId }: { accountId: string }) {
     <div className="grid gap-4">
       <Panel>
         <PanelHeading title="Heatmap" />
-        <p className={`-mt-1 mb-3 text-[12.5px] leading-relaxed ${TONE.muted}`}>
+        <p className={`-mt-1 mb-3 text-caption leading-relaxed ${TONE.muted}`}>
           Open a product below. Press ✓ on a part when they do not have it, so we can offer it. Press ✗ when they have it,
           or we cannot go. The colour of the product follows its parts.
         </p>
-        <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-caption">
           {COLOUR_ORDER.map((c) => (
             <li key={c} className="flex items-center gap-1.5">
               <span className={cn("size-2.5 rounded-full", COLOUR[c].dot)} aria-hidden />
@@ -85,7 +85,7 @@ export function AccountHeatmapPanel({ accountId }: { accountId: string }) {
         <Panel key={group.id}>
           <PanelHeading title={group.title} />
           {group.products.length === 0 ? (
-            <p className={`text-[12.5px] ${TONE.muted}`}>No products in this group yet.</p>
+            <p className={`text-caption ${TONE.muted}`}>No products in this group yet.</p>
           ) : (
             <ul className="grid gap-2">
               {group.products.map((product) => (

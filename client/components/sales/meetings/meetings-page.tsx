@@ -56,9 +56,9 @@ function groupByDay(items: SalesMeetingSummary[]) {
   ].filter((group) => group.items.length > 0)
 }
 
-const TOGGLE_ON = "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const TOGGLE_ON = "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
 const TOGGLE_OFF =
-  "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+  "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
 
 export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
   const { accessToken, user, status: sessionStatus } = useSession()
@@ -106,7 +106,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
       {/* Hidden while loading: a filter beside a skeleton reads as an answer
           about a list nobody has counted yet. */}
       {!isLoading && !query.isError ? (
-        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
+        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
           <Button type="button" aria-pressed={mine} onClick={() => setMine(!mine)} className={mine ? TOGGLE_ON : TOGGLE_OFF}>
             Mine only
           </Button>
@@ -118,7 +118,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
           >
             Show cancelled
           </Button>
-          <span className={`text-[12px] ${TONE.muted}`}>
+          <span className={`text-caption ${TONE.muted}`}>
             {mine ? "Meetings you attend on our side" : "Every meeting in the hub"}
             {!showCancelled && hiddenCancelled > 0 ? `, ${hiddenCancelled} cancelled hidden` : ""}
           </span>
@@ -132,7 +132,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
       ) : null}
 
       {isLoading ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-5">
+        <div className="rounded-md border border-line bg-white px-5 py-5">
           <Skeleton className="h-4 w-24" />
           <div className="mt-4 space-y-3">
             <Skeleton className="h-3.5 w-3/4" />
@@ -141,27 +141,27 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
           </div>
         </div>
       ) : query.isError ? (
-        <div className="flex flex-col items-center gap-3 rounded-md border border-[#E4E9EF] bg-white px-5 py-10 text-center">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+        <div className="flex flex-col items-center gap-3 rounded-md border border-line bg-white px-5 py-10 text-center">
+          <span className="flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
-          <div className="text-[13.5px] font-bold">Meetings could not be loaded</div>
-          <p className={`text-[12.5px] ${TONE.muted}`}>Nothing has changed. Check the connection and try again.</p>
+          <div className="text-body-sm font-bold">Meetings could not be loaded</div>
+          <p className={`text-caption ${TONE.muted}`}>Nothing has changed. Check the connection and try again.</p>
           <Button
             onClick={() => query.refetch()}
-            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             <RiRefreshLine className="size-4" aria-hidden />
             Retry
           </Button>
         </div>
       ) : groups.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-md border border-[#E4E9EF] bg-white px-5 py-10 text-center">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+        <div className="flex flex-col items-center gap-3 rounded-md border border-line bg-white px-5 py-10 text-center">
+          <span className="flex size-9 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
             <RiInboxLine className="size-5" aria-hidden />
           </span>
-          <div className="text-[13.5px] font-bold">{mine ? "No meetings for you" : "No meetings yet"}</div>
-          <p className={`max-w-[46ch] text-[12.5px] leading-relaxed ${TONE.muted}`}>
+          <div className="text-body-sm font-bold">{mine ? "No meetings for you" : "No meetings yet"}</div>
+          <p className={`max-w-[46ch] text-caption leading-relaxed ${TONE.muted}`}>
             {mine
               ? `Nothing coming up, and nothing in the past ${PAST_DAYS} days, that you attend on our side.`
               : `Nothing coming up, and nothing in the past ${PAST_DAYS} days. Schedule one from here or from an account.`}
@@ -172,7 +172,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
           {groups.map((group) => (
             <section
               key={group.title}
-              className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5"
+              className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5"
             >
               <Heading level="section" className="mb-1">
                 {group.title} <span className={`font-semibold ${TONE.muted}`}>· {group.items.length}</span>

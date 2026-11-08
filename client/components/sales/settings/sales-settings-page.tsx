@@ -41,9 +41,9 @@ import { Heading } from "@/components/ds/heading"
 
 const KINDS = Object.keys(MINUTES_KIND_LABEL) as MinutesKind[]
 
-const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const PRIMARY = "h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
 const QUIET =
-  "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+  "h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
 
 export function SalesSettingsPage() {
   const { status } = useSession()
@@ -73,7 +73,7 @@ export function SalesSettingsPage() {
 }
 
 function Panel({ children }: { children: React.ReactNode }) {
-  return <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</section>
+  return <section className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</section>
 }
 
 function PanelLoading() {
@@ -108,11 +108,11 @@ function MinutesTemplatePanel() {
     return (
       <Panel>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+          <span className="flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
-          <div className="text-[13.5px] font-bold">The minutes template could not be loaded</div>
-          <p className={`text-[12.5px] ${TONE.muted}`}>{toMessage(query.error)}</p>
+          <div className="text-body-sm font-bold">The minutes template could not be loaded</div>
+          <p className={`text-caption ${TONE.muted}`}>{toMessage(query.error)}</p>
           <Button onClick={() => query.refetch()} className={PRIMARY}>
             <RiRefreshLine className="size-4" aria-hidden />
             Retry
@@ -124,7 +124,7 @@ function MinutesTemplatePanel() {
 
   return (
     <div className="grid gap-3">
-      <p className={`text-[12.5px] ${TONE.muted}`}>
+      <p className={`text-caption ${TONE.muted}`}>
         Who can change this: every Sales User, unless a Sales Admin turns it off in &quot;Who can do what&quot; below.
       </p>
       {!mayEdit ? <PanelAlert>{SWITCHED_OFF_HINT} Ask a Sales Admin to turn it on.</PanelAlert> : null}
@@ -249,12 +249,12 @@ function TemplateEditor({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Heading level="section">Minutes template</Heading>
-          <p className={`mt-0.5 max-w-[68ch] text-[12.5px] leading-relaxed ${TONE.muted}`}>
+          <p className={`mt-0.5 max-w-[68ch] text-caption leading-relaxed ${TONE.muted}`}>
             New minutes start with these sections, in this order. Minutes already started keep the sections they
             have. A single document can still add its own sections.
           </p>
         </div>
-        <span className={`text-[12px] ${TONE.muted}`}>
+        <span className={`text-caption ${TONE.muted}`}>
           {template.isDefault
             ? "The default, from the team's own documents"
             : template.updatedAt
@@ -270,9 +270,9 @@ function TemplateEditor({
         className={`mt-4 grid gap-2 transition-opacity motion-reduce:transition-none ${save.isPending ? "opacity-60" : ""}`}
       >
         {sections.map((section, index) => (
-          <li key={index} className="rounded-md border border-[#EEF1F5] px-3 py-3">
+          <li key={index} className="rounded-md border border-surface-sunken px-3 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="w-5 text-[13px] font-bold text-[#5F6B7C] tabular-nums">{index + 1}.</span>
+              <span className="w-5 text-body-sm font-bold text-ink-muted tabular-nums">{index + 1}.</span>
               <Input
                 aria-label={`Heading of section ${index + 1}`}
                 value={section.heading}
@@ -330,7 +330,7 @@ function TemplateEditor({
                 />
               </div>
             ) : section.kind === "TABLE" ? (
-              <p className={`mt-1 pl-7 text-[11.5px] ${TONE.muted}`}>
+              <p className={`mt-1 pl-7 text-caption ${TONE.muted}`}>
                 Its columns are fixed: SL, Action Item, Responsible Person/Team and Status. A row can become a task.
               </p>
             ) : null}
@@ -343,7 +343,7 @@ function TemplateEditor({
         variant="ghost"
         disabled={save.isPending}
         onClick={() => change([...sections, { heading: "", kind: "PARAGRAPHS" }])}
-        className="mt-2 h-auto px-2 py-1 text-[12px] font-bold text-[#3D4756] hover:bg-[#F1F4F8]"
+        className="mt-2 h-auto px-2 py-1 text-caption font-bold text-ink-soft hover:bg-surface-hover"
       >
         <RiAddLine className="size-3.5" aria-hidden />
         Add a section
@@ -364,7 +364,7 @@ function TemplateEditor({
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#EEF1F5] pt-4">
+      <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-surface-sunken pt-4">
         {dirty ? (
           <Button
             type="button"
@@ -406,7 +406,7 @@ function IconButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="h-8 w-8 shrink-0 p-0 text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+      className="h-8 w-8 shrink-0 p-0 text-ink-muted hover:bg-surface-hover hover:text-ink-body"
     >
       {children}
     </Button>

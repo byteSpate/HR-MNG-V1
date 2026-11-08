@@ -39,7 +39,7 @@ function rowCells(p: ProjectListRow): TableCell[] {
       node: (
         <span className="block w-full">
           <span className="block truncate font-semibold">{p.name}</span>
-          <span className="block truncate font-mono text-[11.5px] text-[#6B7789]">
+          <span className="block truncate font-mono text-caption text-ink-muted">
             {p.serial} · {p.opportunitySerial} · {TRACK_LABEL[p.track] ?? p.track}
           </span>
         </span>
@@ -52,7 +52,7 @@ function rowCells(p: ProjectListRow): TableCell[] {
         <div className="min-w-0">
           <Tag label={PROJECT_STATUS_LABEL[p.status]} tone={PROJECT_STATUS_TONE[p.status]} />
           {/* One line, so every row keeps the same height (owner, 2026-10-19). */}
-          {quiet ? <div title={quiet} className="mt-0.5 truncate text-[11.5px] font-semibold text-[#8A5E0C]">{quiet}</div> : null}
+          {quiet ? <div title={quiet} className="mt-0.5 truncate text-caption font-semibold text-warning">{quiet}</div> : null}
         </div>
       ),
     },
@@ -69,10 +69,10 @@ function rowCells(p: ProjectListRow): TableCell[] {
     {
       node: (
         <div className="min-w-0">
-          <span className={p.daysLeft !== null && p.daysLeft < 0 ? "font-semibold text-[#B03A3A]" : undefined}>
+          <span className={p.daysLeft !== null && p.daysLeft < 0 ? "font-semibold text-danger" : undefined}>
             {daysLeftText(p.daysLeft, p.status)}
           </span>
-          {finishDateLine(p.dueOn) ? <div className={`text-[11.5px] ${TONE.muted}`}>{finishDateLine(p.dueOn)}</div> : null}
+          {finishDateLine(p.dueOn) ? <div className={`text-caption ${TONE.muted}`}>{finishDateLine(p.dueOn)}</div> : null}
         </div>
       ),
     },
@@ -80,7 +80,7 @@ function rowCells(p: ProjectListRow): TableCell[] {
       node: (
         <span>
           {p.openTasks}
-          {p.lateTasks > 0 ? <span className="font-semibold text-[#B03A3A]"> · {p.lateTasks} late</span> : null}
+          {p.lateTasks > 0 ? <span className="font-semibold text-danger"> · {p.lateTasks} late</span> : null}
         </span>
       ),
     },
@@ -148,7 +148,7 @@ export function ProjectsPage() {
   }, [projects, loaded.length])
 
   const selectClass =
-    "h-9 rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+    "h-9 rounded-md border border-line bg-white px-2 text-body-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
 
   return (
     <>
@@ -161,7 +161,7 @@ export function ProjectsPage() {
           control. */}
       {!query.isPending ? (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <label htmlFor="project-status" className={`text-[12px] font-semibold ${TONE.muted}`}>
+          <label htmlFor="project-status" className={`text-caption font-semibold ${TONE.muted}`}>
             Status
           </label>
           <select id="project-status" value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
@@ -173,7 +173,7 @@ export function ProjectsPage() {
             ))}
           </select>
 
-          <label htmlFor="project-health" className={`ml-3 text-[12px] font-semibold ${TONE.muted}`}>
+          <label htmlFor="project-health" className={`ml-3 text-caption font-semibold ${TONE.muted}`}>
             Health
           </label>
           <select id="project-health" value={health} onChange={(e) => setHealth(e.target.value)} className={selectClass}>
@@ -185,7 +185,7 @@ export function ProjectsPage() {
             ))}
           </select>
 
-          <label htmlFor="project-track" className={`ml-3 text-[12px] font-semibold ${TONE.muted}`}>
+          <label htmlFor="project-track" className={`ml-3 text-caption font-semibold ${TONE.muted}`}>
             Track
           </label>
           <select id="project-track" value={track} onChange={(e) => setTrack(e.target.value)} className={selectClass}>

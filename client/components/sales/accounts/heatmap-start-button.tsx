@@ -24,7 +24,7 @@ export function HeatmapStartButton({ accountId, productTitle }: { accountId: str
         disabled={!can("opportunity.create")}
         title={can("opportunity.create") ? undefined : "A Sales Admin has turned this off for Sales Users."}
         onClick={() => setOpen(true)}
-        className="h-auto gap-1.5 rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+        className="h-auto gap-1.5 rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
       >
         <RiFlashlightLine className="size-3.5" aria-hidden />
         Start an Opportunity

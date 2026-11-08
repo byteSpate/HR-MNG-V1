@@ -30,7 +30,7 @@ export function CustomQnaEditor({
   return (
     <div className="space-y-3">
       {rows.map((row, i) => (
-        <div key={i} className="rounded-md border border-[#E4E9EF] bg-white p-3">
+        <div key={i} className="rounded-md border border-line bg-white p-3">
           <div className="grid gap-2.5">
             <Field label="Question" htmlFor={`${idPrefix}-q-${i}`}>
               <Input
@@ -56,7 +56,7 @@ export function CustomQnaEditor({
             variant="link"
             disabled={disabled}
             onClick={() => onChange(rows.filter((_, n) => n !== i))}
-            className="mt-1 h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+            className="mt-1 h-auto p-0 text-caption font-bold text-danger underline"
           >
             Remove
           </Button>
@@ -67,7 +67,7 @@ export function CustomQnaEditor({
         variant="outline"
         disabled={disabled || rows.length >= MAX_CUSTOM_QUESTIONS}
         onClick={() => onChange([...rows, { id: null, question: "", answer: "" }])}
-        className="h-8 gap-1.5 px-2.5 text-[12px] font-bold"
+        className="h-8 gap-1.5 px-2.5 text-caption font-bold"
       >
         <RiAddLine className="size-3.5" aria-hidden />
         Add a question

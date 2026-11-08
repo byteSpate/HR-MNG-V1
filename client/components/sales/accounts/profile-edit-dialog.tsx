@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 type Value = { answer: string; detail: string }
 
@@ -36,7 +37,7 @@ function QuestionField({
   const id = `profile-${q.key}`
   return (
     <div className="space-y-1.5">
-      <div id={`${id}-label`} className="text-[13px] font-semibold">
+      <div id={`${id}-label`} className="text-body-sm font-semibold">
         {q.text}
       </div>
 
@@ -53,10 +54,10 @@ function QuestionField({
                   aria-checked={selected}
                   onClick={() => onChange({ answer: choice.value, detail: choice.value === "YES" ? value.detail : "" })}
                   className={cn(
-                    "h-8 rounded-md border px-3 text-[12.5px] font-semibold transition-colors motion-reduce:transition-none",
+                    "h-8 rounded-md border px-3 text-caption font-semibold transition-colors motion-reduce:transition-none",
                     selected
-                      ? "border-[#17191C] bg-[#17191C] text-white"
-                      : "border-[#E4E9EF] bg-white hover:border-[#8A94A2]",
+                      ? "border-ink bg-ink text-white"
+                      : "border-line bg-white hover:border-line-strong",
                   )}
                 >
                   {choice.label}
@@ -79,7 +80,7 @@ function QuestionField({
           aria-labelledby={`${id}-label`}
           value={value.answer}
           onChange={(e) => onChange({ answer: e.target.value, detail: "" })}
-          className="h-9 w-full rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+          className="h-9 w-full rounded-md border border-line bg-white px-2 text-body-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
         >
           <option value="">Not answered</option>
           {(q.options ?? []).map((option) => (
@@ -159,7 +160,7 @@ function ProfileForm({
       <div className="max-h-[calc(85svh-16rem)] min-h-40 space-y-6 overflow-y-auto pr-1">
         {profile.groups.map((group) => (
           <section key={group.key} className="space-y-4">
-            <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>{group.title}</h3>
+            <Heading level="label">{group.title}</Heading>
             {group.questions.map((q) => (
               <QuestionField
                 key={q.key}
@@ -172,8 +173,8 @@ function ProfileForm({
         ))}
 
         <section className="space-y-3">
-          <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Your own questions</h3>
-          <p className={`text-[12px] ${TONE.muted}`}>
+          <Heading level="label">Your own questions</Heading>
+          <p className={`text-caption ${TONE.muted}`}>
             Add a question and its answer about this company. To remove one, use Remove and then save.
           </p>
           <CustomQnaEditor

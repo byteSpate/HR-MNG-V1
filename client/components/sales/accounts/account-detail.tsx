@@ -85,31 +85,31 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
             "back" destination for every visitor of this page. */}
         {/* #5F6B7C, not #7A8698: the latter is 3.7:1 on white and is recorded
             in the UI standard as failing AA at this size. */}
-        <Link href="/sales/accounts" className="text-[12.5px] font-semibold text-[#5F6B7C] hover:underline">
+        <Link href="/sales/accounts" className="text-caption font-semibold text-ink-muted hover:underline">
           ← All Accounts
         </Link>
       </div>
 
       {sessionStatus === "loading" || accountQuery.isPending ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+        <div className="rounded-md border border-line bg-white px-5.5 py-5">
           <Skeleton className="h-5 w-48" />
           <Skeleton className="mt-2.5 h-3.5 w-64" />
         </div>
       ) : accountQuery.isError ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-8 text-center">
-          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+        <div className="rounded-md border border-line bg-white px-5.5 py-8 text-center">
+          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
           {/* Server refusal, verbatim — "That Sales Account does not exist,
               or is not yours" already says the right thing. */}
-          <p className="text-[13px] font-semibold text-[#B03A3A]">
+          <p className="text-body-sm font-semibold text-danger">
             {accountQuery.error instanceof ApiError
               ? accountQuery.error.message
               : "This account could not be loaded."}
           </p>
         </div>
       ) : (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+        <div className="rounded-md border border-line bg-white px-5.5 py-5">
           <div className="flex flex-wrap items-center gap-2.5">
             <Heading level="page">{accountQuery.data.name}</Heading>
             <Tag
@@ -121,7 +121,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
               <Button
                 type="button"
                 onClick={() => openEdit(false)}
-                className="ml-auto h-8 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                className="ml-auto h-8 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
               >
                 Edit
               </Button>
@@ -131,14 +131,14 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
           {/* The reason lives beside the status it explains. Without it a
               Do Not Contact badge is a decision with no record of why. */}
           {accountQuery.data.statusReason ? (
-            <p className="mt-2 text-[12.5px] text-[#5F6B7C]">{accountQuery.data.statusReason}</p>
+            <p className="mt-2 text-caption text-ink-muted">{accountQuery.data.statusReason}</p>
           ) : null}
 
-          <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[#5F6B7C]">
+          <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
             <span>Owner: {accountQuery.data.ownerName}</span>
             {accountQuery.data.assignees.length > 0 ? (
               <span className="inline-flex items-center gap-1">
-                <RiGroupLine className="size-3.5 text-[#8A94A2]" aria-hidden />
+                <RiGroupLine className="size-3.5 text-ink-muted" aria-hidden />
                 {accountQuery.data.assignees.map((a) => a.fullName).join(", ")}
               </span>
             ) : null}
@@ -146,16 +146,16 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
           </div>
 
           {accountQuery.data.website || accountQuery.data.address ? (
-            <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-[#6B7789]">
+            <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-caption text-ink-muted">
               {accountQuery.data.website ? (
                 <span className="inline-flex items-center gap-1">
-                  <RiGlobalLine className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+                  <RiGlobalLine className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
                   {accountQuery.data.website}
                 </span>
               ) : null}
               {accountQuery.data.address ? (
                 <span className="inline-flex items-center gap-1">
-                  <RiMapPinLine className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+                  <RiMapPinLine className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
                   {accountQuery.data.address}
                 </span>
               ) : null}
@@ -166,7 +166,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
               account whose owner cannot work it is a gap in coverage, not a
               fact about the viewer's permissions. */}
           {!accountQuery.data.ownerActive ? (
-            <p className="mt-3 flex items-start gap-1.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2 text-[12px] leading-relaxed text-[#8A5E0C]">
+            <p className="mt-3 flex items-start gap-1.5 rounded-md border border-warning-line bg-warning-tint px-3 py-2 text-caption leading-relaxed text-warning">
               <RiAlertLine className="mt-px size-3.5 shrink-0" aria-hidden />
               <span>
                 {accountQuery.data.ownerName} can no longer work this account — their Techno Sales
@@ -178,7 +178,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
                     type="button"
                     variant="link"
                     onClick={() => openEdit(true)}
-                    className="ml-1.5 h-auto p-0 text-[12px] font-bold text-[#8A5E0C] underline"
+                    className="ml-1.5 h-auto p-0 text-caption font-bold text-warning underline"
                   >
                     Choose a new owner
                   </Button>
@@ -188,7 +188,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
           ) : null}
 
           {!accountQuery.data.canManage ? (
-            <p className="mt-3 flex items-start gap-1.5 rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 py-2 text-[12px] leading-relaxed text-[#5F6B7C]">
+            <p className="mt-3 flex items-start gap-1.5 rounded-md border border-line bg-surface-subtle px-3 py-2 text-caption leading-relaxed text-ink-muted">
               <RiEyeLine className="mt-px size-3.5 shrink-0" aria-hidden />
               You can see this account because it is shared in All Accounts, but only its owner,
               its collaborators, or a Sales Admin can add contacts or log activity on it.

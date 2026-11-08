@@ -36,7 +36,7 @@ function cellsOf(c: ContactDirectoryRow): TableCell[] {
 
 const STATUSES = Object.keys(CONTACT_STATUS_LABEL) as SalesContactStatus[]
 const selectClass =
-  "h-9 rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+  "h-9 rounded-md border border-line bg-white px-2 text-body-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
 
 /**
  * Every contact of every account the viewer may see (owner, 2026-10-18), as a
@@ -90,7 +90,7 @@ export function ContactsPage() {
         type="button"
         onClick={() => sortBy(key)}
         aria-label={`Sort by ${label.toLowerCase()}`}
-        className={cn("inline-flex items-center gap-0.5 uppercase hover:text-[#17191C]", active && "text-[#17191C]")}
+        className={cn("inline-flex items-center gap-0.5 uppercase hover:text-ink", active && "text-ink")}
       >
         {label}
         <Arrow className={cn("size-3.5", !active && "opacity-30")} aria-hidden />
@@ -118,17 +118,17 @@ export function ContactsPage() {
       {data ? (
         <div className="mt-5 mb-3 flex flex-wrap items-end justify-between gap-3">
           <div className="relative w-full max-w-sm">
-            <RiSearchLine className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[#8A94A2]" aria-hidden />
+            <RiSearchLine className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-ink-muted" aria-hidden />
             <Input
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               aria-label="Search contacts"
               placeholder="Name, job title, phone, email, account or industry"
-              className="pl-8 text-[13px]"
+              className="pl-8 text-body-sm"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor="contact-industry" className={`text-[12px] font-semibold ${TONE.muted}`}>
+            <label htmlFor="contact-industry" className={`text-caption font-semibold ${TONE.muted}`}>
               Industry
             </label>
             <select
@@ -148,7 +148,7 @@ export function ContactsPage() {
                 </option>
               ))}
             </select>
-            <label htmlFor="contact-status" className={`ml-1 text-[12px] font-semibold ${TONE.muted}`}>
+            <label htmlFor="contact-status" className={`ml-1 text-caption font-semibold ${TONE.muted}`}>
               Status
             </label>
             <select
@@ -168,7 +168,7 @@ export function ContactsPage() {
               ))}
             </select>
             {filtered ? (
-              <Button type="button" variant="outline" onClick={clearAll} className="h-9 text-[12px] font-bold">
+              <Button type="button" variant="outline" onClick={clearAll} className="h-9 text-caption font-bold">
                 Clear
               </Button>
             ) : null}
@@ -202,15 +202,15 @@ export function ContactsPage() {
       />
 
       {data && data.total > data.pageSize ? (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[12.5px]">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-caption">
           <span className={TONE.muted}>
             {(data.page - 1) * data.pageSize + 1} to {Math.min(data.page * data.pageSize, data.total)} of {data.total}
           </span>
           <span className="flex gap-2">
-            <Button type="button" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)} className="h-8 text-[12px] font-bold">
+            <Button type="button" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)} className="h-8 text-caption font-bold">
               Previous
             </Button>
-            <Button type="button" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)} className="h-8 text-[12px] font-bold">
+            <Button type="button" variant="outline" disabled={page >= pages} onClick={() => setPage(page + 1)} className="h-8 text-caption font-bold">
               Next
             </Button>
           </span>

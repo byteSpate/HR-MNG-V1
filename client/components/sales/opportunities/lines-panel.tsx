@@ -210,7 +210,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
             <Button
               type="button"
               onClick={() => { clearLineForm(); setAdding(true) }}
-              className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              className="h-8 gap-1 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
             >
               <RiAddLine className="size-3.5" aria-hidden />
               {modules ? "Add module" : "Add"}
@@ -239,7 +239,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                 variant="link"
                 disabled={reconcile.isPending}
                 onClick={() => reconcile.mutate()}
-                className="h-auto p-0 text-[12px] font-bold text-[#8A5E0C] underline"
+                className="h-auto p-0 text-caption font-bold text-warning underline"
               >
                 Use the {modules ? "modules" : "products"} total as the Opportunity value
               </Button>
@@ -249,7 +249,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
       ) : null}
 
       {deal.lines.length === 0 ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>
+        <p className={`text-caption ${TONE.muted}`}>
           {modules
             ? "No modules yet. Add each part of the software, with its price."
             : "No products yet. An Opportunity can have several products, each with its own quantity and price. The Opportunity value stays the figure the funnel reads."}
@@ -257,11 +257,11 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
       ) : (
         <ul>
           {deal.lines.map((line, index) => (
-            <li key={line.id} className="border-b border-[#EEF1F5] py-2.5 last:border-b-0">
+            <li key={line.id} className="border-b border-surface-sunken py-2.5 last:border-b-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-[13px] font-semibold">{line.product}</div>
-                  <div className={`text-[11.5px] ${TONE.muted}`}>
+                  <div className="truncate text-body-sm font-semibold">{line.product}</div>
+                  <div className={`text-caption ${TONE.muted}`}>
                     {[
                       line.oemBrand,
                       line.model,
@@ -272,18 +272,18 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                       .filter(Boolean)
                       .join(" · ") || "No further detail"}
                   </div>
-                  {line.description ? <div className={`mt-0.5 text-[11.5px] whitespace-pre-line ${TONE.muted}`}>{line.description}</div> : null}
+                  {line.description ? <div className={`mt-0.5 text-caption whitespace-pre-line ${TONE.muted}`}>{line.description}</div> : null}
                 </div>
                 <div className="text-right">
                   {/* No price yet, never ৳0 — a product nobody has priced is not a
                       product being given away. */}
                   <div
-                    className={line.lineValue === null ? `text-[12.5px] ${TONE.muted}` : "text-[13px]"}
+                    className={line.lineValue === null ? `text-caption ${TONE.muted}` : "text-body-sm"}
                   >
                     {taka(line.lineValue)}
                   </div>
                   {line.marginPercent !== null ? (
-                    <div className={`text-[11.5px] ${TONE.muted}`}>
+                    <div className={`text-caption ${TONE.muted}`}>
                       Margin {Number(line.marginPercent)}%
                       {line.marginAmount !== null ? ` · ${marginWords(line.marginAmount)}` : ", no total price yet"}
                     </div>
@@ -297,8 +297,8 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                         ]}
                       />
                       <div className="mt-1 flex justify-end gap-1">
-                        <Button type="button" variant="link" disabled={index === 0 || reorder.isPending} onClick={() => move(index, -1)} className="h-auto p-0 text-[11px]">Up</Button>
-                        <Button type="button" variant="link" disabled={index === deal.lines.length - 1 || reorder.isPending} onClick={() => move(index, 1)} className="h-auto p-0 text-[11px]">Down</Button>
+                        <Button type="button" variant="link" disabled={index === 0 || reorder.isPending} onClick={() => move(index, -1)} className="h-auto p-0 text-caption">Up</Button>
+                        <Button type="button" variant="link" disabled={index === deal.lines.length - 1 || reorder.isPending} onClick={() => move(index, 1)} className="h-auto p-0 text-caption">Down</Button>
                       </div>
                     </>
                   ) : null}
@@ -310,35 +310,35 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
       )}
 
       {deal.lines.length > 0 ? (
-        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 border-t border-[#E4E9EF] pt-3">
-          <span className={`text-[12px] ${TONE.muted}`}>
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 border-t border-line pt-3">
+          <span className={`text-caption ${TONE.muted}`}>
             {modules ? "Modules total" : "Products total"}
             {/* The excluded count is stated rather than folded in as zero. */}
             {deal.unpricedLineCount > 0
               ? `, not counting ${deal.unpricedLineCount} with no price yet`
               : ""}
           </span>
-          <span className="text-[13.5px] font-bold">{taka(deal.lineTotal)}</span>
+          <span className="text-body-sm font-bold">{taka(deal.lineTotal)}</span>
         </div>
       ) : null}
 
       {deal.lines.length > 0 && !modules ? (
         <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
-          <span className={`text-[12px] ${TONE.muted}`}>
+          <span className={`text-caption ${TONE.muted}`}>
             Margin total
             {/* The excluded count is stated rather than folded in as zero. */}
             {deal.unmarginedLineCount > 0
               ? `, not counting ${deal.unmarginedLineCount} with no margin yet`
               : ""}
           </span>
-          <span className={deal.marginAmount === null ? `text-[13px] ${TONE.muted}` : "text-[13.5px] font-bold"}>
+          <span className={deal.marginAmount === null ? `text-body-sm ${TONE.muted}` : "text-body-sm font-bold"}>
             {deal.marginAmount === null ? "No margin yet" : marginWords(deal.marginAmount)}
           </span>
         </div>
       ) : null}
 
       {adding ? (
-        <div className="mt-3 space-y-3 border-t border-[#E4E9EF] pt-3">
+        <div className="mt-3 space-y-3 border-t border-line pt-3">
           <Field label={modules ? "Module name" : "Product"} htmlFor="line-product">
             <Input id="line-product" list="line-product-suggestions" autoComplete="off" value={product} onChange={(e) => setProduct(e.target.value)} />
             <SuggestionList id="line-product-suggestions" field="product" q={product} />
@@ -389,7 +389,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               <Field label="Total price" htmlFor="line-total" help="Quantity × Price per unit. It is worked out for you.">
                 <output
                   id="line-total"
-                  className={`flex h-9 items-center rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 text-[13px] ${productTotal === null ? TONE.muted : "font-semibold"}`}
+                  className={`flex h-9 items-center rounded-md border border-line bg-surface-subtle px-3 text-body-sm ${productTotal === null ? TONE.muted : "font-semibold"}`}
                 >
                   {/* Exact, paisa included: the server stores 3001.50, so the form must not say 3,002. */}
                   {productTotal === null
@@ -422,7 +422,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
               type="button"
               disabled={saveLine.isPending || !product.trim()}
               onClick={() => saveLine.mutate()}
-              className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
             >
               {saveLine.isPending ? "Saving…" : editing ? (modules ? "Save module" : "Save product") : (modules ? "Add module" : "Add product")}
             </Button>
@@ -433,7 +433,7 @@ export function LinesPanel({ deal, canManage }: { deal: OpportunitySummary; canM
                 setAdding(false)
                 clearLineForm()
               }}
-              className="h-8 p-0 text-[12px] font-bold text-[#5F6B7C]"
+              className="h-8 p-0 text-caption font-bold text-ink-muted"
             >
               Cancel
             </Button>

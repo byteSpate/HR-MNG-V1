@@ -39,7 +39,7 @@ export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
 
   if (project.team.length === 0) {
     return (
-      <p className="text-[13px]">
+      <p className="text-body-sm">
         No one is on the team yet, so there is no Daily Log.
       </p>
     )
@@ -51,14 +51,14 @@ export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
         <Button
           type="button"
           onClick={() => setWeek(currentWeek ? addDays(currentWeek, -7) : null)}
-          className="h-8 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+          className="h-8 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
         >
           Previous week
         </Button>
         <Button
           type="button"
           onClick={() => setWeek(null)}
-          className="h-8 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+          className="h-8 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
         >
           This week
         </Button>
@@ -67,26 +67,26 @@ export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
           // Next week has no lines yet, so there is nothing to look at.
           disabled={atCurrent}
           onClick={() => currentWeek && setWeek(addDays(currentWeek, 7))}
-          className="h-8 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB] disabled:opacity-50"
+          className="h-8 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle disabled:opacity-50"
         >
           Next week
         </Button>
       </div>
 
       {log.isPending ? (
-        <p className={`text-[13px] ${TONE.muted}`}>Loading the week…</p>
+        <p className={`text-body-sm ${TONE.muted}`}>Loading the week…</p>
       ) : log.isError ? (
-        <p className="text-[13px] font-semibold text-[#B03A3A]">
+        <p className="text-body-sm font-semibold text-danger">
           The Daily Log could not be loaded.
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[42rem] border-collapse text-left">
             <thead>
-              <tr className="border-b border-[#E4E9EF]">
-                <th className="py-2 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">Person</th>
+              <tr className="border-b border-line">
+                <th className="py-2 pr-3 text-caption font-semibold text-ink-muted">Person</th>
                 {(log.data?.days ?? []).map((day) => (
-                  <th key={day.date} className="py-2 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">
+                  <th key={day.date} className="py-2 pr-3 text-caption font-semibold text-ink-muted">
                     {new Date(`${day.date}T00:00:00.000Z`).toLocaleDateString("en-GB", {
                       day: "2-digit", month: "short",
                     })}
@@ -98,15 +98,15 @@ export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
               {(log.data?.days ?? []).length > 0 && log.data!.days[0].people.map((_, index) => {
                 const person = log.data!.days[0].people[index]
                 return (
-                  <tr key={person.employeeId} className="border-b border-[#EEF1F5] align-top">
-                    <td className="py-2 pr-3 text-[13px] font-semibold">{person.fullName}</td>
+                  <tr key={person.employeeId} className="border-b border-surface-sunken align-top">
+                    <td className="py-2 pr-3 text-body-sm font-semibold">{person.fullName}</td>
                     {log.data!.days.map((day) => {
                       const cell = day.people.find((p) => p.employeeId === person.employeeId)
                       if (!cell) return <td key={day.date} className="py-2 pr-3" />
                       return (
                         <td
                           key={day.date}
-                          className={`py-2 pr-3 text-[12.5px] ${cell.missing ? "text-[#8A5E0C]" : ""}`}
+                          className={`py-2 pr-3 text-caption ${cell.missing ? "text-warning" : ""}`}
                         >
                           {cell.text ? (
                             cell.text
@@ -134,7 +134,7 @@ export function ProjectDailyLogTab({ project }: { project: ProjectSummary }) {
       {user?.salesRole === "SALES_USER" ? (
         <ProjectLogForm projectId={project.id} />
       ) : (
-        <p className={`text-[12px] ${TONE.muted}`}>Team members write one line a day for each Project in progress.</p>
+        <p className={`text-caption ${TONE.muted}`}>Team members write one line a day for each Project in progress.</p>
       )}
     </div>
   )

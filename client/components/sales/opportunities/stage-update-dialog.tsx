@@ -18,14 +18,14 @@ import { Input } from "@/components/ui/input"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 import { cx } from "@/components/ds/classes"
 
-const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-const QUIET = "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+const PRIMARY = "h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
+const QUIET = "h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
 const OPTION =
-  "flex w-full flex-wrap items-baseline gap-2 rounded-md border px-2.5 py-2 text-left text-[12.5px] transition-colors " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#17191C]"
-const OPTION_ON = "border-[#17191C] bg-[#F1F4F8] font-semibold"
-const OPTION_OFF = "border-[#E4E9EF] bg-white hover:border-[#8A94A2]"
-const TAG = "rounded bg-[#FFF1DC] px-1.5 py-px text-[11px] font-semibold text-[#8A4B00]"
+  "flex w-full flex-wrap items-baseline gap-2 rounded-md border px-2.5 py-2 text-left text-caption transition-colors " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+const OPTION_ON = "border-ink bg-surface-hover font-semibold"
+const OPTION_OFF = "border-line bg-white hover:border-line-strong"
+const TAG = "rounded bg-warning-tint px-1.5 py-px text-caption font-semibold text-warning"
 
 /**
  * One box for both stages (spec 2026-11-05). Both lists start filled in. Picking
@@ -144,7 +144,7 @@ export function StageUpdateDialog({
 
         {/* At the top, so the answer to a pick is seen without scrolling. */}
         {note ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#E8F5EC] px-3 py-2 text-[12.5px] text-[#1B6B3A]" role="status">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-success-tint px-3 py-2 text-caption text-success" role="status">
             <span>{note}</span>
             <span className="flex gap-1">
               <Button type="button" variant="ghost" onClick={undoPick} className={QUIET}>Undo</Button>
@@ -155,7 +155,7 @@ export function StageUpdateDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <div className={`mb-1.5 text-[11.5px] font-semibold ${TONE.muted}`}>Work stage (what we do)</div>
+            <div className={`mb-1.5 text-caption font-semibold ${TONE.muted}`}>Work stage (what we do)</div>
             <ul className="flex flex-col gap-1">
               {stagesFor(track).map((stage) => {
                 const on = stage === draft.work
@@ -178,7 +178,7 @@ export function StageUpdateDialog({
           </div>
 
           <div>
-            <div className={`mb-1.5 text-[11.5px] font-semibold ${TONE.muted}`}>Sales stage (where the customer is)</div>
+            <div className={`mb-1.5 text-caption font-semibold ${TONE.muted}`}>Sales stage (where the customer is)</div>
             <ul className="flex flex-col gap-1">
               {/* Not set is a real answer. Picking it clears a stage set by mistake. */}
               <li>
@@ -202,7 +202,7 @@ export function StageUpdateDialog({
                       onClick={() => pick({ sales: stage })}
                       className={`${OPTION} ${on ? OPTION_ON : OPTION_OFF}`}
                     >
-                      <span className={`w-5 font-mono text-[11px] ${TONE.muted}`}>{index + 1}</span>
+                      <span className={`w-5 font-mono text-caption ${TONE.muted}`}>{index + 1}</span>
                       <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{SALES_STAGE_LABEL[stage]}</span>
                       {moves ? <span className={TAG}>moves work stage</span> : null}
                     </button>
@@ -214,7 +214,7 @@ export function StageUpdateDialog({
         </div>
 
         {salesHelp ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 py-2 text-[12px] leading-relaxed" aria-live="polite">
+          <div className="rounded-md border border-line bg-surface-subtle px-3 py-2 text-caption leading-relaxed" aria-live="polite">
             <div className="font-semibold">{SALES_STAGE_LABEL[draft.sales!]}</div>
             <div className={TONE.muted}>{salesHelp.meaning}</div>
             <div className={TONE.muted}>{salesHelp.example}</div>

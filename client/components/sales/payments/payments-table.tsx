@@ -25,10 +25,10 @@ const money = (v: string) => `৳${Number(v).toLocaleString("en-BD", { minimumFr
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
 
 const STATUS_CLASS: Record<PaymentRow["status"], string> = {
-  PAID: "bg-[#EEF8F2] text-[#17673A]",
-  PART_PAID: "bg-[#FFF6E5] text-[#8A5E0C]",
-  UNPAID: "bg-[#F1F4F8] text-[#5F6B7C]",
-  OVERDUE: "bg-[#FCEFEF] text-[#B03A3A]",
+  PAID: "bg-surface-sunken text-success",
+  PART_PAID: "bg-warning-tint text-warning",
+  UNPAID: "bg-surface-hover text-ink-muted",
+  OVERDUE: "bg-warning-tint text-danger",
 }
 
 const NUMERIC: SortKey[] = ["invoiceTotal", "received", "percentPaid", "balance"]
@@ -95,7 +95,7 @@ export function PaymentsTable({
       <div className="grid gap-2">
         <PanelAlert>{toMessage(query.error)}</PanelAlert>
         <div>
-          <Button type="button" onClick={() => query.refetch()} className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]">
+          <Button type="button" onClick={() => query.refetch()} className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong">
             Try again
           </Button>
         </div>
@@ -104,10 +104,10 @@ export function PaymentsTable({
   }
   const { rows, totals } = query.data
   if (rows.length === 0) {
-    return <p className={`rounded-md border border-[#E4E9EF] bg-white px-4 py-4 text-[12.5px] ${TONE.muted}`}>{emptyText}</p>
+    return <p className={`rounded-md border border-line bg-white px-4 py-4 text-caption ${TONE.muted}`}>{emptyText}</p>
   }
   const sorted = sortRows(rows, sort, dir)
-  const cell = "border-b border-r border-[#EEF1F5] px-3 py-2 last:border-r-0"
+  const cell = "border-b border-r border-surface-sunken px-3 py-2 last:border-r-0"
 
   return (
     <div className="grid gap-2">
@@ -119,16 +119,16 @@ export function PaymentsTable({
           formats={["csv", "pdf"]}
         />
       </div>
-      <div className="overflow-x-auto rounded-md border border-[#E4E9EF] bg-white">
-        <table className="w-full min-w-[46rem] border-collapse text-[12.5px]">
+      <div className="overflow-x-auto rounded-md border border-line bg-white">
+        <table className="w-full min-w-[46rem] border-collapse text-caption">
           <thead>
-            <tr className="bg-[#F7F9FB] text-left text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+            <tr className="bg-surface-subtle text-left text-caption font-bold tracking-wide text-ink-muted uppercase">
               {columns.map((c) => {
                 const active = c.key === sort
                 const Arrow = active && dir === "desc" ? RiArrowDownSLine : RiArrowUpSLine
                 return (
                   <th key={c.key} className={cn(cell, "font-bold", c.right && "text-right")}>
-                    <button type="button" onClick={() => sortBy(c.key)} className={cn("inline-flex items-center gap-0.5 uppercase hover:text-[#17191C]", active && "text-[#17191C]")}>
+                    <button type="button" onClick={() => sortBy(c.key)} className={cn("inline-flex items-center gap-0.5 uppercase hover:text-ink", active && "text-ink")}>
                       {c.label}
                       <Arrow className={cn("size-3.5", !active && "opacity-30")} aria-hidden />
                     </button>
@@ -145,7 +145,7 @@ export function PaymentsTable({
                   <tr
                     onClick={() => setOpenId(open ? null : r.invoiceId)}
                     aria-expanded={open}
-                    className="cursor-pointer hover:bg-[#F7F9FB]"
+                    className="cursor-pointer hover:bg-surface-subtle"
                   >
                     <td className={cn(cell, "font-semibold")}>
                       <span className="inline-flex items-center gap-1">
@@ -169,17 +169,17 @@ export function PaymentsTable({
                     <td className={cn(cell, "text-right tabular-nums")}>{percentText(r.percentPaid)}</td>
                     <td className={cn(cell, "text-right font-semibold tabular-nums")}>{money(r.balance)}</td>
                     <td className={cell}>
-                      <span className={cn("rounded px-1.5 py-0.5 text-[11.5px] font-bold", STATUS_CLASS[r.status])}>{STATUS_WORD[r.status]}</span>
+                      <span className={cn("rounded px-1.5 py-0.5 text-caption font-bold", STATUS_CLASS[r.status])}>{STATUS_WORD[r.status]}</span>
                     </td>
                   </tr>
                   {open ? (
                     <tr>
-                      <td colSpan={columns.length} className="border-b border-[#EEF1F5] bg-[#FBFCFD] px-4 py-2.5">
-                        <div className={`mb-1 text-[11.5px] ${TONE.muted}`}>Invoice date {day(r.date)}</div>
+                      <td colSpan={columns.length} className="border-b border-surface-sunken bg-surface px-4 py-2.5">
+                        <div className={`mb-1 text-caption ${TONE.muted}`}>Invoice date {day(r.date)}</div>
                         {r.receipts.length === 0 ? (
-                          <p className={`text-[12px] ${TONE.muted}`}>No payment received yet.</p>
+                          <p className={`text-caption ${TONE.muted}`}>No payment received yet.</p>
                         ) : (
-                          <ul className="grid gap-0.5 text-[12px]">
+                          <ul className="grid gap-0.5 text-caption">
                             {r.receipts.map((p) => (
                               <li key={`${p.number}-${p.date}`} className="flex flex-wrap gap-x-3">
                                 <span className="font-semibold">{p.number}</span>
@@ -198,7 +198,7 @@ export function PaymentsTable({
             })}
           </tbody>
           <tfoot>
-            <tr className="bg-[#F7F9FB] font-bold">
+            <tr className="bg-surface-subtle font-bold">
               <td className={cell} colSpan={2 + (showAccount ? 1 : 0) + (showOpportunity ? 1 : 0)}>Total ({rows.length})</td>
               <td className={cn(cell, "text-right tabular-nums")}>{money(totals.invoiceTotal)}</td>
               <td className={cn(cell, "text-right tabular-nums")}>{money(totals.received)}</td>

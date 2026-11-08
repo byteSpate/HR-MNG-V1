@@ -60,34 +60,34 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
   return (
     <>
       <div className="pt-7 pb-4">
-        <Link href="/sales/projects" className="text-[12.5px] font-semibold text-[#5F6B7C] hover:underline">
+        <Link href="/sales/projects" className="text-caption font-semibold text-ink-muted hover:underline">
           ← Won Projects
         </Link>
       </div>
 
       {sessionStatus === "loading" || query.isPending ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+        <div className="rounded-md border border-line bg-white px-5.5 py-5">
           <Skeleton className="h-5 w-48" />
           <Skeleton className="mt-2.5 h-3.5 w-64" />
         </div>
       ) : query.isError ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-8 text-center">
-          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+        <div className="rounded-md border border-line bg-white px-5.5 py-8 text-center">
+          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <span aria-hidden>!</span>
           </span>
           {/* Verbatim: "That Project does not exist, or is not yours" already
               says the right thing. */}
-          <p className="text-[13px] font-semibold text-[#B03A3A]">{toMessage(query.error)}</p>
+          <p className="text-body-sm font-semibold text-danger">{toMessage(query.error)}</p>
         </div>
       ) : project ? (
         <>
-          <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+          <div className="rounded-md border border-line bg-white px-5.5 py-5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className={`font-mono text-[12px] ${TONE.muted}`}>{project.serial}</span>
+              <span className={`font-mono text-caption ${TONE.muted}`}>{project.serial}</span>
               <Heading level="page">{project.name}</Heading>
               <Tag label={PROJECT_STATUS_LABEL[project.status]} tone={PROJECT_STATUS_TONE[project.status]} />
             </div>
-            <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[#5F6B7C]">
+            <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
               <Link href={`/sales/accounts/${project.salesAccount.id}`} className="font-semibold hover:underline">
                 {project.salesAccount.name}
               </Link>
@@ -99,7 +99,7 @@ export function ProjectDetail({ projectId, initialTab }: { projectId: string; in
             {/* Louder than a muted note: a manager who can no longer work the
                 account cannot approve the Project's own work either. */}
             {!project.manager.onAccount ? (
-              <p className="mt-3 flex items-start gap-1.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2 text-[12px] leading-relaxed text-[#8A5E0C]">
+              <p className="mt-3 flex items-start gap-1.5 rounded-md border border-warning-line bg-warning-tint px-3 py-2 text-caption leading-relaxed text-warning">
                 <span aria-hidden>{project.manager.fullName}</span> is no longer on this account. Choose a new Project
                 Manager.
               </p>

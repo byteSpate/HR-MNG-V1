@@ -39,7 +39,7 @@ export function ProjectActivityPanel({ projectId }: { projectId: string }) {
 
   if (activity.isError) {
     return (
-      <p className="text-[13px] font-semibold text-[#B03A3A]">
+      <p className="text-body-sm font-semibold text-danger">
         The activity list could not be loaded.
       </p>
     )
@@ -52,7 +52,7 @@ export function ProjectActivityPanel({ projectId }: { projectId: string }) {
   ])
 
   if (rows.length === 0) {
-    return <p className="text-[13px]">Nothing has happened yet.</p>
+    return <p className="text-body-sm">Nothing has happened yet.</p>
   }
 
   return (

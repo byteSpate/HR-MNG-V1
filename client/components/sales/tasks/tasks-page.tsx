@@ -58,9 +58,9 @@ const ORIGINS = Object.keys(TASK_ORIGIN_LABEL) as SalesTaskOrigin[]
 /** A select's "any", since an empty value reads as nothing chosen at all. */
 const ANY = "any"
 
-const TOGGLE_ON = "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const TOGGLE_ON = "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
 const TOGGLE_OFF =
-  "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+  "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
 
 export function TasksPage({
   initialDue,
@@ -136,7 +136,7 @@ export function TasksPage({
         <span className="block min-w-0">
           <span className="block truncate font-semibold">{task.title}</span>
           {task.detail || task.opportunitySerial || task.meetingTitle || task.givenByName || task.type !== "OTHER" ? (
-            <span className={`block truncate text-[11.5px] ${TONE.muted}`}>
+            <span className={`block truncate text-caption ${TONE.muted}`}>
               {[
                 task.givenByName ? `Take-out from ${task.givenByName}${task.givenOn ? `, ${onDay(task.givenOn)}` : ""}` : null,
                 task.type !== "OTHER" ? TASK_TYPE_LABEL[task.type] : null,
@@ -198,7 +198,7 @@ export function TasksPage({
           Logs
         </Button>
         {tab === "tasks" && can("task.create") ? (
-          <Button type="button" variant="ghost" onClick={() => setCreateOpen(true)} className="ml-auto h-9 gap-1 px-2 text-[12.5px] font-semibold">
+          <Button type="button" variant="ghost" onClick={() => setCreateOpen(true)} className="ml-auto h-9 gap-1 px-2 text-caption font-semibold">
             <RiAddLine className="size-4" aria-hidden />
             Add a future task
           </Button>
@@ -214,7 +214,7 @@ export function TasksPage({
       {/* Hidden while loading: a filter beside a skeleton reads as an answer
           about a list nobody has counted yet. */}
       {!isLoading && !query.isError ? (
-        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
+        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
           <Select value={status || ANY} onValueChange={(v) => setStatus(!v || v === ANY ? "" : (v as SalesTaskStatus))}>
             <SelectTrigger aria-label="Task status" className="h-9 w-auto min-w-[9rem]">
               <SelectValue>
@@ -272,7 +272,7 @@ export function TasksPage({
               type="button"
               variant="link"
               onClick={clearFilters}
-              className="h-9 gap-1.5 p-0 text-[12.5px] font-bold text-[#5F6B7C]"
+              className="h-9 gap-1.5 p-0 text-caption font-bold text-ink-muted"
             >
               <RiFilterOffLine className="size-3.5" aria-hidden />
               Clear

@@ -44,14 +44,14 @@ function MarkButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none disabled:cursor-default motion-reduce:transition-none",
+        "flex size-8 shrink-0 items-center justify-center rounded-md border transition-colors focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none disabled:cursor-default motion-reduce:transition-none",
         kind === "GREEN"
           ? pressed
-            ? "border-[#1F8A4C] bg-[#1F8A4C] text-white enabled:hover:bg-[#17673A]"
-            : "border-[#9ED3B4] text-[#17673A] enabled:hover:bg-[#EEF8F2] disabled:opacity-50"
+            ? "border-success bg-success text-white enabled:hover:bg-success"
+            : "border-success-line text-success enabled:hover:bg-surface-sunken disabled:opacity-50"
           : pressed
-            ? "border-[#C24141] bg-[#C24141] text-white enabled:hover:bg-[#B03A3A]"
-            : "border-[#E9B4B4] text-[#B03A3A] enabled:hover:bg-[#FCEFEF] disabled:opacity-50",
+            ? "border-danger bg-danger text-white enabled:hover:bg-danger"
+            : "border-warning-line text-danger enabled:hover:bg-warning-tint disabled:opacity-50",
       )}
     >
       <Icon className="size-[18px]" aria-hidden />
@@ -77,12 +77,12 @@ function NoteForm({ note, pending, onSave }: { note: string | null; pending: boo
         maxLength={300}
         aria-label="Note (optional)"
         placeholder="Note (optional). For example: they use another vendor."
-        className="min-w-0 flex-1 basis-60 text-[12.5px]"
+        className="min-w-0 flex-1 basis-60 text-caption"
       />
       <Button
         type="submit"
         disabled={!changed || pending}
-        className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+        className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
       >
         Save note
       </Button>
@@ -141,15 +141,15 @@ export function HeatmapProductRow({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full min-w-0 items-stretch gap-3 text-left focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+        className="flex w-full min-w-0 items-stretch gap-3 text-left focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
       >
         <span className={cn("w-1.5 shrink-0", tone.stripe)} aria-hidden />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5 py-2.5">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="text-[13.5px] font-bold [overflow-wrap:anywhere]">{product.title}</span>
-            <span className={cn("text-[11.5px] font-bold", tone.text)}>{tone.word}</span>
+            <span className="text-body-sm font-bold [overflow-wrap:anywhere]">{product.title}</span>
+            <span className={cn("text-caption font-bold", tone.text)}>{tone.word}</span>
           </span>
-          <span className={`text-[12px] leading-snug [overflow-wrap:anywhere] ${TONE.muted}`}>{closedLine(product)}</span>
+          <span className={`text-caption leading-snug [overflow-wrap:anywhere] ${TONE.muted}`}>{closedLine(product)}</span>
         </span>
         <RiArrowDownSLine
           className={cn("mr-3 size-5 shrink-0 self-center transition-transform motion-reduce:transition-none", open && "rotate-180")}
@@ -158,9 +158,9 @@ export function HeatmapProductRow({
       </button>
 
       {open ? (
-        <div className="grid gap-3 border-t border-[#E4E9EF] bg-white px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 fill-mode-backwards duration-300 motion-reduce:animate-none">
+        <div className="grid gap-3 border-t border-line bg-white px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 fill-mode-backwards duration-300 motion-reduce:animate-none">
           {product.parts.length === 0 ? (
-            <p className={`text-[12.5px] ${TONE.muted}`}>This product has no parts yet. A Sales Admin can add one in Sales Settings.</p>
+            <p className={`text-caption ${TONE.muted}`}>This product has no parts yet. A Sales Admin can add one in Sales Settings.</p>
           ) : (
             <>
               {canManage ? (
@@ -173,8 +173,8 @@ export function HeatmapProductRow({
                     aria-label="Tick every part"
                     onClick={() => all.mutate(allMarkTarget(product, "GREEN"))}
                     className={cn(
-                      "h-auto rounded-md border px-3 py-1.5 text-[12.5px] font-bold",
-                      allTicked ? "border-[#1F8A4C] bg-[#1F8A4C] text-white hover:bg-[#17673A]" : "border-[#9ED3B4] text-[#17673A] hover:bg-[#EEF8F2]",
+                      "h-auto rounded-md border px-3 py-1.5 text-caption font-bold",
+                      allTicked ? "border-success bg-success text-white hover:bg-success" : "border-success-line text-success hover:bg-surface-sunken",
                     )}
                   >
                     All ✓
@@ -187,14 +187,14 @@ export function HeatmapProductRow({
                     aria-label="Cross every part"
                     onClick={() => all.mutate(allMarkTarget(product, "RED"))}
                     className={cn(
-                      "h-auto rounded-md border px-3 py-1.5 text-[12.5px] font-bold",
-                      allCrossed ? "border-[#C24141] bg-[#C24141] text-white hover:bg-[#B03A3A]" : "border-[#E9B4B4] text-[#B03A3A] hover:bg-[#FCEFEF]",
+                      "h-auto rounded-md border px-3 py-1.5 text-caption font-bold",
+                      allCrossed ? "border-danger bg-danger text-white hover:bg-danger" : "border-warning-line text-danger hover:bg-warning-tint",
                     )}
                   >
                     All ✗
                   </Button>
                   {product.markedByName && product.markedAt ? (
-                    <span className={`text-[11.5px] ${TONE.muted}`}>
+                    <span className={`text-caption ${TONE.muted}`}>
                       Last change: {product.markedByName}, {onDay(product.markedAt)}
                     </span>
                   ) : null}
@@ -205,8 +205,8 @@ export function HeatmapProductRow({
                 {product.parts.map((p) => (
                   <li key={p.id} className="flex min-w-0 items-center gap-2.5 rounded-md px-2 py-1.5">
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-[12.5px] font-semibold [overflow-wrap:anywhere]">{p.title}</span>
-                      {p.note ? <span className={`text-[11.5px] leading-snug ${TONE.muted}`}>{p.note}</span> : null}
+                      <span className="text-caption font-semibold [overflow-wrap:anywhere]">{p.title}</span>
+                      {p.note ? <span className={`text-caption leading-snug ${TONE.muted}`}>{p.note}</span> : null}
                     </span>
                     <MarkButton
                       kind="GREEN"
@@ -232,7 +232,7 @@ export function HeatmapProductRow({
             canManage ? (
               <NoteForm key={product.note ?? ""} note={product.note} pending={busy} onSave={(text) => note.mutate(text)} />
             ) : product.note ? (
-              <p className="text-[12.5px] [overflow-wrap:anywhere]">Note: {product.note}</p>
+              <p className="text-caption [overflow-wrap:anywhere]">Note: {product.note}</p>
             ) : null
           ) : null}
 

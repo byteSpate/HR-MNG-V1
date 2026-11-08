@@ -124,7 +124,7 @@ function Band({ title, sub, children }: { title: string; sub?: string; children:
     <section className="mt-5">
       <div className="mb-2.5">
         <Heading level="section">{title}</Heading>
-        {sub ? <p className={`mt-0.5 text-[12.5px] ${TONE.muted}`}>{sub}</p> : null}
+        {sub ? <p className={`mt-0.5 text-caption ${TONE.muted}`}>{sub}</p> : null}
       </div>
       {children}
     </section>
@@ -152,10 +152,10 @@ function resultOf(q: SalesTargetQuarter): { text: string; className: string } {
 
 function QuarterTable({ quarters }: { quarters: SalesTargetQuarter[] }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-[#E4E9EF] bg-white">
-      <table className="w-full min-w-[36rem] border-collapse text-[12.5px]">
+    <div className="overflow-x-auto rounded-md border border-line bg-white">
+      <table className="w-full min-w-[36rem] border-collapse text-caption">
         <thead>
-          <tr className="border-b border-[#E4E9EF] text-left">
+          <tr className="border-b border-line text-left">
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Quarter</th>
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Target</th>
             <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Won</th>
@@ -173,7 +173,7 @@ function QuarterTable({ quarters }: { quarters: SalesTargetQuarter[] }) {
             return (
               <tr
                 key={q.quarter}
-                className="rise-in border-b border-[#EEF1F5] align-top last:border-b-0 motion-reduce:animate-none"
+                className="rise-in border-b border-surface-sunken align-top last:border-b-0 motion-reduce:animate-none"
                 style={stagger(i)}
               >
                 <td className="px-4 py-2.5 font-semibold">Q{q.quarter}</td>
@@ -186,11 +186,11 @@ function QuarterTable({ quarters }: { quarters: SalesTargetQuarter[] }) {
                     <>
                       <div className="tabular-nums">{taka(q.target)}</div>
                       {carried ? (
-                        <div className={`text-[11.5px] ${TONE.muted}`}>
+                        <div className={`text-caption ${TONE.muted}`}>
                           includes {taka(carried)} carried from Q{q.quarter - 1}
                         </div>
                       ) : q.carryPending ? (
-                        <div className={`text-[11.5px] ${TONE.muted}`}>
+                        <div className={`text-caption ${TONE.muted}`}>
                           plus any shortfall from Q{q.quarter - 1}
                         </div>
                       ) : null}
@@ -204,7 +204,7 @@ function QuarterTable({ quarters }: { quarters: SalesTargetQuarter[] }) {
                     <>
                       <div>{taka(q.valueWon)}</div>
                       {q.unpricedWonCount > 0 ? (
-                        <div className={`text-[11.5px] ${TONE.muted}`}>
+                        <div className={`text-caption ${TONE.muted}`}>
                           {q.unpricedWonCount} with no price yet
                         </div>
                       ) : null}
@@ -232,7 +232,7 @@ function ActionRows({ rows, scope, employeeId }: { rows: SalesActionRow[]; scope
           key={row.key}
           href={actionHref(row, scope, employeeId)}
           style={stagger(i)}
-          className="rise-in group flex items-center justify-between gap-3 rounded-md border border-[#E4E9EF] bg-white px-4 py-3 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-[#CBD5E1] hover:shadow-[0_2px_10px_rgba(16,24,40,0.06)] motion-reduce:animate-none motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+          className="rise-in group flex items-center justify-between gap-3 rounded-md border border-line bg-white px-4 py-3 transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[0_2px_10px_rgba(16,24,40,0.06)] motion-reduce:animate-none motion-reduce:transition-none motion-reduce:hover:translate-y-0"
         >
           <div className="flex min-w-0 items-center gap-3">
             {ACTION_ICON[row.key]
@@ -251,16 +251,16 @@ function ActionRows({ rows, scope, employeeId }: { rows: SalesActionRow[]; scope
                 })()
               : null}
             <div className="min-w-0">
-              <div className="text-[13px] font-semibold">{row.label}</div>
-              <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>{row.detail}</div>
+              <div className="text-body-sm font-semibold">{row.label}</div>
+              <div className={`mt-0.5 text-caption ${TONE.muted}`}>{row.detail}</div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <span className="text-[17px] font-bold tabular-nums" style={{ color: tones[row.tone].color }}>
+            <span className="text-title-sm font-bold tabular-nums" style={{ color: tones[row.tone].color }}>
               {row.count}
             </span>
             <RiArrowRightLine
-              className="size-3.5 text-[#8A94A2] transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+              className="size-3.5 text-ink-muted transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
               aria-hidden
             />
           </div>
@@ -272,10 +272,10 @@ function ActionRows({ rows, scope, employeeId }: { rows: SalesActionRow[]; scope
 
 function TeamTable({ team, onReview }: { team: SalesTeamRow[]; onReview: (employeeId: string) => void }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-[#E4E9EF] bg-white">
-      <table className="w-full min-w-[34rem] border-collapse text-[12.5px]">
+    <div className="overflow-x-auto rounded-md border border-line bg-white">
+      <table className="w-full min-w-[34rem] border-collapse text-caption">
         <thead>
-          <tr className="border-b border-[#E4E9EF] text-left">
+          <tr className="border-b border-line text-left">
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Person</th>
             <th className={`px-4 py-2.5 font-semibold ${TONE.muted}`}>Target</th>
             <th className={`px-4 py-2.5 text-right font-semibold ${TONE.muted}`}>Won</th>
@@ -288,7 +288,7 @@ function TeamTable({ team, onReview }: { team: SalesTeamRow[]; onReview: (employ
           {team.map((row, i) => (
             <tr
               key={row.employeeId}
-              className="rise-in border-b border-[#EEF1F5] last:border-b-0 motion-reduce:animate-none"
+              className="rise-in border-b border-surface-sunken last:border-b-0 motion-reduce:animate-none"
               style={stagger(i)}
             >
               {/* Every row names the person it is about. */}
@@ -303,7 +303,7 @@ function TeamTable({ team, onReview }: { team: SalesTeamRow[]; onReview: (employ
                 <button
                   type="button"
                   onClick={() => onReview(row.employeeId)}
-                  className="rounded-md px-2 py-1 text-[12px] font-semibold text-[#5F6B7C] transition-colors hover:bg-[#F1F4F8] hover:text-[#1C2733] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                  className="rounded-md px-2 py-1 text-caption font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-body focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
                 >
                   Review
                 </button>
@@ -343,12 +343,12 @@ function ScopeBar({
         : "Your accounts and shared priorities"
 
   return (
-    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 border-y border-[#E4E9EF] py-3">
+    <div className="mt-1 flex flex-wrap items-center justify-between gap-3 border-y border-line py-3">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {canTeam ? (
             <Select value={selectedEmployeeId} onValueChange={(value) => onSelect(value ?? "all")}>
-              <SelectTrigger aria-label="Dashboard scope" className="h-8 min-w-[12.5rem] border-0 bg-[#F7F9FB] text-[12.5px] font-bold shadow-none hover:bg-[#F1F4F8]">
+              <SelectTrigger aria-label="Dashboard scope" className="h-8 min-w-[12.5rem] border-0 bg-surface-subtle text-caption font-bold shadow-none hover:bg-surface-hover">
                 <SelectValue>
                   {(value: string | null) =>
                     value === "all"
@@ -365,16 +365,16 @@ function ScopeBar({
               </SelectContent>
             </Select>
           ) : (
-            <span className="text-[12.5px] font-bold">My sales view</span>
+            <span className="text-caption font-bold">My sales view</span>
           )}
-          <span className={`text-[12px] ${TONE.muted}`}>{scopeDescription}</span>
+          <span className={`text-caption ${TONE.muted}`}>{scopeDescription}</span>
         </div>
       </div>
       {canSetTarget && data.scope !== "all" && data.employeeName && (isSalesAdmin || data.scope === "employee") ? (
         <Button
           type="button"
           onClick={onSetTarget}
-          className="h-8 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+          className="h-8 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
         >
           Set yearly target
         </Button>
@@ -416,7 +416,7 @@ function TargetEditor({
           </DialogTitle>
         </DialogHeader>
 
-        <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
+        <p className={`text-caption leading-relaxed ${TONE.muted}`}>
           A target is an amount of Opportunity value, in taka, for the year. It is split equally over the
           quarters from the one it starts in. If a quarter falls short, the shortfall is added to the
           next quarter. Winning more than a quarter&rsquo;s target does not lower the next one.
@@ -523,7 +523,7 @@ function TargetForm({
           type="button"
           disabled={save.isPending || !amount.trim()}
           onClick={handleSave}
-          className="h-9 rounded-md bg-[#17191C] px-3.5 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+          className="h-9 rounded-md bg-ink px-3.5 text-caption font-bold text-white hover:bg-ink-strong"
         >
           {save.isPending ? "Saving…" : "Set target"}
         </Button>
@@ -580,15 +580,15 @@ export function SalesDashboard() {
           ))}
         </div>
       ) : query.isError ? (
-        <div className="mt-5 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-8 text-center">
-          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+        <div className="mt-5 rounded-md border border-line bg-white px-5.5 py-8 text-center">
+          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
-          <p className="text-[13px] font-semibold text-[#B03A3A]">{toMessage(query.error)}</p>
+          <p className="text-body-sm font-semibold text-danger">{toMessage(query.error)}</p>
           <Button
             type="button"
             onClick={() => query.refetch()}
-            className="mt-3 h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+            className="mt-3 h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
           >
             Try again
           </Button>
@@ -619,7 +619,7 @@ export function SalesDashboard() {
               {groupStats(data.stats).map((group, g) => (
                 <div key={group.title ?? g}>
                   {group.title ? (
-                    <h3 className={`mb-2 text-[12.5px] font-semibold ${TONE.muted}`}>{group.title}</h3>
+                    <Heading level="label" className="mb-2">{group.title}</Heading>
                   ) : null}
                   {/* auto-fit at xl, so a group of three fills its row and a
                       group of five does not leave one tile alone on the next. */}
@@ -641,7 +641,7 @@ export function SalesDashboard() {
               {/* Stated on the page, as the design requires: the figures are
                   live rather than frozen at quarter end, because freezing them
                   would hide a correction. */}
-              <p className={`mt-2 text-[11.5px] ${TONE.muted}`}>
+              <p className={`mt-2 text-caption ${TONE.muted}`}>
                 Achievement is counted live. If a Sales Admin corrects a Won Opportunity, a past
                 quarter&rsquo;s figure moves, and so do the targets after it. The audit log records why.
               </p>
@@ -679,7 +679,7 @@ export function SalesDashboard() {
             <section className="mt-5">
               <div className="mb-2.5">
                 <Heading level="section">Payments</Heading>
-                <p className={`mt-0.5 text-[12.5px] ${TONE.muted}`}>Every invoice not yet fully paid. Click a row to see its payments.</p>
+                <p className={`mt-0.5 text-caption ${TONE.muted}`}>Every invoice not yet fully paid. Click a row to see its payments.</p>
               </div>
               <PaymentsTable filter={{ open: true }} showAccount showOpportunity emptyText="Every approved invoice is fully paid." />
             </section>
