@@ -219,5 +219,15 @@
     "40px",
     "64px",
     "80px"
-  ]
+  ],
+  "nonTextOverrides": {
+    "#7a8698": "line-strong",
+    "#a5afbe": "line-strong",
+    "#8a94a2": "line-strong",
+    "#8a94a3": "line-strong",
+    "#8792a3": "line-strong",
+    "#8b95a3": "line-strong",
+    "#98a2b1": "line-strong",
+    "#98a2b0": "line-strong"
+  }
 }
