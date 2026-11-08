@@ -30,7 +30,7 @@ export function LinesList({
       {header === false ? null : (
         <div role="row" className={cx(grid, "max-md:hidden border-b border-line px-3 pb-2 text-caption font-bold text-ink-muted uppercase")}>
           {columns.map((c) => (
-            <div key={c.key} role="columnheader" className={c.align === "right" ? "text-right" : undefined}>
+            <div key={c.key} role="columnheader" className={cx(c.align === "right" && "text-right", c.labelClassName)}>
               {c.label}
             </div>
           ))}
@@ -46,9 +46,14 @@ export function LinesList({
             <div
               key={c.key}
               role="cell"
-              className={cx("min-w-0", isEmptyCell(row[c.key]) && "max-md:hidden", c.align === "right" && "md:text-right")}
+              className={cx(
+                "min-w-0",
+                isEmptyCell(row[c.key]) && "max-md:hidden",
+                c.fullOnPhone && "max-md:col-span-2",
+                c.align === "right" && "md:text-right",
+              )}
             >
-              <div className="mb-0.5 text-caption font-bold text-ink-muted md:hidden">{c.label}</div>
+              {c.label ? <div className={cx("mb-0.5 text-caption font-bold text-ink-muted md:hidden", c.labelClassName)}>{c.label}</div> : null}
               {row[c.key]}
             </div>
           ))}

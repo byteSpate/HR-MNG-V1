@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AccountPicker } from "@/components/accounting/account-picker"
 import { fromPaisa, sumPaisa, toPaisa } from "@/components/accounting/accounting-shared"
+import { LinesList } from "@/components/ds/lines-list"
+import type { LinesColumn } from "@/components/ds/layout-helpers"
 import { cn } from "@/lib/utils"
 
 export interface DraftLine {
@@ -138,91 +140,92 @@ export function JournalLinesEditor({
     patch(key, column === "debit" ? { debit: value, credit: "" } : { credit: value, debit: "" })
   }
 
+  const columns: LinesColumn[] = [
+    { key: "account", label: "Account", width: "1fr", fullOnPhone: true },
+    { key: "note", label: "Line note", width: "1fr", fullOnPhone: true },
+    { key: "debit", label: "Debit", width: "160px", align: "right", labelClassName: sides.sideText("debit") },
+    { key: "credit", label: "Credit", width: "160px", align: "right", labelClassName: sides.sideText("credit") },
+    { key: "remove", label: "", width: "40px", fullOnPhone: true },
+  ]
+
+  const rows = lines.map((line, index) => ({
+    key: line.key,
+    account: (
+      <AccountPicker
+        accounts={accounts}
+        value={line.accountId}
+        onChange={(accountId) => patch(line.key, { accountId })}
+        disabled={disabled}
+      />
+    ),
+    note: (
+      <Input
+        value={line.narration}
+        onChange={(e) => patch(line.key, { narration: e.target.value })}
+        placeholder="Optional"
+        disabled={disabled}
+        aria-label={`Line note, line ${index + 1}`}
+        className="h-9"
+      />
+    ),
+    debit: (
+      <Input
+        ref={(el) => {
+          debitRefs.current[line.key] = el
+        }}
+        value={line.debit}
+        onChange={(e) => setAmount(line.key, "debit", e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault()
+            addAfter(line.key)
+          }
+        }}
+        inputMode="decimal"
+        placeholder="0.00"
+        disabled={disabled}
+        aria-label={`Debit, line ${index + 1}`}
+        className={cn("h-9 text-right tabular-nums", Number.isNaN(toPaisa(line.debit)) && "border-destructive")}
+      />
+    ),
+    credit: (
+      <Input
+        value={line.credit}
+        onChange={(e) => setAmount(line.key, "credit", e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault()
+            addAfter(line.key)
+          }
+        }}
+        inputMode="decimal"
+        placeholder="0.00"
+        disabled={disabled}
+        aria-label={`Credit, line ${index + 1}`}
+        className={cn("h-9 text-right tabular-nums", Number.isNaN(toPaisa(line.credit)) && "border-destructive")}
+      />
+    ),
+    remove: (
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onClick={() => remove(line.key)}
+          disabled={disabled}
+          aria-label={`Remove line ${index + 1}`}
+        >
+          <RiDeleteBinLine className="size-4" />
+        </Button>
+      </div>
+    ),
+  }))
+
   return (
     <div className="rounded-lg border">
-      <div className="grid grid-cols-[1fr_1fr_160px_160px_40px] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
-        <span>Account</span>
-        <span>Line note</span>
-        <span className={cn("text-right", sides.sideText("debit"))}>Debit</span>
-        <span className={cn("text-right", sides.sideText("credit"))}>Credit</span>
-        <span />
-      </div>
+      <LinesList columns={columns} rows={rows} getKey={(row) => String(row.key)} />
 
-      {lines.map((line, index) => (
-        <div
-          key={line.key}
-          className="grid grid-cols-[1fr_1fr_160px_160px_40px] items-center gap-2 border-b px-3 py-1.5 last:border-0"
-        >
-          <AccountPicker
-            accounts={accounts}
-            value={line.accountId}
-            onChange={(accountId) => patch(line.key, { accountId })}
-            disabled={disabled}
-          />
-
-          <Input
-            value={line.narration}
-            onChange={(e) => patch(line.key, { narration: e.target.value })}
-            placeholder="Optional"
-            disabled={disabled}
-            className="h-9"
-          />
-
-          <Input
-            ref={(el) => {
-              debitRefs.current[line.key] = el
-            }}
-            value={line.debit}
-            onChange={(e) => setAmount(line.key, "debit", e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                addAfter(line.key)
-              }
-            }}
-            inputMode="decimal"
-            placeholder="0.00"
-            disabled={disabled}
-            aria-label={`Debit, line ${index + 1}`}
-            className={cn(
-              "h-9 text-right tabular-nums",
-              Number.isNaN(toPaisa(line.debit)) && "border-destructive"
-            )}
-          />
-
-          <Input
-            value={line.credit}
-            onChange={(e) => setAmount(line.key, "credit", e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                addAfter(line.key)
-              }
-            }}
-            inputMode="decimal"
-            placeholder="0.00"
-            disabled={disabled}
-            aria-label={`Credit, line ${index + 1}`}
-            className={cn(
-              "h-9 text-right tabular-nums",
-              Number.isNaN(toPaisa(line.credit)) && "border-destructive"
-            )}
-          />
-
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            onClick={() => remove(line.key)}
-            disabled={disabled}
-            aria-label={`Remove line ${index + 1}`}
-          >
-            <RiDeleteBinLine className="size-4" />
-          </Button>
-        </div>
-      ))}
-
-      <div className="flex items-center gap-2 border-t px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2">
         <Button
           type="button"
           size="sm"
@@ -239,11 +242,12 @@ export function JournalLinesEditor({
         The balance footer. Persistent, live, and the reason this screen
         works: the rule that decides whether the entry can be submitted is
         visible while you type rather than delivered as an error after you
-        submit.
+        submit. On a phone the message sits on top and the two totals share
+        the next line.
       */}
       <div
         className={cn(
-          "grid grid-cols-[1fr_1fr_160px_160px_40px] items-center gap-2 border-t px-3 py-2.5 text-sm font-medium tabular-nums",
+          "grid grid-cols-2 items-center gap-x-3 gap-y-1 border-t px-3 py-2.5 text-sm font-medium tabular-nums md:grid-cols-[1fr_1fr_160px_160px_40px] md:gap-2",
           balance.isBalanced ? "bg-muted/40" : "bg-destructive/5"
         )}
       >
@@ -258,9 +262,15 @@ export function JournalLinesEditor({
             </span>
           )}
         </span>
-        <span className="text-right">{fromPaisa(balance.debitPaisa || 0)}</span>
-        <span className="text-right">{fromPaisa(balance.creditPaisa || 0)}</span>
-        <span />
+        <span className="text-right">
+          <span className="mr-2 text-xs font-bold md:hidden">Debit</span>
+          {fromPaisa(balance.debitPaisa || 0)}
+        </span>
+        <span className="text-right">
+          <span className="mr-2 text-xs font-bold md:hidden">Credit</span>
+          {fromPaisa(balance.creditPaisa || 0)}
+        </span>
+        <span className="hidden md:block" />
       </div>
     </div>
   )

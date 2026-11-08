@@ -30,6 +30,10 @@ export interface LinesColumn {
   /** Width on a wide screen, as a CSS grid track, for example "1fr" or "8rem". */
   width?: string
   align?: "left" | "right"
+  /** On a phone the cell takes the whole card width instead of half. */
+  fullOnPhone?: boolean
+  /** Extra classes for the column label only, for example a color. */
+  labelClassName?: string
 }
 
 export function isEmptyCell(value: unknown): boolean {
