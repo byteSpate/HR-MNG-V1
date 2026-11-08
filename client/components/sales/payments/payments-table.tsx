@@ -128,7 +128,7 @@ export function PaymentsTable({
                 const Arrow = active && dir === "desc" ? RiArrowDownSLine : RiArrowUpSLine
                 return (
                   <th key={c.key} className={cn(cell, "font-bold", c.right && "text-right")}>
-                    <button type="button" onClick={() => sortBy(c.key)} className={cn("inline-flex items-center gap-0.5 uppercase hover:text-ink", active && "text-ink")}>
+                    <button type="button" onClick={() => sortBy(c.key)} className={cn("inline-flex items-center gap-0.5 pointer-coarse:py-3 uppercase hover:text-ink", active && "text-ink")}>
                       {c.label}
                       <Arrow className={cn("size-3.5", !active && "opacity-30")} aria-hidden />
                     </button>
