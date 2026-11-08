@@ -113,7 +113,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
         </div>
 
         {project.people.length > 0 ? (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto contain-inline-size">
             <table className="w-full min-w-[22rem] border-collapse text-left">
               <thead>
                 <tr className="border-b border-[#E4E9EF]">
