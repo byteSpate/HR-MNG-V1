@@ -195,9 +195,18 @@ if (cfg.login.kind === "email") {
 } else {
   await page.getByRole("textbox", { name: "Employee ID" }).fill(cfg.login.id)
 }
-await page.getByRole("textbox", { name: "Password" }).fill(PW)
-await page.getByRole("button", { name: "Sign in" }).click()
-await page.waitForFunction(() => !location.pathname.startsWith("/login"), null, { timeout: 240000 })
+// Sign in, and try again if the page was not ready yet (a fresh dev server hydrates slowly).
+for (let attempt = 0; attempt < 6; attempt++) {
+  if (attempt > 0) {
+    if (cfg.login.kind === "email") await page.getByRole("textbox", { name: "Email" }).fill(cfg.login.id)
+    else await page.getByRole("textbox", { name: "Employee ID" }).fill(cfg.login.id)
+  }
+  await page.getByRole("textbox", { name: "Password" }).fill(PW)
+  await page.getByRole("button", { name: "Sign in" }).click()
+  const moved = await page.waitForFunction(() => !location.pathname.startsWith("/login"), null, { timeout: 40000 }).then(() => true, () => false)
+  if (moved) break
+  if (attempt === 5) throw new Error("Sign-in did not leave /login after 6 tries")
+}
 
 async function settle() {
   await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {})
