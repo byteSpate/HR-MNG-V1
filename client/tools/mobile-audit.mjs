@@ -13,7 +13,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_CORE ?? "playwright-cor
 const BASE = process.env.AUDIT_BASE ?? "http://localhost:3100"
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 const DESKTOP = process.env.DESKTOP === "1" // 1366 px sweep, no touch; results go to sweep/
-const VP = DESKTOP ? { width: 1366, height: 900 } : { width: 390, height: 844 }
+const VP = DESKTOP ? { width: 1366, height: 900 } : { width: Number(process.env.AUDIT_WIDTH ?? 390), height: 844 }
 const OUT = `${ROOT}/.playwright-mcp/${DESKTOP ? "sweep" : "mobile"}`
 const CHROME = process.env.AUDIT_CHROME // optional path to a Chrome binary
 const PW = process.env.AUDIT_PASSWORD ?? "Demo@12345" // the demo password of the dev database
@@ -69,7 +69,9 @@ const patternOf = (href) => {
   const m = UUID.exec(href || "")
   return m ? m[1] + "/[id]" : null
 }
-const queue = isDyn ? fs.readFileSync(dynFile, "utf8").split("\n").filter(Boolean) : staticRoutes.slice(START, END)
+const ONLY = (process.env.AUDIT_ONLY ?? "").split(",").filter(Boolean) // keep routes that contain one of these
+const queue0 = isDyn ? fs.readFileSync(dynFile, "utf8").split("\n").filter(Boolean) : staticRoutes.slice(START, END)
+const queue = ONLY.length ? queue0.filter((r) => ONLY.some((o) => r.includes(o))) : queue0
 
 // ---- page measurements, run inside the page --------------------------------
 const MEASURE = () => {
