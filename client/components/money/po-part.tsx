@@ -157,8 +157,8 @@ export function PoPart({
 
               <div className="mt-3 space-y-1.5 border-t border-[#EEF1F5] pt-3">
                 {po.lines.map((line) => (
-                  <div key={line.id} className="flex items-center justify-between gap-3 text-[12.5px]">
-                    <span className="min-w-0 truncate">{line.description}</span>
+                  <div key={line.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[12.5px]">
+                    <span className="min-w-0 max-w-full basis-full truncate sm:flex-1 sm:basis-auto">{line.description}</span>
                     <span className={line.vatMethod === "MANUAL" ? "shrink-0 text-[#8A5E0C]" : "shrink-0 text-[#5F6B7C]"}>
                       VAT {vatLabel(line)}
                     </span>
