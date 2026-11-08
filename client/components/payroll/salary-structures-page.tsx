@@ -222,10 +222,10 @@ function StructureCard({
     <div
       className={cn(
         "flex flex-col rounded-md border bg-white transition-[border-color,box-shadow] duration-180 ease-out",
-        "hover:border-[#CFD7E0] hover:shadow-[0_10px_24px_-16px_rgba(28,39,51,0.28)]",
+        "hover:border-line-strong hover:shadow-[0_10px_24px_-16px_rgba(28,39,51,0.28)]",
         // An inactive structure is still real and still pays the people on it,
         // so it is marked rather than dimmed into unreadability.
-        structure.isActive ? "border-[#E4E9EF]" : "border-dashed border-[#D8DEE7]",
+        structure.isActive ? "border-line" : "border-dashed border-line-strong",
         "motion-reduce:transition-none"
       )}
     >
@@ -237,15 +237,15 @@ function StructureCard({
               {structure.isActive ? null : <Tag label="Inactive" tone="neutral" />}
             </div>
             <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="font-heading text-[22px] font-bold tracking-tight tabular-nums">
+              <span className="font-heading text-heading font-bold tracking-tight tabular-nums">
                 {formatMoney(totals.net.toFixed(2), structure.currency)}
               </span>
-              <span className="text-[12.5px] text-[#5F6B7C]">
+              <span className="text-caption text-ink-muted">
                 {split ? "net per month" : "per month"}
               </span>
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-[12px] text-[#5F6B7C]">
-              <RiTeamLine className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+            <div className="mt-1 flex items-center gap-1.5 text-caption text-ink-muted">
+              <RiTeamLine className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
               {inUse
                 ? `${structure.employeeCount} employee${structure.employeeCount === 1 ? "" : "s"}`
                 : "Nobody assigned"}
@@ -260,7 +260,7 @@ function StructureCard({
               <Button
                 variant="ghost"
                 onClick={onEdit}
-                className="h-auto gap-1 rounded-md px-2 py-1 text-[12px] font-semibold text-[#5F6B7C] transition-colors hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+                className="h-auto gap-1 rounded-md px-2 py-1 text-caption font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-body"
               >
                 <RiPencilLine className="size-3.5" aria-hidden />
                 Edit
@@ -273,7 +273,7 @@ function StructureCard({
                   title={`${structure.employeeCount} employee${
                     structure.employeeCount === 1 ? " is" : "s are"
                   } on this structure. Move them first, or mark it inactive.`}
-                  className="inline-flex cursor-help items-center gap-1 rounded-md px-2 py-1 text-[12px] font-semibold text-[#8A94A2]"
+                  className="inline-flex cursor-help items-center gap-1 rounded-md px-2 py-1 text-caption font-semibold text-ink-muted"
                 >
                   <RiLockLine className="size-3.5" aria-hidden />
                   In use
@@ -282,7 +282,7 @@ function StructureCard({
                 <Button
                   variant="ghost"
                   onClick={onAskDelete}
-                  className="h-auto gap-1 rounded-md px-2 py-1 text-[12px] font-semibold text-[#5F6B7C] transition-colors hover:bg-[#FDF1F1] hover:text-[#B03A3A]"
+                  className="h-auto gap-1 rounded-md px-2 py-1 text-caption font-semibold text-ink-muted transition-colors hover:bg-danger-tint hover:text-danger"
                 >
                   <RiDeleteBinLine className="size-3.5" aria-hidden />
                   Delete
@@ -296,8 +296,8 @@ function StructureCard({
       {/* Confirmed in place rather than in a modal: the thing being deleted
           stays on screen, including the figure it pays. */}
       {confirming ? (
-        <div className="mx-5 mb-4 rounded-md border border-[#F0D2D2] bg-[#FDF6F6] px-4 py-3">
-          <div className="flex items-start gap-2 text-[12.5px] leading-relaxed text-[#7A2B2B]">
+        <div className="mx-5 mb-4 rounded-md border border-danger-line bg-danger-tint px-4 py-3">
+          <div className="flex items-start gap-2 text-caption leading-relaxed text-danger">
             <RiErrorWarningLine className="mt-px size-4 shrink-0" aria-hidden />
             <span>
               Delete <strong>{structure.name}</strong>? Payslips already issued on it keep their own
@@ -306,7 +306,7 @@ function StructureCard({
           </div>
           <div className="mt-2.5 flex gap-2">
             <Button
-              className="h-auto rounded-md bg-[#B03A3A] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#8F2E2E]"
+              className="h-auto rounded-md bg-danger px-3.5 py-2 text-caption font-bold text-white hover:bg-danger"
               disabled={deleting}
               onClick={onConfirmDelete}
             >
@@ -321,7 +321,7 @@ function StructureCard({
 
       {split ? (
         <>
-          <dl className="border-t border-[#EEF1F5] px-5 py-3 text-[12.5px]">
+          <dl className="border-t border-surface-sunken px-5 py-3 text-caption">
             <Line
               label="Basic"
               amount={formatMoney(structure.basic, structure.currency)}
@@ -344,7 +344,7 @@ function StructureCard({
           </dl>
 
           {/* The three figures a structure is judged by, on one line. */}
-          <div className="mt-auto flex flex-wrap gap-x-6 gap-y-1 border-t border-[#EEF1F5] bg-[#FAFBFC] px-5 py-2.5 text-[12px]">
+          <div className="mt-auto flex flex-wrap gap-x-6 gap-y-1 border-t border-surface-sunken bg-surface-subtle px-5 py-2.5 text-caption">
             <Total label="Gross" value={formatMoney(totals.gross.toFixed(2), structure.currency)} />
             <Total
               label="Deductions"
@@ -384,7 +384,7 @@ function Line({
             aria-hidden
             className={cn(
               "w-2 shrink-0 font-bold",
-              tone === "deduction" ? "text-[#B03A3A]" : "text-[#1E7A3C]"
+              tone === "deduction" ? "text-danger" : "text-success"
             )}
           >
             {tone === "deduction" ? "−" : "+"}
@@ -392,11 +392,11 @@ function Line({
         )}
         <span className={cn("truncate", tone === "basic" && "font-semibold")}>{label}</span>
         {code ? (
-          <span className="shrink-0 rounded bg-[#F1F4F8] px-1 font-mono text-[10.5px] text-[#6B7789]">
+          <span className="shrink-0 rounded bg-surface-hover px-1 font-mono text-caption text-ink-muted">
             {code}
           </span>
         ) : null}
-        {note ? <span className="shrink-0 text-[11px] text-[#8A5E0C]">{note}</span> : null}
+        {note ? <span className="shrink-0 text-caption text-warning">{note}</span> : null}
       </dt>
       <dd className="shrink-0 tabular-nums">{amount}</dd>
     </div>
@@ -406,7 +406,7 @@ function Line({
 function Total({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="text-[#5F6B7C]">{label}</span>
+      <span className="text-ink-muted">{label}</span>
       <span className={cn("tabular-nums", strong ? "font-bold" : "font-semibold")}>{value}</span>
     </div>
   )
@@ -503,12 +503,12 @@ export function SalaryStructuresPage() {
 
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-[13px] text-[#5F6B7C]">
+          <div className="text-body-sm text-ink-muted">
             Finance authors these; HR assigns employees to them from the employee directory.
           </div>
           {canWrite && !draft ? (
             <Button
-              className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
               onClick={() => setDraft({ ...BLANK_DRAFT, components: [{ ...BLANK_COMPONENT }] })}
             >
               <RiAddLine className="size-4" aria-hidden />
@@ -520,9 +520,9 @@ export function SalaryStructuresPage() {
         {draft ? (
           // A left rule and a tint so the editor does not read as one more
           // card in the list it sits above.
-          <div className="space-y-4 rounded-md border border-[#D8E0EA] border-l-3 border-l-[#17191C] bg-[#FAFBFC] px-5.5 py-5">
+          <div className="space-y-4 rounded-md border border-line border-l-3 border-l-[#17191C] bg-surface-subtle px-5.5 py-5">
             <div className="flex items-center gap-2">
-              <RiWallet3Line className="size-4 text-[#8A94A2]" aria-hidden />
+              <RiWallet3Line className="size-4 text-ink-muted" aria-hidden />
               <Heading level="section">
                 {draft.id ? `Edit ${draft.name || "structure"}` : "New structure"}
               </Heading>
@@ -585,7 +585,7 @@ export function SalaryStructuresPage() {
                 checked={draft.isActive}
                 onCheckedChange={(v) => patch({ isActive: v })}
               />
-              <Label htmlFor="s-active" className="text-[12.5px] font-normal">
+              <Label htmlFor="s-active" className="text-caption font-normal">
                 Active — inactive structures cannot be assigned to anyone new
               </Label>
             </div>
@@ -593,18 +593,18 @@ export function SalaryStructuresPage() {
             <div>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="text-[13px] font-semibold">
+                  <div className="text-body-sm font-semibold">
                     Allowances and deductions{" "}
-                    <span className="font-normal text-[#6B7789]">· optional</span>
+                    <span className="font-normal text-ink-muted">· optional</span>
                   </div>
                   {draft.components.length === 0 ? (
-                    <div className="mt-0.5 text-[11.5px] text-[#5F6B7C]">
+                    <div className="mt-0.5 text-caption text-ink-muted">
                       Leave this empty for a flat monthly salary — the usual case.
                     </div>
                   ) : null}
                 </div>
                 <Button
-                  variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  variant="link" className="h-auto p-0 text-caption font-semibold underline"
                   onClick={() =>
                     patch({ components: [...draft.components, { ...BLANK_COMPONENT }] })
                   }
@@ -618,7 +618,7 @@ export function SalaryStructuresPage() {
                   the stacked mobile layout was worse still. Hidden below `sm`,
                   where each row becomes its own labelled block instead. */}
               {draft.components.length > 0 ? (
-                <div className="mb-1.5 hidden gap-2 px-0.5 text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase sm:grid sm:grid-cols-[0.7fr_1.2fr_0.8fr_1fr_0.8fr_auto]">
+                <div className="mb-1.5 hidden gap-2 px-0.5 text-caption font-bold tracking-wide text-ink-muted uppercase sm:grid sm:grid-cols-[0.7fr_1.2fr_0.8fr_1fr_0.8fr_auto]">
                   <span>Code</span>
                   <span>Label</span>
                   <span>Kind</span>
@@ -632,7 +632,7 @@ export function SalaryStructuresPage() {
                 {draft.components.map((c, i) => (
                   <div
                     key={i}
-                    className="grid gap-2 rounded-md border border-[#EEF1F5] p-3 sm:grid-cols-[0.7fr_1.2fr_0.8fr_1fr_0.8fr_auto] sm:rounded-none sm:border-0 sm:p-0"
+                    className="grid gap-2 rounded-md border border-surface-sunken p-3 sm:grid-cols-[0.7fr_1.2fr_0.8fr_1fr_0.8fr_auto] sm:rounded-none sm:border-0 sm:p-0"
                   >
                     <Input
                       value={c.code}
@@ -687,7 +687,7 @@ export function SalaryStructuresPage() {
                     <Button
                       variant="ghost"
                       aria-label={`Remove ${c.label || "component"}`}
-                      className="h-auto justify-start gap-1 rounded-md px-2 py-1 text-[12px] font-semibold text-[#5F6B7C] transition-colors hover:bg-[#FDF1F1] hover:text-[#B03A3A] sm:justify-center"
+                      className="h-auto justify-start gap-1 rounded-md px-2 py-1 text-caption font-semibold text-ink-muted transition-colors hover:bg-danger-tint hover:text-danger sm:justify-center"
                       onClick={() =>
                         patch({ components: draft.components.filter((_, j) => j !== i) })
                       }
@@ -699,7 +699,7 @@ export function SalaryStructuresPage() {
                     {/* Full width under the row it belongs to. Only earnings
                         can be wages, so a deduction does not ask. */}
                     {c.kind === "EARNING" ? (
-                      <label className="flex cursor-pointer items-start gap-2 text-[11.5px] leading-relaxed text-[#5F6B7C] sm:col-span-6 sm:-mt-0.5 sm:pl-0.5">
+                      <label className="flex cursor-pointer items-start gap-2 text-caption leading-relaxed text-ink-muted sm:col-span-6 sm:-mt-0.5 sm:pl-0.5">
                         <Checkbox
                           nativeButton
                           render={<button type="button" />}
@@ -709,7 +709,7 @@ export function SalaryStructuresPage() {
                         />
                         <span>
                           Counts as wages
-                          <span className="text-[#8A94A2]">
+                          <span className="text-ink-muted">
                             {" "}
                             — included in leave encashment and the gratuity base. Clear it for
                             bonus and overtime.
@@ -726,31 +726,31 @@ export function SalaryStructuresPage() {
                 reaches a payslip, where preflight would only call it a
                 negative net pay. */}
             {preview && draft.components.length === 0 ? (
-              <div className="rounded-md bg-[#F5F7FA] px-4 py-3 text-[12.5px]">
-                <span className="text-[#5F6B7C]">Take-home at a full month: </span>
+              <div className="rounded-md bg-surface-subtle px-4 py-3 text-caption">
+                <span className="text-ink-muted">Take-home at a full month: </span>
                 <span className="font-semibold">
                   {formatMoney(preview.gross.toFixed(2), draft.currency)}
                 </span>
               </div>
             ) : preview ? (
-              <div className="flex flex-wrap gap-6 rounded-md bg-[#F5F7FA] px-4 py-3 text-[12.5px]">
+              <div className="flex flex-wrap gap-6 rounded-md bg-surface-subtle px-4 py-3 text-caption">
                 <div>
-                  <span className="text-[#5F6B7C]">Gross at a full month: </span>
+                  <span className="text-ink-muted">Gross at a full month: </span>
                   <span className="font-semibold">
                     {formatMoney(preview.gross.toFixed(2), draft.currency)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#5F6B7C]">Deductions: </span>
+                  <span className="text-ink-muted">Deductions: </span>
                   <span className="font-semibold">
                     {formatMoney(preview.deductions.toFixed(2), draft.currency)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#5F6B7C]">Net: </span>
+                  <span className="text-ink-muted">Net: </span>
                   <span
                     className={`font-semibold ${
-                      preview.gross - preview.deductions < 0 ? "text-[#B03A3A]" : ""
+                      preview.gross - preview.deductions < 0 ? "text-danger" : ""
                     }`}
                   >
                     {formatMoney((preview.gross - preview.deductions).toFixed(2), draft.currency)}
@@ -778,10 +778,10 @@ export function SalaryStructuresPage() {
           // lands. Was one full-width grey slab.
           <div className="grid gap-4 lg:grid-cols-2">
             {[0, 1].map((card) => (
-              <div key={card} className="space-y-3 rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+              <div key={card} className="space-y-3 rounded-md border border-line bg-white px-5 py-4">
                 <Skeleton className="h-3.5 w-1/3" />
                 <Skeleton className="h-6 w-1/2" />
-                <div className="space-y-1.5 border-t border-[#EEF1F5] pt-3">
+                <div className="space-y-1.5 border-t border-surface-sunken pt-3">
                   <Skeleton className="h-3 w-full" />
                   <Skeleton className="h-3 w-4/5" />
                 </div>
@@ -789,16 +789,16 @@ export function SalaryStructuresPage() {
             ))}
           </div>
         ) : structuresQuery.isError ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-8 text-center">
-            <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+          <div className="rounded-md border border-line bg-white px-5.5 py-8 text-center">
+            <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
               <RiErrorWarningLine className="size-5" aria-hidden />
             </span>
-            <div className="text-[13.5px] font-bold">Salary structures could not be loaded</div>
-            <p className="mt-1 text-[12.5px] text-[#5F6B7C]">
+            <div className="text-body-sm font-bold">Salary structures could not be loaded</div>
+            <p className="mt-1 text-caption text-ink-muted">
               Nothing has changed. Check the connection and try again.
             </p>
             <Button
-              className="mt-3 h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+              className="mt-3 h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
               onClick={() => structuresQuery.refetch()}
             >
               <RiRefreshLine className="size-4" aria-hidden />
@@ -808,18 +808,18 @@ export function SalaryStructuresPage() {
         ) : structures.length === 0 ? (
           // The old empty state said payroll could not run and then offered
           // nothing to do about it.
-          <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-10 text-center">
-            <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+          <div className="rounded-md border border-line bg-white px-5.5 py-10 text-center">
+            <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
               <RiWallet3Line className="size-5" aria-hidden />
             </span>
-            <div className="text-[13.5px] font-bold">No salary structures yet</div>
-            <p className="mx-auto mt-1 max-w-[46ch] text-[12.5px] leading-relaxed text-[#5F6B7C]">
+            <div className="text-body-sm font-bold">No salary structures yet</div>
+            <p className="mx-auto mt-1 max-w-[46ch] text-caption leading-relaxed text-ink-muted">
               A structure is the pay band a payslip is computed from. Payroll cannot run until at
               least one exists.
             </p>
             {canWrite && !draft ? (
               <Button
-                className="mt-3 h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+                className="mt-3 h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
                 onClick={() =>
                   setDraft({ ...BLANK_DRAFT, components: [{ ...BLANK_COMPONENT }] })
                 }

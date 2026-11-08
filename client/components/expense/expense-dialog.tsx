@@ -165,7 +165,7 @@ export function ExpenseDialog({
             </div>
           </div>
 
-          <div className="text-[11.5px] text-[#7A8698]">
+          <div className="text-caption text-ink-muted">
             The exchange rate is frozen from the spend date, not from when the claim is approved.
           </div>
 
@@ -219,10 +219,10 @@ export function ExpenseDialog({
               id="exp-receipt"
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
-              className="h-auto py-1.5 text-[12.5px] file:mr-3 file:rounded file:border-0 file:bg-[#F1F4F8] file:px-2.5 file:py-1 file:text-[12px] file:font-semibold"
+              className="h-auto py-1.5 text-caption file:mr-3 file:rounded file:border-0 file:bg-surface-hover file:px-2.5 file:py-1 file:text-caption file:font-semibold"
               onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
             />
-            <p className="mt-1.5 text-[11.5px] text-[#7A8698]">
+            <p className="mt-1.5 text-caption text-ink-muted">
               {/* Said plainly, because the claim is created first and the file
                   attached to it — a failure at that second step needs to be
                   recognisable as "the claim is fine, the file is not". */}
@@ -231,7 +231,7 @@ export function ExpenseDialog({
             </p>
           </div>
 
-          {error ? <div className="text-[12.5px] text-[#B03A3A]">{error}</div> : null}
+          {error ? <div className="text-caption text-danger">{error}</div> : null}
         </div>
 
         <DialogFooter>

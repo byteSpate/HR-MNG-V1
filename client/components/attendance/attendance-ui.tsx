@@ -24,7 +24,7 @@ export function SectionHeading({
   return (
     <div className={cn("pt-7 pb-3.5", className)}>
       <Heading level="section">{title}</Heading>
-      {sub ? <div className="mt-0.5 max-w-xl text-[12.5px] text-[#5F6B7C]">{sub}</div> : null}
+      {sub ? <div className="mt-0.5 max-w-xl text-caption text-ink-muted">{sub}</div> : null}
     </div>
   )
 }

@@ -40,7 +40,7 @@ export function MyPayslips() {
 
   if (payslipsQuery.isError) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+      <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
         Failed to load your payslips.{" "}
         <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => payslipsQuery.refetch()}>
           Retry
@@ -53,7 +53,7 @@ export function MyPayslips() {
 
   if (payslips.length === 0) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+      <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
         You have no payslips yet. One appears here once a payroll run covering you is approved.
       </div>
     )
@@ -78,13 +78,13 @@ export function MyPayslips() {
       node: (
         <div className="flex gap-2">
           <Button
-            variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline"
+            variant="link" className="h-auto p-0 text-caption font-semibold underline"
             onClick={() => setSelected(p)}
           >
             View
           </Button>
           <Button
-            variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
+            variant="link" className="h-auto p-0 text-caption font-semibold underline disabled:opacity-50"
             disabled={downloadMutation.isPending}
             onClick={() => downloadMutation.mutate(p)}
           >
@@ -98,7 +98,7 @@ export function MyPayslips() {
   return (
     <div className="space-y-4">
       {error ? (
-        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {error}
         </div>
       ) : null}

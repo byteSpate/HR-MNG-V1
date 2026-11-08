@@ -81,7 +81,7 @@ export function AdjustmentsPanel({ month, year }: { month: number; year: number 
         ? {
             node: (
               <Button
-                variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
+                variant="link" className="h-auto p-0 text-caption font-semibold underline disabled:opacity-50"
                 disabled={deleteMutation.isPending}
                 onClick={() => deleteMutation.mutate(a.id)}
               >
@@ -96,8 +96,8 @@ export function AdjustmentsPanel({ month, year }: { month: number; year: number 
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-[15px] font-bold">Adjustments · {formatMonth(month, year)}</div>
-          <div className="mt-0.5 text-[12.5px] text-[#7A8698]">
+          <div className="text-lead font-bold">Adjustments · {formatMonth(month, year)}</div>
+          <div className="mt-0.5 text-caption text-ink-muted">
             Bonuses, arrears and one-off recoveries. HR owns these; Finance pays them.
           </div>
         </div>
@@ -105,13 +105,13 @@ export function AdjustmentsPanel({ month, year }: { month: number; year: number 
       </div>
 
       {error ? (
-        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {error}
         </div>
       ) : null}
 
       {adjustments.length === 0 ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+        <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
           No adjustments for this month.
         </div>
       ) : (

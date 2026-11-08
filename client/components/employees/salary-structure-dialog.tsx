@@ -65,7 +65,7 @@ function StructureForm({
       </DialogHeader>
 
       <div className="space-y-4">
-        <div className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <div className="text-caption leading-relaxed text-ink-muted">
           Finance authors the structures; HR decides who sits on which. The change applies to the
           next payroll run. Months already paid keep the figures they were paid on.
         </div>
@@ -93,17 +93,17 @@ function StructureForm({
 
         {/* The band's actual money, so the choice is not made on a name. */}
         {chosen ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-[#F8FAFC] px-4 py-3">
-            <div className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+          <div className="rounded-md border border-line bg-surface-subtle px-4 py-3">
+            <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">
               {chosen.components.length === 0 ? "Monthly salary" : "Basic"}
             </div>
-            <div className="font-heading text-[17px] font-bold">
+            <div className="font-heading text-title-sm font-bold">
               {formatMoney(chosen.basic, chosen.currency)}
             </div>
             <div className="mt-1.5 space-y-0.5">
               {chosen.components.map((c) => (
-                <div key={c.id} className="flex justify-between text-[12px]">
-                  <span className={c.kind === "DEDUCTION" ? "text-[#B03A3A]" : ""}>{c.label}</span>
+                <div key={c.id} className="flex justify-between text-caption">
+                  <span className={c.kind === "DEDUCTION" ? "text-danger" : ""}>{c.label}</span>
                   <span>
                     {c.calc === "PERCENT_OF_BASIC"
                       ? `${c.value}% of basic`
@@ -114,13 +114,13 @@ function StructureForm({
             </div>
           </div>
         ) : (
-          <div className="rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-4 py-3 text-[12.5px] leading-relaxed text-[#8A5E0C]">
+          <div className="rounded-md border border-warning-line bg-warning-tint px-4 py-3 text-caption leading-relaxed text-warning">
             With no structure this employee blocks every payroll run they fall into. Preflight names
             them rather than paying them nothing.
           </div>
         )}
 
-        {error ? <div className="text-[12.5px] text-[#B03A3A]">{error}</div> : null}
+        {error ? <div className="text-caption text-danger">{error}</div> : null}
       </div>
 
       <DialogFooter>

@@ -69,7 +69,7 @@ const VIEW_MODES = [
 function CalendarLoading() {
   return (
     <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-4">
+      <div className="rounded-md border border-line bg-white p-4">
         <Skeleton className="mx-auto h-6 w-36" />
         <div className="mt-4 grid grid-cols-7 gap-1.5">
           {/* Six rows of seven: the largest a month grid ever gets, so the
@@ -78,13 +78,13 @@ function CalendarLoading() {
             <Skeleton key={i} className="size-8 rounded" />
           ))}
         </div>
-        <div className="mt-3 flex flex-wrap gap-3 border-t border-[#EEF1F5] pt-3">
+        <div className="mt-3 flex flex-wrap gap-3 border-t border-surface-sunken pt-3">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-3 w-16" />
           ))}
         </div>
       </div>
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5">
+      <div className="rounded-md border border-line bg-white p-5.5">
         <Skeleton className="h-3.5 w-32" />
         <Skeleton className="mt-3 h-3 w-full" />
         <Skeleton className="mt-2 h-3 w-2/3" />
@@ -290,18 +290,18 @@ export function AttendancePage() {
           <div
             role="group"
             aria-label="Month shown"
-            className="flex items-center gap-0.5 rounded-md border border-[#E4E9EF] bg-white p-0.5"
+            className="flex items-center gap-0.5 rounded-md border border-line bg-white p-0.5"
           >
             <Button
               type="button"
               variant="ghost"
               aria-label="Previous month"
               onClick={() => shiftMonth(-1)}
-              className="size-8 rounded p-0 text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+              className="size-8 rounded p-0 text-ink-muted hover:bg-surface-hover hover:text-ink-body"
             >
               <RiArrowLeftSLine className="size-4" aria-hidden />
             </Button>
-            <span aria-live="polite" className="min-w-32.5 text-center text-[13px] font-bold">
+            <span aria-live="polite" className="min-w-32.5 text-center text-body-sm font-bold">
               {formatMonthLabel(month, year)}
             </span>
             <Button
@@ -309,7 +309,7 @@ export function AttendancePage() {
               variant="ghost"
               aria-label="Next month"
               onClick={() => shiftMonth(1)}
-              className="size-8 rounded p-0 text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+              className="size-8 rounded p-0 text-ink-muted hover:bg-surface-hover hover:text-ink-body"
             >
               <RiArrowRightSLine className="size-4" aria-hidden />
             </Button>
@@ -337,7 +337,7 @@ export function AttendancePage() {
           <div className="mt-4 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             {summaryQuery.isPending ? (
               [0, 1, 2].map((i) => (
-                <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+                <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
                   <Skeleton className="h-3 w-24" />
                   <Skeleton className="mt-2.5 h-6 w-12" />
                   <Skeleton className="mt-2 h-3 w-28" />
@@ -533,10 +533,10 @@ function UnresolvedDays({
         return (
           <div
             key={day.date}
-            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-4 py-3"
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-warning-line bg-warning-tint px-4 py-3"
           >
-            <RiAlertLine className="size-4 shrink-0 text-[#8A5E0C]" aria-hidden />
-            <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-[#8A5E0C]">
+            <RiAlertLine className="size-4 shrink-0 text-warning" aria-hidden />
+            <p className="min-w-0 flex-1 text-caption leading-relaxed text-warning">
               {guessed ? (
                 <>
                   You didn&apos;t check out on <strong>{formatDayLabel(day.date)}</strong>, so it was
@@ -554,7 +554,7 @@ function UnresolvedDays({
               type="button"
               variant="outline"
               size="sm"
-              className="shrink-0 border-[#E4CFA6] bg-white text-[#8A5E0C] hover:bg-[#FBF3E4]"
+              className="shrink-0 border-warning-line bg-white text-warning hover:bg-warning-tint"
               onClick={() => onFix(day)}
             >
               <RiPencilLine className="size-3.5" aria-hidden />

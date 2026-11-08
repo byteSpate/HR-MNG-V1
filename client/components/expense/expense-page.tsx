@@ -115,12 +115,12 @@ function claimCell(claim: ExpenseClaim) {
   return {
     node: (
       <div className="flex min-w-0 items-start gap-2">
-        <Icon className="mt-0.5 size-4 shrink-0 text-[#8A94A2]" aria-hidden />
+        <Icon className="mt-0.5 size-4 shrink-0 text-ink-muted" aria-hidden />
         <div className="min-w-0">
-          <div className="truncate text-[13px] font-semibold text-[#1C2733]">
+          <div className="truncate text-body-sm font-semibold text-ink-body">
             {claim.name ?? claim.category.name}
           </div>
-          <div className="mt-0.5 text-[11.5px] leading-snug text-[#6B7789]">
+          <div className="mt-0.5 text-caption leading-snug text-ink-muted">
             <span>{claim.category.name}</span>
             {detail ? (
               <>
@@ -392,7 +392,7 @@ export function ExpensePage() {
               <div className="flex justify-end gap-3 whitespace-nowrap">
                 <Button
                   variant="link"
-                  className="h-auto gap-1 p-0 text-[12.5px] font-semibold underline"
+                  className="h-auto gap-1 p-0 text-caption font-semibold underline"
                   onClick={() => setEditing(claim)}
                 >
                   <RiPencilLine className="size-3.5" aria-hidden />
@@ -400,7 +400,7 @@ export function ExpensePage() {
                 </Button>
                 <Button
                   variant="link"
-                  className="h-auto gap-1 p-0 text-[12.5px] font-semibold text-[#B03A3A] underline"
+                  className="h-auto gap-1 p-0 text-caption font-semibold text-danger underline"
                   onClick={() => setDeleting(claim)}
                 >
                   <RiDeleteBinLine className="size-3.5" aria-hidden />
@@ -470,7 +470,7 @@ export function ExpensePage() {
               // employee's own claims: one row of controls, one vocabulary.
               <div className="flex gap-3">
                 <Button
-                  variant="link" className="h-auto gap-1 p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
+                  variant="link" className="h-auto gap-1 p-0 text-caption font-semibold underline disabled:opacity-50"
                   disabled={approveMutation.isPending}
                   onClick={() => approveMutation.mutate(claim.id)}
                 >
@@ -478,7 +478,7 @@ export function ExpensePage() {
                   Approve
                 </Button>
                 <Button
-                  variant="link" className="h-auto gap-1 p-0 text-[12.5px] font-semibold text-[#B03A3A] underline"
+                  variant="link" className="h-auto gap-1 p-0 text-caption font-semibold text-danger underline"
                   onClick={() => setRejecting(claim.id)}
                 >
                   <RiCloseLine className="size-3.5" aria-hidden />
@@ -507,7 +507,7 @@ export function ExpensePage() {
       />
 
       {error ? (
-        <div className="mb-4 rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="mb-4 rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {error}
         </div>
       ) : null}
@@ -524,14 +524,14 @@ export function ExpensePage() {
         {isStaff ? (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="text-[15px] font-bold">My claims</div>
+              <div className="text-lead font-bold">My claims</div>
               <Button onClick={() => setOpen(true)}>Claim an expense</Button>
             </div>
 
             {mineQuery.isPending ? (
               <Skeleton className="h-40 w-full" />
             ) : mine.length === 0 ? (
-              <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+              <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
                 You have no expense claims yet.
               </div>
             ) : (
@@ -552,7 +552,7 @@ export function ExpensePage() {
 
         {isAdmin ? (
           <div className="space-y-4">
-            <div className="text-[15px] font-bold">All claims</div>
+            <div className="text-lead font-bold">All claims</div>
 
             {/* Hidden while the first page loads. A filter beside a skeleton
                 reads as an answer about a list nobody has yet. */}
@@ -577,7 +577,7 @@ export function ExpensePage() {
                   <>
                     <Button
                       variant="outline"
-                      className="text-[12.5px]"
+                      className="text-caption"
                       onClick={() =>
                         setSelected(
                           allTicked ? new Set() : new Set(sweepable.map((c) => c.id))
@@ -587,7 +587,7 @@ export function ExpensePage() {
                       {allTicked ? "Clear selection" : `Select all ${sweepable.length} pending`}
                     </Button>
                     <Button
-                      className="text-[12.5px]"
+                      className="text-caption"
                       disabled={ticked.length === 0 || sweepMutation.isPending}
                       onClick={() => setConfirmingSweep(true)}
                     >
@@ -625,13 +625,13 @@ export function ExpensePage() {
             {allQuery.isPending ? (
               <Skeleton className="h-40 w-full" />
             ) : all.length === 0 ? (
-              <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+              <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
                 No expense claims have been submitted.
               </div>
             ) : queue.length === 0 ? (
               // Distinct from the empty system above: this person has filed
               // nothing, which is a different fact from nobody having.
-              <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+              <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
                 No claims from this person.
               </div>
             ) : (
@@ -663,8 +663,8 @@ export function ExpensePage() {
         {isAdmin || isStaff ? (
           <div className="space-y-4">
             <div>
-              <div className="text-[15px] font-bold">{isAdmin ? "Reports" : "Download my expenses"}</div>
-              <p className="mt-1 text-[12.5px] text-[#5F6B7C]">
+              <div className="text-lead font-bold">{isAdmin ? "Reports" : "Download my expenses"}</div>
+              <p className="mt-1 text-caption text-ink-muted">
                 {isAdmin
                   ? "Claims for any date range, by person or across everybody, as a PDF or a spreadsheet."
                   : "Pick the dates. Then download your claims as a PDF or a spreadsheet. The PDF shows every detail of each claim."}
@@ -803,11 +803,11 @@ function MonthStats({
 
   if (query.isError || !query.data) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4 text-[12.5px] text-[#B03A3A]">
+      <div className="rounded-md border border-line bg-white px-5 py-4 text-caption text-danger">
         This month&apos;s totals could not be loaded.{" "}
         <Button
           variant="link"
-          className="h-auto p-0 text-[12.5px] font-semibold underline"
+          className="h-auto p-0 text-caption font-semibold underline"
           onClick={() => query.refetch()}
         >
           Retry

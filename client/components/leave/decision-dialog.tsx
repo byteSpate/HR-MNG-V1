@@ -59,24 +59,24 @@ export function DecisionDialog({
             />
           </div>
 
-          <div className="flex items-start gap-2.5 rounded-md border border-[#E4E9EF] bg-[#F4F6F9] p-3">
+          <div className="flex items-start gap-2.5 rounded-md border border-line bg-surface-hover p-3">
             <Checkbox id="notify-employee" disabled className="mt-0.5" />
             <div>
-              <Label htmlFor="notify-employee" className="text-[13px] font-semibold text-[#5F6B7C]">
+              <Label htmlFor="notify-employee" className="text-body-sm font-semibold text-ink-muted">
                 Email the employee
               </Label>
-              <p className="text-[11.5px] text-[#6B7789]">Coming soon — no email is sent yet.</p>
+              <p className="text-caption text-ink-muted">Coming soon — no email is sent yet.</p>
             </div>
           </div>
 
-          {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+          {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
 
           <DialogFooter>
             <Button
               type="button"
               disabled={pending || note.trim().length === 0}
               onClick={() => onConfirm(note.trim())}
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {pending ? "Saving…" : confirmLabel}
             </Button>

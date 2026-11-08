@@ -83,7 +83,7 @@ export function PayrollPage() {
     return (
       <>
         <PageHeader kicker="Workspace" title="Payroll" sub="Payslips and runs" />
-        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+        <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
           You do not have access to payroll.
         </div>
       </>
@@ -108,7 +108,7 @@ export function PayrollPage() {
     {
       node: (
         <Button
-          variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline"
+          variant="link" className="h-auto p-0 text-caption font-semibold underline"
           onClick={() => setSelectedRunId(run.id)}
         >
           Open
@@ -126,14 +126,14 @@ export function PayrollPage() {
       />
 
       {error ? (
-        <div className="mb-4 rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="mb-4 rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {error}
         </div>
       ) : null}
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-[15px] font-bold">Payroll runs</div>
+          <div className="text-lead font-bold">Payroll runs</div>
           {isFinance ? (
             <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
               Open a run for {formatMonth(month, year)}
@@ -144,14 +144,14 @@ export function PayrollPage() {
         {runsQuery.isPending ? (
           <Skeleton className="h-40 w-full" />
         ) : runsQuery.isError ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+          <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
             Failed to load payroll runs.{" "}
             <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => runsQuery.refetch()}>
               Retry
             </Button>
           </div>
         ) : runs.length === 0 ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+          <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
             No payroll runs yet.
             {isFinance ? " Open one for last month to begin." : ""}
           </div>

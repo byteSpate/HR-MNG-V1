@@ -65,7 +65,7 @@ export function PayslipsCard({ employeeId }: { employeeId: string }) {
 
   if (payslipsQuery.isError) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5 text-[13px] text-[#B03A3A]">
+      <div className="rounded-md border border-line bg-white px-5.5 py-5 text-body-sm text-danger">
         Could not load this employee&rsquo;s payslips.{" "}
         <Button
           variant="link"
@@ -82,11 +82,11 @@ export function PayslipsCard({ employeeId }: { employeeId: string }) {
   const drafts = payslips.filter((p) => !isFinal(p.payrollRun?.status)).length
 
   return (
-    <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+    <div className="flex flex-col rounded-md border border-line bg-white px-5.5 py-5">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <div className="text-[15px] font-bold">Payslips</div>
+        <div className="text-lead font-bold">Payslips</div>
         {payslips.length > 0 ? (
-          <div className="text-[12px] text-[#7A8698]">
+          <div className="text-caption text-ink-muted">
             {payslips.length} month{payslips.length === 1 ? "" : "s"}
             {drafts > 0 ? `, ${drafts} not approved` : ""}
           </div>
@@ -94,36 +94,36 @@ export function PayslipsCard({ employeeId }: { employeeId: string }) {
       </div>
 
       {downloadError ? (
-        <div className="mb-3 rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-3.5 py-2.5 text-[12.5px] text-[#B03A3A]">
+        <div className="mb-3 rounded-md border border-danger-line bg-danger-tint px-3.5 py-2.5 text-caption text-danger">
           {downloadError}
         </div>
       ) : null}
 
       {payslips.length === 0 ? (
-        <p className="text-[13px] text-[#A5AFBE]">
+        <p className="text-body-sm text-ink-muted">
           No payslips yet. One appears here for every payroll run that covers this employee, from
           the moment it is processed.
         </p>
       ) : (
         // Capped rather than paged: a long-serving employee has dozens of
         // these, and the card sits in a grid with the field cards.
-        <ul className="-my-1 max-h-76 divide-y divide-[#EEF1F5] overflow-y-auto">
+        <ul className="-my-1 max-h-76 divide-y divide-surface-sunken overflow-y-auto">
           {payslips.map((payslip) => {
             const provisional = !isFinal(payslip.payrollRun?.status)
             return (
               <li key={payslip.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <div className="truncate text-[13.5px] font-semibold">
+                  <div className="truncate text-body-sm font-semibold">
                     {payslip.payrollRun
                       ? formatMonth(payslip.payrollRun.month, payslip.payrollRun.year)
                       : payslip.payslipNo}
                   </div>
-                  <div className="text-[11.5px] text-[#A5AFBE]">
+                  <div className="text-caption text-ink-muted">
                     {formatMoney(payslip.netPayable, payslip.currency)}
                     {provisional ? (
                       // The run's own status word, not a generic "draft": the
                       // reader may need to go and approve the thing.
-                      <span className="ml-1.5 font-semibold text-[#8A5A1E]">
+                      <span className="ml-1.5 font-semibold text-warning">
                         {payslip.payrollRun?.status === "SUBMITTED"
                           ? "awaiting approval"
                           : "draft, not approved"}
@@ -134,14 +134,14 @@ export function PayslipsCard({ employeeId }: { employeeId: string }) {
                 <div className="flex shrink-0 gap-2">
                   <Button
                     variant="link"
-                    className="h-auto p-0 text-[12.5px] font-semibold underline"
+                    className="h-auto p-0 text-caption font-semibold underline"
                     onClick={() => setSelected(payslip)}
                   >
                     View
                   </Button>
                   <Button
                     variant="link"
-                    className="h-auto p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
+                    className="h-auto p-0 text-caption font-semibold underline disabled:opacity-50"
                     disabled={downloadMutation.isPending}
                     onClick={() => downloadMutation.mutate(payslip)}
                   >

@@ -202,7 +202,7 @@ function DailyBoard({ accessToken }: { accessToken: string }) {
       {dailyQuery.isPending ? (
         <div className="mb-3.5 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+            <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="mt-2.5 h-6 w-10" />
               <Skeleton className="mt-2 h-3 w-24" />
@@ -665,7 +665,7 @@ function AuditDialog({
         {auditQuery.isPending ? (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="border-l-2 border-[#E4E9EF] pl-3">
+              <div key={i} className="border-l-2 border-line pl-3">
                 <Skeleton className="h-3.5 w-32" />
                 <Skeleton className="mt-1.5 h-3 w-40" />
               </div>
@@ -674,20 +674,20 @@ function AuditDialog({
         ) : auditQuery.isError ? (
           <PanelAlert>That history could not be loaded. Nothing has changed.</PanelAlert>
         ) : entries.length === 0 ? (
-          <p className="text-[12.5px] text-[#5F6B7C]">
+          <p className="text-caption text-ink-muted">
             Nothing has been changed on this record since it was created.
           </p>
         ) : (
           <ol className="space-y-2.5">
             {entries.map((entry) => (
-              <li key={entry.id} className="border-l-2 border-[#E4E9EF] pl-3">
-                <div className="text-[12.5px] font-bold">{entry.action}</div>
-                <div className="text-[11.5px] text-[#5F6B7C]">
+              <li key={entry.id} className="border-l-2 border-line pl-3">
+                <div className="text-caption font-bold">{entry.action}</div>
+                <div className="text-caption text-ink-muted">
                   {new Date(entry.changedAt).toLocaleString()}
                   {entry.changedBy ? ` by ${entry.changedBy}` : ""}
                 </div>
                 {entry.note ? (
-                  <div className="mt-0.5 text-[12px] text-[#3D4756]">{entry.note}</div>
+                  <div className="mt-0.5 text-caption text-ink-soft">{entry.note}</div>
                 ) : null}
               </li>
             ))}
@@ -818,7 +818,7 @@ function HolidayPanel({
               setError(null)
               setAdding(true)
             }}
-            className="h-auto shrink-0 rounded-md bg-[#17191C] px-4 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto shrink-0 rounded-md bg-ink px-4 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             Add holiday
           </Button>

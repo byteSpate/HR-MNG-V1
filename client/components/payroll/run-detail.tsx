@@ -173,7 +173,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
   }
   if (runQuery.isError || !run) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+      <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
         Failed to load this run.{" "}
         <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => runQuery.refetch()}>
           Retry
@@ -241,20 +241,20 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
 
   return (
     <div className="space-y-5">
-      <Button variant="link" className="h-auto p-0 text-[12.5px] font-semibold text-[#7A8698] underline" onClick={onBack}>
+      <Button variant="link" className="h-auto p-0 text-caption font-semibold text-ink-muted underline" onClick={onBack}>
         ← All runs
       </Button>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="font-heading text-[22px] font-bold tracking-tight">
+          <div className="font-heading text-heading font-bold tracking-tight">
             {formatMonth(run.month, run.year)}
           </div>
           <div className="mt-1 flex items-center gap-2">
             <Tag label={RUN_STATUS_LABEL[run.status]} tone={RUN_STATUS_TONE[run.status]} />
             {/* The frozen rate appears once for the run, not per row. */}
             {run.fxRateToBdt ? (
-              <span className="text-[12px] text-[#7A8698]">
+              <span className="text-caption text-ink-muted">
                 Rate frozen at 1 USD = {formatRate(run.fxRateToBdt)} BDT
               </span>
             ) : null}
@@ -329,7 +329,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
       </div>
 
       {processMutation.isPending ? (
-        <div role="status" className="rounded-md border border-[#E4E9EF] bg-white px-5 py-3.5 text-[12.5px] text-[#5F6B7C]">
+        <div role="status" className="rounded-md border border-line bg-white px-5 py-3.5 text-caption text-ink-muted">
           Working out every payslip. This can take a minute. Please wait.
         </div>
       ) : null}
@@ -345,13 +345,13 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
       />
 
       {run.rejectionNote ? (
-        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           Returned to draft: {run.rejectionNote}
         </div>
       ) : null}
 
       {actionError ? (
-        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {actionError}
         </div>
       ) : null}
@@ -406,9 +406,9 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
           />
 
           {canPick ? (
-            <div className="space-y-3 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-              <div className="text-[13.5px] font-bold">Who is paid in this run</div>
-              <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+            <div className="space-y-3 rounded-md border border-line bg-white px-5.5 py-5">
+              <div className="text-body-sm font-bold">Who is paid in this run</div>
+              <p className="text-caption leading-relaxed text-ink-muted">
                 Untick a person to leave them out of this run. Then press Reprocess. Nobody is left
                 out until you do. Their expense claims wait for the next run. Bonus and deduction
                 items for this month are not used.
@@ -416,7 +416,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
               {(run.excludedEmployees ?? []).length > 0 ? (
                 <ul className="space-y-1.5">
                   {(run.excludedEmployees ?? []).map((person) => (
-                    <li key={person.id} className="flex items-center gap-2.5 text-[13px]">
+                    <li key={person.id} className="flex items-center gap-2.5 text-body-sm">
                       <Checkbox
                         aria-label={`Pay ${person.fullName} in this run`}
                         checked={!currentLeftOut.includes(person.id)}
@@ -424,13 +424,13 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
                         disabled={anyPending}
                       />
                       <span className="font-semibold">{person.fullName}</span>
-                      <span className="text-[#5F6B7C]">{person.employeeCode} · left out</span>
+                      <span className="text-ink-muted">{person.employeeCode} · left out</span>
                     </li>
                   ))}
                 </ul>
               ) : null}
               {selectionChanged ? (
-                <p className="text-[12.5px] font-semibold text-[#8A5E0C]">
+                <p className="text-caption font-semibold text-warning">
                   You changed who is paid. Press Reprocess to use the change.
                 </p>
               ) : null}
@@ -440,17 +440,17 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
       ) : null}
 
       {payslips.some((p) => isNegativeMoney(p.netPay)) ? (
-        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           One or more payslips compute a negative net pay. HR resolves this with an adjustment.
         </div>
       ) : null}
 
       {canEmail ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+        <div className="rounded-md border border-line bg-white px-5.5 py-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[15px] font-bold">Bank files and payslips</div>
-              <div className="mt-0.5 text-[12.5px] text-[#7A8698]">
+              <div className="text-lead font-bold">Bank files and payslips</div>
+              <div className="mt-0.5 text-caption text-ink-muted">
                 One file per currency. BEFTN is domestic and BDT-only.
               </div>
             </div>
@@ -479,10 +479,10 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
               file?" is answered here rather than by inspecting a CSV. */}
           {summaryQuery.data ? (
             <div
-              className={`mt-4 rounded-md border px-4 py-3 text-[12.5px] ${
+              className={`mt-4 rounded-md border px-4 py-3 text-caption ${
                 summaryQuery.data.complete
-                  ? "border-[#CDE7D4] bg-[#F3FAF5] text-[#2F6B42]"
-                  : "border-[#F0D9D9] bg-[#FDF6F6] text-[#B03A3A]"
+                  ? "border-success-line bg-surface-hover text-success"
+                  : "border-danger-line bg-danger-tint text-danger"
               }`}
             >
               {summaryQuery.data.complete
@@ -500,7 +500,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
           ) : null}
 
           {emailStatusQuery.data ? (
-            <div className="mt-3 text-[12.5px] text-[#7A8698]">
+            <div className="mt-3 text-caption text-ink-muted">
               Emailed {emailStatusQuery.data.sent} of {emailStatusQuery.data.total}
               {emailStatusQuery.data.failed > 0 ? ` · ${emailStatusQuery.data.failed} failed` : ""}
               {emailStatusQuery.data.inProgress ? " · sending…" : ""}

@@ -45,8 +45,8 @@ export function OutstandingReimbursementsPanel({ accessToken }: { accessToken: s
   return (
     <section className="space-y-4">
       <div>
-        <div className="text-[15px] font-bold">Outstanding reimbursements</div>
-        <p className="mt-1 max-w-[68ch] text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <div className="text-lead font-bold">Outstanding reimbursements</div>
+        <p className="mt-1 max-w-[68ch] text-caption leading-relaxed text-ink-muted">
           Approved claims that have not yet been attached to payroll or a final settlement,
           ordered from the longest waiting.
         </p>

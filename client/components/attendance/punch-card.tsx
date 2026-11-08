@@ -112,7 +112,7 @@ export function PunchCard({
 
   if (isLoading || !today) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5">
+      <div className="rounded-md border border-line bg-white p-5.5">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="mt-3 h-10 w-full" />
       </div>
@@ -126,11 +126,11 @@ export function PunchCard({
   const notice = dayNotice(today)
 
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5">
+    <div className="rounded-md border border-line bg-white p-5.5">
       {/* Above the button, not below it: the point is to be read before the
           tap, not to explain one that already happened. */}
       {notice ? (
-        <div className="mb-4 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#8A5E0C]">
+        <div className="mb-4 rounded-md border border-warning-line bg-warning-tint px-3.5 py-3 text-caption leading-relaxed text-warning">
           <div className="font-bold">{notice.heading}</div>
           <div className="mt-0.5">{notice.body}</div>
         </div>
@@ -138,17 +138,17 @@ export function PunchCard({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+          <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">
             {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </div>
-          <div className="font-heading mt-1 text-[28px] font-bold tracking-tight tabular-nums">
+          <div className="font-heading mt-1 text-display font-bold tracking-tight tabular-nums">
             {now.toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               second: "2-digit",
             })}
           </div>
-          <div className="mt-0.5 text-xs text-[#5F6B7C]">
+          <div className="mt-0.5 text-xs text-ink-muted">
             {today.shift.name} · {formatShiftSpan(
               today.shift.startTime,
               today.shift.endTime,
@@ -162,7 +162,7 @@ export function PunchCard({
             <Button
               onClick={onCheckIn}
               disabled={isPunching}
-              className="h-auto rounded-md bg-[#17191C] px-5 py-2.5 text-[13px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-auto rounded-md bg-ink px-5 py-2.5 text-body-sm font-bold text-white hover:bg-ink-strong"
             >
               {isPunching ? (
                 <RiLoader4Line className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
@@ -175,7 +175,7 @@ export function PunchCard({
             <Button
               onClick={onCheckOut}
               disabled={isPunching}
-              className="h-auto rounded-md bg-[#17191C] px-5 py-2.5 text-[13px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-auto rounded-md bg-ink px-5 py-2.5 text-body-sm font-bold text-white hover:bg-ink-strong"
             >
               {isPunching ? (
                 <RiLoader4Line className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
@@ -185,7 +185,7 @@ export function PunchCard({
               Check out
             </Button>
           ) : (
-            <div className="rounded-md bg-[#F2F5F8] px-4 py-2.5 text-[13px] font-semibold text-[#3D4756]">
+            <div className="rounded-md bg-surface-hover px-4 py-2.5 text-body-sm font-semibold text-ink-soft">
               Done for today
             </div>
           )}
@@ -200,7 +200,7 @@ export function PunchCard({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-[#EEF1F5] pt-4 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-surface-sunken pt-4 sm:grid-cols-4">
         <Detail label="Checked in" value={formatClock(today.checkIn)} />
         <Detail label="Checked out" value={formatClock(today.checkOut)} />
         <Detail
@@ -230,7 +230,7 @@ export function PunchCard({
           somebody they are checked in when they are not, and they find out
           on payday. */}
       {error ? (
-        <div className="mt-3 rounded-md border border-[#F0D2D2] bg-[#FDF6F6] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#B03A3A]">
+        <div className="mt-3 rounded-md border border-danger-line bg-danger-tint px-3.5 py-2.5 text-caption font-semibold text-danger">
           {error}
         </div>
       ) : null}
@@ -241,8 +241,8 @@ export function PunchCard({
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase">{label}</div>
-      <div className="mt-0.5 text-[13.5px] font-semibold tabular-nums">{value}</div>
+      <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">{label}</div>
+      <div className="mt-0.5 text-body-sm font-semibold tabular-nums">{value}</div>
     </div>
   )
 }

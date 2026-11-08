@@ -68,7 +68,7 @@ function ShiftForm({
       </DialogHeader>
 
       <div className="space-y-4">
-        <div className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <div className="text-caption leading-relaxed text-ink-muted">
           Attendance — late arrivals, hours worked, the weekly off day — is judged against
           whichever shift is assigned here. Leave unset to use the General shift.
         </div>
@@ -97,21 +97,21 @@ function ShiftForm({
         {/* The shift's actual hours, so the choice is not made on a name
             alone — mirrors the money preview in the salary-structure dialog. */}
         {chosen ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-[#F8FAFC] px-4 py-3">
-            <div className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+          <div className="rounded-md border border-line bg-surface-subtle px-4 py-3">
+            <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">
               Window
             </div>
-            <div className="font-heading text-[17px] font-bold">
+            <div className="font-heading text-title-sm font-bold">
               {chosen.startTime}–{chosen.endTime}
             </div>
-            <div className="mt-1.5 space-y-0.5 text-[12px] text-[#5F6B7C]">
+            <div className="mt-1.5 space-y-0.5 text-caption text-ink-muted">
               <div>{chosen.graceMinutes} min grace · {chosen.breakMinutes} min break</div>
               <div>Weekly off: {formatOffDays(chosen.weeklyOffDays)}</div>
             </div>
           </div>
         ) : null}
 
-        {error ? <div className="text-[12.5px] text-[#B03A3A]">{error}</div> : null}
+        {error ? <div className="text-caption text-danger">{error}</div> : null}
       </div>
 
       <DialogFooter>

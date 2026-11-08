@@ -89,7 +89,7 @@ export function TimeAmendmentDialog({
               />
             </div>
           </div>
-          <p className="text-[11.5px] text-[#5F6B7C]">
+          <p className="text-caption text-ink-muted">
             Office local time. Leave a field blank to keep what is already recorded.
           </p>
 
@@ -106,7 +106,7 @@ export function TimeAmendmentDialog({
             />
           </div>
 
-          {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+          {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
 
           <DialogFooter>
             <Button
@@ -119,7 +119,7 @@ export function TimeAmendmentDialog({
                   note: note.trim(),
                 })
               }
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {pending ? "Saving…" : confirmLabel}
             </Button>
