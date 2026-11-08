@@ -194,8 +194,8 @@ export function PeriodsPage() {
 
                 <ul className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
                   {fy.periods.map((p) => (
-                    <li key={p.id} className="flex items-center gap-3 bg-background px-4 py-2.5 text-sm">
-                      <span className="w-32">{monthLabel(p.year, p.month)}</span>
+                    <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-background px-4 py-2.5 text-sm">
+                      <span className="min-w-28">{monthLabel(p.year, p.month)}</span>
                       <Badge variant={TONE_VARIANT[PERIOD_STATUS_TONE[p.status]]}>
                         {p.status === "OPEN" ? "Open" : p.status === "CLOSED" ? "Closed" : "Locked"}
                       </Badge>
@@ -222,7 +222,7 @@ export function PeriodsPage() {
 
                       {p.reopenReason && p.status === "OPEN" && (
                         <span
-                          className="ml-auto truncate text-xs text-muted-foreground"
+                          className="ml-auto min-w-0 max-w-full truncate text-xs text-muted-foreground"
                           title={p.reopenReason}
                         >
                           Reopened — {p.reopenReason}
