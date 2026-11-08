@@ -1,6 +1,6 @@
 Design tools (client/tools)
 
-  npm run check:design   Counts files that break the design rules and fails if any count
+  npm run check:design   Counts places that break the design rules and fails if any count
                          went UP compared with design-debt.json. After you remove debt,
                          run:  node tools/design-ratchet.mjs --update
 
@@ -13,5 +13,5 @@ Design tools (client/tools)
                          (set PLAYWRIGHT_CORE to its index.mjs, and AUDIT_CHROME to a
                          Chrome binary if the default one is missing).
                          Other settings: AUDIT_ONLY (comma list, keeps routes that contain it), AUDIT_WIDTH (default 390), AUDIT_BASE (default http://localhost:3100),
-                         AUDIT_PASSWORD (demo password), DESKTOP=1 for a 1366 px sweep.
+                         AUDIT_API_PORT (default 4100), AUDIT_PASSWORD (demo password), DESKTOP=1 for a 1366 px sweep.
                          Results go to .playwright-mcp/mobile/<role>.ndjson

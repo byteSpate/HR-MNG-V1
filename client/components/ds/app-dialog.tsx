@@ -25,12 +25,12 @@ import { DIALOG_BODY_CLASS, dialogWidthClass, type DialogSize } from "./dialog-s
  */
 
 export function AppDialogFrame({ size = "md", children }: { size?: DialogSize; children: ReactNode }) {
-  return <DialogContent className={cx("gap-0 overflow-hidden p-0", dialogWidthClass(size))}>{children}</DialogContent>
+  return <DialogContent className={cx("flex flex-col gap-0 overflow-hidden p-0", dialogWidthClass(size))}>{children}</DialogContent>
 }
 
 export function AppDialogHeader({ title, description }: { title: ReactNode; description?: ReactNode }) {
   return (
-    <DialogHeader className="px-4 pt-4 pr-12 pb-3">
+    <DialogHeader className="shrink-0 px-4 pt-4 pr-12 pb-3">
       <DialogTitle className="font-heading text-title-sm font-bold">{title}</DialogTitle>
       {description ? <DialogDescription className="text-body-sm">{description}</DialogDescription> : null}
     </DialogHeader>
@@ -43,7 +43,7 @@ export function AppDialogBody({ children }: { children: ReactNode }) {
 
 export function AppDialogFooter({ children }: { children: ReactNode }) {
   return (
-    <DialogFooter className="m-0 flex-col-reverse gap-2 rounded-none border-t border-line bg-surface-subtle px-4 py-3 sm:flex-row sm:justify-end [&>button]:w-full sm:[&>button]:w-auto">
+    <DialogFooter className="m-0 shrink-0 flex-col-reverse gap-2 rounded-none border-t border-line bg-surface-subtle px-4 py-3 sm:flex-row sm:justify-end [&>button]:w-full sm:[&>button]:w-auto">
       {children}
     </DialogFooter>
   )

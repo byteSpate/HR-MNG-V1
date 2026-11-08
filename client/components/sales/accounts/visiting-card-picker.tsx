@@ -135,7 +135,7 @@ export function VisitingCardPicker({
         <div className="rise-in flex items-center gap-3 rounded-md border border-[#E4E9EF] bg-white p-2.5 motion-reduce:animate-none">
           <span className="flex h-[52px] w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#E4E9EF] bg-[#F7F9FB]">
             {preview ? (
-              <Img src={preview} alt="The chosen visiting card" width={84} height={52} className="max-h-full max-w-full object-contain" />
+              <Img src={preview} alt="The chosen visiting card" width={84} height={52} className="h-full w-full object-contain" />
             ) : null}
           </span>
           {/* `w-0 flex-1`, not just `min-w-0`: a long file name would otherwise count

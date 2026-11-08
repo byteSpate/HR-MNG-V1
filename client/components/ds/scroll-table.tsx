@@ -6,10 +6,19 @@ import { cx } from "./classes"
  * Wraps a wide table so it scrolls inside its own box, not the page.
  * A soft fade on the right edge shows on a phone that there is more to see.
  */
-export function ScrollTable({ children, className }: { children: ReactNode; className?: string }) {
+export function ScrollTable({
+  children,
+  className,
+  label = "Table, scrolls sideways",
+}: {
+  children: ReactNode
+  className?: string
+  /** Name the table, so a screen reader can tell several apart. */
+  label?: string
+}) {
   return (
     <div className={cx("relative", className)}>
-      <div className="overflow-x-auto overscroll-x-contain" tabIndex={0} role="region" aria-label="Table, scrolls sideways">
+      <div className="overflow-x-auto overscroll-x-contain" tabIndex={0} role="region" aria-label={label}>
         {children}
       </div>
       <div

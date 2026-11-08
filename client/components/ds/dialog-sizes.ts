@@ -12,5 +12,8 @@ const WIDTH: Record<DialogSize, string> = {
 
 export const dialogWidthClass = (size: DialogSize): string => WIDTH[size]
 
-/** The body scrolls, not the page. The cap leaves room for header, footer and keyboard. */
-export const DIALOG_BODY_CLASS = "max-h-[calc(100dvh-12rem)] overflow-y-auto"
+/**
+ * The body scrolls, not the page. The frame is a flex column capped by the base dialog,
+ * so the body takes only the space the header and footer leave. No height is guessed.
+ */
+export const DIALOG_BODY_CLASS = "min-h-0 flex-1 overflow-y-auto"

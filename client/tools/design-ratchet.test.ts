@@ -4,19 +4,19 @@ import { countFiles, compare, isExempt } from "./design-ratchet.mjs";
 
 const files = {
   "components/a.tsx": '<p className="text-[12px] text-[#fff]">x</p><h2>t</h2>',
-  "components/b.tsx": '<p className="text-[13px]">x</p><img src="a" />',
+  "components/b.tsx": '<p className="text-[13px] text-[14px]">x</p><img src="a" />',
   "components/ds/c.tsx": '<p className="text-[13px] text-[#000]">x</p>',
   "components/d.tsx": '<DialogContent className="sm:max-w-[600px]"><div className="w-[320px]" /></DialogContent>',
 };
 
-test("counts how many files break each rule, ignoring exempt folders", () => {
+test("counts every place that breaks each rule, ignoring exempt folders", () => {
   const c = countFiles(files);
-  assert.equal(c.fontSize, 2);
+  assert.equal(c.fontSize, 3);
   assert.equal(c.hexColor, 1);
   assert.equal(c.rawHeading, 1);
   assert.equal(c.rawImg, 1);
   assert.equal(c.dialogWidth, 1);
-  assert.equal(c.arbitraryWidth, 1);
+  assert.equal(c.arbitraryWidth, 2);
 });
 
 test("exempt folders are components/ui, components/ds, lib/design and globals.css", () => {
@@ -37,4 +37,10 @@ test("equal or lower passes, and lower is reported as improved", () => {
   const r = compare({ fontSize: 2, hexColor: 2 }, { fontSize: 2, hexColor: 1 });
   assert.equal(r.ok, true);
   assert.deepEqual(r.better, ["hexColor"]);
+});
+
+test("a new violation in a file that already has one raises the count", () => {
+  const before = countFiles({ "components/a.tsx": '<p className="text-[12px]">' });
+  const after = countFiles({ "components/a.tsx": '<p className="text-[12px] text-[13px]">' });
+  assert.ok(after.fontSize > before.fontSize);
 });

@@ -16,7 +16,9 @@ test("sizes are strictly increasing", () => {
   for (let i = 1; i < widths.length; i++) assert.ok(widths[i] > widths[i - 1]);
 });
 
-test("the body scrolls inside the dialog, with a dvh height cap", () => {
+test("the body takes the space left and scrolls, with no fixed height guess", () => {
+  assert.match(DIALOG_BODY_CLASS, /\bmin-h-0\b/);
+  assert.match(DIALOG_BODY_CLASS, /\bflex-1\b/);
   assert.match(DIALOG_BODY_CLASS, /overflow-y-auto/);
-  assert.match(DIALOG_BODY_CLASS, /dvh/);
+  assert.doesNotMatch(DIALOG_BODY_CLASS, /calc\(/);
 });

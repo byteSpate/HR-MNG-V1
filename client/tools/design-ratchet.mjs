@@ -1,4 +1,4 @@
-// Design ratchet: counts, per rule, how many files break it. Fails if any count goes UP
+// Design ratchet: counts, per rule, how many places break it. Fails if any count goes UP
 // compared with tools/design-debt.json. Run: node tools/design-ratchet.mjs [--update]
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -20,7 +20,7 @@ export function countFiles(files) {
   const out = Object.fromEntries(Object.keys(RULES).map((k) => [k, 0]));
   for (const [rel, src] of Object.entries(files)) {
     if (isExempt(rel)) continue;
-    for (const [rule, re] of Object.entries(RULES)) if (re.test(src)) out[rule]++;
+    for (const [rule, re] of Object.entries(RULES)) out[rule] += (src.match(new RegExp(re.source, "g")) ?? []).length;
   }
   return out;
 }
@@ -65,7 +65,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
   const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
   const r = compare(baseline, current);
-  console.log("Files that break each design rule:", JSON.stringify(current));
+  console.log("Places that break each design rule:", JSON.stringify(current));
   if (!r.ok) {
     console.error(`Design debt went UP for: ${r.worse.join(", ")}. Use the ds pieces (Heading, Text, Icon, Img, AppDialog) and the named sizes and colors in globals.css.`);
     process.exit(1);

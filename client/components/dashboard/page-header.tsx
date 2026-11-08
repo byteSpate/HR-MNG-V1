@@ -2,7 +2,6 @@ import type { ReactNode } from "react"
 import type { RemixiconComponentType } from "@remixicon/react"
 
 import { Button } from "@/components/ui/button"
-import { Heading } from "@/components/ds/heading"
 
 export function PageHeader({
   kicker,
@@ -44,7 +43,8 @@ export function PageHeader({
     <div className="flex flex-wrap items-start justify-between gap-4 pt-5 pb-4 sm:items-end sm:pt-7 sm:pb-5.5">
       <div>
         <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">{kicker}</div>
-        <Heading level="page" className="mb-1">{title}</Heading>
+        {/* Sizes kept as they were until the owner approves the new type scale (Phase 3, Task 1). */}
+        <h1 className="font-heading mb-1 text-[20px] font-bold tracking-tight sm:text-[23px]">{title}</h1>
         <div className="text-[13px] text-[#5F6B7C]">{sub}</div>
       </div>
       {aside || cta ? (

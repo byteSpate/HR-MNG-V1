@@ -10,6 +10,7 @@ import path from "node:path"
 // Needs playwright-core. Install it anywhere and point PLAYWRIGHT_CORE at its index.mjs,
 // or install it in client/ (npm i -D playwright-core). See tools/README.txt.
 const { chromium } = await import(process.env.PLAYWRIGHT_CORE ?? "playwright-core")
+const API_PORT = process.env.AUDIT_API_PORT ?? "4100"
 const BASE = process.env.AUDIT_BASE ?? "http://localhost:3100"
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 const DESKTOP = process.env.DESKTOP === "1" // 1366 px sweep, no touch; results go to sweep/
@@ -176,7 +177,7 @@ page.on("pageerror", (e) => errs.push("PAGEERROR " + String(e.message).slice(0, 
 const bad = []
 page.on("response", (r) => {
   const u = r.url()
-  if (u.includes(":4100/") && r.status() >= 400) bad.push(`${r.status()} ${u.replace(/^.*:4100/, "").slice(0, 70)}`)
+  if (u.includes(`:${API_PORT}/`) && r.status() >= 400) bad.push(`${r.status()} ${u.replace(new RegExp(`^.*:${API_PORT}`), "").slice(0, 70)}`)
 })
 
 // ---- sign in ---------------------------------------------------------------
