@@ -7,7 +7,7 @@ import { createSupplierCreditNote, type SupplierCreditNoteInput } from "@/lib/ap
 import { useSession } from "@/lib/auth/session-context"
 import type { DealMoneySupplierBill, SupplierCreditNote } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
-import { CheckboxField, DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
+import { CheckboxField, DialogActions, Field, FormError, toMessage } from "@/components/dashboard/record-kit"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"

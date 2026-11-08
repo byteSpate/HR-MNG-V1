@@ -3,6 +3,7 @@ import type { ElementType, ReactNode } from "react"
 import { cx, headingClass, type HeadingLevel } from "./classes"
 
 const DEFAULT_TAG: Record<HeadingLevel, "h1" | "h2" | "h3"> = {
+  hero: "h2",
   label: "h3",
   display: "h1",
   page: "h1",

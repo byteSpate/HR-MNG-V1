@@ -30,7 +30,7 @@ export function MyRecoveries() {
   if (recoveriesQuery.isPending) return <Skeleton className="h-32 w-full" />
   if (recoveriesQuery.isError) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+      <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
         Could not load your recoveries.
       </div>
     )
@@ -39,7 +39,7 @@ export function MyRecoveries() {
   const recoveries = recoveriesQuery.data ?? []
   if (recoveries.length === 0) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+      <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
         You have no outstanding asset recoveries.
       </div>
     )

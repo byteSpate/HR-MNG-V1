@@ -1,10 +1,12 @@
 // Class builders for the design system. Pure, so they can be tested without a browser.
 // Pages pass `className` for layout only (margins, flex). Size and color come from here.
 
-export type HeadingLevel = "label" | "display" | "page" | "section" | "card"
+export type HeadingLevel = "hero" | "label" | "display" | "page" | "section" | "card"
 export type TextVariant = "body" | "small" | "caption" | "muted" | "danger" | "notice"
 
 const HEADING: Record<HeadingLevel, string> = {
+  // Marketing one-offs (landing, sign-in). The page passes its own big size.
+  hero: "font-heading font-bold tracking-tighter text-balance",
   label: "text-caption font-bold tracking-wide text-ink-muted uppercase",
   display: "font-heading font-bold tracking-tight text-heading sm:text-display",
   page: "font-heading font-bold tracking-tight text-title md:text-heading",

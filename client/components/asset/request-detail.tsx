@@ -56,8 +56,8 @@ function formatMoment(iso: string): string {
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <div className="text-[11px] font-bold text-muted-foreground uppercase">{label}</div>
-      <div className="mt-0.5 text-[13px]">{value}</div>
+      <div className="text-caption font-bold text-muted-foreground uppercase">{label}</div>
+      <div className="mt-0.5 text-body-sm">{value}</div>
     </div>
   )
 }
@@ -85,24 +85,24 @@ function Timeline({
             {!last ? (
               <span
                 aria-hidden
-                className="absolute top-4 bottom-0 left-[5px] w-px bg-[#E4E9EF]"
+                className="absolute top-4 bottom-0 left-[5px] w-px bg-line"
               />
             ) : null}
             <span
               aria-hidden
               className={`relative mt-1.5 size-[11px] shrink-0 rounded-full ${
-                ACTION_TONE[entry.action] ?? "bg-[#17191C]"
+                ACTION_TONE[entry.action] ?? "bg-ink"
               }`}
             />
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-semibold text-[#1C2733]">
+              <div className="text-body-sm font-semibold text-ink-body">
                 {ACTION_LABEL[entry.action] ?? entry.action}
               </div>
-              <div className="mt-0.5 text-[12px] text-[#5F6B7C] tabular-nums">
+              <div className="mt-0.5 text-caption text-ink-muted tabular-nums">
                 {formatMoment(entry.at)}
               </div>
               {entry.note ? (
-                <p className="mt-1.5 border-l-2 border-[#E4E9EF] pl-2.5 text-[12.5px] leading-relaxed text-[#3D4756]">
+                <p className="mt-1.5 border-l-2 border-line pl-2.5 text-caption leading-relaxed text-ink-soft">
                   {entry.note}
                 </p>
               ) : null}
@@ -117,11 +117,11 @@ function Timeline({
         <li className="relative flex gap-3">
           <span
             aria-hidden
-            className="relative mt-1.5 size-[11px] shrink-0 rounded-full border-2 border-[#B6C0CC] bg-white"
+            className="relative mt-1.5 size-[11px] shrink-0 rounded-full border-2 border-line-strong bg-white"
           />
           <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-semibold text-[#5F6B7C]">{pendingLabel}</div>
-            <div className="mt-0.5 text-[12px] text-[#8A94A2]">Not yet</div>
+            <div className="text-body-sm font-semibold text-ink-muted">{pendingLabel}</div>
+            <div className="mt-0.5 text-caption text-ink-muted">Not yet</div>
           </div>
         </li>
       ) : null}
@@ -187,8 +187,8 @@ export function RequestDetail({
               </div>
 
               <div>
-                <div className="text-[11px] font-bold text-muted-foreground uppercase">Reason</div>
-                <p className="mt-1 text-[13px] leading-relaxed">{request.reason}</p>
+                <div className="text-caption font-bold text-muted-foreground uppercase">Reason</div>
+                <p className="mt-1 text-body-sm leading-relaxed">{request.reason}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -201,8 +201,8 @@ export function RequestDetail({
                 ) : null}
               </div>
 
-              <div className="border-t border-[#E4E9EF] pt-4">
-                <div className="mb-3 text-[13px] font-bold">History</div>
+              <div className="border-t border-line pt-4">
+                <div className="mb-3 text-body-sm font-bold">History</div>
 
                 {timelineQuery.isPending ? (
                   <div className="space-y-4">
@@ -217,7 +217,7 @@ export function RequestDetail({
                     ))}
                   </div>
                 ) : timelineQuery.isError ? (
-                  <div className="text-[13px] text-destructive">
+                  <div className="text-body-sm text-destructive">
                     The history could not be loaded.{" "}
                     <Button
                       variant="link"
@@ -231,7 +231,7 @@ export function RequestDetail({
                   // Not reachable in normal use — submitting writes the first
                   // audit row in the same transaction — so this says what it
                   // means rather than pretending the request does not exist.
-                  <p className="text-[12.5px] text-[#5F6B7C]">
+                  <p className="text-caption text-ink-muted">
                     No history was recorded for this request.
                   </p>
                 ) : (

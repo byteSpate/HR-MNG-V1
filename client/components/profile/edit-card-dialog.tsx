@@ -247,16 +247,16 @@ function EditForm({
               />
             )}
             {field.hint ? (
-              <p className="mt-1.5 text-[11.5px] leading-snug text-[#5F6B7C]">{field.hint}</p>
+              <p className="mt-1.5 text-caption leading-snug text-ink-muted">{field.hint}</p>
             ) : null}
           </div>
         ))}
-        {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+        {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
         <DialogFooter>
           <Button
             type="submit"
             disabled={mutation.isPending}
-            className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+            className="bg-ink text-white hover:bg-ink-strong"
           >
             {mutation.isPending ? "Saving…" : "Save changes"}
           </Button>

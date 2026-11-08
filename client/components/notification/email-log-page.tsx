@@ -149,7 +149,7 @@ export function EmailLogPage() {
       {/* The one line the whole column depends on. "Sent" is the mail
           server's answer, not the reader's inbox, and a column headed
           "Delivered" would claim something nobody here can know. */}
-      <p className="mb-4 text-[12.5px] text-[#5F6B7C]">
+      <p className="mb-4 text-caption text-ink-muted">
         Sent means the mail server accepted the message. It is not proof that a person
         received it. There is no resend here — the log stores who and what, not the message
         body, so resending lives on the page that owns the thing.
@@ -176,7 +176,7 @@ export function EmailLogPage() {
           >
             Failures only
           </Button>
-          <span className="text-[12.5px] text-[#5F6B7C] tabular-nums">
+          <span className="text-caption text-ink-muted tabular-nums">
             {items.length} {items.length === 1 ? "email" : "emails"}
           </span>
           {filtersActive ? (

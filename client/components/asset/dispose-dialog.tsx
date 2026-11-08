@@ -39,7 +39,7 @@ export function DisposeDialog({
           <DialogTitle>Dispose {asset?.assetTag ?? "this asset"}?</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          <p className="text-caption leading-relaxed text-ink-muted">
             Disposing of {asset?.name ?? "this asset"} removes its cost and the depreciation charged to
             date from the balance sheet. The gain or loss on disposal is whatever the ledger makes of
             the difference.
@@ -61,7 +61,7 @@ export function DisposeDialog({
               onChange={(e) => setProceeds(e.target.value)}
               placeholder="0.00"
             />
-            <p className="mt-1 text-[11.5px] text-[#5F6B7C]">
+            <p className="mt-1 text-caption text-ink-muted">
               Leave empty if nothing was received for it.
             </p>
           </div>
@@ -79,7 +79,7 @@ export function DisposeDialog({
             />
           </div>
 
-          {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+          {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
 
           <DialogFooter>
             <Button
@@ -99,7 +99,7 @@ export function DisposeDialog({
                   note: note.trim() ? note.trim() : undefined,
                 })
               }
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {pending ? "Disposing…" : "Dispose asset"}
             </Button>

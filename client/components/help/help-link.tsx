@@ -32,7 +32,7 @@ export function HelpLink({ children }: { children?: React.ReactNode }) {
   return (
     <Link
       href={href}
-      className="h-auto p-0 text-[12.5px] font-bold text-[#1C2733] underline decoration-[#B8C1CE] underline-offset-2 hover:text-[#0E1012]"
+      className="h-auto p-0 text-caption font-bold text-ink-body underline decoration-line-strong underline-offset-2 hover:text-ink-strong"
     >
       {children ?? "How does this work?"}
     </Link>

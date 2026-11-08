@@ -58,19 +58,19 @@ function RequestForm({
             New national ID
           </Label>
           <Input id="new-national-id" value={value} onChange={(e) => setValue(e.target.value)} />
-          <p className="mt-1 text-[11.5px] text-[#A5AFBE]">
+          <p className="mt-1 text-caption text-ink-muted">
             {currentValue ? `Currently on file: ${currentValue}` : "Nothing is on file yet"}. HR
             reviews this before it takes effect.
           </p>
         </div>
 
-        {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+        {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
 
         <DialogFooter>
           <Button
             type="submit"
             disabled={mutation.isPending || value.trim() === ""}
-            className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+            className="bg-ink text-white hover:bg-ink-strong"
           >
             {mutation.isPending ? "Submitting…" : "Submit request"}
           </Button>

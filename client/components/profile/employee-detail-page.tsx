@@ -207,7 +207,7 @@ export function EmployeeDetailPage({
 
   if (employeeQuery.isError) {
     return (
-      <div className="mt-7 rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+      <div className="mt-7 rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
         Could not load this employee.{" "}
         <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => employeeQuery.refetch()}>
           Retry
@@ -260,7 +260,7 @@ export function EmployeeDetailPage({
     (CARD_FIELDS[card] ?? []).some((f) => employee.editableFields.includes(f.key)) ? (
       <Button
         type="button"
-        variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline"
+        variant="link" className="h-auto p-0 text-caption font-semibold underline"
         onClick={() => setEditing(card)}
       >
         Edit
@@ -270,7 +270,7 @@ export function EmployeeDetailPage({
   return (
     <>
       <div className="pt-7 pb-4">
-        <Link href={backHref} className="text-[12.5px] font-semibold text-[#7A8698] hover:underline">
+        <Link href={backHref} className="text-caption font-semibold text-ink-muted hover:underline">
           ← Back
         </Link>
       </div>
@@ -329,7 +329,7 @@ export function EmployeeDetailPage({
                   "Deactivate login" a plain button. */}
               {canGrantSalesRole ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11.5px] font-semibold text-muted-foreground">Techno Sales Hub</span>
+                  <span className="text-caption font-semibold text-muted-foreground">Techno Sales Hub</span>
                   <Select
                     value={salesRole ?? "NONE"}
                     onValueChange={(v) =>
@@ -355,13 +355,13 @@ export function EmployeeDetailPage({
       />
 
       {accountError ? (
-        <div className="mb-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-3 text-[13px] text-[#B03A3A]">
+        <div className="mb-4 rounded-md border border-line bg-white px-5 py-3 text-body-sm text-danger">
           {accountError}
         </div>
       ) : null}
 
       {salesRoleError ? (
-        <div className="mb-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-3 text-[13px] text-[#B03A3A]">
+        <div className="mb-4 rounded-md border border-line bg-white px-5 py-3 text-body-sm text-danger">
           {salesRoleError}
         </div>
       ) : null}
@@ -380,7 +380,7 @@ export function EmployeeDetailPage({
           {employee.blockers!.map((b) => (
             <div
               key={`${b.field}-${b.blocks}`}
-              className="rounded-md border border-[#F0DCC0] bg-[#FDF7EE] px-4 py-2.5 text-[13px] text-[#8A5A1E]"
+              className="rounded-md border border-warning-line bg-warning-tint px-4 py-2.5 text-body-sm text-warning"
             >
               {b.blocks}
             </div>
@@ -403,13 +403,13 @@ export function EmployeeDetailPage({
                 value: employee.personal.nationalId,
                 action: employee.personal.nationalIdChangeRequest ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-[11.5px] text-[#A5AFBE]">
+                    <span className="text-caption text-ink-muted">
                       Change to {employee.personal.nationalIdChangeRequest.newValue} pending
                     </span>
                     <Button
                       type="button"
                       variant="link"
-                      className="h-auto p-0 text-[12px] font-semibold underline"
+                      className="h-auto p-0 text-caption font-semibold underline"
                       disabled={approveNationalIdMutation.isPending}
                       onClick={() =>
                         approveNationalIdMutation.mutate(
@@ -422,7 +422,7 @@ export function EmployeeDetailPage({
                     <Button
                       type="button"
                       variant="link"
-                      className="h-auto p-0 text-[12px] font-semibold text-[#B03A3A] underline"
+                      className="h-auto p-0 text-caption font-semibold text-danger underline"
                       onClick={() => setRejectOpen(true)}
                     >
                       Reject
@@ -470,7 +470,7 @@ export function EmployeeDetailPage({
               <Button
                 type="button"
                 variant="link"
-                className="h-auto p-0 text-[12.5px] font-semibold underline"
+                className="h-auto p-0 text-caption font-semibold underline"
                 onClick={() => setEmailOpen(true)}
               >
                 Change
@@ -525,7 +525,7 @@ export function EmployeeDetailPage({
                   <Button
                     type="button"
                     variant="link"
-                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    className="h-auto p-0 text-caption font-semibold underline"
                     onClick={() => setAssigningShift(true)}
                   >
                     {employee.employment.shift ? "Change" : "Assign"}
@@ -574,7 +574,7 @@ export function EmployeeDetailPage({
                   <Button
                     type="button"
                     variant="link"
-                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    className="h-auto p-0 text-caption font-semibold underline"
                     onClick={() => setAssigningStructure(true)}
                   >
                     {employee.payroll.salaryStructure ? "Change" : "Assign"}
@@ -601,7 +601,7 @@ export function EmployeeDetailPage({
                 <Button
                   type="button"
                   variant="link"
-                  className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  className="h-auto p-0 text-caption font-semibold underline"
                   onClick={() => setExitOpen(true)}
                 >
                   Edit

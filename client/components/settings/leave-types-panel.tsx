@@ -45,6 +45,7 @@ import {
   toMessage,
 } from "@/components/dashboard/record-kit"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 const ACCRUAL_BASES: LeaveAccrualBasis[] = ["PRO_RATED", "PER_EVENT", "EARNED", "NONE"]
 
@@ -213,8 +214,8 @@ export function LeaveTypesPanel({ accessToken }: { accessToken: string }) {
  */
 function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-3 border-t border-[#EEF1F5] pt-4 first:border-0 first:pt-0">
-      <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>{title}</h3>
+    <section className="space-y-3 border-t border-surface-sunken pt-4 first:border-0 first:pt-0">
+      <Heading level="label">{title}</Heading>
       {children}
     </section>
   )
@@ -439,7 +440,7 @@ function LeaveTypeDialog({
             </Field>
 
             <div className="grid gap-1.5">
-              <Label className="text-[12px] font-bold text-[#1C2733]">
+              <Label className="text-caption font-bold text-ink-body">
                 Eligible employment types
               </Label>
               <div className="flex flex-wrap gap-x-5 gap-y-1">
@@ -453,7 +454,7 @@ function LeaveTypeDialog({
                 ))}
               </div>
               {locked ? (
-                <p className={`text-[11.5px] leading-relaxed ${TONE.muted}`}>
+                <p className={`text-caption leading-relaxed ${TONE.muted}`}>
                   You can cover more employment types than the Act requires, but not fewer.
                 </p>
               ) : null}
@@ -488,7 +489,7 @@ function LeaveTypeDialog({
               />
             </div>
             {locked ? (
-              <p className={`text-[11.5px] leading-relaxed ${TONE.muted}`}>
+              <p className={`text-caption leading-relaxed ${TONE.muted}`}>
                 These four say how the statute is applied rather than how much is granted, so they
                 are fixed for a statutory type.
               </p>

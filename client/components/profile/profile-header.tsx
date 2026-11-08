@@ -47,7 +47,7 @@ export function ProfileHeader({
   const { accessToken } = useSession()
   const employment = employee.employment
   return (
-    <div className="mb-5 flex flex-wrap items-start gap-4 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+    <div className="mb-5 flex flex-wrap items-start gap-4 rounded-md border border-line bg-white px-5.5 py-5">
       <AvatarUpload
         upload={(file) => uploadAvatar(accessToken!, employee.id, file)}
         remove={() => deleteAvatar(accessToken!, employee.id)}
@@ -67,7 +67,7 @@ export function ProfileHeader({
               onClick={onEditName}
               aria-label="Edit name"
               title="Edit name"
-              className="rounded p-1 text-[#7A8698] hover:bg-[#F4F6F9] hover:text-[#17191C]"
+              className="rounded p-1 text-ink-muted hover:bg-surface-hover hover:text-ink"
             >
               <svg
                 width="14"
@@ -91,11 +91,11 @@ export function ProfileHeader({
           {/* Independent of employmentStatus — see EmploymentDetails.accountActive. */}
           {employment && !employment.accountActive ? <Tag tone="red" label="No access" /> : null}
         </div>
-        <div className="mt-0.5 text-[13px] text-[#7A8698]">
+        <div className="mt-0.5 text-body-sm text-ink-muted">
           {employee.work.designation} · {employee.work.department.name}
         </div>
         {employment ? (
-          <div className="mt-1 text-[12.5px] text-[#A5AFBE]">
+          <div className="mt-1 text-caption text-ink-muted">
             {employment.employeeCode} · Joined {formatDateValue(employment.joiningDate)}
           </div>
         ) : null}

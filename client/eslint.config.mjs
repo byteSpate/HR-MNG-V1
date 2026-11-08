@@ -13,16 +13,17 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
-  // Design system: warnings now, errors once the migration waves finish (Phase 3, wave 6).
+  // Design system rules. Errors since the migration waves finished (Phase 3, wave 6).
   // The same rules, counted per file, are enforced by tools/design-ratchet.mjs.
   {
     files: ["app/**/*.tsx", "components/**/*.tsx"],
     ignores: ["components/ui/**", "components/ds/**"],
     rules: {
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
-          selector: "Literal[value=/text-\\[\\d+(\\.\\d+)?px\\]/]",
+          // 30px and up (landing, big numbers) are one-offs outside the scale.
+          selector: "Literal[value=/text-\\[([0-9]|[12][0-9])(\\.\\d+)?px\\]/]",
           message: "Do not pick a font size by hand. Use a named size, for example text-caption, text-body-sm or text-body, or the Heading and Text pieces.",
         },
         {

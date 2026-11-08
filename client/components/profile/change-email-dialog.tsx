@@ -72,17 +72,17 @@ export function ChangeEmailDialog({
         </DialogHeader>
 
         {sentTo ? (
-          <div className="space-y-4 text-[13px] leading-relaxed">
+          <div className="space-y-4 text-body-sm leading-relaxed">
             <p>
               We sent an approval link to <strong>{sentTo}</strong> — the address you are moving
               away from, not the new one.
             </p>
-            <p className="text-[#5F6B7C]">
+            <p className="text-ink-muted">
               Open it and confirm the change was you. Only then do we email{" "}
               <strong>{newEmail.trim()}</strong> to check that inbox works. Your address changes
               after both steps, and nothing changes if you stop here.
             </p>
-            <p className="rounded-md border border-[#E4E9EF] bg-[#F8FAFC] px-3.5 py-2.5 text-[12.5px] text-[#5F6B7C]">
+            <p className="rounded-md border border-line bg-surface-subtle px-3.5 py-2.5 text-caption text-ink-muted">
               The link lasts one hour. If it expires, start again.
             </p>
           </div>
@@ -90,7 +90,7 @@ export function ChangeEmailDialog({
           <div className="space-y-4">
             <div>
               <Label className="mb-1.5 text-xs font-bold">Current address</Label>
-              <div className="rounded-md border border-[#E4E9EF] bg-[#F8FAFC] px-3 py-2 text-[13px] text-[#5F6B7C]">
+              <div className="rounded-md border border-line bg-surface-subtle px-3 py-2 text-body-sm text-ink-muted">
                 {currentEmail}
               </div>
             </div>
@@ -108,7 +108,7 @@ export function ChangeEmailDialog({
                 onChange={(e) => setNewEmail(e.target.value)}
               />
               {sameAsNow && newEmail.trim() ? (
-                <p className="mt-1.5 text-[11.5px] font-medium text-[#B03A3A]">
+                <p className="mt-1.5 text-caption font-medium text-danger">
                   That is already your address.
                 </p>
               ) : null}
@@ -116,8 +116,8 @@ export function ChangeEmailDialog({
 
             {/* Said before they commit, not after. Two inboxes is not what
                 anyone expects from a form with one field in it. */}
-            <div className="rounded-md border border-[#E4E9EF] bg-[#F8FAFC] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#5F6B7C]">
-              <div className="mb-1.5 flex items-center gap-1.5 font-semibold text-[#17191C]">
+            <div className="rounded-md border border-line bg-surface-subtle px-3.5 py-3 text-caption leading-relaxed text-ink-muted">
+              <div className="mb-1.5 flex items-center gap-1.5 font-semibold text-ink">
                 <RiMailLine className="size-3.5" aria-hidden />
                 This takes two steps
               </div>
@@ -132,7 +132,7 @@ export function ChangeEmailDialog({
               </p>
             </div>
 
-            {error ? <p className="text-[12.5px] text-[#B03A3A]">{error}</p> : null}
+            {error ? <p className="text-caption text-danger">{error}</p> : null}
           </div>
         )}
 
@@ -184,7 +184,7 @@ export function PendingEmailChangeNotice() {
   if (!data) return null
 
   return (
-    <div className="mb-4 flex items-start gap-2.5 rounded-md border border-[#E4CFA6] bg-[#FDF8EE] px-4 py-3 text-[12.5px] leading-relaxed text-[#8A5E0C]">
+    <div className="mb-4 flex items-start gap-2.5 rounded-md border border-warning-line bg-warning-tint px-4 py-3 text-caption leading-relaxed text-warning">
       <RiTimeLine className="mt-0.5 size-4 shrink-0" aria-hidden />
       <div>
         <div className="font-semibold">
@@ -215,15 +215,15 @@ export function SignInEmailCard({ email }: { email: string }) {
 
   return (
     <>
-      <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+      <div className="rounded-md border border-line bg-white px-5.5 py-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-[13px] font-bold">
-              <RiMailLine className="size-4 text-[#5F6B7C]" aria-hidden />
+            <div className="flex items-center gap-1.5 text-body-sm font-bold">
+              <RiMailLine className="size-4 text-ink-muted" aria-hidden />
               How you sign in
             </div>
-            <div className="mt-1.5 text-[13px] break-words text-[#17191C]">{email}</div>
-            <p className="mt-1 text-[12px] text-[#5F6B7C]">
+            <div className="mt-1.5 text-body-sm break-words text-ink">{email}</div>
+            <p className="mt-1 text-caption text-ink-muted">
               This is your username, and where a password reset would be sent.
             </p>
           </div>

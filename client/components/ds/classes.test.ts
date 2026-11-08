@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { headingClass, textClass, type HeadingLevel, type TextVariant } from "./classes";
 import { TYPE_SCALE } from "@/lib/design/tokens";
 
-const levels: HeadingLevel[] = ["label", "display", "page", "section", "card"];
+const levels: HeadingLevel[] = ["hero", "label", "display", "page", "section", "card"];
 const variants: TextVariant[] = ["body", "small", "caption", "muted", "danger", "notice"];
 
 test("display heading is heading on a phone and display from sm up", () => {
@@ -36,6 +36,10 @@ test("every text variant uses a named size from TYPE_SCALE", () => {
     const sizes = names.map((c) => c.slice(5)).filter((n) => n in TYPE_SCALE);
     assert.ok(sizes.length >= 1, `${v}: ${textClass(v)}`);
   }
+});
+
+test("hero heading sets no size, the page passes its own", () => {
+  assert.doesNotMatch(headingClass("hero"), /\btext-(?!balance)/);
 });
 
 test("headings use the heading font, except the small label", () => {

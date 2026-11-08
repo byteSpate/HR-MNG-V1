@@ -51,11 +51,11 @@ export function ManagerTeamPage() {
   return (
     <>
       <div className="pt-7 pb-5.5">
-        <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#7A8698] uppercase">
+        <div className="mb-1.5 text-caption font-bold tracking-[1.1px] text-ink-muted uppercase">
           Workspace
         </div>
         <Heading level="page" className="mb-1">My team</Heading>
-        <div className="text-[13px] text-[#7A8698]">The people who report to you</div>
+        <div className="text-body-sm text-ink-muted">The people who report to you</div>
       </div>
 
       {loading ? (
@@ -65,35 +65,35 @@ export function ManagerTeamPage() {
           <Skeleton className="h-24 w-full" />
         </div>
       ) : employeesQuery.isError || meQuery.isError ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+        <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
           Failed to load your team.{" "}
           <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => employeesQuery.refetch()}>
             Retry
           </Button>
         </div>
       ) : reports.length === 0 ? (
-        <p className="text-[13px] text-[#A5AFBE]">Nobody reports to you yet.</p>
+        <p className="text-body-sm text-ink-muted">Nobody reports to you yet.</p>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4">
           {reports.map((e) => (
             <div
               key={e.id}
-              className="flex flex-col gap-3 rounded-md border border-[#E4E9EF] bg-white px-4 py-3.5"
+              className="flex flex-col gap-3 rounded-md border border-line bg-white px-4 py-3.5"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#EFF2F6]">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-sunken">
                   {e.work.avatarUrl ? (
                     <Img src={e.work.avatarUrl} alt="" width={44} height={44} className="h-full w-full object-cover" />
                   ) : (
-                    <span className="text-[13px] font-bold text-[#55657A]">
+                    <span className="text-body-sm font-bold text-ink-muted">
                       {initialsFrom(e.work.fullName)}
                     </span>
                   )}
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-[13.5px] font-semibold">{e.work.fullName}</div>
-                  <div className="truncate text-[12px] text-[#7A8698]">{e.work.designation}</div>
-                  <div className="truncate text-[11.5px] text-[#A5AFBE]">
+                  <div className="truncate text-body-sm font-semibold">{e.work.fullName}</div>
+                  <div className="truncate text-caption text-ink-muted">{e.work.designation}</div>
+                  <div className="truncate text-caption text-ink-muted">
                     {e.work.department.name}
                   </div>
                 </div>
@@ -103,7 +103,7 @@ export function ManagerTeamPage() {
                   making the whole card secretly clickable. */}
               <Link
                 href={`/manager/team/${e.id}`}
-                className="rounded-md border border-[#E4E9EF] px-2.5 py-1 text-center text-[12.5px] font-semibold hover:border-[#C6CCD3]"
+                className="rounded-md border border-line px-2.5 py-1 text-center text-caption font-semibold hover:border-line-strong"
               >
                 View profile
               </Link>

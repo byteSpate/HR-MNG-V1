@@ -92,13 +92,13 @@ function RowAction({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "rounded border px-2.5 py-1 text-[12px] font-semibold",
+        "rounded border px-2.5 py-1 text-caption font-semibold",
         "transition-[transform,background-color,border-color,color] duration-150 ease-out-quint",
-        "focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none",
+        "focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none",
         "active:scale-97 disabled:pointer-events-none disabled:opacity-45 motion-reduce:transition-none",
         tone === "destructive"
-          ? "border-[#EBD5D5] text-[#9C3232] hover:border-[#D9AFAF] hover:bg-[#FBF3F3]"
-          : "border-[#E4E9EF] text-[#3F4A59] hover:border-[#CFD6E0] hover:bg-[#F7F9FC]"
+          ? "border-danger-line text-danger hover:border-warning-line hover:bg-danger-tint"
+          : "border-line text-ink-soft hover:border-line-strong hover:bg-surface-subtle"
       )}
     >
       {children}
@@ -243,11 +243,11 @@ export function UsersPage() {
               <UserAvatar
                 name={u.employee?.fullName ?? u.email}
                 className="size-8 rounded-md"
-                textClassName="text-[11.5px]"
+                textClassName="text-caption"
               />
               <div className="min-w-0">
                 <div className="truncate font-semibold">{u.email}</div>
-                <div className="truncate text-[12px] text-[#6B7789]">
+                <div className="truncate text-caption text-ink-muted">
                   {u.mustChangePassword
                     ? "Has not set a password yet"
                     : `Added ${formatCreated(u.createdAt)}`}
@@ -256,7 +256,7 @@ export function UsersPage() {
               {u.id === user?.id ? (
                 // Knowing which row is yours is what stops someone changing
                 // their own role and locking themselves out of the page.
-                <span className="shrink-0 rounded bg-[#F1F4F8] px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[#3F4A59] uppercase">
+                <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-caption font-bold tracking-wide text-ink-soft uppercase">
                   You
                 </span>
               ) : null}
@@ -329,7 +329,7 @@ export function UsersPage() {
 
   if (!canManage) {
     return (
-      <div className="mt-7 rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+      <div className="mt-7 rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
         Only a super admin can manage user accounts.
       </div>
     )
@@ -339,16 +339,16 @@ export function UsersPage() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4 pt-7 pb-5.5">
         <div>
-          <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">
+          <div className="mb-1.5 text-caption font-bold tracking-[1.1px] text-ink-muted uppercase">
             Administration
           </div>
           <Heading level="page" className="mb-1">Users</Heading>
-          <div className="text-[13px] text-[#5F6B7C]">
+          <div className="text-body-sm text-ink-muted">
             System accounts, roles and access — who can sign in, and as what.
           </div>
         </div>
         <Button
-          className="h-auto rounded-md bg-[#17191C] px-4 py-2.5 text-[13px] font-bold text-white transition-transform duration-150 ease-out-quint hover:bg-[#0E1012] active:scale-97 motion-reduce:transition-none"
+          className="h-auto rounded-md bg-ink px-4 py-2.5 text-body-sm font-bold text-white transition-transform duration-150 ease-out-quint hover:bg-ink-strong active:scale-97 motion-reduce:transition-none"
           onClick={() => {
             setError(null)
             setCreateOpen(true)
@@ -372,7 +372,7 @@ export function UsersPage() {
         <div className="relative min-w-0 flex-1 sm:max-w-80">
           <RiSearchLine
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8A94A3]"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-muted"
           />
           <input
             type="search"
@@ -380,14 +380,14 @@ export function UsersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search user accounts"
-            className="h-10 w-full rounded-md border border-[#E4E9EF] bg-white pr-9 pl-9 text-[13px] transition-[border-color,box-shadow] duration-150 ease-out-quint outline-none placeholder:text-[#98A2B1] hover:border-[#CFD6E0] focus:border-[#17191C] focus:shadow-[0_0_0_3px_rgba(23,25,28,0.08)] motion-reduce:transition-none [&::-webkit-search-cancel-button]:hidden"
+            className="h-10 w-full rounded-md border border-line bg-white pr-9 pl-9 text-body-sm transition-[border-color,box-shadow] duration-150 ease-out-quint outline-none placeholder:text-ink-muted hover:border-line-strong focus:border-ink focus:shadow-[0_0_0_3px_rgba(23,25,28,0.08)] motion-reduce:transition-none [&::-webkit-search-cancel-button]:hidden"
           />
           {search ? (
             <button
               type="button"
               onClick={() => setSearch("")}
               aria-label="Clear search"
-              className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded text-[#8A94A3] transition-[transform,color,background-color] duration-150 ease-out-quint hover:bg-[#F1F4F8] hover:text-[#17191C] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none active:scale-90 motion-reduce:transition-none"
+              className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded text-ink-muted transition-[transform,color,background-color] duration-150 ease-out-quint hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none active:scale-90 motion-reduce:transition-none"
             >
               <RiCloseLine className="size-4" />
             </button>
@@ -416,19 +416,19 @@ export function UsersPage() {
       </div>
 
       {error ? (
-        <div className="fade-in mb-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-3 text-[13px] text-[#B03A3A]">
+        <div className="fade-in mb-4 rounded-md border border-line bg-white px-5 py-3 text-body-sm text-danger">
           {error}
         </div>
       ) : null}
 
       {usersQuery.isPending ? (
-        <div className="space-y-2 rounded-md border border-[#E4E9EF] bg-white p-5.5">
+        <div className="space-y-2 rounded-md border border-line bg-white p-5.5">
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-full" />
         </div>
       ) : usersQuery.isError ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+        <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
           Failed to load user accounts.{" "}
           <Button
             variant="link"
@@ -439,10 +439,10 @@ export function UsersPage() {
           </Button>
         </div>
       ) : visible.length === 0 ? (
-        <div className="fade-in grid place-items-center rounded-md border border-dashed border-[#D9E0E9] bg-white px-6 py-14 text-center">
-          <RiShieldUserLine aria-hidden="true" className="mb-3 size-7 text-[#B6BFCB]" />
-          <p className="text-[13.5px] font-semibold">No accounts match that</p>
-          <p className="mt-1 max-w-80 text-[12.5px] text-[#5F6B7C]">
+        <div className="fade-in grid place-items-center rounded-md border border-dashed border-line bg-white px-6 py-14 text-center">
+          <RiShieldUserLine aria-hidden="true" className="mb-3 size-7 text-line-strong" />
+          <p className="text-body-sm font-semibold">No accounts match that</p>
+          <p className="mt-1 max-w-80 text-caption text-ink-muted">
             Try a shorter search, or switch the status filter back to All.
           </p>
           {filtering ? (
@@ -481,7 +481,7 @@ export function UsersPage() {
             <DialogTitle>Create an account</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="text-[12.5px] text-[#7A8698]">
+            <div className="text-caption text-ink-muted">
               For administrative logins only. An employee or manager account needs a
               department, designation and joining date — create those from Employees.
             </div>
@@ -516,7 +516,7 @@ export function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-            {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+            {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
           </div>
           <DialogFooter>
             <Button
@@ -528,7 +528,7 @@ export function UsersPage() {
             </Button>
             <Button
               disabled={!email.trim() || createMutation.isPending}
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
               onClick={() => createMutation.mutate()}
             >
               {createMutation.isPending ? "Creating…" : "Create account"}
@@ -543,14 +543,14 @@ export function UsersPage() {
             <DialogTitle>Account created</DialogTitle>
           </DialogHeader>
           {created ? (
-            <div className="space-y-3 text-[13.5px]">
+            <div className="space-y-3 text-body-sm">
               <p>
                 <strong>{created.email}</strong> can now sign in with this temporary password.
               </p>
-              <div className="rounded-md border border-[#E4E9EF] bg-[#F4F6F9] p-3 font-mono text-[13px]">
+              <div className="rounded-md border border-line bg-surface-hover p-3 font-mono text-body-sm">
                 {created.temporaryPassword}
               </div>
-              <p className="text-[#7A8698]">
+              <p className="text-ink-muted">
                 Shown once and never retrievable again. They must change it on first sign-in.
               </p>
               <Button
@@ -580,7 +580,7 @@ export function UsersPage() {
           </DialogHeader>
           {roleTarget ? (
             <div className="space-y-4">
-              <div className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+              <div className="text-caption leading-relaxed text-ink-muted">
                 An employee or manager role needs a linked employee record. Demoting a manager
                 who still has direct reports is refused until they are reassigned.
               </div>
@@ -614,7 +614,7 @@ export function UsersPage() {
                 to={roleTarget.role}
                 employeeCode={roleTarget.employee?.employeeCode}
               />
-              {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+              {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
             </div>
           ) : null}
           <DialogFooter>
@@ -627,7 +627,7 @@ export function UsersPage() {
             </Button>
             <Button
               disabled={roleMutation.isPending}
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
               onClick={() =>
                 roleTarget && roleMutation.mutate({ id: roleTarget.id, role: roleTarget.role })
               }
@@ -665,12 +665,12 @@ function RoleChangeConsequences({
   const promotion = ROLE_TIER[to] > ROLE_TIER[from]
 
   return (
-    <ul className="space-y-2 rounded-md border border-[#E4E9EF] bg-[#FAFBFC] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#5F6B7C]">
+    <ul className="space-y-2 rounded-md border border-line bg-surface-subtle px-3.5 py-3 text-caption leading-relaxed text-ink-muted">
       <li className="flex items-start gap-2">
         {promotion ? (
-          <RiTimeLine className="mt-px size-4 shrink-0 text-[#8A94A2]" aria-hidden />
+          <RiTimeLine className="mt-px size-4 shrink-0 text-ink-muted" aria-hidden />
         ) : (
-          <RiLogoutBoxRLine className="mt-px size-4 shrink-0 text-[#8A5E0C]" aria-hidden />
+          <RiLogoutBoxRLine className="mt-px size-4 shrink-0 text-warning" aria-hidden />
         )}
         <span>
           {promotion ? (
@@ -680,7 +680,7 @@ function RoleChangeConsequences({
             </>
           ) : (
             <>
-              <strong className="font-semibold text-[#8A5E0C]">
+              <strong className="font-semibold text-warning">
                 This signs them out everywhere.
               </strong>{" "}
               The role they are losing would otherwise stay live in their session for up to
@@ -691,9 +691,9 @@ function RoleChangeConsequences({
       </li>
       {employeeCode ? (
         <li className="flex items-start gap-2">
-          <RiIdCardLine className="mt-px size-4 shrink-0 text-[#8A94A2]" aria-hidden />
+          <RiIdCardLine className="mt-px size-4 shrink-0 text-ink-muted" aria-hidden />
           <span>
-            Their code stays <span className="font-semibold text-[#1C2733]">{employeeCode}</span>.
+            Their code stays <span className="font-semibold text-ink-body">{employeeCode}</span>.
             It records what they were hired as, and it cannot be reissued — staff sign in with
             it, and it appears on bank files and records already sent.
           </span>

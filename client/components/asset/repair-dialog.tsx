@@ -126,12 +126,12 @@ export function RepairDialog({
               checked={isWarranty}
               onCheckedChange={(checked) => setIsWarranty(checked === true)}
             />
-            <Label htmlFor="repair-warranty" className="text-[13px] font-semibold">
+            <Label htmlFor="repair-warranty" className="text-body-sm font-semibold">
               Covered by warranty
             </Label>
           </div>
 
-          {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+          {formError ? <p className="text-body-sm font-semibold text-destructive">{formError}</p> : null}
         </div>
 
         <DialogFooter>

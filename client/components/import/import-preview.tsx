@@ -50,14 +50,14 @@ export function previewRowNumbers(
 export function issuesCell(rowIssues: ImportIssue[]): TableCell {
   if (rowIssues.length === 0) {
     return {
-      node: <RiCheckLine className="size-4 text-[#1E7A3C]" aria-label="No issues" role="img" />,
+      node: <RiCheckLine className="size-4 text-success" aria-label="No issues" role="img" />,
     }
   }
   return {
     node: (
       <ul className="space-y-0.5">
         {rowIssues.map((issue, i) => (
-          <li key={i} className="text-[11.5px] leading-snug font-semibold text-[#B03A3A]">
+          <li key={i} className="text-caption leading-snug font-semibold text-danger">
             {issue.column ? `${issue.column}: ` : ""}
             {issue.message}
           </li>
@@ -77,9 +77,9 @@ export function issuesCell(rowIssues: ImportIssue[]): TableCell {
  */
 export function ImportPreviewEmpty({ noun }: { noun: string }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-8 text-center">
-      <div className="text-[13.5px] font-bold">No rows to import</div>
-      <p className="mx-auto mt-1 max-w-[46ch] text-[12.5px] leading-relaxed text-[#5F6B7C]">
+    <div className="rounded-md border border-line bg-white px-5.5 py-8 text-center">
+      <div className="text-body-sm font-bold">No rows to import</div>
+      <p className="mx-auto mt-1 max-w-[46ch] text-caption leading-relaxed text-ink-muted">
         The file was read successfully but held no {noun}. Check that the data starts under the
         header row and that the sheet is not empty.
       </p>

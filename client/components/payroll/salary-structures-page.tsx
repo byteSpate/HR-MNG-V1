@@ -520,7 +520,7 @@ export function SalaryStructuresPage() {
         {draft ? (
           // A left rule and a tint so the editor does not read as one more
           // card in the list it sits above.
-          <div className="space-y-4 rounded-md border border-line border-l-3 border-l-[#17191C] bg-surface-subtle px-5.5 py-5">
+          <div className="space-y-4 rounded-md border border-line border-l-3 border-l-ink bg-surface-subtle px-5.5 py-5">
             <div className="flex items-center gap-2">
               <RiWallet3Line className="size-4 text-ink-muted" aria-hidden />
               <Heading level="section">

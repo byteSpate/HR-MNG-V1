@@ -55,9 +55,9 @@ export function AuthShell({
         <BrandLogo tone="dark" width={186} className="self-start" />
 
         <div className="my-auto hidden max-w-105 md:block">
-          <h2 className="font-heading text-[34px] leading-[1.12] font-bold tracking-tighter text-balance">
+          <Heading level="hero" className="text-[34px] leading-[1.12]">
             One login. Your whole working month.
-          </h2>
+          </Heading>
           <p className="mt-4.5 max-w-[46ch] text-body leading-[1.7] text-white/60">
             Check in, request leave, read payslips, approve claims. Whatever your role, it is behind
             this door.

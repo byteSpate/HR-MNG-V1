@@ -135,12 +135,12 @@ function ExitForm({
           </Label>
           <Textarea id="exitNote" value={exitNote} onChange={(e) => setExitNote(e.target.value)} />
         </div>
-        {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+        {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
         <DialogFooter>
           <Button
             type="submit"
             disabled={mutation.isPending || lastWorkingDay === ""}
-            className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+            className="bg-ink text-white hover:bg-ink-strong"
           >
             {mutation.isPending ? "Saving…" : "Record exit"}
           </Button>

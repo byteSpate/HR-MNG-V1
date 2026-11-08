@@ -41,7 +41,7 @@ function CheckingSession() {
       <div className="flex flex-col items-center gap-4">
         <span
           aria-hidden
-          className="size-10 rounded-full border-[3px] border-line border-t-[#17191C] animate-spin motion-reduce:animate-none"
+          className="size-10 rounded-full border-[3px] border-line border-t-ink animate-spin motion-reduce:animate-none"
         />
         <p className="font-heading text-title font-semibold tracking-tight">Checking your sign-in</p>
         <p className="text-body-sm text-ink-muted">Please wait a moment.</p>

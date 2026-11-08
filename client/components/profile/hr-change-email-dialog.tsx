@@ -73,24 +73,24 @@ export function HrChangeEmailDialog({
         </DialogHeader>
 
         {done ? (
-          <div className="space-y-3 text-[13px] leading-relaxed">
+          <div className="space-y-3 text-body-sm leading-relaxed">
             <p>
               This account now signs in with <strong>{done.email}</strong>.
             </p>
-            <p className="text-[#5F6B7C]">
+            <p className="text-ink-muted">
               {done.inviteResent
                 ? // The reason HR is usually here. Worth saying plainly, because
                   // a fresh temporary password went out and the old one is dead.
                   "They had never signed in, so a fresh invite went to the new address with a new temporary password. The old one no longer works."
                 : "They were signed out everywhere and will need to sign in again with the new address. Their password is unchanged."}
             </p>
-            <p className="text-[#5F6B7C]">Both the old and the new address were notified.</p>
+            <p className="text-ink-muted">Both the old and the new address were notified.</p>
           </div>
         ) : (
           <div className="space-y-4">
             <div>
               <Label className="mb-1.5 text-xs font-bold">Current address</Label>
-              <div className="rounded-md border border-[#E4E9EF] bg-[#F8FAFC] px-3 py-2 text-[13px] text-[#5F6B7C]">
+              <div className="rounded-md border border-line bg-surface-subtle px-3 py-2 text-body-sm text-ink-muted">
                 {currentEmail}
               </div>
             </div>
@@ -107,13 +107,13 @@ export function HrChangeEmailDialog({
                 onChange={(e) => setNewEmail(e.target.value)}
               />
               {sameAsNow && newEmail.trim() ? (
-                <p className="mt-1.5 text-[11.5px] font-medium text-[#B03A3A]">
+                <p className="mt-1.5 text-caption font-medium text-danger">
                   That is already the address on this account.
                 </p>
               ) : null}
             </div>
 
-            <div className="flex items-start gap-2.5 rounded-md border border-[#E4CFA6] bg-[#FDF8EE] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#8A5E0C]">
+            <div className="flex items-start gap-2.5 rounded-md border border-warning-line bg-warning-tint px-3.5 py-3 text-caption leading-relaxed text-warning">
               <RiAlertLine className="mt-0.5 size-4 shrink-0" aria-hidden />
               <div>
                 <div className="font-semibold">This happens straight away</div>
@@ -125,7 +125,7 @@ export function HrChangeEmailDialog({
               </div>
             </div>
 
-            {error ? <p className="text-[12.5px] text-[#B03A3A]">{error}</p> : null}
+            {error ? <p className="text-caption text-danger">{error}</p> : null}
           </div>
         )}
 

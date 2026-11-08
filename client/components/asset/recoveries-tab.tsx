@@ -98,7 +98,7 @@ export function RecoveriesTab({ onChanged }: { onChanged?: () => void }) {
     { text: formatMoney(r.amount, r.currency), weight: 600 },
     {
       node: (
-        <span className="line-clamp-2 text-[12px] text-[#5F6B7C]" title={r.reason}>
+        <span className="line-clamp-2 text-caption text-ink-muted" title={r.reason}>
           {r.reason}
         </span>
       ),
@@ -130,7 +130,7 @@ export function RecoveriesTab({ onChanged }: { onChanged?: () => void }) {
             </>
           ) : null}
           {r.status === "RECOVERED" ? (
-            <span className="text-[11.5px] text-[#5F6B7C]">
+            <span className="text-caption text-ink-muted">
               {r.adjustment?.payslip?.payslipNo ?? r.settlement?.settlementNo ?? "Collected"}
             </span>
           ) : null}
@@ -142,7 +142,7 @@ export function RecoveriesTab({ onChanged }: { onChanged?: () => void }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-[13px] text-[#5F6B7C]">
+        <div className="text-body-sm text-ink-muted">
           Debts raised against employees for assets not returned, damaged or lost.
         </div>
         <Button type="button" onClick={() => setCreateOpen(true)}>
@@ -158,7 +158,7 @@ export function RecoveriesTab({ onChanged }: { onChanged?: () => void }) {
       ) : null}
 
       {error ? (
-        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-4 py-3 text-[12.5px] text-[#B03A3A]">
+        <div className="rounded-md border border-danger-line bg-danger-tint px-4 py-3 text-caption text-danger">
           {error}
         </div>
       ) : null}
@@ -222,7 +222,7 @@ function WaiveDialog({
           <DialogTitle>Waive this recovery?</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          <p className="text-caption leading-relaxed text-ink-muted">
             Waiving keeps the row and records who decided and why. &ldquo;We chose not to charge
             her&rdquo; is precisely what an auditor asks about — a deleted row cannot answer. The
             amount {recovery ? formatMoney(recovery.amount, recovery.currency) : ""} will not be
@@ -239,7 +239,7 @@ function WaiveDialog({
               placeholder="Company fault, insurance covered it, damage not theirs…"
             />
           </div>
-          {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+          {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="ghost" disabled={pending} onClick={onClose}>
               Cancel
@@ -248,7 +248,7 @@ function WaiveDialog({
               type="button"
               disabled={pending || reason.trim().length === 0}
               onClick={onConfirm}
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {pending ? "Waiving…" : "Waive recovery"}
             </Button>

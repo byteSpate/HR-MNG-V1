@@ -181,7 +181,7 @@ export function LostCompass() {
   return (
     <div
       aria-hidden
-      className="mb-1 flex items-end gap-1.5 font-[family-name:var(--font-heading)] text-[64px] leading-none font-bold tracking-tight text-[#E4E9EF] select-none sm:text-[80px]"
+      className="mb-1 flex items-end gap-1.5 font-[family-name:var(--font-heading)] text-[64px] leading-none font-bold tracking-tight text-line select-none sm:text-[80px]"
     >
       <span ref={leftRef} className="inline-block will-change-transform">
         <span className="rise-in inline-block">4</span>
@@ -190,7 +190,7 @@ export function LostCompass() {
       <span className="inline-flex items-center">
         <span className="rise-in inline-flex" style={{ animationDelay: "60ms" }}>
           <span ref={needleRef} className="inline-flex will-change-transform">
-            <RiCompass3Line className="size-[0.72em] text-[#C9D2DD]" />
+            <RiCompass3Line className="size-[0.72em] text-line-strong" />
           </span>
         </span>
       </span>

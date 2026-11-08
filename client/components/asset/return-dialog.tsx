@@ -127,10 +127,10 @@ export function ReturnDialog({
           </div>
 
           {conditionIn === "DAMAGED" ? (
-            <div className="rounded-md border border-[#E4E9EF] bg-[#F4F6F9] p-3">
+            <div className="rounded-md border border-line bg-surface-hover p-3">
               <button
                 type="button"
-                className="flex w-full items-center justify-between text-[12.5px] font-semibold"
+                className="flex w-full items-center justify-between text-caption font-semibold"
                 onClick={() => setRecoveryOpen((v) => !v)}
               >
                 <span>Price a recovery for the damage</span>
@@ -208,7 +208,7 @@ export function ReturnDialog({
             </div>
           </div>
 
-          {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+          {formError ? <p className="text-body-sm font-semibold text-destructive">{formError}</p> : null}
         </div>
 
         <DialogFooter>

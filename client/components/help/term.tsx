@@ -34,7 +34,7 @@ export function Term({
               render={
                 <span
                   lang={lang}
-                  className={`cursor-help border-b border-dotted border-[#8792A3] ${lang ? "font-sans" : ""}`}
+                  className={`cursor-help border-b border-dotted border-line-strong ${lang ? "font-sans" : ""}`}
                 >
                   {term}
                 </span>
@@ -43,13 +43,13 @@ export function Term({
           }
         />
         <PopoverContent className="w-64">
-          <p lang={lang} className="text-[12.5px] leading-[1.6] text-[#3B4757]">
+          <p lang={lang} className="text-caption leading-[1.6] text-ink-soft">
             {definition}
           </p>
         </PopoverContent>
       </Popover>
       <TooltipContent>
-        <span lang={lang} className="text-[11.5px]">
+        <span lang={lang} className="text-caption">
           {definition}
         </span>
       </TooltipContent>

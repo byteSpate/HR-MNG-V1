@@ -30,7 +30,7 @@ export function ExitChecklistPanel({ employeeId }: { employeeId: string }) {
   if (!checklist.hasOutstanding) return null
 
   return (
-    <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-[12.5px]">
+    <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-caption">
       <p className="font-medium">
         This leaver still has {checklist.openAssignments.length} unreturned asset
         {checklist.openAssignments.length === 1 ? "" : "s"}

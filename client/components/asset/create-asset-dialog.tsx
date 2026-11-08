@@ -60,12 +60,12 @@ function CustodyStrip({
   const action = heldBy ? onReturn : onHandOver
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md bg-[#F1F4F8] px-3.5 py-2.5 text-[12.5px] text-[#5F6B7C]">
+    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md bg-surface-hover px-3.5 py-2.5 text-caption text-ink-muted">
       <span className="min-w-0 flex-1">
         {heldBy ? (
           <>
             Held by{" "}
-            <span className="font-semibold text-[#1C2733]">
+            <span className="font-semibold text-ink-body">
               {heldBy.fullName} ({heldBy.employeeCode})
             </span>{" "}
             since {formatAssetDate(heldBy.assignedAt)}
@@ -73,7 +73,7 @@ function CustodyStrip({
           </>
         ) : (
           <>
-            <span className="font-semibold text-[#1C2733]">Not handed to anyone.</span> Recording a
+            <span className="font-semibold text-ink-body">Not handed to anyone.</span> Recording a
             handover is a separate step — it captures the condition and asks the holder to confirm.
           </>
         )}
@@ -83,7 +83,7 @@ function CustodyStrip({
           type="button"
           variant="link"
           onClick={action}
-          className="h-auto shrink-0 p-0 text-[12px] font-bold text-[#1C2733] underline"
+          className="h-auto shrink-0 p-0 text-caption font-bold text-ink-body underline"
         >
           {heldBy ? "Take it back" : "Hand it over"}
         </Button>
@@ -393,7 +393,7 @@ function AssetForm({
           />
         </div>
 
-        {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+        {formError ? <p className="text-body-sm font-semibold text-destructive">{formError}</p> : null}
       </div>
       </AppDialogBody>
 

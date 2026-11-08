@@ -507,7 +507,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
                               : ALL_COLUMNS.filter((c) => prev.includes(c) || c === column)
                           )
                         }
-                        className="size-3.5 accent-[#17191C]"
+                        className="size-3.5 accent-ink"
                       />
                       {COLUMN_LABEL[column]}
                     </label>
