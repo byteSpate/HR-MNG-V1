@@ -8,6 +8,8 @@ import { AvatarLightbox } from "@/components/dashboard/avatar-lightbox"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import { Tag } from "@/components/dashboard/tag"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 /**
  * Seven fields of work identity, for the person who opened this from a
@@ -33,7 +35,7 @@ export function ColleagueDialog({
   return (
     <>
       <Dialog open={!!employee} onOpenChange={onOpenChange}>
-        <DialogContent className="p-5 sm:max-w-105">
+        <DialogContent className={cx(dialogWidthClass("sm"), "p-5")}>
           {employee ? (
             <>
               <DialogHeader className="flex-row items-center gap-4 pr-6">

@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { TableCell, Tone } from "@/components/dashboard/types"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const STATUS_TONE: Record<EmploymentStatus, Tone> = {
   ACTIVE: "green",
@@ -541,7 +542,7 @@ export function EmployeesPage() {
           Tailwind v4 emits arbitrary utilities after named ones, so at equal
           specificity the calc wins and the dialog fills the viewport.
         */}
-        <DialogContent className="sm:max-w-2xl!">
+        <DialogContent className={dialogWidthClass("lg")}>
           <DialogHeader>
             <DialogTitle>Add employee</DialogTitle>
           </DialogHeader>

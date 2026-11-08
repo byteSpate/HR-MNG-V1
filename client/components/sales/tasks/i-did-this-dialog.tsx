@@ -30,6 +30,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 /** A select's "none", since an empty value reads as nothing chosen at all. */
 const NONE = "none"
@@ -51,7 +53,7 @@ export function IDidThisDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={cx(dialogWidthClass("md"), "max-h-[90vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>I did this</DialogTitle>
         </DialogHeader>

@@ -133,7 +133,7 @@ export function VisitingCardPicker({
     <div className="space-y-2">
       {file ? (
         <div className="rise-in flex items-center gap-3 rounded-md border border-[#E4E9EF] bg-white p-2.5 motion-reduce:animate-none">
-          <span className="flex h-[52px] w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#E4E9EF] bg-[#F7F9FB]">
+          <span className="flex h-[52px] w-21 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#E4E9EF] bg-[#F7F9FB]">
             {preview ? (
               <Img src={preview} alt="The chosen visiting card" width={84} height={52} className="h-full w-full object-contain" />
             ) : null}

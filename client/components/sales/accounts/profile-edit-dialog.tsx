@@ -13,6 +13,7 @@ import { CustomQnaEditor } from "@/components/sales/accounts/custom-qna-editor"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 type Value = { answer: string; detail: string }
 
@@ -218,7 +219,7 @@ export function ProfileEditDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Edit company profile</DialogTitle>
         </DialogHeader>

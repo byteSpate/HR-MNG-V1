@@ -460,8 +460,8 @@ export function AccountingGuidePage() {
         sub="One real month, followed start to finish: where every figure comes from, and where it goes next."
       />
 
-      <div className="flex max-w-[1280px] justify-between gap-10">
-        <div className="min-w-0 max-w-[760px] flex-1 text-[13.5px] leading-[1.7] text-[#3B4757]">
+      <div className="flex max-w-320 justify-between gap-10">
+        <div className="min-w-0 max-w-190 flex-1 text-[13.5px] leading-[1.7] text-[#3B4757]">
           <p className="mb-10">
             This follows one real transaction, July&apos;s payroll, through every stage the accounts
             go through, in order. Every other kind of entry, from a hand-typed correction to an

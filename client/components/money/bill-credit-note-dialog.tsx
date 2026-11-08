@@ -11,6 +11,7 @@ import { CheckboxField, DialogActions, Field, FormError, TONE, toMessage } from 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -79,7 +80,7 @@ export function BillCreditNoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Fix bill {bill.billNumber}</DialogTitle>
           <DialogDescription>Choose the lines being reduced. A reason is required.</DialogDescription>

@@ -70,7 +70,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
         <Link
           href="/login"
-          className="flex h-11 w-full items-center justify-center rounded-lg bg-[#17191C] text-[14px] font-bold text-white transition-transform hover:bg-[#0E1012] active:translate-y-px motion-reduce:transition-none"
+          className="flex h-11 w-full items-center justify-center rounded-lg bg-ink text-body font-bold text-white transition-transform hover:bg-ink-strong active:translate-y-px motion-reduce:transition-none"
         >
           Go to sign in
         </Link>
@@ -85,7 +85,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     return (
       <div className="grid gap-4">
         <AuthError>{error}</AuthError>
-        <p className="text-center text-[12px] text-[#5F6B7C]">
+        <p className="text-center text-caption text-ink-muted">
           Reset links are single use and last an hour.{" "}
           <Link href="/forgot-password" className={AUTH_LINK}>
             Request a new one

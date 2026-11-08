@@ -44,6 +44,7 @@ import {
   TONE,
   toMessage,
 } from "@/components/dashboard/record-kit"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const ACCRUAL_BASES: LeaveAccrualBasis[] = ["PRO_RATED", "PER_EVENT", "EARNED", "NONE"]
 
@@ -272,7 +273,7 @@ function LeaveTypeDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>{leaveType ? `Edit ${leaveType.name}` : "Add a leave type"}</DialogTitle>
           <DialogDescription>

@@ -6,6 +6,7 @@ import { RiErrorWarningLine, RiLoader4Line, type RemixiconComponentType } from "
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * The furniture every signed-out form is built from.
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils"
  * only place that format is stated.
  */
 export const AUTH_INPUT =
-  "h-11 w-full rounded-lg border-[#DDE3EA] bg-white text-[14px] text-[#17191C] placeholder:text-[#6B7789] focus-visible:border-[#17191C] focus-visible:ring-2 focus-visible:ring-[#17191C]/12"
+  "h-11 w-full rounded-lg border-line bg-white text-body text-ink placeholder:text-ink-muted focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-ink/12"
 
 export function AuthField({
   label,
@@ -40,7 +41,7 @@ export function AuthField({
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={htmlFor} className="text-[12.5px] font-semibold text-[#1C2733]">
+      <Label htmlFor={htmlFor} className="text-caption font-semibold text-ink-body">
         {label}
       </Label>
       {/* The icon sits on this wrapper rather than inside the control, because
@@ -52,12 +53,12 @@ export function AuthField({
           white background, which is why only that field appeared to lack one. */}
       <div className="relative">
         <Icon
-          className="pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2 text-[#8792A3]"
+          className="pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2 text-ink-muted"
           aria-hidden
         />
         {children}
       </div>
-      {hint ? <p className="text-[11.5px] leading-relaxed text-[#5F6B7C]">{hint}</p> : null}
+      {hint ? <p className="text-caption leading-relaxed text-ink-muted">{hint}</p> : null}
     </div>
   )
 }
@@ -76,7 +77,7 @@ export function AuthError({ children }: { children: ReactNode }) {
   return (
     <div
       role="alert"
-      className="flex items-start gap-2.5 rounded-lg border border-[#F0D2D2] bg-[#FDF6F6] px-3.5 py-2.5 text-[12.5px] leading-relaxed font-semibold text-[#B03A3A]"
+      className="flex items-start gap-2.5 rounded-lg border border-danger-line bg-danger-tint px-3.5 py-2.5 text-caption leading-relaxed font-semibold text-danger"
     >
       <RiErrorWarningLine className="mt-px size-4 shrink-0" aria-hidden />
       <span>{children}</span>
@@ -86,7 +87,7 @@ export function AuthError({ children }: { children: ReactNode }) {
 
 /** Every inline link on a signed-out screen, so they cannot drift apart. */
 export const AUTH_LINK =
-  "font-bold text-[#17191C] underline underline-offset-2 hover:text-[#0E1012]"
+  "font-bold text-ink underline underline-offset-2 hover:text-ink-strong"
 
 /**
  * The panel a form is replaced by once it has done its job.
@@ -113,14 +114,14 @@ export function AuthNotice({
   children: ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-[#DDE3EA] bg-white px-5 py-4.5">
+    <div className="rounded-lg border border-line bg-white px-5 py-4.5">
       <div className="flex items-center gap-2.5">
-        <span aria-hidden className="shrink-0 text-[#17191C] [&>svg]:size-4.5">
+        <span aria-hidden className="shrink-0 text-ink [&>svg]:size-4.5">
           {icon}
         </span>
-        <h2 className="text-[14px] font-bold text-[#17191C]">{title}</h2>
+        <Heading level="section">{title}</Heading>
       </div>
-      <div className="mt-2.5 grid gap-2.5 text-[12.5px] leading-relaxed text-[#5F6B7C]">
+      <div className="mt-2.5 grid gap-2.5 text-caption leading-relaxed text-ink-muted">
         {children}
       </div>
     </div>
@@ -188,7 +189,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
           />
         ))}
       </div>
-      <span className="text-[11px] font-bold" style={{ color: level.color }}>
+      <span className="text-caption font-bold" style={{ color: level.color }}>
         {level.label}
       </span>
     </div>
@@ -209,8 +210,8 @@ export function AuthSubmit({
       type="submit"
       disabled={submitting}
       className={cn(
-        "h-11 w-full rounded-lg bg-[#17191C] text-[14px] font-bold text-white",
-        "hover:bg-[#0E1012] disabled:opacity-60"
+        "h-11 w-full rounded-lg bg-ink text-body font-bold text-white",
+        "hover:bg-ink-strong disabled:opacity-60"
       )}
     >
       {submitting ? (

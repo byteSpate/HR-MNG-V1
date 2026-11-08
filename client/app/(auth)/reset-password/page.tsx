@@ -41,7 +41,7 @@ export default async function ResetPasswordPage({
             </p>
             <p>If it keeps happening, ask for a fresh link and use the newest email.</p>
           </AuthNotice>
-          <p className="text-center text-[12px] text-[#5F6B7C]">
+          <p className="text-center text-caption text-ink-muted">
             <Link href="/forgot-password" className={AUTH_LINK}>
               Request a new link
             </Link>

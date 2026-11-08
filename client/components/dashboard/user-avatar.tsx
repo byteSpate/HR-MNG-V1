@@ -4,6 +4,7 @@ import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { initialsFrom } from "@/lib/auth/use-identity"
+import { Img } from "@/components/ds/img"
 
 /**
  * Muted tints for the initials fallback. A directory of forty people with no
@@ -58,7 +59,7 @@ export function UserAvatar({
       <span
         aria-hidden="true"
         className={cn(
-          "col-start-1 row-start-1 grid place-items-center text-[13px] font-bold",
+          "col-start-1 row-start-1 grid place-items-center text-body-sm font-bold",
           textClassName
         )}
         style={{ color: tint.fg }}
@@ -66,12 +67,12 @@ export function UserAvatar({
         {initialsFrom(name)}
       </span>
       {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Img
           src={avatarUrl}
           alt=""
+          width={128}
+          height={128}
           loading="lazy"
-          decoding="async"
           onLoad={() => setLoaded(true)}
           // A photo arriving mid-scroll should not pop. It fades in over the
           // initials, which are already the right size in the right place, so

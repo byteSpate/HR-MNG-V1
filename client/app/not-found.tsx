@@ -9,6 +9,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { Heading } from "@/components/ds/heading"
 
 export const metadata: Metadata = {
   title: "Page not found · byteSpate",
@@ -41,10 +42,10 @@ export default function NotFound() {
         <EmptyHeader>
           <LostCompass />
 
-          {/* EmptyTitle renders a div, so the real <h1> is nested inside it.
+          {/* EmptyTitle renders a div, so the real page heading is nested inside it.
               A 404 with no heading is a 404 a screen-reader user has to infer. */}
           <EmptyTitle className="rise-in" style={{ animationDelay: "180ms" }}>
-            <h1 className="text-[19px] font-bold tracking-tight">Page not found</h1>
+            <Heading level="page">Page not found</Heading>
           </EmptyTitle>
 
           <EmptyDescription className="rise-in" style={{ animationDelay: "220ms" }}>

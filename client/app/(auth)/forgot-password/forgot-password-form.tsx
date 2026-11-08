@@ -56,7 +56,7 @@ export function ForgotPasswordForm() {
             page has no basis for.
           */}
           <p>
-            If <span className="font-semibold text-[#1C2733]">{sentTo}</span> belongs to an account,
+            If <span className="font-semibold text-ink-body">{sentTo}</span> belongs to an account,
             a link to set a new password is on its way. It works once, and it stops working an hour
             after it was sent.
           </p>
@@ -69,7 +69,7 @@ export function ForgotPasswordForm() {
         <button
           type="button"
           onClick={() => setSentTo(null)}
-          className="text-center text-[12px] font-semibold text-[#5F6B7C] underline underline-offset-2 hover:text-[#17191C]"
+          className="text-center text-caption font-semibold text-ink-muted underline underline-offset-2 hover:text-ink"
         >
           Try a different address
         </button>
@@ -105,7 +105,7 @@ export function ForgotPasswordForm() {
 
       <AuthSubmit submitting={submitting} label="Send the reset link" pendingLabel="Sending…" />
 
-      <p className="text-center text-[12px] text-[#5F6B7C]">
+      <p className="text-center text-caption text-ink-muted">
         Remembered it?{" "}
         <Link href="/login" className={AUTH_LINK}>
           Back to sign in

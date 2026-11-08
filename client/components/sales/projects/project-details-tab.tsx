@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const PRIORITIES = ["LOW", "NORMAL", "HIGH"] as const
 
@@ -260,7 +261,7 @@ function TeamDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Edit the Project Team</DialogTitle>
           <DialogDescription>

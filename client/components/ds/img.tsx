@@ -9,11 +9,19 @@ import { cx } from "./classes"
  * Give width and height, or `fill` inside a `relative` parent.
  */
 export function Img(
-  props: { src: string; alt: string; className?: string; sizes?: string } & (
+  props: {
+    src: string
+    alt: string
+    className?: string
+    sizes?: string
+    loading?: "lazy" | "eager"
+    onLoad?: () => void
+    onError?: () => void
+  } & (
     | { width: number; height: number; fill?: never }
     | { fill: true; width?: never; height?: never }
   ),
 ) {
-  const { src, alt, className, sizes, ...size } = props
-  return <Image src={src} alt={alt} sizes={sizes} unoptimized className={cx(className)} {...size} />
+  const { src, alt, className, sizes, loading, onLoad, onError, ...size } = props
+  return <Image src={src} alt={alt} sizes={sizes} loading={loading} onLoad={onLoad} onError={onError} unoptimized className={cx(className)} {...size} />
 }

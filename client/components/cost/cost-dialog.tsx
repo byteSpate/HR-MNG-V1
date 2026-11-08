@@ -22,6 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCostDate, monthName, STATUS_LABEL } from "@/components/cost/cost-shared"
 import { ReceiptGallery } from "@/components/cost/receipt-gallery"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 export interface CostPrefill {
   categoryId: string
@@ -372,7 +374,7 @@ export function CostDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={cx(dialogWidthClass("md"), "max-h-[85vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit bill" : "Record a bill"}</DialogTitle>
         </DialogHeader>

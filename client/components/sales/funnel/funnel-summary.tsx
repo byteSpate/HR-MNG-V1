@@ -59,7 +59,7 @@ export function FunnelSummaryStrip({ summary }: { summary: FunnelSummary }) {
   return (
     <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-sm" aria-label={`Targets for ${summary.quarterLabel}`}>
+        <table className="w-full min-w-190 border-collapse text-sm" aria-label={`Targets for ${summary.quarterLabel}`}>
           <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
             <tr>
               {heads.map((h, i) => (

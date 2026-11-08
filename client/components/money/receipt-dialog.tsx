@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -134,7 +135,7 @@ export function ReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Record payment received</DialogTitle>
           <DialogDescription>Money the customer paid on this Opportunity, and which invoices it settles.</DialogDescription>

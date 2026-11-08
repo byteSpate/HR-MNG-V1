@@ -165,7 +165,7 @@ export function FunnelGridTable({
       <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
         {/* The grid scrolls in here. The page body never scrolls sideways. */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1300px] border-collapse text-sm">
+          <table className="w-full min-w-325 border-collapse text-sm">
             <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
               <tr>
                 {head("sn", "S/N", "w-14 text-center")}

@@ -49,7 +49,7 @@ export function AnnexurePage() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[1000px] text-sm">
+          <table className="w-full min-w-250 text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
                 {COLUMNS.map((h) => (

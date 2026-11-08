@@ -23,6 +23,7 @@ import type {
   Department,
   Role,
 } from "@/lib/api/types"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const ROLES: Role[] = [
   "SUPER_ADMIN",
@@ -131,7 +132,7 @@ export function ComposeAnnouncementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className={dialogWidthClass("md")}>
         <DialogHeader>
           <DialogTitle>{existing ? "Edit announcement" : "New announcement"}</DialogTitle>
           <DialogDescription>

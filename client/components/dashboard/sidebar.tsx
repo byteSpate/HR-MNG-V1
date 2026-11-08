@@ -39,14 +39,14 @@ import type { NavGroup, NavItem } from "@/components/dashboard/types"
 // enough that you can tell where you are from a glance. No new palette
 // enters the codebase; two already run side by side here.
 const GRADIENT = {
-  default: "from-[#17191C] to-[#0B0D0F]",
-  sales: "from-[#242830] to-[#14171C]",
+  default: "from-ink to-ink-strong",
+  sales: "from-ink-body to-ink",
 } as const
 
 /** Shared so a parent row and a leaf row are the same control at a glance. */
 function itemClasses(active: boolean) {
   return cn(
-    "h-auto rounded px-3 py-2 text-[13px] transition-colors hover:bg-white/10 hover:text-white active:bg-white/10 active:text-white",
+    "h-auto rounded px-3 py-2 text-body-sm transition-colors hover:bg-white/10 hover:text-white active:bg-white/10 active:text-white",
     active
       ? "bg-white/15 font-bold text-white data-active:bg-white/15 data-active:font-bold data-active:text-white"
       : "font-medium text-white/68"
@@ -56,7 +56,7 @@ function itemClasses(active: boolean) {
 function NavBadge({ count }: { count?: number }) {
   if (!count) return null
   return (
-    <span className="grid h-[17px] min-w-[18px] place-items-center rounded bg-[#B6BDC6] px-1 text-[10px] font-extrabold text-[#101214]">
+    <span className="grid h-[17px] min-w-4.5 place-items-center rounded bg-line-strong px-1 text-caption font-extrabold text-ink-strong">
       {count}
     </span>
   )
@@ -174,7 +174,7 @@ function NavParent({
                   isActive={active}
                   onClick={onNavigate}
                   className={cn(
-                    "h-auto rounded px-2.5 py-1.5 text-[12.5px] transition-colors hover:bg-white/10 hover:text-white active:bg-white/10 active:text-white",
+                    "h-auto rounded px-2.5 py-1.5 text-caption transition-colors hover:bg-white/10 hover:text-white active:bg-white/10 active:text-white",
                     active
                       ? "bg-white/12 font-bold text-white data-active:bg-white/12 data-active:font-bold data-active:text-white"
                       : "font-medium text-white/60"
@@ -268,13 +268,13 @@ export function Sidebar({
           <div className="grid gap-2">
             <BrandLogo tone="dark" width={172} />
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-0.5">
-              <span className="text-[10.5px] tracking-widest text-white/50">{systemLabel}</span>
+              <span className="text-caption tracking-widest text-white/50">{systemLabel}</span>
               {/* Not decoration: a Sales Admin and a Sales User see the same
                   screens with different controls on them, and until now the
                   only way to tell which you held was to notice what was
                   missing. */}
               {accessLabel ? (
-                <span className="rounded-full bg-white/12 px-2 py-0.5 text-[9.5px] font-bold tracking-wide text-white/75 uppercase">
+                <span className="rounded-full bg-white/12 px-2 py-0.5 text-caption font-bold tracking-wide text-white/75 uppercase">
                   {accessLabel}
                 </span>
               ) : null}
@@ -286,7 +286,7 @@ export function Sidebar({
         <SidebarContent className="flex-1 gap-0 overflow-y-auto">
           {navGroups.map((group) => (
             <SidebarGroup key={group.label} className="p-0">
-              <SidebarGroupLabel className="h-auto px-3 pt-3.5 pb-1.5 text-[10px] font-bold tracking-[1.2px] text-white/38 uppercase">
+              <SidebarGroupLabel className="h-auto px-3 pt-3.5 pb-1.5 text-caption font-bold tracking-[1.2px] text-white/38 uppercase">
                 {group.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -337,8 +337,8 @@ export function Sidebar({
             >
               <UserAvatar name={name} avatarUrl={avatarUrl} className="size-8" />
               <div className="min-w-0 flex-1 leading-tight">
-                <div className="truncate text-[12.5px] font-semibold">{name}</div>
-                <div className="truncate text-[10.5px] text-white/55">{subtitle}</div>
+                <div className="truncate text-caption font-semibold">{name}</div>
+                <div className="truncate text-caption text-white/55">{subtitle}</div>
               </div>
             </Link>
           )}

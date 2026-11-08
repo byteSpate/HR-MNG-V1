@@ -15,6 +15,8 @@ import { StageChangeDialog } from "@/components/sales/opportunities/stage-change
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
 const QUIET = "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
@@ -135,7 +137,7 @@ export function StageUpdateDialog({
 
   return (
     <Dialog open onOpenChange={(next) => !next && !move.isPending && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className={cx(dialogWidthClass("lg"), "max-h-[90vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>Update stage</DialogTitle>
         </DialogHeader>

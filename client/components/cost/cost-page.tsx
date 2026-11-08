@@ -86,7 +86,7 @@ function MonthStepper({
       >
         <RiArrowLeftSLine className="size-4" aria-hidden />
       </Button>
-      <span aria-live="polite" className="min-w-[130px] text-center text-[13px] font-bold">
+      <span aria-live="polite" className="min-w-32.5 text-center text-[13px] font-bold">
         {monthName(period.month)} {period.year}
       </span>
       <Button

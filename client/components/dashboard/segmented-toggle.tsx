@@ -43,7 +43,7 @@ export function SegmentedToggle<T extends string>({
     <div
       role="group"
       aria-label={label}
-      className={cn("flex rounded-md border border-[#E4E9EF] bg-white p-0.5", className)}
+      className={cn("flex rounded-md border border-line bg-white p-0.5", className)}
     >
       {options.map(({ value: optionValue, label: optionLabel, Icon }) => {
         const active = optionValue === value
@@ -56,10 +56,10 @@ export function SegmentedToggle<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(optionValue)}
             className={cn(
-              "gap-1.5 rounded px-3 text-[12px] transition-colors",
+              "gap-1.5 rounded px-3 text-caption transition-colors",
               active
-                ? "bg-[#17191C] font-bold text-white hover:bg-[#17191C] hover:text-white"
-                : "font-semibold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+                ? "bg-ink font-bold text-white hover:bg-ink hover:text-white"
+                : "font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
             )}
           >
             {Icon ? <Icon className="size-3.5" aria-hidden /> : null}

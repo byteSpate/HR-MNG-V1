@@ -110,7 +110,7 @@ export function StatementTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <div className="min-w-[640px]">
+      <div className="min-w-160">
         <div className="grid grid-cols-[1fr_140px_140px] gap-4 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
           <span>Particulars</span>
           <span className="text-right">{currentLabel}</span>

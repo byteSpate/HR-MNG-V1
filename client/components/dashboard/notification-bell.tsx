@@ -22,8 +22,8 @@ const FEED_LIMIT = 8
  * fine and need no flag.
  */
 const SEVERITY_DOT: Partial<Record<EventSeverity, string>> = {
-  WARNING: "bg-[#C98A15]",
-  ERROR: "bg-[#B03A3A]",
+  WARNING: "bg-warning",
+  ERROR: "bg-danger",
 }
 
 /**
@@ -49,10 +49,10 @@ function FeedRow({ event, home }: { event: EventItem; home: string }) {
       <div className="flex items-start gap-2">
         {dot ? <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${dot}`} aria-hidden /> : null}
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-[#1C2733]">{event.title}</div>
-          {event.meta ? <div className="text-[11.5px] text-[#5F6B7C]">{event.meta}</div> : null}
+          <div className="text-body-sm font-semibold text-ink-body">{event.title}</div>
+          {event.meta ? <div className="text-caption text-ink-muted">{event.meta}</div> : null}
         </div>
-        <span className="shrink-0 text-[11px] whitespace-nowrap text-[#8792A3]">
+        <span className="shrink-0 text-caption whitespace-nowrap text-ink-muted">
           {timeAgo(event.createdAt)}
         </span>
       </div>
@@ -63,13 +63,13 @@ function FeedRow({ event, home }: { event: EventItem; home: string }) {
   // is prefixed here. An event with no href is a statement of fact with
   // nowhere to go, and must not become a dead link.
   return event.href ? (
-    <li className="border-b border-[#EEF1F5] last:border-b-0">
-      <Link href={`${home}${event.href}`} className="block px-3.5 py-2.5 transition-colors hover:bg-[#F4F6F9]">
+    <li className="border-b border-surface-sunken last:border-b-0">
+      <Link href={`${home}${event.href}`} className="block px-3.5 py-2.5 transition-colors hover:bg-surface-hover">
         {body}
       </Link>
     </li>
   ) : (
-    <li className="border-b border-[#EEF1F5] px-3.5 py-2.5 last:border-b-0">{body}</li>
+    <li className="border-b border-surface-sunken px-3.5 py-2.5 last:border-b-0">{body}</li>
   )
 }
 
@@ -112,39 +112,39 @@ export function NotificationBell() {
             variant="outline"
             size="icon"
             aria-label="Recent activity"
-            className="relative size-8.5 rounded border-[#E4E9EF] text-[#55657A] hover:bg-[#F4F6F9]"
+            className="relative size-8.5 rounded border-line text-ink-muted hover:bg-surface-hover"
           />
         }
       >
         <RiNotification3Line className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 min-w-80 p-0">
-        <div className="border-b border-[#EEF1F5] px-3.5 py-2.5 text-[13px] font-bold">
+        <div className="border-b border-surface-sunken px-3.5 py-2.5 text-body-sm font-bold">
           Recent activity
         </div>
 
         {feed.isPending ? (
           <ul>
             {[0, 1, 2].map((i) => (
-              <li key={i} className="border-b border-[#EEF1F5] px-3.5 py-2.5 last:border-b-0">
-                <div className="h-3 w-40 animate-pulse rounded bg-[#EEF1F5]" />
-                <div className="mt-1.5 h-2.5 w-24 animate-pulse rounded bg-[#F4F6F9]" />
+              <li key={i} className="border-b border-surface-sunken px-3.5 py-2.5 last:border-b-0">
+                <div className="h-3 w-40 animate-pulse rounded bg-surface-sunken" />
+                <div className="mt-1.5 h-2.5 w-24 animate-pulse rounded bg-surface-hover" />
               </li>
             ))}
           </ul>
         ) : feed.isError ? (
-          <div className="px-3.5 py-4 text-[12.5px] text-[#5F6B7C]">
+          <div className="px-3.5 py-4 text-caption text-ink-muted">
             Activity could not be loaded.{" "}
             <Button
               variant="link"
               onClick={() => feed.refetch()}
-              className="h-auto p-0 text-[12.5px] font-bold text-[#1C2733] underline"
+              className="h-auto p-0 text-caption font-bold text-ink-body underline"
             >
               Retry
             </Button>
           </div>
         ) : items.length === 0 ? (
-          <div className="px-3.5 py-4 text-[12.5px] text-[#5F6B7C]">
+          <div className="px-3.5 py-4 text-caption text-ink-muted">
             Nothing has happened yet that concerns you.
           </div>
         ) : (
@@ -155,7 +155,7 @@ export function NotificationBell() {
           </ul>
         )}
 
-        <div className="border-t border-[#EEF1F5] bg-[#F4F6F9] px-3.5 py-2.5 text-[11.5px] text-[#5F6B7C]">
+        <div className="border-t border-surface-sunken bg-surface-hover px-3.5 py-2.5 text-caption text-ink-muted">
           A record of what happened here. Nothing on this list was emailed.
         </div>
       </DropdownMenuContent>

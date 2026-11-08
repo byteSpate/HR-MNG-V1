@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { VatChoice, vatIncomplete } from "./vat-choice"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -153,7 +154,7 @@ export function CustomerPoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>{po ? `Edit ${po.serial}` : "Record customer PO"}</DialogTitle>
           <DialogDescription>What the customer ordered on this Opportunity.</DialogDescription>

@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const BUCKET_TONE: Record<AgeingBucket, Tone> = {
   "Not due": "neutral",
@@ -191,7 +192,7 @@ function StatementDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Statement · {customer.legalName}</DialogTitle>
           <DialogDescription>Everything owed and paid in the period, with a running balance.</DialogDescription>

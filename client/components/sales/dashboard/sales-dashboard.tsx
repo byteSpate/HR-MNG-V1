@@ -46,6 +46,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MEETING_ICON, MINUTES_ICON, TASK_ICON, taka } from "@/components/sales/shared/sales-shared"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 /** The server's own rule, checked here too so the answer arrives before a round trip. */
 const MONEY = /^\d{1,12}(\.\d{1,2})?$/
@@ -407,7 +408,7 @@ function TargetEditor({
       {/* Wider than the default dialog: the five-column quarter table needs
           36rem, and in the default width it scrolled sideways and hid the
           Result and Deals columns. */}
-      <DialogContent className="sm:max-w-[42rem]">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>
             Yearly target — {employeeName}, {calendarYear}

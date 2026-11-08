@@ -63,6 +63,7 @@ import {
   formatHours,
   formatMonthLabel,
 } from "@/components/attendance/attendance-shared"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const STATUS_OPTIONS = (Object.keys(STATUS_LABEL) as AttendanceStatus[])
   // NOT_TRACKED is a projection artefact rather than something a day can be
@@ -572,7 +573,7 @@ function EmployeeDaysDialog({
   return (
     <>
       <Dialog open onOpenChange={(next) => !next && onClose()}>
-        <DialogContent className="sm:max-w-3xl!">
+        <DialogContent className={dialogWidthClass("lg")}>
           <DialogHeader>
             <DialogTitle>
               {employee.fullName}, {formatMonthLabel(month, year)}

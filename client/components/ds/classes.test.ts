@@ -3,8 +3,14 @@ import assert from "node:assert/strict";
 import { headingClass, textClass, type HeadingLevel, type TextVariant } from "./classes";
 import { TYPE_SCALE } from "@/lib/design/tokens";
 
-const levels: HeadingLevel[] = ["page", "section", "card"];
+const levels: HeadingLevel[] = ["display", "page", "section", "card"];
 const variants: TextVariant[] = ["body", "small", "caption", "muted", "danger", "notice"];
+
+test("display heading is heading on a phone and display from sm up", () => {
+  const c = headingClass("display");
+  assert.match(c, /\btext-heading\b/);
+  assert.match(c, /\bsm:text-display\b/);
+});
 
 test("page heading is title on a phone and heading from md up", () => {
   const c = headingClass("page");

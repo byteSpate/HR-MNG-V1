@@ -46,7 +46,7 @@ const STAT_ICON: Record<string, RemixiconComponentType> = {
  * neutral-black shadow on a cool grey canvas reads as dirt.
  */
 const SURFACE =
-  "@container flex flex-col gap-2.5 rounded-md border border-[#E4E9EF] bg-white p-4 shadow-[0_8px_24px_-12px_rgba(28,39,51,0.20)] @[260px]:p-5"
+  "@container flex flex-col gap-2.5 rounded-md border border-line bg-white p-4 shadow-[0_8px_24px_-12px_rgba(28,39,51,0.20)] @[260px]:p-5"
 
 function CardBody({ stat }: { stat: Stat }) {
   const Icon = stat.icon ? STAT_ICON[stat.icon] : undefined
@@ -68,7 +68,7 @@ function CardBody({ stat }: { stat: Stat }) {
               <Icon className="size-3.5" aria-hidden />
             </span>
           ) : null}
-          <span className="truncate text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+          <span className="truncate text-caption font-bold tracking-wide text-ink-muted uppercase">
             {stat.label}
           </span>
         </span>
@@ -81,12 +81,12 @@ function CardBody({ stat }: { stat: Stat }) {
               "font-heading text-xl font-bold tracking-tight whitespace-nowrap @[260px]:text-2xl",
               // Muted, so a card that could not load is visibly not a number
               // sitting next to three that are.
-              stat.failed && "text-[#98A2B0]"
+              stat.failed && "text-ink-muted"
             )}
           >
             {stat.value}
           </div>
-          <div className="mt-0.5 truncate text-xs text-[#5F6B7C]">{stat.sub}</div>
+          <div className="mt-0.5 truncate text-xs text-ink-muted">{stat.sub}</div>
         </div>
         {/* The slot keeps its width whether or not there is a series, so a grid
             of four cards does not reflow when one has a sparkline and three
@@ -127,9 +127,9 @@ export function StatCard({ stat }: { stat: Stat }) {
         // lifts a hair on hover and presses back down on click, so the
         // pointer gets the same tactile answer twice rather than only on press.
         "transition-[box-shadow,transform,border-color] duration-180 ease-out",
-        "hover:-translate-y-0.5 hover:border-[#CFD7E0] hover:shadow-[0_14px_30px_-12px_rgba(28,39,51,0.30)]",
+        "hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[0_14px_30px_-12px_rgba(28,39,51,0.30)]",
         "active:translate-y-0 active:shadow-[0_6px_18px_-12px_rgba(28,39,51,0.28)]",
-        "focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none",
+        "focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none",
         // The lift is decoration to somebody who asked for less motion; the
         // border and shadow still answer the hover.
         "motion-reduce:transition-none motion-reduce:hover:translate-y-0"

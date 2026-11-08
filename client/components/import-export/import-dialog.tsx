@@ -18,6 +18,8 @@ import {
   type ImportRowIssue,
 } from "@/lib/api/import-export"
 import { useSession } from "@/lib/auth/session-context"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 /** `parseSheet` on the server reads only these two. */
 const IMPORT_ACCEPT = ["xlsx", "csv"]
@@ -162,7 +164,7 @@ export function ImportDialog({
         if (!open) onClose()
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className={cx(dialogWidthClass("xl"), "max-h-[90vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

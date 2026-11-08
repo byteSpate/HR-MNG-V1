@@ -61,7 +61,7 @@ export function ConfirmEmailChangeForm({ token }: { token: string }) {
         <p>You will be signed out everywhere and will need to sign in again.</p>
       </AuthNotice>
 
-      {error ? <p className="text-[12.5px] text-[#B03A3A]">{error}</p> : null}
+      {error ? <p className="text-caption text-danger">{error}</p> : null}
 
       <Button type="button" disabled={confirm.isPending} onClick={() => confirm.mutate()}>
         {confirm.isPending ? "Confirming…" : "Confirm this address"}

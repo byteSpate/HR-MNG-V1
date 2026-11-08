@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { BrandLogo } from "@/components/brand/brand"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * The split screen every signed-out page sits in.
@@ -33,7 +34,7 @@ export function AuthShell({
         is not decoration: on a shared office machine it is the only thing that
         says which system is being signed into.
       */}
-      <aside className="relative isolate flex w-full min-w-0 flex-col overflow-hidden bg-[#0E1012] px-6 py-5 text-white md:w-[42%] md:min-w-95 md:p-10">
+      <aside className="relative isolate flex w-full min-w-0 flex-col overflow-hidden bg-ink-strong px-6 py-5 text-white md:w-[42%] md:min-w-95 md:p-10">
         {/*
           The source logo is a glow on black. Echoing it here in the brand's own
           red and green keeps the panel from being a flat rectangle without
@@ -57,7 +58,7 @@ export function AuthShell({
           <h2 className="font-heading text-[34px] leading-[1.12] font-bold tracking-tighter text-balance">
             One login. Your whole working month.
           </h2>
-          <p className="mt-4.5 max-w-[46ch] text-[14.5px] leading-[1.7] text-white/60">
+          <p className="mt-4.5 max-w-[46ch] text-body leading-[1.7] text-white/60">
             Check in, request leave, read payslips, approve claims. Whatever your role, it is behind
             this door.
           </p>
@@ -69,13 +70,13 @@ export function AuthShell({
 
       <main className="flex flex-1 items-start justify-center px-5 pt-10 pb-12 md:items-center md:px-7 md:py-10">
         <div className="w-full max-w-100">
-          <h1 className="font-heading text-[26px] font-bold tracking-tight">{title}</h1>
-          <p className="mt-2 mb-7 text-[13.5px] text-[#55657A]">{subtitle}</p>
+          <Heading level="display">{title}</Heading>
+          <p className="mt-2 mb-7 text-body-sm text-ink-muted">{subtitle}</p>
 
           {children}
 
           {footer ? (
-            <div className="mt-6 border-t border-[#E4E9EF] pt-5 text-center text-[11.5px] leading-[1.6] text-[#6B7789]">
+            <div className="mt-6 border-t border-line pt-5 text-center text-caption leading-[1.6] text-ink-muted">
               {footer}
             </div>
           ) : null}

@@ -38,16 +38,16 @@ export default async function LoginPage() {
             the app: this picks which credential you are signing in with, so
             it should read as a switch rather than as navigation. */}
         <Tabs defaultValue="staff">
-          <TabsList className="mb-6 h-auto! w-full gap-1 rounded-lg bg-[#EFF2F6] p-1">
+          <TabsList className="mb-6 h-auto! w-full gap-1 rounded-lg bg-surface-sunken p-1">
             <TabsTrigger
               value="staff"
-              className="h-9 flex-1 rounded-md text-[13px] font-semibold text-[#5F6B7C] after:hidden data-active:bg-white data-active:text-[#17191C] data-active:shadow-[0_1px_2px_rgba(28,39,51,0.10)]"
+              className="h-9 flex-1 rounded-md text-body-sm font-semibold text-ink-muted after:hidden data-active:bg-white data-active:text-ink data-active:shadow-[0_1px_2px_rgba(28,39,51,0.10)]"
             >
               Staff
             </TabsTrigger>
             <TabsTrigger
               value="admin"
-              className="h-9 flex-1 rounded-md text-[13px] font-semibold text-[#5F6B7C] after:hidden data-active:bg-white data-active:text-[#17191C] data-active:shadow-[0_1px_2px_rgba(28,39,51,0.10)]"
+              className="h-9 flex-1 rounded-md text-body-sm font-semibold text-ink-muted after:hidden data-active:bg-white data-active:text-ink data-active:shadow-[0_1px_2px_rgba(28,39,51,0.10)]"
             >
               Administrator
             </TabsTrigger>
@@ -66,7 +66,7 @@ export default async function LoginPage() {
           way, and a link that moved when you switched tabs would suggest there
           were two different resets.
         */}
-        <p className="mt-5 text-center text-[12px] text-[#5F6B7C]">
+        <p className="mt-5 text-center text-caption text-ink-muted">
           <Link href="/forgot-password" className={AUTH_LINK}>
             Forgot your password?
           </Link>

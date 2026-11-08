@@ -43,7 +43,7 @@ export default async function ApproveEmailChangePage({
             </p>
             <p>Nothing has changed on your account.</p>
           </AuthNotice>
-          <p className="text-center text-[12px] text-[#5F6B7C]">
+          <p className="text-center text-caption text-ink-muted">
             <Link href="/login" className={AUTH_LINK}>
               Back to sign in
             </Link>

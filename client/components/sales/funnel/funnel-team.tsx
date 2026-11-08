@@ -54,7 +54,7 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
       <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
         <div className="overflow-x-auto">
           {/* One line per value, so rows stay one height (owner, 2026-10-19). */}
-          <table className="w-full min-w-[1400px] border-collapse text-sm [&_td]:whitespace-nowrap">
+          <table className="w-full min-w-350 border-collapse text-sm [&_td]:whitespace-nowrap">
             <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
               <tr>
                 <th scope="col" className="px-4 py-2 text-left font-medium">

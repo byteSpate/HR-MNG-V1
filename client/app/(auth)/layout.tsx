@@ -16,7 +16,7 @@ const sora = Sora({
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={cn(publicSans.variable, sora.variable, "font-sans min-h-screen w-full bg-[#FBFBFC] text-[#17191C]")}>
+    <div className={cn(publicSans.variable, sora.variable, "font-sans min-h-screen w-full bg-surface-subtle text-ink")}>
       {children}
     </div>
   )

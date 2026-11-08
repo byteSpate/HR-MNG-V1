@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 export function EquityTable({ result }: { result: EquityResult }) {
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-[640px] text-sm">
+      <table className="w-full min-w-160 text-sm">
         <thead>
           <tr className="border-b bg-muted/40 text-xs font-medium text-muted-foreground">
             <th className="px-4 py-2 text-left">Particulars</th>

@@ -46,6 +46,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 const MODES = Object.keys(MEETING_MODE_LABEL) as SalesMeetingMode[]
 /** The deal select's "none", since an empty value reads as nothing chosen at all. */
@@ -211,7 +213,7 @@ export function MeetingFormDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={cx(dialogWidthClass("md"), "max-h-[90vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>{meeting ? "Edit meeting" : "Schedule a meeting"}</DialogTitle>
         </DialogHeader>

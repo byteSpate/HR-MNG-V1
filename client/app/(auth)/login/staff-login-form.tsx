@@ -79,7 +79,7 @@ export function StaffLoginForm() {
 
       <AuthSubmit submitting={submitting} label="Sign in" pendingLabel="Signing in…" />
 
-      <p className="text-center text-[11.5px] leading-[1.6] text-[#5F6B7C]">
+      <p className="text-center text-caption leading-[1.6] text-ink-muted">
         First time signing in? Use the temporary ID and password your HR team sent you. You&rsquo;ll
         be asked to set a new password.
       </p>

@@ -13,6 +13,8 @@ import { PayslipDetail } from "@/components/payroll/payslip-detail"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 /**
  * A run only becomes real pay at APPROVED. Before that the figures are a
@@ -156,7 +158,7 @@ export function PayslipsCard({ employeeId }: { employeeId: string }) {
           employee's own page does: there the table owns the full width, while
           this card is one cell of a grid and the breakdown does not fit in it. */}
       <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-h-[86dvh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className={cx(dialogWidthClass("lg"), "max-h-[86dvh] overflow-y-auto")}>
           <DialogHeader>
             <DialogTitle>Payslip</DialogTitle>
           </DialogHeader>

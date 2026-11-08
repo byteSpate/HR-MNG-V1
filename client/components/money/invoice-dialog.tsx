@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { vatFieldsFor } from "@/lib/vat-payload"
 import { VatChoice } from "./vat-choice"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -141,7 +142,7 @@ export function InvoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>{invoice ? `Edit invoice ${invoice.invoiceNumber}` : "Create invoice"}</DialogTitle>
           <DialogDescription>

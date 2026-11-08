@@ -91,7 +91,7 @@ export function ImportGuide({ basePath }: { basePath: string }) {
             the same list on its Guide sheet.
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-[12.5px]">
+            <table className="w-full min-w-160 text-left text-[12.5px]">
               <thead>
                 <tr className="border-b border-[#E4E9EF] text-[#5F6B7C]">
                   <th className="py-1.5 pr-3 font-semibold">Column</th>

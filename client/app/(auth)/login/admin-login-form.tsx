@@ -74,7 +74,7 @@ export function AdminLoginForm() {
 
       <AuthSubmit submitting={submitting} label="Sign in" pendingLabel="Signing in…" />
 
-      <p className="text-center text-[11.5px] leading-[1.6] text-[#5F6B7C]">
+      <p className="text-center text-caption leading-[1.6] text-ink-muted">
         Administrator accounts sign in with a work email. Staff use their employee ID on the other
         tab.
       </p>

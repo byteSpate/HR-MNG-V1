@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 /**
  * Create, edit or end a recurring commitment. Ending is the only way a
@@ -173,7 +175,7 @@ export function CommitmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={cx(dialogWidthClass("md"), "max-h-[85vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit fixed cost" : "New fixed cost"}</DialogTitle>
         </DialogHeader>

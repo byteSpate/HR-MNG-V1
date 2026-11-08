@@ -28,18 +28,18 @@ export function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold whitespace-nowrap",
+        "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-caption font-semibold whitespace-nowrap",
         "transition-[transform,background-color,border-color,color] duration-150 ease-out-quint",
-        "focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none",
+        "focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none",
         "active:scale-97 motion-reduce:transition-none",
         active
-          ? "border-[#17191C] bg-[#17191C] text-white"
-          : "border-[#E4E9EF] bg-white text-[#3F4A59] hover:border-[#CFD6E0] hover:bg-[#F7F9FC]"
+          ? "border-ink bg-ink text-white"
+          : "border-line bg-white text-ink-soft hover:border-line-strong hover:bg-surface-subtle"
       )}
     >
       {label}
       {count === undefined ? null : (
-        <span className={cn("text-[11px] font-bold", active ? "text-white/60" : "text-[#98A2B1]")}>
+        <span className={cn("text-caption font-bold", active ? "text-white/60" : "text-ink-muted")}>
           {count}
         </span>
       )}

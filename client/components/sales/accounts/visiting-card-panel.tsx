@@ -22,6 +22,7 @@ import { Panel } from "@/components/sales/shared/panel"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Img } from "@/components/ds/img"
 
 /**
  * The card picture in its frame.
@@ -74,9 +75,10 @@ function CardImage({
           </Button>
         </div>
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Img
           key={attempt}
+          width={640}
+          height={400}
           src={url}
           alt={`Visiting card of ${name}`}
           onLoad={() => setLoaded(true)}

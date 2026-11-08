@@ -29,6 +29,7 @@ import {
   TONE,
   toMessage,
 } from "@/components/dashboard/record-kit"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 /**
  * The attendance grid resolves the fallback shift by this literal name for
@@ -259,7 +260,7 @@ function ShiftEditDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className={dialogWidthClass("md")}>
         <DialogHeader>
           <DialogTitle>{shift ? `Edit ${shift.name}` : "Add a shift"}</DialogTitle>
           <DialogDescription>
