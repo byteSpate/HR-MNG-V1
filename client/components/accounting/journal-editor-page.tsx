@@ -198,7 +198,7 @@ function JournalForm({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
           {isDraft && (
             <Button variant="ghost" onClick={() => discard.mutate()} disabled={discard.isPending}>
               <RiDeleteBinLine className="size-4" /> Discard
