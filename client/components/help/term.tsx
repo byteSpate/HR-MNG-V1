@@ -34,7 +34,7 @@ export function Term({
               render={
                 <span
                   lang={lang}
-                  className={`cursor-help border-b border-dotted border-line-strong ${lang ? "font-sans" : ""}`}
+                  className={`relative cursor-help pointer-coarse:after:absolute pointer-coarse:after:-inset-x-1 pointer-coarse:after:-inset-y-3 pointer-coarse:after:content-[''] border-b border-dotted border-line-strong ${lang ? "font-sans" : ""}`}
                 >
                   {term}
                 </span>

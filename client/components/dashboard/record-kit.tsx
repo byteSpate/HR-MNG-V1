@@ -522,7 +522,7 @@ export function FieldHelp({ label, children }: { label: string; children: ReactN
                 <button
                   type="button"
                   aria-label={`About ${label}`}
-                  className="inline-flex size-4 shrink-0 cursor-help items-center justify-center rounded-full text-ink-muted transition-colors hover:text-ink-body focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
+                  className="relative inline-flex size-4 shrink-0 cursor-help pointer-coarse:after:absolute pointer-coarse:after:-inset-3 pointer-coarse:after:content-[''] items-center justify-center rounded-full text-ink-muted transition-colors hover:text-ink-body focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
                 >
                   <RiQuestionLine className="size-3.5" aria-hidden />
                 </button>

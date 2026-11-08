@@ -303,7 +303,7 @@ function TeamTable({ team, onReview }: { team: SalesTeamRow[]; onReview: (employ
                 <button
                   type="button"
                   onClick={() => onReview(row.employeeId)}
-                  className="rounded-md px-2 py-1 text-caption font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-body focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
+                  className="rounded-md px-2 py-1 pointer-coarse:min-h-10 pointer-coarse:px-3 text-caption font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-body focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
                 >
                   Review
                 </button>

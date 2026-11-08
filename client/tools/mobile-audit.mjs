@@ -122,8 +122,10 @@ const MEASURE = () => {
   const inlineLink = (el) => el.tagName === "A" && getComputedStyle(el).display === "inline"
   const tiny = taps.filter((el) => {
     const r = el.getBoundingClientRect()
-    // A checkbox draws small but its hit area is grown by an ::after box (see ui/checkbox.tsx).
-    if (el.matches('[data-slot=checkbox]')) return false
+    // A control may draw small and grow its hit area with an absolutely placed ::after box
+    // (checkbox, help dots). Count the larger of the two.
+    const after = getComputedStyle(el, "::after")
+    if (after.position === "absolute" && after.content !== "none" && parseFloat(after.height) >= 28 && parseFloat(after.width) >= 28) return false
     return !inlineLink(el) && (r.height < 28 || r.width < 28)
   })
   const smallText = all.filter((el) => {
