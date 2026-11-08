@@ -26,9 +26,9 @@ const ACTION_LABEL: Record<string, string> = {
  */
 function ChangeRow({ change }: { change: HistoryChange }) {
   return (
-    <div className="grid grid-cols-[minmax(88px,auto)_1fr] gap-x-3 gap-y-0.5 py-1 text-[12px]">
+    <div className="grid grid-cols-[minmax(88px,38%)_minmax(0,1fr)] gap-x-3 gap-y-0.5 py-1 text-[12px]">
       <dt className="truncate text-[#6B7789]">{change.label}</dt>
-      <dd className="m-0 min-w-0 text-[#1C2733]">
+      <dd className="m-0 min-w-0 break-words text-[#1C2733]">
         {change.before === null ? (
           <span className="font-medium">{change.after}</span>
         ) : (
