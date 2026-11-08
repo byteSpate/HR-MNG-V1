@@ -19,8 +19,8 @@ test("counts every place that breaks each rule, ignoring exempt folders", () => 
   assert.equal(c.arbitraryWidth, 2);
 });
 
-test("exempt folders are components/ui, components/ds, lib/design and globals.css", () => {
-  assert.ok(isExempt("components/ui/button.tsx"));
+test("exempt folders are components/ds, lib/design and globals.css, and components/ui is checked", () => {
+  assert.ok(!isExempt("components/ui/button.tsx"));
   assert.ok(isExempt("components/ds/heading.tsx"));
   assert.ok(isExempt("lib/design/tokens.ts"));
   assert.ok(isExempt("app/globals.css"));
