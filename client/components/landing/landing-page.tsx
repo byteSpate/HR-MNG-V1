@@ -71,7 +71,7 @@ export function LandingPage() {
 
       <section className="mx-auto grid w-full max-w-290 grid-cols-1 items-center gap-10 px-5.5 pt-14 pb-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:gap-14 lg:px-7 lg:pt-21 lg:pb-18">
         <div>
-          <Heading level="hero" as="h1" className="m-0 text-[38px] leading-[1.04] sm:text-[58px]">
+          <Heading level="hero" as="h1" className="m-0 text-hero-sm leading-[1.04] sm:text-hero">
             Payroll that closes itself.
           </Heading>
           <p className="mt-5.5 max-w-120 text-title-sm leading-[1.65] text-ink-muted text-pretty">
@@ -125,7 +125,7 @@ export function LandingPage() {
               </span>
             ))}
           </div>
-          <div className="font-heading text-[34px] font-bold tracking-tighter">{role.stat}</div>
+          <div className="font-heading text-stat font-bold tracking-tighter">{role.stat}</div>
           <div className="mt-1 text-body-sm text-white/55">{role.statLabel}</div>
           <div className="mt-5 flex flex-col border-t border-white/12">
             {role.actions.map((action) => (
@@ -211,7 +211,7 @@ export function LandingPage() {
           <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-8">
             {bandStats.map((stat) => (
               <div key={stat.label} className="border-l border-white/15 pl-5">
-                <div className="font-heading text-[38px] font-bold tracking-tighter">{stat.value}</div>
+                <div className="font-heading text-hero-sm font-bold tracking-tighter">{stat.value}</div>
                 <div className="mt-1.5 text-body-sm leading-snug text-white/55">{stat.label}</div>
               </div>
             ))}
@@ -242,7 +242,7 @@ export function LandingPage() {
       </section>
 
       <section className="mx-auto w-full max-w-290 px-5 py-15 sm:px-7 sm:py-24 text-center">
-        <Heading level="hero" className="m-0 text-[30px] sm:text-[40px]">
+        <Heading level="hero" className="m-0 text-stat sm:text-hero-sm">
           Close your next payroll in two days.
         </Heading>
         <p className="mx-auto mt-4 max-w-110 text-lead leading-relaxed text-ink-muted">

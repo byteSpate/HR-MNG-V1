@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PALETTE, TYPE_SCALE, TEXT_ON_SURFACE_PAIRS, contrast } from "./tokens";
+import { BIG_SCALE, PALETTE, TYPE_SCALE, TEXT_ON_SURFACE_PAIRS, contrast } from "./tokens";
 
 const css = readFileSync(join(__dirname, "../../app/globals.css"), "utf8");
 
@@ -23,6 +23,13 @@ test("every name in PALETTE exists as a CSS variable in globals.css", () => {
 
 test("every type size exists as a CSS variable in globals.css", () => {
   for (const [name, px] of Object.entries(TYPE_SCALE)) {
+    assert.match(css, new RegExp(`--text-${name}:\\s*${px}px`), `--text-${name} missing`);
+  }
+});
+
+test("the big marketing sizes are 30px and up, and exist as CSS variables", () => {
+  for (const [name, px] of Object.entries(BIG_SCALE)) {
+    assert.ok(px >= 30, `${name} is ${px}px`);
     assert.match(css, new RegExp(`--text-${name}:\\s*${px}px`), `--text-${name} missing`);
   }
 });

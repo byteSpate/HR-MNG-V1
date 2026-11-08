@@ -22,8 +22,7 @@ const eslintConfig = defineConfig([
       "no-restricted-syntax": [
         "error",
         {
-          // 30px and up (landing, big numbers) are one-offs outside the scale.
-          selector: "Literal[value=/text-\\[([0-9]|[12][0-9])(\\.\\d+)?px\\]/]",
+          selector: "Literal[value=/text-\\[\\d+(\\.\\d+)?px\\]/]",
           message: "Do not pick a font size by hand. Use a named size, for example text-caption, text-body-sm or text-body, or the Heading and Text pieces.",
         },
         {

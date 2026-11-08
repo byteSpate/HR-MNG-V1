@@ -5,8 +5,7 @@ import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const RULES = {
-  // Display sizes of 30px and up (landing page, big numbers) are one-offs outside the scale.
-  fontSize: /text-\[(?:[0-9]|[12][0-9])(?:\.\d+)?px\]/,
+  fontSize: /text-\[\d+(?:\.\d+)?px\]/,
   hexColor: /[a-z][a-z0-9-]*-\[#[0-9a-fA-F]{3,8}\]/,
   arbitraryWidth: /(?<![\w-])(?:w|min-w|max-w)-\[\d+(?:\.\d+)?px\]/,
   rawHeading: /<h[1-3][\s>]/,

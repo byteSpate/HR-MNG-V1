@@ -45,9 +45,9 @@ test("a new violation in a file that already has one raises the count", () => {
   assert.ok(after.fontSize > before.fontSize);
 });
 
-test("display sizes of 30px and up are one-offs and are not counted", () => {
-  const c = countFiles({ "components/a.tsx": '<p className="text-[58px] text-[34px] text-[30px] text-[29px] text-[12.5px]">' });
-  assert.equal(c.fontSize, 2);
+test("big hand-picked sizes are counted too", () => {
+  const c = countFiles({ "components/a.tsx": '<p className="text-[58px] text-[34px] text-[12.5px]">' });
+  assert.equal(c.fontSize, 3);
 });
 
 test("hand-picked colors on a side or a variant are counted too", () => {

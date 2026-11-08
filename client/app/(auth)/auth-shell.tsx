@@ -55,7 +55,7 @@ export function AuthShell({
         <BrandLogo tone="dark" width={186} className="self-start" />
 
         <div className="my-auto hidden max-w-105 md:block">
-          <Heading level="hero" className="text-[34px] leading-[1.12]">
+          <Heading level="hero" className="text-stat leading-[1.12]">
             One login. Your whole working month.
           </Heading>
           <p className="mt-4.5 max-w-[46ch] text-body leading-[1.7] text-white/60">

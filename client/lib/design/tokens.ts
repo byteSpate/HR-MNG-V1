@@ -13,6 +13,14 @@ export const TYPE_SCALE = {
   "display": 28,
 } as const
 
+/** Big sizes for the landing page, sign-in page, clock and the 404. Not for app screens. */
+export const BIG_SCALE = {
+  "stat": 32,
+  "hero-sm": 40,
+  "hero": 60,
+  "giant": 80,
+} as const
+
 export type TypeName = keyof typeof TYPE_SCALE
 
 /** Named colors. Hex is lower case so the test can match it in the CSS. */

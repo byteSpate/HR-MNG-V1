@@ -181,7 +181,7 @@ export function LostCompass() {
   return (
     <div
       aria-hidden
-      className="mb-1 flex items-end gap-1.5 font-[family-name:var(--font-heading)] text-[64px] leading-none font-bold tracking-tight text-line select-none sm:text-[80px]"
+      className="mb-1 flex items-end gap-1.5 font-[family-name:var(--font-heading)] text-hero leading-none font-bold tracking-tight text-line select-none sm:text-giant"
     >
       <span ref={leftRef} className="inline-block will-change-transform">
         <span className="rise-in inline-block">4</span>

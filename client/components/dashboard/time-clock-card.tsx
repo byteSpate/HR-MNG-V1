@@ -64,7 +64,7 @@ export function TimeClockCard({
       </div>
 
       <div>
-        <div className="font-heading text-[32px] font-bold tracking-tight tabular-nums">
+        <div className="font-heading text-stat font-bold tracking-tight tabular-nums">
           {now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" })}
         </div>
         <div className="mt-0.5 text-caption text-white/65">
