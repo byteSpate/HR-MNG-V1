@@ -5,6 +5,7 @@ import type { HeatmapGroupView } from "@/lib/api/types"
 import { TONE } from "@/components/dashboard/record-kit"
 import { HeatmapStartButton } from "@/components/sales/accounts/heatmap-start-button"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 const onDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 
@@ -85,11 +86,11 @@ function Lane({
   const tone = COLOUR[colour]
   return (
     <section aria-label={tone.lane} className="min-w-0">
-      <h3 className="mb-2 flex items-center gap-2 text-[13px] font-bold">
+      <Heading level="card" className="mb-2 flex items-center gap-2">
         <span className={cn("size-2.5 rounded-full", tone.dot)} aria-hidden />
         <span className={tone.text}>{tone.lane}</span>
         <span className={`font-semibold ${TONE.muted}`}>{cards.length}</span>
-      </h3>
+      </Heading>
       {cards.length === 0 ? (
         <p className={`rounded-md border border-dashed border-[#E4E9EF] px-3 py-4 text-[12.5px] ${TONE.muted}`}>{empty}</p>
       ) : (

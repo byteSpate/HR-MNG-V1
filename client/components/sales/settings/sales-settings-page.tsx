@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 const KINDS = Object.keys(MINUTES_KIND_LABEL) as MinutesKind[]
 
@@ -247,7 +248,7 @@ function TemplateEditor({
     <Panel>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[13.5px] font-bold">Minutes template</h2>
+          <Heading level="section">Minutes template</Heading>
           <p className={`mt-0.5 max-w-[68ch] text-[12.5px] leading-relaxed ${TONE.muted}`}>
             New minutes start with these sections, in this order. Minutes already started keep the sections they
             have. A single document can still add its own sections.

@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getPayrollSettings, updatePayrollSettings } from "@/lib/api/payroll"
 import type { PayrollSettings } from "@/lib/api/payroll-types"
+import { Heading } from "@/components/ds/heading"
 
 interface Rule {
   key: keyof PayrollSettings
@@ -72,7 +73,7 @@ export function PayrollSettingsPanel({ accessToken }: { accessToken: string }) {
   return (
     <section className="space-y-4">
       <header>
-        <h2 className="font-heading text-[16px] font-bold tracking-tight">Payroll rules</h2>
+        <Heading level="section">Payroll rules</Heading>
         <p className="mt-1 text-[12.5px] text-[#5F6B7C]">Rules that change how pay is worked out.</p>
       </header>
 

@@ -17,6 +17,7 @@ import type { Tone } from "@/components/dashboard/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { Heading } from "@/components/ds/heading"
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -87,7 +88,7 @@ export function PoPart({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-heading text-[15px] font-bold tracking-tight">Customer PO</h2>
+        <Heading level="section">Customer PO</Heading>
         {canRecordPo(pos) ? (
           <Button
             type="button"
@@ -95,7 +96,7 @@ export function PoPart({
               setError(null)
               setRecording(true)
             }}
-            className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+            className="h-8 gap-1 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
           >
             <RiAddLine className="size-3.5" aria-hidden />
             Record PO
@@ -106,27 +107,27 @@ export function PoPart({
       {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
 
       {pos.length === 0 ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-          <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
+        <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+          <p className={`text-caption leading-relaxed ${TONE.muted}`}>
             No PO yet. Record the customer&apos;s PO when it arrives.
           </p>
         </div>
       ) : (
         <ul className="space-y-3">
           {pos.map((po) => (
-            <li key={po.id} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+            <li key={po.id} className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[13.5px] font-bold">{po.serial}</span>
+                    <span className="text-body-sm font-bold">{po.serial}</span>
                     <Tag label={STATUS_LABEL[po.status]} tone={STATUS_TONE[po.status]} />
                   </div>
-                  <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                  <div className={`mt-0.5 text-caption ${TONE.muted}`}>
                     {po.customerPoNumber} · {formatDate(po.date)}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <span className="mr-2 text-[13px] font-bold">{formatMoney(poNet(po), "BDT")}</span>
+                  <span className="mr-2 text-body-sm font-bold">{formatMoney(poNet(po), "BDT")}</span>
                   {canChange(po) ? (
                     <RowActions
                       actions={[
@@ -153,13 +154,13 @@ export function PoPart({
                 </div>
               </div>
 
-              {po.cancelReason ? <p className={`mt-2 text-[12px] ${TONE.danger}`}>Cancelled: {po.cancelReason}</p> : null}
+              {po.cancelReason ? <p className={`mt-2 text-caption ${TONE.danger}`}>Cancelled: {po.cancelReason}</p> : null}
 
-              <div className="mt-3 space-y-1.5 border-t border-[#EEF1F5] pt-3">
+              <div className="mt-3 space-y-1.5 border-t border-surface-sunken pt-3">
                 {po.lines.map((line) => (
-                  <div key={line.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[12.5px]">
+                  <div key={line.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-caption">
                     <span className="min-w-0 max-w-full basis-full truncate sm:flex-1 sm:basis-auto">{line.description}</span>
-                    <span className={line.vatMethod === "MANUAL" ? "shrink-0 text-[#8A5E0C]" : "shrink-0 text-[#5F6B7C]"}>
+                    <span className={line.vatMethod === "MANUAL" ? "shrink-0 text-warning" : "shrink-0 text-ink-muted"}>
                       VAT {vatLabel(line)}
                     </span>
                     <span className={`shrink-0 ${TONE.muted}`}>

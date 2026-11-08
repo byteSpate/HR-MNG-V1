@@ -17,6 +17,7 @@ import { Tag } from "@/components/dashboard/tag"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { Heading } from "@/components/ds/heading"
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -75,12 +76,12 @@ export function PaidPart({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-heading text-[15px] font-bold tracking-tight">Paid</h2>
+        <Heading level="section">Paid</Heading>
         {canEdit && canRecord ? (
           <Button
             type="button"
             onClick={() => { setError(null); setRecording(true) }}
-            className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+            className="h-8 gap-1 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
           >
             <RiAddLine className="size-3.5" aria-hidden />
             Record payment received
@@ -91,8 +92,8 @@ export function PaidPart({
       {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
 
       {receipts.length === 0 ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-          <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>No payments recorded yet.</p>
+        <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+          <p className={`text-caption leading-relaxed ${TONE.muted}`}>No payments recorded yet.</p>
         </div>
       ) : (
         <ul className="space-y-3">
@@ -111,16 +112,16 @@ export function PaidPart({
             ]
 
             return (
-              <li key={r.id} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+              <li key={r.id} className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className={`min-w-0 ${reversed ? "line-through opacity-60" : ""}`}>
-                    <div className="text-[12px] font-bold tracking-wide">{r.number}</div>
-                    <div className="text-[13.5px] font-bold">{formatMoney(r.amount, "BDT")}</div>
-                    <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                    <div className="text-caption font-bold tracking-wide">{r.number}</div>
+                    <div className="text-body-sm font-bold">{formatMoney(r.amount, "BDT")}</div>
+                    <div className={`mt-0.5 text-caption ${TONE.muted}`}>
                       {formatDate(r.date)}
                       {r.reference ? ` · ${r.reference}` : ""}
                     </div>
-                    <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                    <div className={`mt-0.5 text-caption ${TONE.muted}`}>
                       {paymentMethodLabel(r.paymentMethod)}
                       {r.bankName ? ` · ${r.bankName}` : ""}
                     </div>
@@ -131,11 +132,11 @@ export function PaidPart({
                 </div>
 
                 {reversed ? (
-                  <p className={`mt-2 text-[12px] ${TONE.danger}`}>Reversed: {r.reversalReason}</p>
+                  <p className={`mt-2 text-caption ${TONE.danger}`}>Reversed: {r.reversalReason}</p>
                 ) : null}
 
                 {Number(r.vdsAmount) > 0 || Number(r.aitAmount) > 0 ? (
-                  <div className={`mt-2.5 flex flex-wrap items-center gap-3 border-t border-[#EEF1F5] pt-2.5 text-[12px] ${reversed ? "line-through opacity-60" : ""}`}>
+                  <div className={`mt-2.5 flex flex-wrap items-center gap-3 border-t border-surface-sunken pt-2.5 text-caption ${reversed ? "line-through opacity-60" : ""}`}>
                     {Number(r.vdsAmount) > 0 ? (
                       <span>
                         VAT withheld {formatMoney(r.vdsAmount, "BDT")}

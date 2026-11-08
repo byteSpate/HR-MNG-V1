@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
 const QUIET =
@@ -159,7 +160,7 @@ export function HeatmapListPanel() {
 
   return (
     <Panel>
-      <h2 className="text-[13.5px] font-bold">Heatmap list</h2>
+      <Heading level="section">Heatmap list</Heading>
       <p className={`mt-1 mb-3 text-[12.5px] leading-relaxed ${TONE.muted}`}>
         The groups, products and parts on every account&apos;s Heatmap tab. Something an account uses can be hidden, not
         deleted. Who can change this: Sales Admins.

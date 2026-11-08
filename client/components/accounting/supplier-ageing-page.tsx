@@ -63,7 +63,7 @@ export function SupplierAgeingPage() {
     { text: r.label },
     {
       node: (
-        <Link href={`${dealsBase}/${r.dealId}`} className="cursor-pointer font-semibold text-[#1C2733] hover:underline">
+        <Link href={`${dealsBase}/${r.dealId}`} className="cursor-pointer font-semibold text-ink-body hover:underline">
           {r.dealSerial}
         </Link>
       ),
@@ -91,7 +91,7 @@ export function SupplierAgeingPage() {
         </PanelAlert>
       ) : null}
       {tieOut.data?.ties ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>
+        <p className={`text-caption ${TONE.muted}`}>
           The bills below add up to {formatMoney(tieOut.data.subledgerTotal, "BDT")}, the same as account 2111 in the ledger.
         </p>
       ) : null}
@@ -101,9 +101,9 @@ export function SupplierAgeingPage() {
       {ageing.isSuccess && data.length > 0 ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {totals.map((t) => (
-            <div key={t.bucket} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-3">
-              <div className={`text-[11px] font-bold tracking-wide uppercase ${TONE.muted}`}>{bucketLabel(t.bucket)}</div>
-              <div className="font-heading mt-1 text-[15px] font-bold tabular-nums">
+            <div key={t.bucket} className="rounded-md border border-line bg-white px-4 py-3">
+              <div className={`text-caption font-bold tracking-wide uppercase ${TONE.muted}`}>{bucketLabel(t.bucket)}</div>
+              <div className="font-heading mt-1 text-lead font-bold tabular-nums">
                 {t.amount > 0 ? formatMoney(t.amount.toFixed(2), "BDT") : "—"}
               </div>
             </div>

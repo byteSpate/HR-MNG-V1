@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EMPLOYMENT_TYPE_LABEL } from "@/components/profile/edit-card-dialog"
+import { Heading } from "@/components/ds/heading"
 
 export function MyProfilePage() {
   const { accessToken, status: sessionStatus } = useSession()
@@ -73,7 +74,7 @@ export function MyProfilePage() {
           <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">
             Account
           </div>
-          <h1 className="font-heading text-[23px] font-bold tracking-tight">My Profile</h1>
+          <Heading level="page">My Profile</Heading>
         </div>
       ) : (
         <div className="pt-7" />

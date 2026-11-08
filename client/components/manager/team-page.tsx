@@ -10,6 +10,7 @@ import { useSession } from "@/lib/auth/session-context"
 import { initialsFrom } from "@/components/profile/avatar-upload"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * A manager's direct reports, linking into the detail page.
@@ -53,7 +54,7 @@ export function ManagerTeamPage() {
         <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#7A8698] uppercase">
           Workspace
         </div>
-        <h1 className="font-heading mb-1 text-[23px] font-bold tracking-tight">My team</h1>
+        <Heading level="page" className="mb-1">My team</Heading>
         <div className="text-[13px] text-[#7A8698]">The people who report to you</div>
       </div>
 

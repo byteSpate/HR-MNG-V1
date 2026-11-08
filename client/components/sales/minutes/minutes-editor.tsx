@@ -88,6 +88,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { Heading } from "@/components/ds/heading"
 
 // The editor brings Tiptap, about 470 KB. It loads when the box is shown, and
 // the placeholder has the same minimum height, so the page does not jump.
@@ -728,7 +729,7 @@ function MinutesDocument({
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-      {title ? <h2 className="mb-3 text-[13.5px] font-bold">{title}</h2> : null}
+      {title ? <Heading level="section" className="mb-3">{title}</Heading> : null}
       {children}
     </section>
   )
@@ -749,7 +750,7 @@ function HeaderCard({
   const lines = detail.header.filter((line) => line.label !== "Purpose" && line.label !== "Meeting With")
   return (
     <Card>
-      <h2 className="text-center font-heading text-[18px] font-bold text-balance">{detail.title}</h2>
+      <Heading level="section" className="text-center text-balance">{detail.title}</Heading>
       <p className={`mt-0.5 text-center text-[13px] ${TONE.muted}`}>{detail.subtitle}</p>
       <dl className="mt-4 grid gap-1 text-[13px]">
         {lines.map((line) => (

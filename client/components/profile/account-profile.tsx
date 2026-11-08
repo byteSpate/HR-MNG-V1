@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * The profile for an account with no employee record — Super Admin, HR Admin
@@ -189,9 +190,9 @@ export function AccountProfile({
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-heading text-[21px] font-bold tracking-tight break-words">
+            <Heading level="page" className="break-words">
               {displayed}
-            </h1>
+            </Heading>
             {/* One button. With no name the heading is the email, so it says what to
                 do in words; once a name is set it is the small pencil again. */}
             <button
@@ -292,7 +293,7 @@ export function AccountProfile({
       </div>
 
       <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <h2 className="font-heading text-[16px] font-bold tracking-tight">What you&apos;ve done</h2>
+        <Heading level="section">What you&apos;ve done</Heading>
         <span className={cn("text-[12.5px]", TONE.muted)}>Your own actions, newest first</span>
       </div>
 
@@ -444,10 +445,10 @@ function Panel({
 }) {
   return (
     <section className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4.5">
-      <h2 className="mb-3.5 flex items-center gap-2 text-[13.5px] font-bold">
+      <Heading level="section" className="mb-3.5 flex items-center gap-2">
         <Icon className="size-4 text-[#8A94A2]" aria-hidden />
         {title}
-      </h2>
+      </Heading>
       {children}
     </section>
   )

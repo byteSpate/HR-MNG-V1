@@ -49,7 +49,7 @@ function DealMoneyPageSkeleton() {
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+          <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
             <Skeleton className="h-3 w-14" />
             <Skeleton className="mt-2.5 h-6 w-24" />
           </div>
@@ -92,7 +92,7 @@ function DealMoneyPageInner({ opportunityId }: { opportunityId: string }) {
         aside={
           <Link
             href={`/sales/opportunities/${opportunityId}`}
-            className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-[#5F6B7C] hover:text-[#1C2733] hover:underline"
+            className="inline-flex items-center gap-1 text-caption font-semibold text-ink-muted hover:text-ink-body hover:underline"
           >
             Open in Sales Hub
             <RiArrowRightUpLine className="size-3.5" aria-hidden />

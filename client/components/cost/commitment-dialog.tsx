@@ -232,7 +232,7 @@ export function CommitmentDialog({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="mt-1 text-[11px] text-muted-foreground">Leave blank if the bill varies monthly.</p>
+              <p className="mt-1 text-caption text-muted-foreground">Leave blank if the bill varies monthly.</p>
             </div>
             <div>
               <Label htmlFor="commitment-currency" className="mb-1.5 text-xs font-bold">
@@ -275,7 +275,7 @@ export function CommitmentDialog({
               onChange={(e) => setStartedOn(e.target.value)}
             />
             {isEdit ? (
-              <p className="mt-1 text-[11px] text-muted-foreground">The start date is fixed once created.</p>
+              <p className="mt-1 text-caption text-muted-foreground">The start date is fixed once created.</p>
             ) : null}
           </div>
 
@@ -292,12 +292,12 @@ export function CommitmentDialog({
           </div>
 
           {existing?.endedOn ? (
-            <p className="text-[12.5px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               Ended {new Date(existing.endedOn).toLocaleDateString("en-US", { dateStyle: "medium" })}.
             </p>
           ) : null}
 
-          {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+          {formError ? <p className="text-body-sm font-semibold text-destructive">{formError}</p> : null}
         </div>
 
         <DialogFooter className="flex-wrap gap-2">

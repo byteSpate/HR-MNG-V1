@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 const STATUSES = Object.keys(MINUTES_STATUS_LABEL) as SalesMinutesStatus[]
 /** A select's "any", since an empty value reads as nothing chosen at all. */
@@ -124,7 +125,7 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
         onWrite={(meeting) => startMinutes.mutate(meeting.id)}
       />
 
-      <h2 className="mt-5 mb-2.5 font-heading text-[15px] font-bold tracking-tight">All minutes</h2>
+      <Heading level="section" className="mt-5 mb-2.5">All minutes</Heading>
 
       {/* Hidden while loading: a filter beside a skeleton reads as an answer
           about a list nobody has counted yet. */}
@@ -197,10 +198,10 @@ function WaitingForMinutes({
 }) {
   return (
     <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-      <h2 className="text-[13.5px] font-bold">
+      <Heading level="section">
         Waiting for minutes
         {items && items.length > 0 ? <span className={`font-semibold ${TONE.muted}`}> · {items.length}</span> : null}
-      </h2>
+      </Heading>
       <p className={`mt-0.5 text-[12px] ${TONE.muted}`}>
         Meetings completed in the last {WAITING_DAYS} days that nobody has started minutes for
         {mine ? ", where you were there for us." : "."}

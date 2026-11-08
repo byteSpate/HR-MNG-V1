@@ -75,18 +75,18 @@ function MonthStepper({
     <div
       role="group"
       aria-label="Month shown"
-      className="flex items-center gap-0.5 rounded-md border border-[#E4E9EF] bg-white p-0.5"
+      className="flex items-center gap-0.5 rounded-md border border-line bg-white p-0.5"
     >
       <Button
         type="button"
         variant="ghost"
         aria-label="Previous month"
         onClick={() => onShift(-1)}
-        className="size-8 rounded p-0 text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+        className="size-8 rounded p-0 text-ink-muted hover:bg-surface-hover hover:text-ink-body"
       >
         <RiArrowLeftSLine className="size-4" aria-hidden />
       </Button>
-      <span aria-live="polite" className="min-w-32.5 text-center text-[13px] font-bold">
+      <span aria-live="polite" className="min-w-32.5 text-center text-body-sm font-bold">
         {monthName(period.month)} {period.year}
       </span>
       <Button
@@ -94,7 +94,7 @@ function MonthStepper({
         variant="ghost"
         aria-label="Next month"
         onClick={() => onShift(1)}
-        className="size-8 rounded p-0 text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+        className="size-8 rounded p-0 text-ink-muted hover:bg-surface-hover hover:text-ink-body"
       >
         <RiArrowRightSLine className="size-4" aria-hidden />
       </Button>
@@ -129,8 +129,8 @@ function badgeCell(
           <span
             className={
               subTone === "alert"
-                ? "text-xs font-semibold text-[#B03A3A]"
-                : "text-xs text-[#5F6B7C]"
+                ? "text-xs font-semibold text-danger"
+                : "text-xs text-ink-muted"
             }
           >
             {sub}
@@ -327,15 +327,15 @@ function ExpectationList({
     <div
       className={
         late
-          ? "rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-4 py-3"
-          : "rounded-md border border-[#E4E9EF] bg-white px-4 py-3"
+          ? "rounded-md border border-warning-line bg-warning-tint px-4 py-3"
+          : "rounded-md border border-line bg-white px-4 py-3"
       }
     >
       <div
         className={
           late
-            ? "text-[12.5px] font-semibold text-[#8A5E0C]"
-            : "text-[12.5px] font-semibold text-[#1C2733]"
+            ? "text-caption font-semibold text-warning"
+            : "text-caption font-semibold text-ink-body"
         }
       >
         {heading}
@@ -343,11 +343,11 @@ function ExpectationList({
       <ul className="mt-2 flex flex-col gap-1.5">
         {commitments.map((c) => (
           <li key={c.id} className="flex flex-wrap items-center justify-between gap-2">
-            <span className={late ? "text-[12.5px] text-[#8A5E0C]" : "text-[12.5px] text-[#5F6B7C]"}>
+            <span className={late ? "text-caption text-warning" : "text-caption text-ink-muted"}>
               {c.label}
-              <span className={late ? "text-[#A9803C]" : "text-[#8792A3]"}> to {c.payee}</span>
+              <span className={late ? "text-warning" : "text-ink-muted"}> to {c.payee}</span>
               {c.dueDay != null ? (
-                <span className={late ? "text-[#A9803C]" : "text-[#8792A3]"}>
+                <span className={late ? "text-warning" : "text-ink-muted"}>
                   , due the {ordinalDay(c.dueDay)}
                 </span>
               ) : null}
@@ -359,8 +359,8 @@ function ExpectationList({
                 onClick={() => onRecord(c)}
                 className={
                   late
-                    ? "h-auto rounded-md px-2 py-1 text-[12px] font-bold text-[#8A5E0C] underline transition-colors hover:bg-[#F8EEDA]"
-                    : "h-auto rounded-md px-2 py-1 text-[12px] font-bold text-[#5F6B7C] underline transition-colors hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+                    ? "h-auto rounded-md px-2 py-1 text-caption font-bold text-warning underline transition-colors hover:bg-danger-line"
+                    : "h-auto rounded-md px-2 py-1 text-caption font-bold text-ink-muted underline transition-colors hover:bg-surface-hover hover:text-ink-body"
                 }
               >
                 {/* "Record it early" on a bill that is not due yet: the same
@@ -380,7 +380,7 @@ function StatSkeletons() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+        <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
           <Skeleton className="h-3 w-20" />
           <Skeleton className="mt-2.5 h-6 w-24" />
           <Skeleton className="mt-1.5 h-3 w-16" />
@@ -673,7 +673,7 @@ export function CostPage() {
               This month&rsquo;s totals could not be loaded.{" "}
               <Button
                 variant="link"
-                className="h-auto p-0 text-[12.5px] font-bold text-[#B03A3A] underline"
+                className="h-auto p-0 text-caption font-bold text-danger underline"
                 onClick={() => summaryQuery.refetch()}
               >
                 Retry
@@ -731,7 +731,7 @@ export function CostPage() {
                         setTab("bills")
                         setBillOverdueOnly((prev) => !prev)
                       }}
-                      className="flex h-auto w-full items-center gap-2 rounded-md border border-[#F0D2D2] bg-[#FDF6F6] px-4 py-2.5 text-left text-[12.5px] font-semibold text-[#B03A3A] transition-colors hover:bg-[#FBEDED]"
+                      className="flex h-auto w-full items-center gap-2 rounded-md border border-danger-line bg-danger-tint px-4 py-2.5 text-left text-caption font-semibold text-danger transition-colors hover:bg-warning-tint"
                     >
                       <RiErrorWarningLine className="size-4 shrink-0" aria-hidden />
                       <span>
@@ -871,7 +871,7 @@ export function CostPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setCommitmentTarget("new")}
-                    className="h-9 rounded-md px-3 text-[13px] font-semibold"
+                    className="h-9 rounded-md px-3 text-body-sm font-semibold"
                   >
                     New commitment
                   </Button>

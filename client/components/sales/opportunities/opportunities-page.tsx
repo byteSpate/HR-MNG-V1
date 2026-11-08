@@ -42,6 +42,7 @@ import {
 import { BeforeQuotationView } from "@/components/sales/opportunities/before-quotation-view"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import type { TableCell } from "@/components/dashboard/types"
+import { Heading } from "@/components/ds/heading"
 
 const TOGGLE_ON = "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
 const TOGGLE_OFF =
@@ -382,7 +383,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
         <section className="mb-3 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-heading text-[14px] font-bold tracking-tight">Refine the view</h2>
+              <Heading level="section">Refine the view</Heading>
               <p className={`mt-0.5 text-[12px] ${TONE.muted}`}>{viewDescription}</p>
             </div>
             <div className="flex items-center gap-2">

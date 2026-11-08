@@ -13,6 +13,7 @@ import { FilterChip } from "@/components/dashboard/filter-chip"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 const ALL_DEPARTMENTS = "__all__"
 
@@ -91,7 +92,7 @@ export function DirectoryPage() {
         <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">
           Workspace
         </div>
-        <h1 className="font-heading mb-1 text-[23px] font-bold tracking-tight">Directory</h1>
+        <Heading level="page" className="mb-1">Directory</Heading>
         <div className="text-[13px] text-[#5F6B7C]">
           Find a colleague — who they are, what they do and how to reach them.
         </div>

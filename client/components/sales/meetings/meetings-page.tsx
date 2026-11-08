@@ -25,6 +25,7 @@ import {
 import { MeetingRow, meetingActions } from "@/components/sales/shared/plan-panels"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 /** How far back Past reaches, so it is recent history and not every meeting ever held. */
 const PAST_DAYS = 30
@@ -173,9 +174,9 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
               key={group.title}
               className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5"
             >
-              <h2 className="mb-1 text-[13.5px] font-bold">
+              <Heading level="section" className="mb-1">
                 {group.title} <span className={`font-semibold ${TONE.muted}`}>· {group.items.length}</span>
-              </h2>
+              </Heading>
               <ul>
                 {group.items.map((meeting, i) => (
                   <MeetingRow

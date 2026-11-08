@@ -3,13 +3,20 @@ import assert from "node:assert/strict";
 import { headingClass, textClass, type HeadingLevel, type TextVariant } from "./classes";
 import { TYPE_SCALE } from "@/lib/design/tokens";
 
-const levels: HeadingLevel[] = ["display", "page", "section", "card"];
+const levels: HeadingLevel[] = ["label", "display", "page", "section", "card"];
 const variants: TextVariant[] = ["body", "small", "caption", "muted", "danger", "notice"];
 
 test("display heading is heading on a phone and display from sm up", () => {
   const c = headingClass("display");
   assert.match(c, /\btext-heading\b/);
   assert.match(c, /\bsm:text-display\b/);
+});
+
+test("label heading is a small muted uppercase caption", () => {
+  const c = headingClass("label");
+  assert.match(c, /\btext-caption\b/);
+  assert.match(c, /\buppercase\b/);
+  assert.match(c, /\btext-ink-muted\b/);
 });
 
 test("page heading is title on a phone and heading from md up", () => {
@@ -31,6 +38,6 @@ test("every text variant uses a named size from TYPE_SCALE", () => {
   }
 });
 
-test("headings use the heading font", () => {
-  for (const l of levels) assert.match(headingClass(l), /\bfont-heading\b/);
+test("headings use the heading font, except the small label", () => {
+  for (const l of levels.filter((x) => x !== "label")) assert.match(headingClass(l), /\bfont-heading\b/);
 });

@@ -35,6 +35,7 @@ import type { Tone } from "@/components/dashboard/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { Heading } from "@/components/ds/heading"
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -198,13 +199,13 @@ export function BoughtPart({
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-heading text-[15px] font-bold tracking-tight">Bought</h2>
+        <Heading level="section">Bought</Heading>
         {canEdit ? (
           <div className="flex flex-wrap gap-1.5">
             <Button
               type="button"
               onClick={() => { setError(null); setAddingBill(true) }}
-              className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              className="h-8 gap-1 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
             >
               <RiAddLine className="size-3.5" aria-hidden />
               Add supplier bill
@@ -213,7 +214,7 @@ export function BoughtPart({
               <Button
                 type="button"
                 onClick={() => { setError(null); setPaying(true) }}
-                className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                className="h-8 gap-1 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
               >
                 <RiAddLine className="size-3.5" aria-hidden />
                 Pay supplier
@@ -226,8 +227,8 @@ export function BoughtPart({
       {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
 
       {bills.length === 0 ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-          <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>No supplier bills yet.</p>
+        <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+          <p className={`text-caption leading-relaxed ${TONE.muted}`}>No supplier bills yet.</p>
         </div>
       ) : (
         <ul className="space-y-3">
@@ -294,23 +295,23 @@ export function BoughtPart({
                 }}
                 className={cn(
                   "rounded-md border bg-white px-4 py-4 transition-colors sm:px-5.5 sm:py-5",
-                  flashId === bill.id ? "border-[#E7C46B] bg-[#FFFBEF]" : "border-[#E4E9EF]"
+                  flashId === bill.id ? "border-warning-line bg-warning-tint" : "border-line"
                 )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13.5px] font-bold">{bill.supplier.name}</span>
+                      <span className="text-body-sm font-bold">{bill.supplier.name}</span>
                       <Tag label={status.label} tone={status.tone} />
                     </div>
-                    <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                    <div className={`mt-0.5 text-caption ${TONE.muted}`}>
                       {bill.billNumber} · {formatDate(bill.date)} · due {formatDate(bill.dueDate)}
                     </div>
                   </div>
                   <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
-                    <span className="mr-2 text-[13px] font-bold">{formatMoney(total.toFixed(2), "BDT")}</span>
+                    <span className="mr-2 text-body-sm font-bold">{formatMoney(total.toFixed(2), "BDT")}</span>
                     {typedRates.length > 0 ? (
-                      <span className="mr-2 rounded bg-[#FDF8EE] px-1.5 py-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">
+                      <span className="mr-2 rounded bg-warning-tint px-1.5 py-0.5 text-caption font-semibold text-warning">
                         Typed VAT {typedRates.map((r) => `${r}%`).join(", ")}
                       </span>
                     ) : null}
@@ -327,8 +328,8 @@ export function BoughtPart({
                 ) : null}
 
                 {bill.status === "APPROVED" ? (
-                  <div className="mt-3 border-t border-[#EEF1F5] pt-3" data-testid={`payments-${bill.billNumber}`}>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+                  <div className="mt-3 border-t border-surface-sunken pt-3" data-testid={`payments-${bill.billNumber}`}>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption">
                       <span>
                         Paid so far <span className="font-bold">{formatMoney(money.paid, "BDT")}</span>
                         {money.usd ? <span className={TONE.muted}> ({formatMoney(money.usd.paid, "USD")})</span> : null}
@@ -345,7 +346,7 @@ export function BoughtPart({
                     {money.payments.length > 0 ? (
                       <ul className="mt-2 space-y-1">
                         {money.payments.map((p) => (
-                          <li key={p.paymentId} className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
+                          <li key={p.paymentId} className="flex flex-wrap items-center justify-between gap-2 text-caption">
                             <span>
                               <span className="font-bold tracking-wide">{p.number}</span>
                               <span className={TONE.muted}>
@@ -357,7 +358,7 @@ export function BoughtPart({
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-7 gap-1 px-2 text-[12px]"
+                              className="h-7 gap-1 px-2 text-caption"
                               aria-label={`Download PDF for ${p.number}`}
                               disabled={downloadVoucher.isPending}
                               onClick={() => { setError(null); downloadVoucher.mutate({ id: p.paymentId, number: p.number }) }}
@@ -373,8 +374,8 @@ export function BoughtPart({
                 ) : null}
 
                 {bill.creditNotes.length > 0 ? (
-                  <div className="mt-3 space-y-2 border-t border-[#EEF1F5] pt-3">
-                    <h3 className={`text-[11px] font-bold tracking-wide uppercase ${TONE.muted}`}>Credit notes</h3>
+                  <div className="mt-3 space-y-2 border-t border-surface-sunken pt-3">
+                    <Heading level="label">Credit notes</Heading>
                     {bill.creditNotes.map((note) => {
                       const noteTotal = note.lines.reduce((s, l) => s + Number(l.amount) + Number(l.vatAmount), 0)
                       const noteStatus = creditNoteStatus(note)
@@ -387,9 +388,9 @@ export function BoughtPart({
                           ref={(el) => {
                             rowRefs.current[note.id] = el
                           }}
-                          className={flashId === note.id ? "rounded-md bg-[#FFFBEF] px-2 py-1.5" : "px-2 py-1.5"}
+                          className={flashId === note.id ? "rounded-md bg-warning-tint px-2 py-1.5" : "px-2 py-1.5"}
                         >
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-[12.5px]">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-caption">
                             <div className="min-w-0">
                               <span className="font-semibold">{formatDate(note.date)}</span>{" "}
                               <span className={TONE.muted}>{note.reason}</span>
@@ -423,10 +424,10 @@ export function BoughtPart({
       )}
 
       <div className="space-y-3">
-        <h3 className="font-heading text-[13.5px] font-bold tracking-tight">Supplier payments</h3>
+        <Heading level="card">Supplier payments</Heading>
         {supplierPayments.length === 0 ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-            <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>No supplier payments recorded yet.</p>
+          <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+            <p className={`text-caption leading-relaxed ${TONE.muted}`}>No supplier payments recorded yet.</p>
           </div>
         ) : (
           <ul className="space-y-3">
@@ -447,30 +448,30 @@ export function BoughtPart({
                   : []),
               ]
               return (
-                <li key={p.id} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+                <li key={p.id} className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className={`min-w-0 ${reversed ? "line-through opacity-60" : ""}`}>
-                      <div className="text-[12px] font-bold tracking-wide">{p.number}</div>
-                      <div className="text-[13.5px] font-bold">{supplierNameOf(p.supplierId)}</div>
-                      <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                      <div className="text-caption font-bold tracking-wide">{p.number}</div>
+                      <div className="text-body-sm font-bold">{supplierNameOf(p.supplierId)}</div>
+                      <div className={`mt-0.5 text-caption ${TONE.muted}`}>
                         {formatDate(p.date)}
                         {p.currency === "USD" && p.sourceAmount ? ` · ${formatMoney(p.sourceAmount, "USD")} at ${Number(p.fxRateToBdt).toFixed(2)}` : ""}
                         {p.reference ? ` · ${p.reference}` : ""}
                       </div>
-                      <div className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+                      <div className={`mt-0.5 text-caption ${TONE.muted}`}>
                         {supplierMethodLabel(p.paymentMethod)}
                         {p.bankName ? ` · ${p.bankName}` : ""}
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <span className="mr-2 text-[13px] font-bold">{formatMoney(p.amount, "BDT")}</span>
+                      <span className="mr-2 text-body-sm font-bold">{formatMoney(p.amount, "BDT")}</span>
                       {actions.length > 0 ? <RowActions actions={actions} /> : null}
                     </div>
                   </div>
 
-                  {reversed ? <p className={`mt-2 text-[12px] ${TONE.danger}`}>Reversed: {p.reversalReason}</p> : null}
+                  {reversed ? <p className={`mt-2 text-caption ${TONE.danger}`}>Reversed: {p.reversalReason}</p> : null}
 
-                  <div className={`mt-2.5 border-t border-[#EEF1F5] pt-2.5 text-[12px] ${reversed ? "line-through opacity-60" : TONE.muted}`}>
+                  <div className={`mt-2.5 border-t border-surface-sunken pt-2.5 text-caption ${reversed ? "line-through opacity-60" : TONE.muted}`}>
                     {settles.length > 0 ? `Settles ${settles.join(", ")}` : "Not yet matched to a bill"}
                   </div>
                 </li>

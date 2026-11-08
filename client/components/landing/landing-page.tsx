@@ -11,6 +11,7 @@ import {
   navLinks,
   quotes,
 } from "@/components/landing/data"
+import { Heading } from "@/components/ds/heading"
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -160,9 +161,9 @@ export function LandingPage() {
 
       <section id="features" className="mx-auto w-full max-w-290 px-5 py-15 sm:px-7 sm:py-24">
         <div className="mb-11 max-w-155">
-          <h2 className="font-heading m-0 text-[28px] font-bold tracking-tighter text-balance sm:text-4xl">
+          <Heading level="section" className="m-0 text-balance sm:text-4xl">
             One system between check-in and payslip
-          </h2>
+          </Heading>
         </div>
         <div className="grid grid-cols-1 items-start gap-[18px] lg:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.1fr)] lg:gap-10">
           <div className="flex flex-col gap-1">

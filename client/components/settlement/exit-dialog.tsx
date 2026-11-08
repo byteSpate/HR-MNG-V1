@@ -89,7 +89,7 @@ export function ExitDialog({
             </Select>
             {/* What the reason will drive, so it reads as a money decision
                 rather than a filing category. */}
-            <div className="mt-1.5 text-[11.5px] text-[#7A8698]">
+            <div className="mt-1.5 text-caption text-ink-muted">
               {EXIT_REASON_EFFECT[exitReason]}
             </div>
           </div>
@@ -106,7 +106,7 @@ export function ExitDialog({
             />
           </div>
 
-          {error ? <div className="text-[12.5px] text-[#B03A3A]">{error}</div> : null}
+          {error ? <div className="text-caption text-danger">{error}</div> : null}
         </div>
 
         <DialogFooter>

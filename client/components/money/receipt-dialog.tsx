@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -180,7 +181,7 @@ export function ReceiptDialog({
           </div>
 
           {taxOpen ? (
-            <section className="grid grid-cols-1 gap-3 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-2">
+            <section className="grid grid-cols-1 gap-3 rounded-md border border-line p-3 sm:grid-cols-2">
               <Field label="VAT withheld (BDT)" htmlFor="rcpt-vds">
                 <Input id="rcpt-vds" type="number" min={0} step="0.01" value={vdsAmount} onChange={(e) => setVdsAmount(e.target.value)} />
               </Field>
@@ -205,19 +206,19 @@ export function ReceiptDialog({
           ) : null}
 
           <section className="space-y-2">
-            <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>What it settles</h3>
+            <Heading level="label">What it settles</Heading>
             {owing.length === 0 ? (
-              <p className={`text-[12.5px] ${TONE.muted}`}>No approved invoice on this Opportunity still owes money.</p>
+              <p className={`text-caption ${TONE.muted}`}>No approved invoice on this Opportunity still owes money.</p>
             ) : (
               owing.map((inv) => {
                 const left = invoiceStillOwed(inv)
                 if (only) {
                   return (
-                    <div key={inv.id} className="rounded-md border border-[#E4E9EF] p-3">
-                      <div className="text-[13px] font-semibold">This payment is for invoice {inv.invoiceNumber}.</div>
-                      <div className={`text-[11.5px] ${TONE.muted}`}>Still owed {formatMoney(left.toFixed(2), "BDT")}</div>
+                    <div key={inv.id} className="rounded-md border border-line p-3">
+                      <div className="text-body-sm font-semibold">This payment is for invoice {inv.invoiceNumber}.</div>
+                      <div className={`text-caption ${TONE.muted}`}>Still owed {formatMoney(left.toFixed(2), "BDT")}</div>
                       {one?.tooMuch ? (
-                        <p role="status" className="mt-1 text-[12.5px] font-semibold text-[#8A5E0C]">
+                        <p role="status" className="mt-1 text-caption font-semibold text-warning">
                           This is more than the invoice still owes. Lower the amount received.
                         </p>
                       ) : null}
@@ -225,10 +226,10 @@ export function ReceiptDialog({
                   )
                 }
                 return (
-                  <div key={inv.id} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
+                  <div key={inv.id} className="grid grid-cols-1 gap-2 rounded-md border border-line p-3 sm:grid-cols-12">
                     <div className="sm:col-span-6">
-                      <div className="text-[13px] font-semibold">{inv.invoiceNumber}</div>
-                      <div className={`text-[11.5px] ${TONE.muted}`}>Still owed {formatMoney(left.toFixed(2), "BDT")}</div>
+                      <div className="text-body-sm font-semibold">{inv.invoiceNumber}</div>
+                      <div className={`text-caption ${TONE.muted}`}>Still owed {formatMoney(left.toFixed(2), "BDT")}</div>
                     </div>
                     <Input
                       aria-label={`${inv.invoiceNumber} amount`}
@@ -245,11 +246,11 @@ export function ReceiptDialog({
                 )
               })
             )}
-            <p className={`text-right text-[12.5px] ${TONE.muted}`}>
+            <p className={`text-right text-caption ${TONE.muted}`}>
               Settles {formatMoney(allocatedTotal.toFixed(2), "BDT")} of {formatMoney(settledTotal.toFixed(2), "BDT")} (cash plus tax withheld).
             </p>
             {!matches && settledTotal > 0 ? (
-              <p role="status" className="text-right text-[12.5px] font-semibold text-[#8A5E0C]">
+              <p role="status" className="text-right text-caption font-semibold text-warning">
                 {settledTotal > allocatedTotal
                   ? `${formatMoney((settledTotal - allocatedTotal).toFixed(2), "BDT")} is not matched to an invoice. Raise the amount settled, lower the amount received, or add the tax the customer kept. Money that is not for an invoice cannot be saved.`
                   : `${formatMoney((allocatedTotal - settledTotal).toFixed(2), "BDT")} more is settled than was received. Lower the amount settled, or raise the amount received.`}

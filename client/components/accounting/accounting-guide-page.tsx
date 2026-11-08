@@ -4,6 +4,7 @@ import { GLOSSARY } from "@/lib/help/glossary"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { Term } from "@/components/help/term"
 import { GuideRail, type RailItem } from "@/components/accounting/accounting-guide-rail"
+import { Heading } from "@/components/ds/heading"
 
 /** Shorthand so a term is defined once here and its glossary sentence can
  *  never drift from `GLOSSARY`'s own wording. */
@@ -30,27 +31,27 @@ function LedgerLines({ lines: written }: { lines: LedgerLine[] }) {
   // named the way the bank's statement names them; see lib/accounting/side-style.ts.)
   const lines = [...written].sort((a, b) => Number(a.side === "Credit") - Number(b.side === "Credit"))
   return (
-    <dl className="my-4 rounded-md border border-[#E4E9EF] bg-white">
+    <dl className="my-4 rounded-md border border-line bg-white">
       {lines.map((line, i) => (
         <div
           key={i}
-          className={`flex items-center justify-between gap-4 px-4 py-2 text-[12.5px] ${
-            i > 0 ? "border-t border-[#EEF1F5]" : ""
+          className={`flex items-center justify-between gap-4 px-4 py-2 text-caption ${
+            i > 0 ? "border-t border-surface-sunken" : ""
           }`}
         >
           <div className="flex items-baseline gap-2.5">
             <span
               className={
                 line.side === "Debit"
-                  ? `w-14 shrink-0 text-[11px] font-bold tracking-wide uppercase ${sides.sideText("debit")}`
-                  : `w-14 shrink-0 pl-3 text-[11px] font-bold tracking-wide uppercase ${sides.sideText("credit")}`
+                  ? `w-14 shrink-0 text-caption font-bold tracking-wide uppercase ${sides.sideText("debit")}`
+                  : `w-14 shrink-0 pl-3 text-caption font-bold tracking-wide uppercase ${sides.sideText("credit")}`
               }
             >
               {line.side}
             </span>
-            <span className="text-[#3B4757]">{line.account}</span>
+            <span className="text-ink-soft">{line.account}</span>
           </div>
-          <span className="font-heading shrink-0 tabular-nums text-[#17191C]">{line.amount}</span>
+          <span className="font-heading shrink-0 tabular-nums text-ink">{line.amount}</span>
         </div>
       ))}
     </dl>
@@ -461,7 +462,7 @@ export function AccountingGuidePage() {
       />
 
       <div className="flex max-w-320 justify-between gap-10">
-        <div className="min-w-0 max-w-190 flex-1 text-[13.5px] leading-[1.7] text-[#3B4757]">
+        <div className="min-w-0 max-w-190 flex-1 text-body-sm leading-[1.7] text-ink-soft">
           <p className="mb-10">
             This follows one real transaction, July&apos;s payroll, through every stage the accounts
             go through, in order. Every other kind of entry, from a hand-typed correction to an
@@ -478,12 +479,12 @@ export function AccountingGuidePage() {
                 className="animate-in fade-in slide-in-from-bottom-1 scroll-mt-20 fill-mode-backwards duration-300 motion-reduce:animate-none"
                 style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
               >
-                <div className="mb-2 text-[11px] font-bold tracking-[0.08em] text-[#8792A3] uppercase">
+                <div className="mb-2 text-caption font-bold tracking-[0.08em] text-ink-muted uppercase">
                   {step.eyebrow}
                 </div>
-                <h2 className="font-heading mb-3 text-[17px] font-bold tracking-tight text-[#17191C] sm:text-[19px]">
+                <Heading level="section" className="mb-3">
                   {step.heading}
-                </h2>
+                </Heading>
                 <div className="space-y-3">{step.body}</div>
                 <AlsoRecordedThisWay pages={FLOW.find((f) => f.id === step.id)?.pages ?? []} />
               </li>
@@ -492,14 +493,14 @@ export function AccountingGuidePage() {
 
           <section
             id="connections"
-            className="animate-in fade-in slide-in-from-bottom-1 scroll-mt-20 fill-mode-backwards mt-14 border-t border-[#EEF1F5] pt-10 duration-300 motion-reduce:animate-none"
+            className="animate-in fade-in slide-in-from-bottom-1 scroll-mt-20 fill-mode-backwards mt-14 border-t border-surface-sunken pt-10 duration-300 motion-reduce:animate-none"
           >
-            <div className="mb-2 text-[11px] font-bold tracking-[0.08em] text-[#8792A3] uppercase">
+            <div className="mb-2 text-caption font-bold tracking-[0.08em] text-ink-muted uppercase">
               7 · Every other kind of entry
             </div>
-            <h2 className="font-heading mb-3 text-[17px] font-bold tracking-tight text-[#17191C] sm:text-[19px]">
+            <Heading level="section" className="mb-3">
               The same shape, eight more times
-            </h2>
+            </Heading>
             <p className="mb-8">
               Every one of these still goes through Set up, Record, Post, Read, Report and Close
               exactly as July&apos;s payroll did above. That part never changes. What&apos;s different
@@ -509,12 +510,12 @@ export function AccountingGuidePage() {
 
             <div className="space-y-8">
               {MODULES.map((mod) => (
-                <div key={mod.id} className="rounded-lg border border-[#E4E9EF] p-5">
-                  <h3 className="mb-2 text-[14px] font-bold text-[#17191C]">{mod.title}</h3>
+                <div key={mod.id} className="rounded-lg border border-line p-5">
+                  <Heading level="card" className="mb-2">{mod.title}</Heading>
                   <p className="mb-1">{mod.trigger}</p>
                   {mod.lines.length > 0 ? <LedgerLines lines={mod.lines} /> : null}
-                  {mod.note ? <p className="text-[12.5px] text-[#5F6B7C]">{mod.note}</p> : null}
-                  <p className="mt-4 text-[12px] text-[#8792A3]">
+                  {mod.note ? <p className="text-caption text-ink-muted">{mod.note}</p> : null}
+                  <p className="mt-4 text-caption text-ink-muted">
                     <span className="font-bold">Also recorded this way:</span> {mod.also}
                   </p>
                 </div>
@@ -522,7 +523,7 @@ export function AccountingGuidePage() {
             </div>
           </section>
 
-          <p className="mt-14 border-t border-[#EEF1F5] pt-6 text-[12.5px] text-[#5F6B7C]">
+          <p className="mt-14 border-t border-surface-sunken pt-6 text-caption text-ink-muted">
             That shape never changes: set up, record, post, read, report, close. A supplier&apos;s
             bill, a customer&apos;s invoice, a correction typed by hand: every one of them is a
             different door into the same six rooms.
@@ -540,7 +541,7 @@ export function AccountingGuidePage() {
 function AlsoRecordedThisWay({ pages }: { pages: string[] }) {
   if (pages.length === 0) return null
   return (
-    <p className="mt-5 text-[12px] leading-[1.6] text-[#8792A3]">
+    <p className="mt-5 text-caption leading-[1.6] text-ink-muted">
       <span className="font-bold">Also recorded this way:</span> {pages.join(" · ")}
     </p>
   )

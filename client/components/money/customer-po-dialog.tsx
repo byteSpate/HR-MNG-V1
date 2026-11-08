@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { VatChoice, vatIncomplete } from "./vat-choice"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -173,19 +174,19 @@ export function CustomerPoDialog({
             </Field>
           </div>
 
-          <p className={`text-[12px] ${TONE.muted}`}>{profile.deliveryNote}</p>
+          <p className={`text-caption ${TONE.muted}`}>{profile.deliveryNote}</p>
 
           <section className="space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines</h3>
+              <Heading level="label">Lines</Heading>
               <Button type="button" variant="outline" size="sm" disabled={copyFromDeal.isPending} onClick={() => copyFromDeal.mutate()}>
                 {copyFromDeal.isPending ? "Copying…" : profile.copyLabel}
               </Button>
             </div>
-            {profile.linesHint ? <p className={`text-[12px] ${TONE.muted}`}>{profile.linesHint}</p> : null}
+            {profile.linesHint ? <p className={`text-caption ${TONE.muted}`}>{profile.linesHint}</p> : null}
 
             {lines.map((line, i) => (
-              <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
+              <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-line p-3 sm:grid-cols-12">
                 <div className="sm:col-span-12">
                   <Input
                     aria-label={`Line ${i + 1} description`}
@@ -230,7 +231,7 @@ export function CustomerPoDialog({
                 <div className="sm:col-span-2">
                   <VatChoice index={i} value={line} codes={codes} onChange={(patch) => update(i, patch)} />
                 </div>
-                <div className={`flex items-center text-[12.5px] sm:col-span-3 ${TONE.muted}`}>
+                <div className={`flex items-center text-caption sm:col-span-3 ${TONE.muted}`}>
                   {lineTotal(line) ? `Line total ${formatMoney(lineTotal(line)!, "BDT")}` : "No line total yet"}
                 </div>
                 <Button
@@ -250,7 +251,7 @@ export function CustomerPoDialog({
               <RiAddLine className="size-4" aria-hidden /> Add line
             </Button>
 
-            <p className={`text-right text-[12.5px] font-bold ${TONE.muted}`}>Net {formatMoney(net.toFixed(2), "BDT")}</p>
+            <p className={`text-right text-caption font-bold ${TONE.muted}`}>Net {formatMoney(net.toFixed(2), "BDT")}</p>
           </section>
 
           {error ? <FormError>{error}</FormError> : null}

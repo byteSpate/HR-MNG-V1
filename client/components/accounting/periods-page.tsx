@@ -39,6 +39,7 @@ import {
   monthLabel,
   PERIOD_STATUS_TONE,
 } from "@/components/accounting/accounting-shared"
+import { Heading } from "@/components/ds/heading"
 
 const TONE_VARIANT = { success: "default", neutral: "secondary", danger: "destructive" } as const
 
@@ -152,7 +153,7 @@ export function PeriodsPage() {
             return (
               <section key={fy.id} className="rounded-lg border">
                 <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-                  <h2 className="font-medium">{fy.name}</h2>
+                  <Heading level="section">{fy.name}</Heading>
                   <span className="text-sm text-muted-foreground">
                     {formatLedgerDate(fy.startDate)} – {formatLedgerDate(fy.endDate)}
                   </span>

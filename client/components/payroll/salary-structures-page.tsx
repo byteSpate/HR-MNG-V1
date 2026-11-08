@@ -44,6 +44,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FINANCE_ROLES } from "@/components/payroll/payroll-shared"
+import { Heading } from "@/components/ds/heading"
 
 /** A component row while it is being edited — strings, so a field can be empty. */
 interface DraftComponent {
@@ -232,7 +233,7 @@ function StructureCard({
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-heading text-[15px] font-bold tracking-tight">{structure.name}</h3>
+              <Heading level="card">{structure.name}</Heading>
               {structure.isActive ? null : <Tag label="Inactive" tone="neutral" />}
             </div>
             <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -522,9 +523,9 @@ export function SalaryStructuresPage() {
           <div className="space-y-4 rounded-md border border-[#D8E0EA] border-l-3 border-l-[#17191C] bg-[#FAFBFC] px-5.5 py-5">
             <div className="flex items-center gap-2">
               <RiWallet3Line className="size-4 text-[#8A94A2]" aria-hidden />
-              <h2 className="font-heading text-[16px] font-bold tracking-tight">
+              <Heading level="section">
                 {draft.id ? `Edit ${draft.name || "structure"}` : "New structure"}
-              </h2>
+              </Heading>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">

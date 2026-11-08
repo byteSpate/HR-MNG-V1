@@ -25,6 +25,7 @@ import { logDaySlots, shiftWeek, weekLabel, weekRange, weekStartOf } from "@/com
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 /** A select's "any", since an empty value reads as nothing chosen at all. */
 const ANY = "any"
@@ -163,10 +164,10 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
         <div className="grid gap-3">
           {slots.map((slot) => (
             <section key={slot.date} aria-label={slot.label} className="overflow-hidden rounded-md border border-[#E4E9EF] bg-white">
-              <h3 className="flex items-baseline justify-between gap-2 bg-[#F8FAFC] px-4 py-2 text-[12.5px] font-bold">
+              <Heading level="card" className="flex items-baseline justify-between gap-2 bg-[#F8FAFC] px-4 py-2">
                 <span>{slot.label}</span>
                 <span className={`font-semibold tabular-nums ${TONE.muted}`}>{onDay(slot.date)}</span>
-              </h3>
+              </Heading>
               {slot.tasks.length === 0 ? (
                 <p className={`px-4 py-2.5 text-[12px] ${TONE.muted}`}>Nothing logged.</p>
               ) : (

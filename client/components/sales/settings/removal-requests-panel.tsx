@@ -17,6 +17,7 @@ import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 export function RemovalRequestsPanel() {
   const { accessToken, user, status } = useSession()
@@ -55,7 +56,7 @@ export function RemovalRequestsPanel() {
 
   return (
     <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5" data-testid="removal-requests">
-      <h2 className="text-[14px] font-bold">Removal requests</h2>
+      <Heading level="section">Removal requests</Heading>
       <p className={`mt-1 text-[12.5px] ${TONE.muted}`}>
         An Owner asked to take a collaborator off a Sales Account. The collaborator keeps their access until you
         approve. Only Sales Admins can decide.

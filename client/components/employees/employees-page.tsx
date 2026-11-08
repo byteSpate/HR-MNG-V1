@@ -40,6 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import type { TableCell, Tone } from "@/components/dashboard/types"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 const STATUS_TONE: Record<EmploymentStatus, Tone> = {
   ACTIVE: "green",
@@ -215,7 +216,7 @@ function todayIso(): string {
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="grid gap-3 border-t border-[#E4E9EF] pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase">{title}</h3>
+      <Heading level="card" className="text-[#5F6B7C] uppercase">{title}</Heading>
       <div className="grid items-start gap-x-4 gap-y-3 sm:grid-cols-2">{children}</div>
     </section>
   )

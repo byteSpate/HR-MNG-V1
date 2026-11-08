@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -96,11 +97,11 @@ export function BillCreditNoteDialog({
           </Field>
 
           <section className="space-y-2">
-            <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines being reduced</h3>
+            <Heading level="label">Lines being reduced</Heading>
             {bill.lines.map((line) => {
               const on = line.id in picked
               return (
-                <div key={line.id} className="space-y-2 rounded-md border border-[#E4E9EF] px-3 py-2">
+                <div key={line.id} className="space-y-2 rounded-md border border-line px-3 py-2">
                   <CheckboxField
                     label={`${line.description} (${line.kind === "GOODS" ? "goods" : "service"}), ${formatMoney(line.amount, "BDT")} plus ${formatMoney(line.vatAmount, "BDT")} VAT`}
                     checked={on}
@@ -142,7 +143,7 @@ export function BillCreditNoteDialog({
                 </div>
               )
             })}
-            <p className="text-right text-[12.5px] font-bold tabular-nums">Credit {formatMoney(total.toFixed(2), "BDT")}</p>
+            <p className="text-right text-caption font-bold tabular-nums">Credit {formatMoney(total.toFixed(2), "BDT")}</p>
           </section>
 
           {error ? <FormError>{error}</FormError> : null}

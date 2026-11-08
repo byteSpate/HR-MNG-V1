@@ -12,6 +12,7 @@ import { FormError, PanelAlert, TONE, toMessage } from "@/components/dashboard/r
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * The running list of what people have written about a record.
@@ -198,7 +199,7 @@ export function CommentPanel({
 
   return (
     <section className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-      <h2 className="font-heading text-[15px] font-bold tracking-tight">{label}</h2>
+      <Heading level="section">{label}</Heading>
 
       {canWrite ? (
         <div className="mt-3">

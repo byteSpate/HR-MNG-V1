@@ -9,6 +9,7 @@ import { AvatarUpload } from "@/components/profile/avatar-upload"
 import { formatDateValue } from "@/components/profile/profile-card"
 import { Tag } from "@/components/dashboard/tag"
 import type { Tone } from "@/components/dashboard/types"
+import { Heading } from "@/components/ds/heading"
 
 const STATUS_TONE: Record<EmploymentStatus, Tone> = {
   ACTIVE: "green",
@@ -57,9 +58,9 @@ export function ProfileHeader({
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="font-heading text-[21px] font-bold tracking-tight">
+          <Heading level="page">
             {employee.work.fullName}
-          </h1>
+          </Heading>
           {onEditName ? (
             <button
               type="button"

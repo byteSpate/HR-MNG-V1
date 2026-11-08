@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { Heading } from "@/components/ds/heading"
 
 const BLANK: PolicyNoteInput = { ref: "", title: "", body: "" }
 
@@ -184,7 +185,7 @@ export function PolicyNotesPage() {
 
       {adding && (
         <article className="rounded-lg border border-dashed p-4">
-          <h2 className="mb-3 font-semibold">New note</h2>
+          <Heading level="section" className="mb-3">New note</Heading>
           <NoteForm
             value={draft}
             onChange={setDraft}
@@ -222,9 +223,9 @@ export function PolicyNotesPage() {
             ) : (
               <article key={note.id} className="rounded-lg border p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <h2 className="font-semibold">
+                  <Heading level="section">
                     {note.ref} {note.title}
-                  </h2>
+                  </Heading>
                   <div className="flex shrink-0 gap-1">
                     <Button size="sm" variant="ghost" onClick={() => startEdit(note)}>
                       <RiEditLine className="size-4" />

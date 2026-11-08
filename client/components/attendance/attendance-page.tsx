@@ -46,6 +46,7 @@ import {
   formatShortfall,
   toTimeInput,
 } from "@/components/attendance/attendance-shared"
+import { Heading } from "@/components/ds/heading"
 
 /** Roles with an Employee profile — the only ones who punch. */
 const STAFF_ROLES = ["EMPLOYEE", "REPORTING_MANAGER"]
@@ -399,9 +400,9 @@ export function AttendancePage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-7 pb-3.5">
-            <h2 className="font-heading text-[16px] font-bold tracking-tight">
+            <Heading level="section">
               Attendance log, {formatMonthLabel(month, year)}
-            </h2>
+            </Heading>
             <SegmentedToggle
               label="Log view"
               value={view}

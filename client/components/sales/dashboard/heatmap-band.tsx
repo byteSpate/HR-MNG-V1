@@ -14,6 +14,7 @@ import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 function AccountList({ colour, accounts }: { colour: "GREEN" | "RED"; accounts: HeatmapOverviewAccount[] }) {
   const tone = COLOUR[colour]
@@ -103,7 +104,7 @@ export function HeatmapBand({ employeeId }: { employeeId?: string }) {
   return (
     <section className="mt-5">
       <div className="mb-2.5">
-        <h2 className="font-heading text-[15px] font-bold tracking-tight">Heatmap</h2>
+        <Heading level="section">Heatmap</Heading>
         <p className={`mt-0.5 text-[12.5px] ${TONE.muted}`}>
           {data ? checkedLine(data) : "Where we can offer each product."}
         </p>

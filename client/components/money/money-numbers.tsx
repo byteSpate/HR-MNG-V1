@@ -5,12 +5,12 @@ import { TONE } from "@/components/dashboard/record-kit"
 
 function Tile({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
-      <div className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">{label}</div>
+    <div className="rounded-md border border-line bg-white px-5 py-4">
+      <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">{label}</div>
       <div
         className={cn(
-          "font-heading mt-1.5 text-[20px] font-bold tracking-tight tabular-nums sm:text-[22px]",
-          danger ? "text-[#B03A3A]" : "text-[#17191C]"
+          "font-heading mt-1.5 text-title font-bold tracking-tight tabular-nums sm:text-heading",
+          danger ? "text-danger" : "text-ink"
         )}
       >
         {value}
@@ -61,7 +61,7 @@ export function MoneyNumbers({
         <Tile label="Still owed" value={formatMoney(numbers.stillOwed, "BDT")} />
       </div>
       {hasDrafts ? (
-        <p className={cn("text-[12px]", TONE.muted)}>Drafts are not counted until they are approved.</p>
+        <p className={cn("text-caption", TONE.muted)}>Drafts are not counted until they are approved.</p>
       ) : null}
     </section>
   )

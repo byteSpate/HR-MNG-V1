@@ -16,6 +16,7 @@ import { ConfirmDialog, PanelAlert, TONE, toMessage } from "@/components/dashboa
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * Where this account is signed in, for every role.
@@ -84,10 +85,10 @@ export function SessionsCard() {
   return (
     <section className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4.5">
       <header className="mb-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="flex items-center gap-2 text-[13.5px] font-bold">
+        <Heading level="section" className="flex items-center gap-2">
           <RiDeviceLine className="size-4 text-[#8A94A2]" aria-hidden />
           Where you&apos;re signed in
-        </h2>
+        </Heading>
         {rows.length > 0 ? (
           <span className={cn("text-[12.5px] tabular-nums", TONE.muted)}>
             {rows.length} {rows.length === 1 ? "device" : "devices"}

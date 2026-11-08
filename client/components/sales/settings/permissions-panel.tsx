@@ -17,6 +17,7 @@ import { CheckboxField, PanelAlert, PanelNotice, TONE, toMessage } from "@/compo
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { groupPermissions, lastChangeOf, pendingChanges, type PermissionDraft } from "./permission-draft"
+import { Heading } from "@/components/ds/heading"
 
 const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
 
@@ -100,7 +101,7 @@ export function PermissionsPanel() {
       ) : null}
       {save.isError ? <PanelAlert>{toMessage(save.error)}</PanelAlert> : null}
       <Panel>
-        <h2 className="text-[14px] font-bold">Who can do what</h2>
+        <Heading level="section">Who can do what</Heading>
         <p className={`mt-1 text-[12.5px] ${TONE.muted}`}>
           Tick what Sales Users can do. If you untick something, no Sales User can do it, even if it is their own
           record. Sales Admins can always do everything.{" "}
@@ -155,7 +156,7 @@ export function PermissionsPanel() {
           </div>
         ) : null}
 
-        <h3 className="mt-6 text-[12.5px] font-bold">Recent changes</h3>
+        <Heading level="card" className="mt-6">Recent changes</Heading>
         {history.isPending ? (
           <Skeleton className="mt-2 h-5 w-full" />
         ) : history.isError ? (

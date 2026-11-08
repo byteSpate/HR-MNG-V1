@@ -21,6 +21,7 @@ import { TASK_TYPE_LABEL, TASK_TYPES } from "@/components/sales/shared/task-type
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 function TaskLine({ task }: { task: SalesTaskSummary }) {
   const about = [task.salesAccountName, task.opportunitySerial].filter(Boolean).join(" · ")
@@ -127,7 +128,7 @@ export function PersonWeekPanel({
   return (
     <section aria-label={`${week.employee.fullName}'s week`} className="space-y-4 rounded-lg border border-[#E4E9EF] bg-white px-4 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-heading text-[14px] font-bold tracking-tight">This week</h3>
+        <Heading level="card">This week</Heading>
         <span className={cn("text-[12px] tabular-nums", TONE.muted)}>Week of {onDay(week.weekStart)}</span>
       </div>
 
@@ -167,7 +168,7 @@ export function PersonWeekPanel({
       )}
 
       <div className="grid gap-3 border-t border-[#EFF2F6] pt-3">
-        <h3 className="font-heading text-[14px] font-bold tracking-tight">Take-outs</h3>
+        <Heading level="card">Take-outs</Heading>
         <TakeOutLines title="Open" items={week.takeOuts.open} empty="No open take-outs." />
         <TakeOutLines title="Done this week" items={week.takeOuts.doneThisWeek} empty="None finished this week." />
         {isAdmin ? <TakeOutBox employeeId={week.employee.id} employeeName={week.employee.fullName} /> : null}

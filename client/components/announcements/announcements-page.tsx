@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import type { AnnouncementItem, CreateAnnouncementInput } from "@/lib/api/types"
 import { ComposeAnnouncementDialog } from "@/components/announcements/compose-announcement-dialog"
+import { Heading } from "@/components/ds/heading"
 
 /** Roles the server lets publish. Mirrors `PUBLISHER_ROLES`. */
 const PUBLISHER_ROLES = ["SUPER_ADMIN", "HR_ADMIN", "FINANCE_OFFICER", "REPORTING_MANAGER"]
@@ -395,7 +396,7 @@ export function AnnouncementsPage() {
                 {visibleGroups.length > 1 ? (
                   <div className="mb-2.5 flex items-center gap-2">
                     <group.icon className="size-4 shrink-0 text-[#8A94A2]" aria-hidden />
-                    <h2 className="text-[13px] font-bold">{group.heading}</h2>
+                    <Heading level="section">{group.heading}</Heading>
                     <span className="rounded-full bg-[#F1F4F8] px-1.5 py-px text-[11px] font-bold text-[#5F6B7C] tabular-nums">
                       {group.items.length}
                     </span>

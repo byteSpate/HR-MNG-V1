@@ -47,6 +47,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { MEETING_ICON, MINUTES_ICON, TASK_ICON, taka } from "@/components/sales/shared/sales-shared"
 import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 /** The server's own rule, checked here too so the answer arrives before a round trip. */
 const MONEY = /^\d{1,12}(\.\d{1,2})?$/
@@ -122,7 +123,7 @@ function Band({ title, sub, children }: { title: string; sub?: string; children:
   return (
     <section className="mt-5">
       <div className="mb-2.5">
-        <h2 className="font-heading text-[15px] font-bold tracking-tight">{title}</h2>
+        <Heading level="section">{title}</Heading>
         {sub ? <p className={`mt-0.5 text-[12.5px] ${TONE.muted}`}>{sub}</p> : null}
       </div>
       {children}
@@ -677,7 +678,7 @@ export function SalesDashboard() {
           {isSalesAdmin ? (
             <section className="mt-5">
               <div className="mb-2.5">
-                <h2 className="font-heading text-[15px] font-bold tracking-tight">Payments</h2>
+                <Heading level="section">Payments</Heading>
                 <p className={`mt-0.5 text-[12.5px] ${TONE.muted}`}>Every invoice not yet fully paid. Click a row to see its payments.</p>
               </div>
               <PaymentsTable filter={{ open: true }} showAccount showOpportunity emptyText="Every approved invoice is fully paid." />

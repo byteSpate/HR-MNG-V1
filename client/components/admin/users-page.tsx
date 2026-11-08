@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 const ROLE_LABEL: Record<Role, string> = {
   SUPER_ADMIN: "Super Admin",
@@ -341,7 +342,7 @@ export function UsersPage() {
           <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">
             Administration
           </div>
-          <h1 className="font-heading mb-1 text-[23px] font-bold tracking-tight">Users</h1>
+          <Heading level="page" className="mb-1">Users</Heading>
           <div className="text-[13px] text-[#5F6B7C]">
             System accounts, roles and access — who can sign in, and as what.
           </div>

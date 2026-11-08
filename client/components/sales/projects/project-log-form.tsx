@@ -19,6 +19,7 @@ import { projectLogBody } from "@/lib/project-log-payload"
 import { PanelAlert, PanelNotice, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Heading } from "@/components/ds/heading"
 
 const todayInput = () => new Date().toLocaleDateString("en-CA")
 
@@ -52,7 +53,7 @@ export function ProjectLogForm({ projectId }: { projectId: string }) {
         save.mutate()
       }}
     >
-      <h3 className="font-heading text-[14px] font-bold tracking-tight">Write your line</h3>
+      <Heading level="card">Write your line</Heading>
       <p className="text-[12px] text-[#5F6B7C]">
         One line for one day: what you did on this Project. Only people on the Project team can write one.
       </p>
