@@ -1,5 +1,6 @@
 "use client"
 
+import { Img } from "@/components/ds/img"
 import { useMemo } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
@@ -81,10 +82,7 @@ export function ManagerTeamPage() {
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#EFF2F6]">
                   {e.work.avatarUrl ? (
-                    // A signed Cloudinary URL is not a static asset and cannot be
-                    // optimised by next/image without whitelisting the host.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={e.work.avatarUrl} alt="" className="h-full w-full object-cover" />
+                    <Img src={e.work.avatarUrl} alt="" width={44} height={44} className="h-full w-full object-cover" />
                   ) : (
                     <span className="text-[13px] font-bold text-[#55657A]">
                       {initialsFrom(e.work.fullName)}

@@ -1,5 +1,6 @@
 "use client"
 
+import { Img } from "@/components/ds/img"
 import { useState } from "react"
 import { RiCloseLine, RiZoomInLine } from "@remixicon/react"
 
@@ -49,11 +50,8 @@ export function AvatarUpload({
   const [photoOpen, setPhotoOpen] = useState(false)
 
   const image = avatarUrl ? (
-    // A signed Cloudinary URL is not a static asset and cannot be optimised
-    // by next/image without whitelisting the host and leaking the cloud
-    // name into client config.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={avatarUrl} alt="" className="h-full w-full rounded-md object-cover" />
+    // A signed Cloudinary URL cannot be optimised, so Img is unoptimized.
+    <Img src={avatarUrl} alt="" width={160} height={160} className="h-full w-full rounded-md object-cover" />
   ) : (
     <span className="text-[26px] font-bold text-[#55657A]">{initialsFrom(fullName)}</span>
   )
