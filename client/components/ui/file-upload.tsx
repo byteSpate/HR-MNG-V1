@@ -84,7 +84,7 @@ export function FileUpload({
           {pending ? "Uploading…" : label}
         </Button>
       )}
-      {error ? <p className="mt-1.5 text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+      {error ? <p className="mt-1.5 text-body-sm font-semibold text-danger">{error}</p> : null}
     </div>
   )
 }

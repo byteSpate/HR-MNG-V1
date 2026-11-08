@@ -13,7 +13,7 @@ export const RULES = {
   rawImg: /<img[\s>]/,
 };
 
-const EXEMPT = ["components/ui/", "components/ds/", "lib/design/", "app/globals.css"];
+const EXEMPT = ["components/ds/", "lib/design/", "app/globals.css"];
 export const isExempt = (rel) => EXEMPT.some((e) => rel.startsWith(e));
 
 export function countFiles(files) {

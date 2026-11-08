@@ -17,7 +17,7 @@ const eslintConfig = defineConfig([
   // The same rules, counted per file, are enforced by tools/design-ratchet.mjs.
   {
     files: ["app/**/*.tsx", "components/**/*.tsx"],
-    ignores: ["components/ui/**", "components/ds/**"],
+    ignores: ["components/ds/**"],
     rules: {
       "no-restricted-syntax": [
         "error",

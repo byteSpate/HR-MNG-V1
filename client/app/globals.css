@@ -114,13 +114,9 @@
     --text-display: 28px;
     --text-display--line-height: 1.25;
     --text-stat: 32px;
-    --text-stat--line-height: 1.15;
     --text-hero-sm: 40px;
-    --text-hero-sm--line-height: 1.1;
     --text-hero: 60px;
-    --text-hero--line-height: 1.04;
     --text-giant: 80px;
-    --text-giant--line-height: 1;
 }
 
 @theme inline {
