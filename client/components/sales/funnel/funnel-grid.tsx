@@ -248,7 +248,7 @@ function FunnelGridRow({
         </td>
 
         <td className="px-2 py-1.5">
-          <button type="button" onClick={onToggle} className="text-left hover:underline">
+          <button type="button" onClick={onToggle} className="text-left hover:underline pointer-coarse:py-3">
             <span className="block truncate font-medium text-ink-body">{row.accountName}</span>
             <span className={cn("block text-xs tabular-nums", TONE.muted)}>{row.serial}</span>
           </button>

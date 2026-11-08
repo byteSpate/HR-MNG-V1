@@ -189,7 +189,7 @@ export function MeetingRow({
               <div className="mt-0.5 text-caption">
                 <Link
                   href={`/sales/accounts/${meeting.salesAccountId}`}
-                  className="font-semibold text-ink-soft hover:underline"
+                  className="font-semibold text-ink-soft hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                 >
                   {meeting.salesAccountName}
                 </Link>
@@ -224,7 +224,7 @@ export function MeetingRow({
                 {meeting.canManage ? (
                   <Link
                     href={`/sales/meetings/minutes/${meeting.minutes.id}`}
-                    className="font-semibold text-ink-soft hover:underline"
+                    className="font-semibold text-ink-soft hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                   >
                     {minutesLine(meeting.minutes)}
                   </Link>

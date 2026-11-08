@@ -101,7 +101,7 @@ export function FunnelTeamList({ team, onOpen }: FunnelTeamListProps) {
                         e.stopPropagation()
                         onOpen(row.employeeId)
                       }}
-                      className="text-left hover:underline focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
+                      className="text-left hover:underline pointer-coarse:py-3 focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
                     >
                       {row.employeeName}
                     </button>
