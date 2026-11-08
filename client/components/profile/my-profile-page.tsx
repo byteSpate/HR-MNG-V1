@@ -120,6 +120,7 @@ function StaffProfile({
   return (
     <>
       <ProfileHeader
+        nameAs="h2"
         employee={employee}
         avatarEditable={employee.editableFields.length > 0}
         onAvatarChanged={onRefresh}

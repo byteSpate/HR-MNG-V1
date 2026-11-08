@@ -36,6 +36,7 @@ export function ProfileHeader({
   onAvatarChanged,
   onEditName,
   action,
+  nameAs = "h1",
 }: {
   employee: EmployeeView
   avatarEditable: boolean
@@ -43,6 +44,8 @@ export function ProfileHeader({
   /** Rendered only when supplied — the caller decides from editableFields. */
   onEditName?: () => void
   action?: ReactNode
+  /** "h2" when the page already has its own title (My Profile). */
+  nameAs?: "h1" | "h2"
 }) {
   const { accessToken } = useSession()
   const employment = employee.employment
@@ -58,7 +61,7 @@ export function ProfileHeader({
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <Heading level="page" as="h2">
+          <Heading level="page" as={nameAs}>
             {employee.work.fullName}
           </Heading>
           {onEditName ? (
