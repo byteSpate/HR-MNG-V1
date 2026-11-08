@@ -48,7 +48,7 @@ export function PageHeader({
         <div className="text-[13px] text-[#5F6B7C]">{sub}</div>
       </div>
       {aside || cta ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
           {aside}
           {cta ? (
             <Button
