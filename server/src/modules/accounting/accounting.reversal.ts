@@ -7,8 +7,10 @@ import { monthLabel } from "./accounting.period.service"
 /** Every dimension copied — department, employee, the deal, the customer,
  *  the supplier, and the FX memo fields — not only accountId/debit/credit.
  *  Losing a dimension here was a real bug caught when this helper was
- *  written; both reversal paths share it so neither can regress it. */
-function invertedLineRows(lines: JournalLine[]) {
+ *  written. Every reversal path uses it, including the Reverse button on the
+ *  Journals page (`reverseJournal`), which once built its own copy and
+ *  dropped the deal, customer and supplier. */
+export function invertedLineRows(lines: JournalLine[]) {
   return invertLines(lines).map((l, i) => ({
     accountId: l.accountId,
     debit: l.debit,
