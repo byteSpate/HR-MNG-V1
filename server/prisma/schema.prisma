@@ -2028,10 +2028,9 @@ model JournalLine {
   // ── deal-based dimensions, added for receivables & payables ──
   // Same pattern as departmentId/employeeId above: optional, so nothing
   // that already posts has to change. A line carries at most one of
-  // customerId/supplierId in practice, never both, but nothing here
-  // enforces that — the posting builders that create these lines are
-  // what guarantee it (Phase 2/3), the same way nothing on this model
-  // enforces "exactly one of debit/credit is non-zero" either.
+  // customerId/supplierId, never both, and exactly one of debit/credit is
+  // above zero. Prisma cannot express either rule, so they are CHECK
+  // constraints added by hand in 20261109133813_journal_line_checks.
   opportunityId String?
   opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
   customerId    String?
