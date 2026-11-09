@@ -25,10 +25,12 @@ import { resolveShift } from "../modules/attendance/attendance.grid"
 import { emitEvent } from "../modules/event/event.emit"
 import { attendanceAutoClosedEvent } from "../modules/attendance/attendance.events"
 import { elapsedHours, officeInstantOf, officeToday } from "../modules/attendance/attendance.time"
-import { addDays, formatDateOnly } from "../utils/dates"
+import { formatDateOnly } from "../utils/dates"
 
 export async function runAutoCloseOpenDays(): Promise<number> {
-  const day = addDays(officeToday(), -1)
+  // Today: the job runs at 21:59, just before the 22:00 attendance report, so the
+  // report already counts these days as closed.
+  const day = officeToday()
 
   const open = await prisma.attendance.findMany({
     where: { date: day, checkIn: { not: null }, checkOut: null },

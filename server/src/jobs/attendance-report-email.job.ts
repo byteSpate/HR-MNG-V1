@@ -3,8 +3,8 @@
  *
  * Daily at 22:00 for today, and monthly at 08:00 on the 1st for the month
  * that just ended. The daily one runs in the evening, so it describes the day that
- * is ending. It runs before the 00:05 auto check-out, so anybody who has not
- * checked out yet by 22:00 shows under "No check-out" in this email.
+ * is ending. It runs at 22:00, one minute after the 21:59 auto check-out, so
+ * a forgotten check-out is already closed when the day is counted.
  *
  * The report is built once and sent to everybody, through the same
  * `getAttendanceReport` the Reports page uses, so the email cannot disagree
