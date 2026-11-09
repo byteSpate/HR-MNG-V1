@@ -29,8 +29,8 @@ import {
   runMonthlyAttendanceReportEmail,
 } from "./attendance-report-email.job"
 
-/** 00:10 on Sunday 4 Oct 2026 in Dhaka is 18:10 on the 3rd in UTC. */
-const DAILY_NOW = new Date("2026-10-03T18:10:00.000Z")
+/** 22:00 on Saturday 3 Oct 2026 in Dhaka is 16:00 on the 3rd in UTC. */
+const DAILY_NOW = new Date("2026-10-03T16:00:00.000Z")
 /** 08:00 on Thursday 1 Oct 2026 in Dhaka is 02:00 UTC the same day. */
 const MONTHLY_NOW = new Date("2026-10-01T02:00:00.000Z")
 
@@ -62,7 +62,7 @@ beforeEach(() => {
 })
 
 describe("the daily attendance report email", () => {
-  it("reports yesterday in office time, as a super admin would see it", async () => {
+  it("reports today in office time, as a super admin would see it", async () => {
     await runDailyAttendanceReportEmail(DAILY_NOW)
 
     expect(getAttendanceReport).toHaveBeenCalledTimes(1)

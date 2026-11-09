@@ -147,7 +147,7 @@ export async function sendAttendanceReportEmail(input: ReportEmailInput): Promis
     { label: "Waiting for approval", value: String(t.pendingApproval) },
   ]
 
-  const when = daily ? "every day at 12:10 am" : "on the 1st of each month at 8:00 am"
+  const when = daily ? "every day at 10:00 pm" : "on the 1st of each month at 8:00 am"
   const footer = `You got this email because you are a Super Admin. It is sent ${when}.`
   const kind = daily ? "ATTENDANCE_REPORT_DAILY" : "ATTENDANCE_REPORT_MONTHLY"
 

@@ -45,9 +45,9 @@ export function startJobs(): void {
     timezone: env.APP_TIMEZONE,
   })
 
-  // 00:10, five minutes after the auto check-out above, so yesterday is
-  // closed before it is counted. Yesterday's report, to every Super Admin.
-  cron.schedule("10 0 * * *", () => guard("daily attendance report", () => runDailyAttendanceReportEmail()), {
+  // 22:00: today's report, to every Super Admin. The day is nearly over, and the
+  // auto check-out above has not run yet, so a missing check-out still shows.
+  cron.schedule("0 22 * * *", () => guard("daily attendance report", () => runDailyAttendanceReportEmail()), {
     timezone: env.APP_TIMEZONE,
   })
 
