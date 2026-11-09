@@ -36,25 +36,25 @@ export function OpportunityProjectPanel({ deal, canStart }: { deal: OpportunityS
       {error ? <PanelAlert>{error}</PanelAlert> : null}
       {deal.project ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/sales/projects/${deal.project.id}`} className="text-[13px] font-semibold hover:underline">
+          <Link href={`/sales/projects/${deal.project.id}`} className="text-body-sm font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3">
             {deal.project.name}
           </Link>
-          <span className={`text-[12px] ${TONE.muted}`}>{deal.project.serial}</span>
+          <span className={`text-caption ${TONE.muted}`}>{deal.project.serial}</span>
           <Tag label={PROJECT_STATUS_LABEL[deal.project.status]} tone={PROJECT_STATUS_TONE[deal.project.status]} />
         </div>
       ) : deal.status !== "WON" ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>A Project can start once this Opportunity is Won.</p>
+        <p className={`text-caption ${TONE.muted}`}>A Project can start once this Opportunity is Won.</p>
       ) : canStart ? (
         <div className="space-y-2">
-          <p className={`text-[12.5px] ${TONE.muted}`}>
+          <p className={`text-caption ${TONE.muted}`}>
             Start a Project if this Opportunity needs delivery work, such as install or setup. A sale with no delivery work does not need one.
           </p>
-          <Button type="button" disabled={start.isPending} onClick={() => start.mutate()} className="h-8 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]">
+          <Button type="button" disabled={start.isPending} onClick={() => start.mutate()} className="h-8 bg-ink text-caption font-bold text-white hover:bg-ink-strong">
             {start.isPending ? "Starting…" : "Start project"}
           </Button>
         </div>
       ) : (
-        <p className={`text-[12.5px] ${TONE.muted}`}>No Project yet. The Opportunity Owner or a Sales Admin can start one.</p>
+        <p className={`text-caption ${TONE.muted}`}>No Project yet. The Opportunity Owner or a Sales Admin can start one.</p>
       )}
     </Panel>
   )

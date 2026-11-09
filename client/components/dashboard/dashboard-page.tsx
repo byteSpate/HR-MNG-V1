@@ -151,18 +151,18 @@ export function DashboardPage() {
 
   if (dashboardQuery.isError || !dashboardQuery.data) {
     return (
-      <div className="mt-10 rounded-md border border-[#E4E9EF] bg-white p-8 text-center">
-        <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+      <div className="mt-10 rounded-md border border-line bg-white p-8 text-center">
+        <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
           <RiErrorWarningLine className="size-5" aria-hidden />
         </span>
-        <div className="text-[15px] font-bold">Your dashboard could not be loaded</div>
-        <p className="mx-auto mt-1 max-w-[52ch] text-[13px] leading-relaxed text-[#5F6B7C]">
+        <div className="text-lead font-bold">Your dashboard could not be loaded</div>
+        <p className="mx-auto mt-1 max-w-[52ch] text-body-sm leading-relaxed text-ink-muted">
           {dashboardQuery.error instanceof ApiError
             ? dashboardQuery.error.message
             : "Something went wrong on the way to the server."}
         </p>
         <Button
-          className="mt-4 h-auto rounded-md bg-[#17191C] px-4 py-2 text-[13px] font-bold text-white hover:bg-[#0E1012]"
+          className="mt-4 h-auto rounded-md bg-ink px-4 py-2 text-body-sm font-bold text-white hover:bg-ink-strong"
           onClick={() => dashboardQuery.refetch()}
         >
           <RiRefreshLine className="size-4" aria-hidden />

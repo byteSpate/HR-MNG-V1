@@ -19,7 +19,7 @@ export function DashboardShell({
   systemLabel,
   accessLabel,
   badges,
-  mainClassName = "max-w-[1220px] 2xl:max-w-[1600px]",
+  mainClassName = "max-w-305 2xl:max-w-400",
   profileHref: profileHrefOverride,
   children,
 }: {

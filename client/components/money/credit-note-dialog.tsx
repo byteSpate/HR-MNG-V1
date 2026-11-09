@@ -7,10 +7,12 @@ import { createCustomerCreditNote, type CustomerCreditNoteInput } from "@/lib/ap
 import { useSession } from "@/lib/auth/session-context"
 import type { CustomerCreditNote, DealMoneyInvoice } from "@/lib/api/types"
 import { formatMoney } from "@/lib/money"
-import { CheckboxField, DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
+import { CheckboxField, DialogActions, Field, FormError, toMessage } from "@/components/dashboard/record-kit"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -78,7 +80,7 @@ export function CreditNoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Fix invoice {invoice.invoiceNumber}</DialogTitle>
           <DialogDescription>Choose the lines to reduce. The VAT is worked out for you.</DialogDescription>
@@ -94,14 +96,14 @@ export function CreditNoteDialog({
           </Field>
 
           <section className="space-y-2">
-            <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines being reduced</h3>
+            <Heading level="label">Lines being reduced</Heading>
             {invoice.lines.map((line) => {
               const left = Number(line.amount) - alreadyCredited(line.id)
               const on = line.id in picked
               const rate = Number(line.amount) > 0 ? Number(line.vatAmount) / Number(line.amount) : 0
               const previewVat = on ? (Number(picked[line.id].amount) || 0) * rate : 0
               return (
-                <div key={line.id} className="space-y-2 rounded-md border border-[#E4E9EF] px-3 py-2">
+                <div key={line.id} className="space-y-2 rounded-md border border-line px-3 py-2">
                   <CheckboxField
                     label={`${line.description}, ${formatMoney(left.toFixed(2), "BDT")} left to credit`}
                     checked={on}
@@ -133,7 +135,7 @@ export function CreditNoteDialog({
                 </div>
               )
             })}
-            <p className="text-right text-[12.5px] font-bold tabular-nums">Credit {formatMoney(total.toFixed(2), "BDT")} before VAT</p>
+            <p className="text-right text-caption font-bold tabular-nums">Credit {formatMoney(total.toFixed(2), "BDT")} before VAT</p>
           </section>
 
           {error ? <FormError>{error}</FormError> : null}

@@ -43,7 +43,7 @@ export function LifecycleRecoveryDialog({
           <DialogTitle>{isLost ? "Mark this asset lost" : "Retire this asset"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          <p className="text-caption leading-relaxed text-ink-muted">
             {isLost
               ? "Marking it lost stops it being handed out and closes its custody. If the loss is somebody's to answer for, you can price a recovery in the same step."
               : "A retired asset leaves the register and is never handed out again."}
@@ -63,10 +63,10 @@ export function LifecycleRecoveryDialog({
           </div>
 
           {isLost ? (
-            <div className="rounded-md border border-[#E4E9EF] bg-[#F4F6F9] p-3">
+            <div className="rounded-md border border-line bg-surface-hover p-3">
               <button
                 type="button"
-                className="flex w-full items-center justify-between text-[12.5px] font-semibold"
+                className="flex w-full items-center justify-between text-caption font-semibold"
                 onClick={() => setRecoveryOpen((v) => !v)}
               >
                 <span>Price a recovery for this loss</span>
@@ -103,7 +103,7 @@ export function LifecycleRecoveryDialog({
             </div>
           ) : null}
 
-          {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+          {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>
@@ -126,7 +126,7 @@ export function LifecycleRecoveryDialog({
                     : { note: note.trim() }
                 )
               }
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {pending ? "Saving…" : isLost ? "Mark lost" : "Retire asset"}
             </Button>

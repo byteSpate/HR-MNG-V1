@@ -72,12 +72,12 @@ function Detail({
 }) {
   return (
     <div className="min-w-0">
-      <div className={cn("text-[11px] font-bold uppercase", TONE.muted)}>{label}</div>
-      <div className="mt-1 flex items-start gap-1.5 text-[13px]">
-        {Icon ? <Icon className="mt-px size-4 shrink-0 text-[#8A94A2]" aria-hidden /> : null}
+      <div className={cn("text-caption font-bold uppercase", TONE.muted)}>{label}</div>
+      <div className="mt-1 flex items-start gap-1.5 text-body-sm">
+        {Icon ? <Icon className="mt-px size-4 shrink-0 text-ink-muted" aria-hidden /> : null}
         <span className="min-w-0">
           {value}
-          {sub ? <span className={cn("block text-[12px]", TONE.muted)}>{sub}</span> : null}
+          {sub ? <span className={cn("block text-caption", TONE.muted)}>{sub}</span> : null}
         </span>
       </div>
     </div>
@@ -139,22 +139,22 @@ export function LeaveDetail({
               {/* The whole reason this sheet exists. Quoted rather than set as
                   plain text so it reads as the employee's words. */}
               <div>
-                <div className={cn("text-[11px] font-bold uppercase", TONE.muted)}>Reason given</div>
+                <div className={cn("text-caption font-bold uppercase", TONE.muted)}>Reason given</div>
                 {request.reason ? (
-                  <blockquote className="mt-1.5 flex gap-2 border-l-2 border-[#E4E9EF] pl-3 text-[13px] leading-relaxed text-[#3D4756]">
-                    <RiChatQuoteLine className="mt-0.5 size-4 shrink-0 text-[#B6C0CC]" aria-hidden />
+                  <blockquote className="mt-1.5 flex gap-2 border-l-2 border-line pl-3 text-body-sm leading-relaxed text-ink-soft">
+                    <RiChatQuoteLine className="mt-0.5 size-4 shrink-0 text-line-strong" aria-hidden />
                     <span>{request.reason}</span>
                   </blockquote>
                 ) : (
                   // Optional on the form, so its absence is a fact about the
                   // request rather than a gap in this screen.
-                  <p className={cn("mt-1.5 text-[13px] italic", TONE.muted)}>
+                  <p className={cn("mt-1.5 text-body-sm italic", TONE.muted)}>
                     No reason was given.
                   </p>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t border-[#EFF2F6] pt-4">
+              <div className="grid grid-cols-2 gap-4 border-t border-surface-sunken pt-4">
                 <Detail
                   label="From"
                   value={formatFullDate(request.startDate)}
@@ -181,14 +181,14 @@ export function LeaveDetail({
               {/* Only once somebody has decided. A pending request showing an
                   empty "Decision" block reads as a failure to load one. */}
               {request.status !== "PENDING" ? (
-                <div className="border-t border-[#EFF2F6] pt-4">
-                  <div className={cn("text-[11px] font-bold uppercase", TONE.muted)}>Decision</div>
-                  <div className="mt-1 text-[13px]">
+                <div className="border-t border-surface-sunken pt-4">
+                  <div className={cn("text-caption font-bold uppercase", TONE.muted)}>Decision</div>
+                  <div className="mt-1 text-body-sm">
                     {STATUS_LABEL[request.status]} by {decidedByLabel(request.decidedBy)}
                     {request.decidedAt ? ` · ${formatMoment(request.decidedAt)}` : ""}
                   </div>
                   {request.decisionNote ? (
-                    <p className="mt-2 border-l-2 border-[#E4E9EF] pl-3 text-[12.5px] leading-relaxed text-[#3D4756]">
+                    <p className="mt-2 border-l-2 border-line pl-3 text-caption leading-relaxed text-ink-soft">
                       {request.decisionNote}
                     </p>
                   ) : null}
@@ -198,7 +198,7 @@ export function LeaveDetail({
               {error ? (
                 <div
                   role="alert"
-                  className="flex items-start gap-2 rounded-md border border-[#F0D2D2] bg-[#FDF6F6] px-3.5 py-3 text-[12.5px] leading-relaxed font-semibold text-[#B03A3A]"
+                  className="flex items-start gap-2 rounded-md border border-danger-line bg-danger-tint px-3.5 py-3 text-caption leading-relaxed font-semibold text-danger"
                 >
                   <RiErrorWarningLine className="mt-px size-4 shrink-0" aria-hidden />
                   <span>{error}</span>
@@ -208,14 +208,14 @@ export function LeaveDetail({
               {canDecide && (decidable || revertable) ? (
                 // Pinned to the bottom of the sheet, so a long reason does not
                 // push the decision below the fold.
-                <div className="mt-auto flex flex-wrap gap-2 border-t border-[#EFF2F6] pt-4">
+                <div className="mt-auto flex flex-wrap gap-2 border-t border-surface-sunken pt-4">
                   {decidable ? (
                     <>
                       <Button
                         type="button"
                         disabled={pending}
                         onClick={() => onApprove(request)}
-                        className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+                        className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
                       >
                         <RiCheckLine className="size-4" aria-hidden />
                         Approve
@@ -225,7 +225,7 @@ export function LeaveDetail({
                         variant="outline"
                         disabled={pending}
                         onClick={() => onReject(request)}
-                        className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#B03A3A] hover:bg-[#FDF1F1]"
+                        className="h-auto rounded-md px-3.5 py-2 text-caption font-bold text-danger hover:bg-danger-tint"
                       >
                         <RiCloseLine className="size-4" aria-hidden />
                         Reject
@@ -238,12 +238,12 @@ export function LeaveDetail({
                         variant="outline"
                         disabled={pending}
                         onClick={() => onRevert(request)}
-                        className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold"
+                        className="h-auto rounded-md px-3.5 py-2 text-caption font-bold"
                       >
                         <RiArrowGoBackLine className="size-4" aria-hidden />
                         Revert approval
                       </Button>
-                      <p className={cn("w-full text-[11.5px] leading-relaxed", TONE.muted)}>
+                      <p className={cn("w-full text-caption leading-relaxed", TONE.muted)}>
                         This leave has not started yet, so the approval can still be taken back.
                       </p>
                     </>

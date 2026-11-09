@@ -39,6 +39,7 @@ import {
   JOURNAL_TYPE_LABEL,
   sumPaisa,
 } from "@/components/accounting/accounting-shared"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * A journal rendered as a document rather than as a form.
@@ -102,9 +103,9 @@ export function JournalDocument({ journal }: { journal: Journal }) {
           <Button variant="ghost" size="sm" onClick={() => router.push("../journals")}>
             <RiArrowLeftLine className="size-4" /> Register
           </Button>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+          <Heading level="page" className="mt-1 text-2xl tabular-nums">
             {journal.journalNo}
-          </h1>
+          </Heading>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <Badge variant={journal.status === "POSTED" ? "default" : "secondary"}>
               {JOURNAL_STATUS_LABEL[journal.status]}

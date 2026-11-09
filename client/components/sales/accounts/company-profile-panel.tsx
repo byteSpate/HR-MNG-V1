@@ -12,16 +12,17 @@ import { TONE } from "@/components/dashboard/record-kit"
 import { Panel, PanelError, PanelHeading, PanelSkeleton } from "@/components/sales/shared/panel"
 import { ProfileEditDialog } from "@/components/sales/accounts/profile-edit-dialog"
 import { Button } from "@/components/ui/button"
+import { Heading } from "@/components/ds/heading"
 
 const onDay = (iso: string) => new Date(iso).toLocaleDateString()
 
 function Row({ question, line, note }: { question: string; line: string | null; note: string | null }) {
   return (
     <div className="grid gap-x-6 gap-y-0.5 py-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-      <dt className={`text-[12.5px] ${TONE.muted}`}>{question}</dt>
-      <dd className="text-[13px] font-semibold [overflow-wrap:anywhere]">
+      <dt className={`text-caption ${TONE.muted}`}>{question}</dt>
+      <dd className="text-body-sm font-semibold [overflow-wrap:anywhere]">
         {line ?? <span className={`font-normal ${TONE.muted}`}>Not recorded</span>}
-        {note ? <span className={`block text-[11.5px] font-normal ${TONE.muted}`}>{note}</span> : null}
+        {note ? <span className={`block text-caption font-normal ${TONE.muted}`}>{note}</span> : null}
       </dd>
     </div>
   )
@@ -56,7 +57,7 @@ export function CompanyProfilePanel({ accountId }: { accountId: string }) {
               type="button"
               variant="outline"
               onClick={() => setEditing(true)}
-              className="h-8 gap-1.5 px-2.5 text-[12px] font-bold"
+              className="h-8 gap-1.5 px-2.5 text-caption font-bold"
             >
               <RiPencilLine className="size-3.5" aria-hidden />
               Edit profile
@@ -64,14 +65,14 @@ export function CompanyProfilePanel({ accountId }: { accountId: string }) {
           ) : null
         }
       />
-      <p className={`-mt-1 mb-3 text-[12.5px] ${TONE.muted}`}>
+      <p className={`-mt-1 mb-3 text-caption ${TONE.muted}`}>
         {profile.answered} of {profile.total} questions answered
       </p>
 
       {profile.groups.map((group) => (
         <section key={group.key} className="mt-4 first:mt-0">
-          <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>{group.title}</h3>
-          <dl className="mt-1 divide-y divide-[#E4E9EF]">
+          <Heading level="label">{group.title}</Heading>
+          <dl className="mt-1 divide-y divide-line">
             {group.questions.map((q) => (
               <Row
                 key={q.key}
@@ -86,8 +87,8 @@ export function CompanyProfilePanel({ accountId }: { accountId: string }) {
 
       {profile.custom.length > 0 ? (
         <section className="mt-4">
-          <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Other questions</h3>
-          <dl className="mt-1 divide-y divide-[#E4E9EF]">
+          <Heading level="label">Other questions</Heading>
+          <dl className="mt-1 divide-y divide-line">
             {profile.custom.map((c) => (
               <Row
                 key={c.id}

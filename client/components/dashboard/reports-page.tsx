@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { TONE } from "@/components/dashboard/record-kit"
 import { AttendanceReports } from "@/components/attendance/report-panel"
 import { ExpenseReports } from "@/components/expense/expense-report-panel"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * One place for every report.
@@ -36,7 +37,7 @@ const ORG_ROLES = ["HR_ADMIN", "SUPER_ADMIN", "FINANCE_OFFICER"]
 const PAYROLL_ADMIN_ROLES = ["HR_ADMIN", "FINANCE_OFFICER", "SUPER_ADMIN"]
 
 function Muted({ children }: { children: string }) {
-  return <p className={`max-w-[64ch] text-[12.5px] leading-relaxed ${TONE.muted}`}>{children}</p>
+  return <p className={`max-w-[64ch] text-caption leading-relaxed ${TONE.muted}`}>{children}</p>
 }
 
 function Section({
@@ -49,9 +50,9 @@ function Section({
   children: ReactNode
 }) {
   return (
-    <section className="space-y-3 border-t border-[#EEF1F5] pt-6 first:border-t-0 first:pt-0">
+    <section className="space-y-3 border-t border-surface-sunken pt-6 first:border-t-0 first:pt-0">
       <div>
-        <h2 className="font-heading text-[16px] font-bold tracking-tight">{title}</h2>
+        <Heading level="section">{title}</Heading>
         <Muted>{sub}</Muted>
       </div>
       {children}

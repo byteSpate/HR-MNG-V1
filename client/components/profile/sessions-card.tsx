@@ -16,6 +16,7 @@ import { ConfirmDialog, PanelAlert, TONE, toMessage } from "@/components/dashboa
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * Where this account is signed in, for every role.
@@ -82,19 +83,19 @@ export function SessionsCard() {
   const rows = sessions.data ?? []
 
   return (
-    <section className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4.5">
+    <section className="rounded-md border border-line bg-white px-5 py-4.5">
       <header className="mb-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="flex items-center gap-2 text-[13.5px] font-bold">
-          <RiDeviceLine className="size-4 text-[#8A94A2]" aria-hidden />
+        <Heading level="section" className="flex items-center gap-2">
+          <RiDeviceLine className="size-4 text-ink-muted" aria-hidden />
           Where you&apos;re signed in
-        </h2>
+        </Heading>
         {rows.length > 0 ? (
-          <span className={cn("text-[12.5px] tabular-nums", TONE.muted)}>
+          <span className={cn("text-caption tabular-nums", TONE.muted)}>
             {rows.length} {rows.length === 1 ? "device" : "devices"}
           </span>
         ) : null}
       </header>
-      <p className={cn("mb-3.5 text-[12.5px] leading-relaxed", TONE.muted)}>
+      <p className={cn("mb-3.5 text-caption leading-relaxed", TONE.muted)}>
         If you don&apos;t recognise something here, end it and change your password.
       </p>
 
@@ -107,15 +108,15 @@ export function SessionsCard() {
       {sessions.isPending ? (
         <div className="space-y-2.5">
           {[0, 1].map((row) => (
-            <div key={row} className="space-y-2 rounded-md border border-[#EEF1F5] p-3">
+            <div key={row} className="space-y-2 rounded-md border border-surface-sunken p-3">
               <Skeleton className="h-3.5 w-1/2" />
               <Skeleton className="h-3 w-2/3" />
             </div>
           ))}
         </div>
       ) : sessions.isError ? (
-        <div className="rounded-md border border-[#EEF1F5] px-3.5 py-3">
-          <p className={cn("text-[12.5px]", TONE.muted)}>
+        <div className="rounded-md border border-surface-sunken px-3.5 py-3">
+          <p className={cn("text-caption", TONE.muted)}>
             This list could not be loaded. Nothing has changed.
           </p>
           <Button
@@ -131,7 +132,7 @@ export function SessionsCard() {
       ) : rows.length === 0 ? (
         // Reachable: a bearer-token client, or every session just revoked.
         // Not an error, and not worth a full empty-state illustration.
-        <p className={cn("text-[12.5px]", TONE.muted)}>No other sign-ins are active.</p>
+        <p className={cn("text-caption", TONE.muted)}>No other sign-ins are active.</p>
       ) : (
         <ul className="space-y-2">
           {rows.map((row) => {
@@ -141,24 +142,24 @@ export function SessionsCard() {
                 key={row.sessionId}
                 className={cn(
                   "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3.5 py-3",
-                  row.current ? "border-[#CFE3D6] bg-[#F7FBF8]" : "border-[#EEF1F5]"
+                  row.current ? "border-success-line bg-surface-subtle" : "border-surface-sunken"
                 )}
               >
                 <Icon
-                  className={cn("size-4.5 shrink-0", row.current ? "text-[#1E7A3C]" : "text-[#8A94A2]")}
+                  className={cn("size-4.5 shrink-0", row.current ? "text-success" : "text-ink-muted")}
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-semibold">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm font-semibold">
                     {row.device}
                     {row.current ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#E3F3E8] px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-[#1E7A3C] uppercase">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success-tint px-2 py-0.5 text-caption font-bold tracking-wide text-success uppercase">
                         <RiCheckboxCircleFill className="size-3" aria-hidden />
                         This device
                       </span>
                     ) : null}
                   </div>
-                  <div className={cn("mt-0.5 text-[12px]", TONE.muted)}>
+                  <div className={cn("mt-0.5 text-caption", TONE.muted)}>
                     {/* The IP is shown because an unfamiliar one is the whole
                         signal. Absent rather than "unknown" when nothing was
                         recorded — a session predating this feature. */}

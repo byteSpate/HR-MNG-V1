@@ -89,7 +89,7 @@ const STATUS_OPTIONS = (["AVAILABLE", "ASSIGNED", "IN_REPAIR", "LOST", "RETIRED"
 )
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className="mb-2 text-[15px] font-bold">{children}</div>
+  return <div className="mb-2 text-lead font-bold">{children}</div>
 }
 
 /**
@@ -1080,20 +1080,20 @@ export function AssetPage() {
               /* `h-auto!` is load-bearing: the primitive pins a horizontal list
                  to `h-8` via `group-data-horizontal/tabs:h-8`, which outranks a
                  plain utility on specificity. */
-              className="h-auto! w-full justify-start gap-6 overflow-x-auto rounded-none border-b border-[#E4E9EF] bg-transparent p-0"
+              className="h-auto! w-full justify-start gap-6 overflow-x-auto rounded-none border-b border-line bg-transparent p-0"
             >
               {ASSET_TABS.map(({ value, label, icon: Icon, count }) => (
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="h-auto flex-none gap-2 rounded-none border-b-2 border-transparent px-0 pt-0 pb-2.5 text-[13px] font-semibold text-[#5F6B7C] transition-colors after:hidden hover:text-[#1C2733] data-active:border-b-[#17191C] data-active:bg-transparent data-active:text-[#1C2733]"
+                  className="h-auto flex-none gap-2 rounded-none border-b-2 border-transparent px-0 pt-0 pb-2.5 text-body-sm font-semibold text-ink-muted transition-colors after:hidden hover:text-ink-body data-active:border-b-ink data-active:bg-transparent data-active:text-ink-body"
                 >
                   <Icon className="size-4 shrink-0" aria-hidden />
                   {label}
                   {/* A count is a quantity, not part of the name, so it reads
                       as a pill rather than "(3)" glued to the label. */}
                   {count ? (
-                    <span className="rounded-full bg-[#EEF1F5] px-1.5 py-px text-[11px] font-bold text-[#5F6B7C] tabular-nums">
+                    <span className="rounded-full bg-surface-sunken px-1.5 py-px text-caption font-bold text-ink-muted tabular-nums">
                       {count}
                     </span>
                   ) : null}
@@ -1234,7 +1234,7 @@ export function AssetPage() {
         <div className="space-y-6">
           <section>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-[15px] font-bold">What I&apos;m holding</div>
+              <div className="text-lead font-bold">What I&apos;m holding</div>
               <Button type="button" size="sm" variant="outline" onClick={() => setRequestOpen(true)}>
                 Request an asset
               </Button>
@@ -1299,7 +1299,7 @@ export function AssetPage() {
               belongs to. */}
           <section>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-[15px] font-bold">My requests</div>
+              <div className="text-lead font-bold">My requests</div>
               <Button type="button" size="sm" variant="outline" onClick={() => setRequestOpen(true)}>
                 Request an asset
               </Button>
@@ -1330,7 +1330,7 @@ export function AssetPage() {
               <button
                 type="button"
                 onClick={() => setShowAllRequests(true)}
-                className="mt-2 text-[12.5px] font-semibold text-[#3A6FF8] underline-offset-2 hover:underline"
+                className="mt-2 text-caption font-semibold text-info underline-offset-2 hover:underline"
               >
                 Show {hiddenRequestCount} earlier request{hiddenRequestCount === 1 ? "" : "s"}
               </button>

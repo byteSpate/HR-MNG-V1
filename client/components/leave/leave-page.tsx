@@ -62,10 +62,10 @@ type DecisionKind = "reject" | "revert"
 /** Shaped like the table it stands in for, so nothing shifts when data lands. */
 function TableSkeleton() {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+    <div className="rounded-md border border-line bg-white px-5.5 py-5">
       <div className="space-y-3">
         {[0, 1, 2, 3].map((row) => (
-          <div key={row} className="flex items-center gap-4 border-b border-[#EEF1F5] pb-3 last:border-0">
+          <div key={row} className="flex items-center gap-4 border-b border-surface-sunken pb-3 last:border-0">
             <div className="flex-1 space-y-1.5">
               <Skeleton className="h-3.5 w-1/3" />
               <Skeleton className="h-3 w-1/5" />
@@ -81,16 +81,16 @@ function TableSkeleton() {
 
 function LoadError({ label, onRetry }: { label: string; onRetry: () => void }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-8 text-center">
-      <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+    <div className="rounded-md border border-line bg-white px-5.5 py-8 text-center">
+      <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
         <RiErrorWarningLine className="size-5" aria-hidden />
       </span>
-      <div className="text-[13.5px] font-bold">Could not load {label}</div>
-      <p className="mt-1 text-[12.5px] text-[#5F6B7C]">
+      <div className="text-body-sm font-bold">Could not load {label}</div>
+      <p className="mt-1 text-caption text-ink-muted">
         Nothing has changed. Check the connection and try again.
       </p>
       <Button
-        className="mt-3 h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+        className="mt-3 h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
         onClick={onRetry}
       >
         <RiRefreshLine className="size-4" aria-hidden />
@@ -111,12 +111,12 @@ function EmptyState({
   body: string
 }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-10 text-center">
-      <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+    <div className="rounded-md border border-line bg-white px-5.5 py-10 text-center">
+      <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
         <Icon className="size-5" aria-hidden />
       </span>
-      <div className="text-[13.5px] font-bold">{title}</div>
-      <p className="mx-auto mt-1 max-w-[46ch] text-[12.5px] leading-relaxed text-[#5F6B7C]">{body}</p>
+      <div className="text-body-sm font-bold">{title}</div>
+      <p className="mx-auto mt-1 max-w-[46ch] text-caption leading-relaxed text-ink-muted">{body}</p>
     </div>
   )
 }
@@ -382,7 +382,7 @@ export function LeavePage() {
             <Button
               type="button"
               onClick={() => openRequest(r)}
-              className="h-auto gap-1.5 rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white transition-[background-color,transform] hover:bg-[#0E1012] active:translate-y-px motion-reduce:transition-none"
+              className="h-auto gap-1.5 rounded-md bg-ink px-2.5 py-1.5 text-caption font-bold text-white transition-[background-color,transform] hover:bg-ink-strong active:translate-y-px motion-reduce:transition-none"
             >
               {actionable ? (
                 <RiCheckboxCircleLine className="size-3.5 text-white" aria-hidden />
@@ -432,14 +432,14 @@ export function LeavePage() {
         <Button
           type="button"
           variant="outline"
-          className="h-auto px-2.5 py-1 text-[12px] font-semibold"
+          className="h-auto px-2.5 py-1 text-caption font-semibold"
           disabled={cancelMutation.isPending}
           onClick={() => cancelMutation.mutate(r.id)}
         >
           Cancel
         </Button>
       ) : (
-        <span className="text-[13px] text-[#6B7789]">—</span>
+        <span className="text-body-sm text-ink-muted">—</span>
       ),
     },
   ])

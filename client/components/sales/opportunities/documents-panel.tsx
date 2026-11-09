@@ -65,15 +65,15 @@ export function DocumentsPanel({
           <Field label="Web address" htmlFor="doc-url">
             <Input id="doc-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://drive.google.com/..." />
           </Field>
-          <Button type="button" disabled={!name.trim() || !url.trim().startsWith("https://") || add.isPending} onClick={() => add.mutate()} className="h-9 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]">
+          <Button type="button" disabled={!name.trim() || !url.trim().startsWith("https://") || add.isPending} onClick={() => add.mutate()} className="h-9 bg-ink text-caption font-bold text-white hover:bg-ink-strong">
             {add.isPending ? "Saving…" : "Add link"}
           </Button>
           {badAddress ? (
-            <p role="alert" className="text-[11.5px] font-semibold text-[#B03A3A] sm:col-span-3">
+            <p role="alert" className="text-caption font-semibold text-danger sm:col-span-3">
               The web address must start with https://
             </p>
           ) : null}
-          <p className={`text-[11.5px] sm:col-span-3 ${TONE.muted}`}>
+          <p className={`text-caption sm:col-span-3 ${TONE.muted}`}>
             The link is saved with the current stage: {STAGE_LABEL[deal.stage]}.
           </p>
         </div>
@@ -84,25 +84,25 @@ export function DocumentsPanel({
       ) : query.isError ? (
         <PanelAlert>{toMessage(query.error)}</PanelAlert>
       ) : query.data.length === 0 ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>No document links yet. Add a link to a file, such as an SRS or a Proposal.</p>
+        <p className={`text-caption ${TONE.muted}`}>No document links yet. Add a link to a file, such as an SRS or a Proposal.</p>
       ) : (
-        <ul className="divide-y divide-[#E4E9EF]">
+        <ul className="divide-y divide-line">
           {query.data.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-2 py-2.5">
               {d.url ? (
-                <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-semibold hover:underline">
+                <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-body-sm font-semibold hover:underline">
                   {d.name} <RiExternalLinkLine className="size-3.5" aria-hidden />
                 </a>
               ) : (
-                <span className="text-[13px] font-semibold">
+                <span className="text-body-sm font-semibold">
                   {d.name} <span className={`font-normal ${TONE.muted}`}>(only admins can open this)</span>
                 </span>
               )}
-              <span className={`text-[12px] ${TONE.muted}`}>
+              <span className={`text-caption ${TONE.muted}`}>
                 {STAGE_LABEL[d.stage]} · {d.createdByName ?? "Someone"} · {new Date(d.createdAt).toLocaleDateString()}
               </span>
               {d.canRemove && canRemoveLinks ? (
-                <Button type="button" variant="link" onClick={() => setRemoving(d.id)} className="ml-auto h-auto p-0 text-[12px] font-bold text-[#B03A3A]">
+                <Button type="button" variant="link" onClick={() => setRemoving(d.id)} className="ml-auto h-auto p-0 text-caption font-bold text-danger">
                   Remove
                 </Button>
               ) : null}

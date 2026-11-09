@@ -60,7 +60,7 @@ export function ApproveEmailChangeForm({ token }: { token: string }) {
           </p>
           <p>Your address has not changed yet. If you never confirm, it stays as it is.</p>
         </AuthNotice>
-        <p className="text-center text-[12px] text-[#5F6B7C]">
+        <p className="text-center text-caption text-ink-muted">
           <Link href="/login" className={AUTH_LINK}>
             Back to sign in
           </Link>
@@ -82,7 +82,7 @@ export function ApproveEmailChangeForm({ token }: { token: string }) {
             your account. Tell your administrator too.
           </p>
         </AuthNotice>
-        <p className="text-center text-[12px] text-[#5F6B7C]">
+        <p className="text-center text-caption text-ink-muted">
           <Link href="/forgot-password" className={AUTH_LINK}>
             Change your password
           </Link>
@@ -104,7 +104,7 @@ export function ApproveEmailChangeForm({ token }: { token: string }) {
         </p>
       </AuthNotice>
 
-      {error ? <p className="text-[12.5px] text-[#B03A3A]">{error}</p> : null}
+      {error ? <p className="text-caption text-danger">{error}</p> : null}
 
       <div className="grid gap-2">
         <Button type="button" disabled={pending} onClick={() => approve.mutate()}>
@@ -115,7 +115,7 @@ export function ApproveEmailChangeForm({ token }: { token: string }) {
           variant="outline"
           disabled={pending}
           onClick={() => refuse.mutate()}
-          className="text-[#B03A3A] hover:bg-[#FDF6F6] hover:text-[#8C2E2E]"
+          className="text-danger hover:bg-danger-tint hover:text-danger"
         >
           {refuse.isPending ? "Stopping…" : "No, this wasn't me"}
         </Button>

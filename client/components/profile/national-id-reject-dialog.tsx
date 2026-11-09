@@ -47,14 +47,14 @@ export function NationalIdRejectDialog({
             />
           </div>
 
-          {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+          {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
 
           <DialogFooter>
             <Button
               type="button"
               disabled={pending || note.trim().length === 0}
               onClick={() => onConfirm(note.trim())}
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {pending ? "Saving…" : "Reject"}
             </Button>

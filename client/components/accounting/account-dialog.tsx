@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const TYPES: Array<{ value: AccountType; label: string; digit: string }> = [
   { value: "ASSET", label: "Asset", digit: "1" },
@@ -282,7 +283,7 @@ export function AccountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Mount the form only while open, so each open starts from the props. */}
       {open && (
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className={dialogWidthClass("md")}>
           <AccountForm account={account} parent={parent} groups={groups} onClose={() => onOpenChange(false)} />
         </DialogContent>
       )}

@@ -30,10 +30,10 @@ export function startJobs(): void {
   // `scheduled: false`. The timezone must be explicit, or the server's
   // locale decides when "morning" is, and a US-hosted server would send
   // the digest in the middle of the Dhaka night.
-  // Just after the day rolls over, so a day is only ever closed once it is
-  // genuinely over. Before the 09:30 nudge, which then describes what this
-  // did rather than asking about a day still open.
-  cron.schedule("5 0 * * *", () => guard("auto check-out", runAutoCloseOpenDays), {
+  // 22:05, five minutes before the 22:10 attendance report, so the report counts
+  // today's forgotten check-outs as closed. Each is closed at its shift's end
+  // time, and the employee is told the next morning by the 09:30 nudge.
+  cron.schedule("5 22 * * *", () => guard("auto check-out", runAutoCloseOpenDays), {
     timezone: env.APP_TIMEZONE,
   })
 
@@ -45,9 +45,8 @@ export function startJobs(): void {
     timezone: env.APP_TIMEZONE,
   })
 
-  // 00:10, five minutes after the auto check-out above, so yesterday is
-  // closed before it is counted. Yesterday's report, to every Super Admin.
-  cron.schedule("10 0 * * *", () => guard("daily attendance report", () => runDailyAttendanceReportEmail()), {
+  // 22:10: today's report, to every Super Admin, after the auto check-out above.
+  cron.schedule("10 22 * * *", () => guard("daily attendance report", () => runDailyAttendanceReportEmail()), {
     timezone: env.APP_TIMEZONE,
   })
 

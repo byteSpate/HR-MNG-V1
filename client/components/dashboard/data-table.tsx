@@ -43,17 +43,17 @@ function CellBody({ cell }: { cell: TableCell }) {
   return (
     <div className="min-w-0">
       <div
-        className="flex items-center gap-1.5 overflow-hidden text-[13px] text-ellipsis whitespace-nowrap"
+        className="flex items-center gap-1.5 overflow-hidden text-body-sm text-ellipsis whitespace-nowrap"
         style={{ fontWeight: cell.weight ?? 400, color: "#1C2733" }}
       >
-        {Icon ? <Icon className="size-4 shrink-0 text-[#8A94A2]" aria-hidden /> : null}
+        {Icon ? <Icon className="size-4 shrink-0 text-ink-muted" aria-hidden /> : null}
         <span className="truncate">{cell.text}</span>
       </div>
       {/* `#6B7789`, not the old `#A5AFBE`: that was 2.2:1 against white, which
           is unreadable rather than quiet. This is the same grey one shade down,
           at 4.5:1. */}
       {cell.sub ? (
-        <div className="mt-0.5 overflow-hidden text-[11.5px] text-ellipsis whitespace-nowrap text-[#6B7789]">
+        <div className="mt-0.5 overflow-hidden text-caption text-ellipsis whitespace-nowrap text-ink-muted">
           {cell.sub}
         </div>
       ) : null}
@@ -75,7 +75,7 @@ function RowLink({ href, row }: { href: string; row: TableCell[] }) {
     <Link
       href={href}
       aria-label={`Open ${row[0]?.text ?? "this row"}`}
-      className="absolute inset-0 rounded-md focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+      className="absolute inset-0 rounded-md focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
     />
   )
 }
@@ -101,22 +101,22 @@ export function DataTable({
   actionHref?: string
 }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+    <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
       {/* Callers that own their own heading (the settings panels, four of the
           attendance sections) pass both of these empty. Rendering the row
           anyway left an empty 15px bar plus its margin above the table. */}
       {title || action ? (
         <div className="mb-2.5 flex items-center justify-between gap-3">
-          <div className="text-[15px] font-bold">{title}</div>
+          <div className="text-lead font-bold">{title}</div>
           {actionHref ? (
             <Link
               href={actionHref}
-              className="shrink-0 text-[12.5px] font-semibold hover:underline"
+              className="shrink-0 text-caption font-semibold hover:underline pointer-coarse:py-3"
             >
               {action}
             </Link>
           ) : (
-            <span className="shrink-0 text-[12.5px] font-semibold">{action}</span>
+            <span className="shrink-0 text-caption font-semibold">{action}</span>
           )}
         </div>
       ) : null}
@@ -137,7 +137,7 @@ export function DataTable({
           // makes those collide.
           <div
             key={`${header}-${i}`}
-            className="flex items-end border-b border-[#E4E9EF] py-2.5 text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase"
+            className="flex items-end border-b border-line py-2.5 text-caption font-bold tracking-wide text-ink-muted uppercase"
           >
             {headerNodes?.[i] ?? header}
           </div>
@@ -146,10 +146,10 @@ export function DataTable({
           ? rows.map((row, r) => (
               // A subgrid row, so the row has a box to hover and to link,
               // while its cells still line up with the header tracks.
-              <div key={r} className="relative col-span-full grid grid-cols-subgrid hover:bg-[#F7F9FB]">
+              <div key={r} className="relative col-span-full grid grid-cols-subgrid hover:bg-surface-subtle">
                 {rowHrefs[r] ? <RowLink href={rowHrefs[r]!} row={row} /> : null}
                 {row.map((cell, c) => (
-                  <div key={c} className="flex min-w-0 items-center border-b border-[#EEF1F5] py-3">
+                  <div key={c} className="flex min-w-0 items-center border-b border-surface-sunken py-3">
                     <div className="min-w-0 flex-1">
                       <CellBody cell={cell} />
                     </div>
@@ -158,7 +158,7 @@ export function DataTable({
               </div>
             ))
           : rows.flat().map((cell, i) => (
-              <div key={i} className="flex min-w-0 items-center border-b border-[#EEF1F5] py-3">
+              <div key={i} className="flex min-w-0 items-center border-b border-surface-sunken py-3">
                 <div className="min-w-0 flex-1">
                   <CellBody cell={cell} />
                 </div>
@@ -172,10 +172,10 @@ export function DataTable({
           pairs, the label coming from the header at the same index. */}
       <div className="flex flex-col gap-2.5 md:hidden">
         {rows.map((row, r) => (
-          <div key={r} className={`relative rounded-md border border-[#EEF1F5] p-3 ${rowHrefs?.[r] ? "hover:bg-[#F7F9FB]" : ""}`}>
+          <div key={r} className={`relative rounded-md border border-surface-sunken p-3 ${rowHrefs?.[r] ? "hover:bg-surface-subtle" : ""}`}>
             {rowHrefs?.[r] ? <RowLink href={rowHrefs[r]!} row={row} /> : null}
             {row[0] && !isEmpty(row[0]) ? (
-              <div className="mb-2 border-b border-[#EEF1F5] pb-2">
+              <div className="mb-2 border-b border-surface-sunken pb-2">
                 <CellBody cell={row[0]} />
               </div>
             ) : null}
@@ -185,7 +185,7 @@ export function DataTable({
                 return (
                   <div key={c} className="flex items-start justify-between gap-3">
                     {/* `c + 1`, not `c`: slice(1) dropped the title cell. */}
-                    <span className="shrink-0 pt-px text-[10.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+                    <span className="shrink-0 pt-px text-caption font-bold tracking-wide text-ink-muted uppercase">
                       {headers[c + 1]}
                     </span>
                     <div className="min-w-0 text-right">

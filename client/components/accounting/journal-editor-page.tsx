@@ -43,6 +43,7 @@ import {
   JOURNAL_TYPE_LABEL,
   toDateInput,
 } from "@/components/accounting/accounting-shared"
+import { Heading } from "@/components/ds/heading"
 
 function toDraftLines(journal: Journal): DraftLine[] {
   return journal.lines.map((l) => ({
@@ -186,9 +187,9 @@ function JournalForm({
           <Button variant="ghost" size="sm" onClick={() => onSaved("")}>
             <RiArrowLeftLine className="size-4" /> Register
           </Button>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+          <Heading level="page" className="mt-1 text-2xl">
             {journal ? journal.journalNo : "New journal"}
-          </h1>
+          </Heading>
           {journal && (
             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant="secondary">{JOURNAL_STATUS_LABEL[journal.status]}</Badge>
@@ -197,7 +198,7 @@ function JournalForm({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
           {isDraft && (
             <Button variant="ghost" onClick={() => discard.mutate()} disabled={discard.isPending}>
               <RiDeleteBinLine className="size-4" /> Discard

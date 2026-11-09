@@ -35,7 +35,7 @@ export function SalesHubButton() {
       label="Techno Sales Hub"
       icon={RiBuilding2Line}
       ringGradientStops={RAINBOW_RING}
-      pillClassName="bg-white text-[#17191C] shadow-[0_1px_2px_rgba(23,25,28,0.06)] group-hover:bg-[#F4F6F9]"
+      pillClassName="bg-white text-ink shadow-[0_1px_2px_rgba(23,25,28,0.06)] group-hover:bg-surface-hover"
       burstColors={RAINBOW_BURST}
     />
   )

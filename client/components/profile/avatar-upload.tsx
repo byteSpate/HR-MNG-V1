@@ -1,5 +1,6 @@
 "use client"
 
+import { Img } from "@/components/ds/img"
 import { useState } from "react"
 import { RiCloseLine, RiZoomInLine } from "@remixicon/react"
 
@@ -49,13 +50,10 @@ export function AvatarUpload({
   const [photoOpen, setPhotoOpen] = useState(false)
 
   const image = avatarUrl ? (
-    // A signed Cloudinary URL is not a static asset and cannot be optimised
-    // by next/image without whitelisting the host and leaking the cloud
-    // name into client config.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={avatarUrl} alt="" className="h-full w-full rounded-md object-cover" />
+    // A signed Cloudinary URL cannot be optimised, so Img is unoptimized.
+    <Img src={avatarUrl} alt="" width={160} height={160} className="h-full w-full rounded-md object-cover" />
   ) : (
-    <span className="text-[26px] font-bold text-[#55657A]">{initialsFrom(fullName)}</span>
+    <span className="text-display font-bold text-ink-muted">{initialsFrom(fullName)}</span>
   )
 
   if (!editable) {
@@ -68,7 +66,7 @@ export function AvatarUpload({
             type="button"
             onClick={() => setPhotoOpen(true)}
             aria-label={`View ${fullName}'s photo`}
-            className="group relative flex h-24 w-24 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded-md bg-[#EFF2F6] transition-transform duration-150 ease-out-quint hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#17191C]/30 focus-visible:outline-none active:translate-y-0 active:scale-97 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            className="group relative flex h-24 w-24 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded-md bg-surface-sunken transition-transform duration-150 ease-out-quint hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none active:translate-y-0 active:scale-97 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             {image}
             <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white opacity-0 transition-opacity duration-150 ease-out-quint group-hover:opacity-100 motion-reduce:transition-none">
@@ -76,7 +74,7 @@ export function AvatarUpload({
             </span>
           </button>
         ) : (
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-md bg-[#EFF2F6]">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-md bg-surface-sunken">
             {image}
           </div>
         )}
@@ -121,11 +119,11 @@ export function AvatarUpload({
               type="button"
               onClick={open}
               disabled={pending || removing}
-              className="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-md bg-[#EFF2F6]"
+              className="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-md bg-surface-sunken"
               aria-label="Change profile photo"
             >
               {image}
-              <span className="absolute inset-0 hidden items-center justify-center bg-black/55 text-[11px] font-bold text-white group-hover:flex">
+              <span className="absolute inset-0 hidden items-center justify-center bg-black/55 text-caption font-bold text-white group-hover:flex">
                 {pending ? "…" : "Change"}
               </span>
             </Button>
@@ -146,7 +144,7 @@ export function AvatarUpload({
               type="button"
               variant="ghost"
               onClick={() => setPhotoOpen(true)}
-              className="h-auto gap-1 p-0 text-[12px] font-semibold text-[#7A8698] hover:bg-transparent hover:text-[#17191C]"
+              className="h-auto gap-1 p-0 text-caption font-semibold text-ink-muted hover:bg-transparent hover:text-ink"
             >
               <RiZoomInLine className="size-3.5" />
               View
@@ -156,7 +154,7 @@ export function AvatarUpload({
               variant="ghost"
               onClick={handleRemove}
               disabled={removing}
-              className="h-auto gap-1 p-0 text-[12px] font-semibold text-[#7A8698] hover:bg-transparent hover:text-[#B03A3A] disabled:opacity-50"
+              className="h-auto gap-1 p-0 text-caption font-semibold text-ink-muted hover:bg-transparent hover:text-danger disabled:opacity-50"
             >
               <RiCloseLine className="size-3.5" />
               {removing ? "Removing…" : "Remove"}
@@ -165,7 +163,7 @@ export function AvatarUpload({
         ) : null}
       </div>
       {removeError ? (
-        <p className="text-[13px] font-semibold text-[#B03A3A]">{removeError}</p>
+        <p className="text-body-sm font-semibold text-danger">{removeError}</p>
       ) : null}
       {avatarUrl ? (
         <AvatarLightbox src={avatarUrl} alt={fullName} open={photoOpen} onOpenChange={setPhotoOpen} />

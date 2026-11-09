@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EMPLOYMENT_TYPE_LABEL } from "@/components/profile/edit-card-dialog"
+import { Heading } from "@/components/ds/heading"
 
 export function MyProfilePage() {
   const { accessToken, status: sessionStatus } = useSession()
@@ -47,7 +48,7 @@ export function MyProfilePage() {
 
   if (profileQuery.isError) {
     return (
-      <div className="mt-7 rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+      <div className="mt-7 rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
         Failed to load your profile.{" "}
         <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => profileQuery.refetch()}>
           Retry
@@ -70,10 +71,10 @@ export function MyProfilePage() {
           ProfileHeader opens on a name rather than a page title. */}
       {employee !== null ? (
         <div className="pt-7 pb-5.5">
-          <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">
+          <div className="mb-1.5 text-caption font-bold tracking-[1.1px] text-ink-muted uppercase">
             Account
           </div>
-          <h1 className="font-heading text-[23px] font-bold tracking-tight">My Profile</h1>
+          <Heading level="page">My Profile</Heading>
         </div>
       ) : (
         <div className="pt-7" />
@@ -119,6 +120,7 @@ function StaffProfile({
   return (
     <>
       <ProfileHeader
+        nameAs="h2"
         employee={employee}
         avatarEditable={employee.editableFields.length > 0}
         onAvatarChanged={onRefresh}
@@ -136,7 +138,7 @@ function StaffProfile({
             {canEdit ? (
               <Button
                 type="button"
-                className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+                className="bg-ink text-white hover:bg-ink-strong"
                 onClick={() => setEditOpen(true)}
               >
                 Edit my details
@@ -157,9 +159,9 @@ function StaffProfile({
         .map((blocker) => (
           <div
             key={blocker.field}
-            className="mb-4 flex items-center justify-between gap-3 rounded-md border border-[#E4E9EF] bg-[#F9FAFC] px-5 py-3.5"
+            className="mb-4 flex items-center justify-between gap-3 rounded-md border border-line bg-surface-subtle px-5 py-3.5"
           >
-            <span className="text-[13px]">{blocker.blocks}</span>
+            <span className="text-body-sm">{blocker.blocks}</span>
             <Button type="button" variant="outline" onClick={() => setEditOpen(true)}>
               Add
             </Button>
@@ -179,14 +181,14 @@ function StaffProfile({
                 value: employee.personal.nationalId,
                 action: employee.personal.nationalIdChangeRequest ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-[11.5px] text-[#A5AFBE]">
+                    <span className="text-caption text-ink-muted">
                       Change to {employee.personal.nationalIdChangeRequest.newValue} pending HR
                       approval
                     </span>
                     <Button
                       type="button"
                       variant="link"
-                      className="h-auto p-0 text-[12px] font-semibold underline"
+                      className="h-auto p-0 text-caption font-semibold underline"
                       disabled={cancelMutation.isPending}
                       onClick={() =>
                         cancelMutation.mutate(employee.personal!.nationalIdChangeRequest!.id)
@@ -199,7 +201,7 @@ function StaffProfile({
                   <Button
                     type="button"
                     variant="link"
-                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    className="h-auto p-0 text-caption font-semibold underline"
                     onClick={() => setNationalIdRequestOpen(true)}
                   >
                     Request change

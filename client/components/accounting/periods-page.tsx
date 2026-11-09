@@ -39,6 +39,7 @@ import {
   monthLabel,
   PERIOD_STATUS_TONE,
 } from "@/components/accounting/accounting-shared"
+import { Heading } from "@/components/ds/heading"
 
 const TONE_VARIANT = { success: "default", neutral: "secondary", danger: "destructive" } as const
 
@@ -152,7 +153,7 @@ export function PeriodsPage() {
             return (
               <section key={fy.id} className="rounded-lg border">
                 <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-                  <h2 className="font-medium">{fy.name}</h2>
+                  <Heading level="section">{fy.name}</Heading>
                   <span className="text-sm text-muted-foreground">
                     {formatLedgerDate(fy.startDate)} – {formatLedgerDate(fy.endDate)}
                   </span>
@@ -194,8 +195,8 @@ export function PeriodsPage() {
 
                 <ul className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
                   {fy.periods.map((p) => (
-                    <li key={p.id} className="flex items-center gap-3 bg-background px-4 py-2.5 text-sm">
-                      <span className="w-32">{monthLabel(p.year, p.month)}</span>
+                    <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-background px-4 py-2.5 text-sm">
+                      <span className="min-w-28">{monthLabel(p.year, p.month)}</span>
                       <Badge variant={TONE_VARIANT[PERIOD_STATUS_TONE[p.status]]}>
                         {p.status === "OPEN" ? "Open" : p.status === "CLOSED" ? "Closed" : "Locked"}
                       </Badge>
@@ -222,7 +223,7 @@ export function PeriodsPage() {
 
                       {p.reopenReason && p.status === "OPEN" && (
                         <span
-                          className="ml-auto truncate text-xs text-muted-foreground"
+                          className="ml-auto min-w-0 max-w-full truncate text-xs text-muted-foreground"
                           title={p.reopenReason}
                         >
                           Reopened — {p.reopenReason}

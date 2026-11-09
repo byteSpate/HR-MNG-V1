@@ -160,11 +160,11 @@ export function CreateRecoveryDialog({
               </div>
 
               {asset ? (
-                <div className="rounded-md border border-[#E4E9EF] bg-[#F4F6F9] p-3 text-[12px] text-[#5F6B7C]">
-                  <div className="mb-1 font-semibold text-[#1C2733]">Context — read only</div>
+                <div className="rounded-md border border-line bg-surface-hover p-3 text-caption text-ink-muted">
+                  <div className="mb-1 font-semibold text-ink-body">Context — read only</div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <div className="text-[11px] font-bold uppercase">Purchase cost</div>
+                      <div className="text-caption font-bold uppercase">Purchase cost</div>
                       <div>
                         {asset.purchaseCost
                           ? formatMoney(asset.purchaseCost, asset.currency)
@@ -172,11 +172,11 @@ export function CreateRecoveryDialog({
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold uppercase">Purchased</div>
+                      <div className="text-caption font-bold uppercase">Purchased</div>
                       <div>{formatAssetDate(asset.purchaseDate ?? null)}</div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold uppercase">Book value today</div>
+                      <div className="text-caption font-bold uppercase">Book value today</div>
                       <div>
                         {bookValue?.bookValue && bookValue.status === "VALUED"
                           ? formatMoney(bookValue.bookValue, bookValue.currency)
@@ -198,7 +198,7 @@ export function CreateRecoveryDialog({
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="Enter the amount — no suggestion, this is your call"
                 />
-                <p className="mt-1 text-[11.5px] text-[#5F6B7C]">
+                <p className="mt-1 text-caption text-ink-muted">
                   Book value, replacement cost and original cost are all defensible. You are the
                   person accountable for the figure.
                 </p>
@@ -218,7 +218,7 @@ export function CreateRecoveryDialog({
             </>
           )}
 
-          {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+          {error ? <p className="text-body-sm font-semibold text-danger">{error}</p> : null}
 
           <DialogFooter>
             <Button
@@ -233,7 +233,7 @@ export function CreateRecoveryDialog({
               type="button"
               disabled={createMutation.isPending || !valid}
               onClick={() => createMutation.mutate()}
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {createMutation.isPending ? "Raising…" : "Raise recovery"}
             </Button>

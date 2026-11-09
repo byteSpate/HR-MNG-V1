@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { VatChoice, vatIncomplete } from "./vat-choice"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -220,7 +222,7 @@ export function BillDialog({
           <div className="space-y-3">
             {productLineSuppliers.length > 0 ? (
               <div className="space-y-1.5">
-                <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>On this Opportunity</h3>
+                <Heading level="label">On this Opportunity</Heading>
                 <div className="flex flex-wrap gap-1.5">
                   {productLineSuppliers.map((s) => (
                     <Button
@@ -228,7 +230,7 @@ export function BillDialog({
                       type="button"
                       variant="outline"
                       onClick={() => chooseSupplier(s.id)}
-                      className="h-9 rounded-md border-[#E4E9EF] text-[12.5px] font-semibold"
+                      className="h-9 rounded-md border-line text-caption font-semibold"
                     >
                       {s.name}
                     </Button>
@@ -263,7 +265,7 @@ export function BillDialog({
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+              className="h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
             >
               Cancel
             </Button>
@@ -276,7 +278,7 @@ export function BillDialog({
   // Step 2: the bill itself.
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>{bill ? `Edit bill ${bill.billNumber}` : `New bill from ${supplierName}`}</DialogTitle>
           <DialogDescription>Type the real bill number, amounts and VAT.</DialogDescription>
@@ -285,7 +287,7 @@ export function BillDialog({
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Supplier" htmlFor="bill-supplier">
-              <div className="flex h-9 items-center rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 text-sm">{supplierName}</div>
+              <div className="flex h-9 items-center rounded-md border border-line bg-surface-subtle px-3 text-sm">{supplierName}</div>
             </Field>
             <Field label="Supplier's bill number" htmlFor="bill-number">
               <Input id="bill-number" value={billNumber} onChange={(e) => setBillNumber(e.target.value)} placeholder="INV-2201" />
@@ -309,10 +311,10 @@ export function BillDialog({
           </div>
 
           <section className="space-y-2">
-            <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines</h3>
+            <Heading level="label">Lines</Heading>
 
             {lines.map((line, i) => (
-              <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
+              <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-line p-3 sm:grid-cols-12">
                 <div className="sm:col-span-12">
                   <Input
                     aria-label={`Line ${i + 1} description`}
@@ -361,12 +363,12 @@ export function BillDialog({
             </Button>
           </section>
 
-          <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-[12.5px] tabular-nums">
+          <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-caption tabular-nums">
             <span className={TONE.muted}>Net {formatMoney(net.toFixed(2), currency)}</span>
             <span className={TONE.muted}>VAT {formatMoney(vat.toFixed(2), currency)}</span>
             <span className="font-bold">Total {formatMoney((net + vat).toFixed(2), currency)}</span>
           </div>
-          <p className={`text-right text-[11.5px] ${TONE.muted}`}>A preview. The saved figures are worked out by the server.</p>
+          <p className={`text-right text-caption ${TONE.muted}`}>A preview. The saved figures are worked out by the server.</p>
 
           {error ? <FormError>{error}</FormError> : null}
         </div>

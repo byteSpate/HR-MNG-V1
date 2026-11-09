@@ -114,7 +114,7 @@ export function SalesShell({ children }: { children: React.ReactNode }) {
       // Wider than a role dashboard's 1220/1600px cap: the accounts table
       // (Day 5) and, later, the Opportunities pipeline want more columns
       // than a role dashboard's panels ever did.
-      mainClassName="max-w-[1320px] 2xl:max-w-[1760px]"
+      mainClassName="max-w-330 2xl:max-w-440"
       // The hub has no profile page of its own — this is the person's real
       // role dashboard's profile, the same page every other route's account
       // menu already points at.

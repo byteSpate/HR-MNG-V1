@@ -191,7 +191,7 @@ export function AssignDialog({
             </div>
           </div>
 
-          {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+          {formError ? <p className="text-body-sm font-semibold text-destructive">{formError}</p> : null}
         </div>
 
         <DialogFooter>

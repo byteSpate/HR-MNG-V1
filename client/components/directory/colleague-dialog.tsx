@@ -8,6 +8,8 @@ import { AvatarLightbox } from "@/components/dashboard/avatar-lightbox"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import { Tag } from "@/components/dashboard/tag"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 /**
  * Seven fields of work identity, for the person who opened this from a
@@ -33,7 +35,7 @@ export function ColleagueDialog({
   return (
     <>
       <Dialog open={!!employee} onOpenChange={onOpenChange}>
-        <DialogContent className="p-5 sm:max-w-105">
+        <DialogContent className={cx(dialogWidthClass("sm"), "p-5")}>
           {employee ? (
             <>
               <DialogHeader className="flex-row items-center gap-4 pr-6">
@@ -44,13 +46,13 @@ export function ColleagueDialog({
                     type="button"
                     onClick={() => setPhotoOpen(true)}
                     aria-label={`View ${employee.work.fullName}'s photo`}
-                    className="group relative shrink-0 cursor-zoom-in rounded-2xl transition-transform duration-150 ease-out-quint hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[#17191C]/30 focus-visible:outline-none active:translate-y-0 active:scale-97 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                    className="group relative shrink-0 cursor-zoom-in rounded-2xl transition-transform duration-150 ease-out-quint hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none active:translate-y-0 active:scale-97 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                   >
                     <UserAvatar
                       name={employee.work.fullName}
                       avatarUrl={employee.work.avatarUrl}
                       className="size-22 rounded-2xl"
-                      textClassName="text-[24px]"
+                      textClassName="text-display"
                     />
                     {/* Touch has no hover state, so this simply never shows
                         on a phone — where the tap opens the photo anyway and
@@ -64,14 +66,14 @@ export function ColleagueDialog({
                     name={employee.work.fullName}
                     avatarUrl={employee.work.avatarUrl}
                     className="size-22 rounded-2xl"
-                    textClassName="text-[24px]"
+                    textClassName="text-display"
                   />
                 )}
                 <div className="min-w-0 flex-1">
-                  <DialogTitle className="truncate text-[17px]">
+                  <DialogTitle className="truncate text-title-sm">
                     {employee.work.fullName}
                   </DialogTitle>
-                  <div className="mt-1 truncate text-[13px] text-[#5F6B7C]">
+                  <div className="mt-1 truncate text-body-sm text-ink-muted">
                     {employee.work.designation}
                   </div>
                   <div className="mt-2.5">
@@ -84,7 +86,7 @@ export function ColleagueDialog({
                   routinely 30+ characters; at half the dialog's width it
                   truncated to "rezaul212002044@d..." which is unusable for
                   the one thing this card exists to give you. */}
-              <div className="grid gap-2 border-t border-[#EEF1F5] pt-4">
+              <div className="grid gap-2 border-t border-surface-sunken pt-4">
                 <ContactRow
                   icon={RiMailLine}
                   label="Email"
@@ -102,17 +104,17 @@ export function ColleagueDialog({
               </div>
 
               {employee.work.reportingManager ? (
-                <div className="flex items-center gap-3 rounded-lg bg-[#F9FAFC] px-3.5 py-3">
+                <div className="flex items-center gap-3 rounded-lg bg-surface-subtle px-3.5 py-3">
                   <UserAvatar
                     name={employee.work.reportingManager.fullName}
                     className="size-9"
-                    textClassName="text-[11.5px]"
+                    textClassName="text-caption"
                   />
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold tracking-wide text-[#8A94A3] uppercase">
+                    <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">
                       Reports to
                     </div>
-                    <div className="truncate text-[13px] font-semibold">
+                    <div className="truncate text-body-sm font-semibold">
                       {employee.work.reportingManager.fullName}
                     </div>
                   </div>
@@ -156,14 +158,14 @@ function ContactRow({
   return (
     <a
       href={href}
-      className="group flex items-center gap-3 rounded-lg border border-[#E4E9EF] px-3.5 py-3 transition-[transform,border-color,background-color] duration-150 ease-out-quint hover:-translate-y-0.5 hover:border-[#C9D2DE] hover:bg-[#F9FAFC] active:translate-y-0 active:scale-99 active:duration-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="group flex items-center gap-3 rounded-lg border border-line px-3.5 py-3 transition-[transform,border-color,background-color] duration-150 ease-out-quint hover:-translate-y-0.5 hover:border-line-strong hover:bg-surface-subtle active:translate-y-0 active:scale-99 active:duration-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
-      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#F1F4F8] text-[#5F6B7C] transition-colors duration-150 ease-out-quint group-hover:bg-[#17191C] group-hover:text-white motion-reduce:transition-none">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-hover text-ink-muted transition-colors duration-150 ease-out-quint group-hover:bg-ink group-hover:text-white motion-reduce:transition-none">
         <Icon className="size-4.5" />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-bold tracking-wide text-[#8A94A3] uppercase">{label}</div>
-        <div className="truncate text-[13px] font-semibold text-[#17191C]">{value}</div>
+        <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">{label}</div>
+        <div className="truncate text-body-sm font-semibold text-ink">{value}</div>
       </div>
     </a>
   )

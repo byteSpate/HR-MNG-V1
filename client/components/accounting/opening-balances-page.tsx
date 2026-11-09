@@ -255,11 +255,11 @@ function AmountGrid({
         {/* Sticky, because this grid is longer than a screen. */}
         <div
           className={cn(
-            "sticky bottom-0 grid grid-cols-[1fr_160px_160px] items-center gap-2 border-t px-4 py-3 text-sm font-medium tabular-nums",
+            "sticky bottom-0 grid grid-cols-2 items-center gap-x-3 gap-y-1 border-t px-4 py-3 text-sm font-medium tabular-nums md:grid-cols-[1fr_160px_160px] md:gap-2",
             isBalanced ? "bg-muted" : "bg-destructive/10"
           )}
         >
-          <span>
+          <span className="col-span-2 md:col-span-1">
             {isBalanced ? (
               "Balanced"
             ) : (
@@ -269,8 +269,14 @@ function AmountGrid({
               </span>
             )}
           </span>
-          <span className="text-right">{fromPaisa(debitPaisa || 0)}</span>
-          <span className="text-right">{fromPaisa(creditPaisa || 0)}</span>
+          <span className="text-right">
+            <span className="mr-2 text-xs font-bold md:hidden">Debit</span>
+            {fromPaisa(debitPaisa || 0)}
+          </span>
+          <span className="text-right">
+            <span className="mr-2 text-xs font-bold md:hidden">Credit</span>
+            {fromPaisa(creditPaisa || 0)}
+          </span>
         </div>
       </div>
     </div>

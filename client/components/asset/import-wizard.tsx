@@ -177,7 +177,7 @@ export function ImportWizard({ onImported }: { onImported: () => void }) {
 
       {step === "preview" && preview ? (
         <div className="space-y-4">
-          <p className="text-[13px]">
+          <p className="text-body-sm">
             <span className="font-semibold">{preview.summary.assets ?? 0}</span> assets,{" "}
             <span className="font-semibold">{preview.summary.assignments ?? 0}</span> of them already
             assigned to someone,{" "}
@@ -187,12 +187,12 @@ export function ImportWizard({ onImported }: { onImported: () => void }) {
 
           <PreviewTable rows={previewRows} issues={issues} />
 
-          <p className="text-[12.5px] font-semibold text-muted-foreground">
+          <p className="text-caption font-semibold text-muted-foreground">
             If any row fails, nothing at all is imported.
           </p>
 
           {commitError ? (
-            <p className="text-[13px] font-semibold text-destructive">{commitError}</p>
+            <p className="text-body-sm font-semibold text-destructive">{commitError}</p>
           ) : null}
 
           <div className="flex gap-2">
@@ -213,10 +213,10 @@ export function ImportWizard({ onImported }: { onImported: () => void }) {
       {step === "result" && result ? (
         <div className="space-y-4">
           <div className="rounded-md border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-900 dark:bg-emerald-950">
-            <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-200">
+            <p className="text-body-sm font-semibold text-emerald-800 dark:text-emerald-200">
               Import complete.
             </p>
-            <p className="mt-0.5 text-[12.5px] text-emerald-700 dark:text-emerald-300">
+            <p className="mt-0.5 text-caption text-emerald-700 dark:text-emerald-300">
               {result.assetCount} asset{result.assetCount === 1 ? "" : "s"} created,{" "}
               {result.assignmentCount} with open custody carried over.
             </p>

@@ -105,7 +105,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
         <PanelHeading title="How it is going" />
         <div className="flex flex-wrap items-center gap-2">
           {health ? <Tag label={health.label} tone={health.tone} /> : null}
-          <span className={project.progress ? "text-[13px]" : "text-[13px] text-[#6B7789]"}>
+          <span className={project.progress ? "text-body-sm" : "text-body-sm text-ink-muted"}>
             {project.progress
               ? `${project.progress.done} of ${project.progress.total} tasks done (${project.progress.percent}%)`
               : "No tasks yet"}
@@ -113,21 +113,21 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
         </div>
 
         {project.people.length > 0 ? (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto contain-inline-size">
             <table className="w-full min-w-[22rem] border-collapse text-left">
               <thead>
-                <tr className="border-b border-[#E4E9EF]">
-                  <th className="py-1.5 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">Person</th>
-                  <th className="py-1.5 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">Open tasks</th>
-                  <th className="py-1.5 pr-3 text-[11.5px] font-semibold text-[#5F6B7C]">Late tasks</th>
+                <tr className="border-b border-line">
+                  <th className="py-1.5 pr-3 text-caption font-semibold text-ink-muted">Person</th>
+                  <th className="py-1.5 pr-3 text-caption font-semibold text-ink-muted">Open tasks</th>
+                  <th className="py-1.5 pr-3 text-caption font-semibold text-ink-muted">Late tasks</th>
                 </tr>
               </thead>
               <tbody>
                 {project.people.map((person) => (
-                  <tr key={person.employeeId} className="border-b border-[#EEF1F5] last:border-b-0">
-                    <td className="py-1.5 pr-3 text-[13px]">{person.fullName}</td>
-                    <td className="py-1.5 pr-3 text-[13px]">{person.open}</td>
-                    <td className={`py-1.5 pr-3 text-[13px] ${person.late > 0 ? "text-[#B03A3A]" : ""}`}>
+                  <tr key={person.employeeId} className="border-b border-surface-sunken last:border-b-0">
+                    <td className="py-1.5 pr-3 text-body-sm">{person.fullName}</td>
+                    <td className="py-1.5 pr-3 text-body-sm">{person.open}</td>
+                    <td className={`py-1.5 pr-3 text-body-sm ${person.late > 0 ? "text-danger" : ""}`}>
                       {person.late}
                     </td>
                   </tr>
@@ -137,7 +137,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
           </div>
         ) : null}
 
-        <p className={`mt-3 text-[11.5px] ${TONE.muted}`}>
+        <p className={`mt-3 text-caption ${TONE.muted}`}>
           At risk means a task is due in the next 3 days. Late means a task or the finish date has passed.
         </p>
       </Panel>
@@ -148,9 +148,9 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
 
         <div className="flex flex-wrap items-center gap-2">
           <Tag label={PROJECT_STATUS_LABEL[project.status]} tone={PROJECT_STATUS_TONE[project.status]} />
-          {project.statusReason ? <span className="text-[12.5px] text-[#5F6B7C]">{project.statusReason}</span> : null}
+          {project.statusReason ? <span className="text-caption text-ink-muted">{project.statusReason}</span> : null}
           {project.completedAt ? (
-            <span className={`text-[12.5px] ${TONE.muted}`}>
+            <span className={`text-caption ${TONE.muted}`}>
               Completed on {new Date(project.completedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
             </span>
           ) : null}
@@ -163,7 +163,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
                 id="prj-status"
                 value={chosen}
                 onChange={(e) => { setChosen(e.target.value as ProjectStatus); setError(null) }}
-                className="h-9 w-full rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+                className="h-9 w-full rounded-md border border-line bg-white px-2 text-body-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
               >
                 {PROJECT_STATUSES.map((s) => (
                   <option key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</option>
@@ -180,7 +180,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
                 type="button"
                 disabled={(!!needsReason && !reason.trim()) || saveStatus.isPending}
                 onClick={submitStatus}
-                className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+                className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
               >
                 {saveStatus.isPending ? "Saving…" : "Save status"}
               </Button>
@@ -194,9 +194,9 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
         {milestoneError ? <PanelAlert>{milestoneError}</PanelAlert> : null}
 
         {project.milestones.length === 0 ? (
-          <p className={`text-[12.5px] ${TONE.muted}`}>No milestones yet. Add the main steps of the work, with a target date.</p>
+          <p className={`text-caption ${TONE.muted}`}>No milestones yet. Add the main steps of the work, with a target date.</p>
         ) : (
-          <ol className="divide-y divide-[#E4E9EF]">
+          <ol className="divide-y divide-line">
             {project.milestones.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-2 py-2.5">
                 {mayEditMilestones ? (
@@ -207,15 +207,15 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
                     onCheckedChange={(v) => toggle.mutate({ id: m.id, done: v === true })}
                   />
                 ) : null}
-                <span className={`text-[13px] ${m.doneAt ? TONE.muted : "font-semibold"}`}>{m.title}</span>
-                <span className={`text-[12px] ${TONE.muted}`}>{onDate(m.dueOn)}</span>
+                <span className={`text-body-sm ${m.doneAt ? TONE.muted : "font-semibold"}`}>{m.title}</span>
+                <span className={`text-caption ${TONE.muted}`}>{onDate(m.dueOn)}</span>
                 {mayEditMilestones ? (
                   <span className="ml-auto flex items-center gap-1">
                     <Button
                       type="button"
                       variant="link"
                       onClick={() => setEditing({ id: m.id, title: m.title, dueOn: m.dueOn ?? "" })}
-                      className="h-auto p-0 text-[12px] font-bold text-[#5F6B7C]"
+                      className="h-auto p-0 text-caption font-bold text-ink-muted"
                     >
                       Edit
                     </Button>
@@ -223,7 +223,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
                       type="button"
                       variant="link"
                       onClick={() => setRemoving(m.id)}
-                      className="h-auto p-0 text-[12px] font-bold text-[#B03A3A]"
+                      className="h-auto p-0 text-caption font-bold text-danger"
                     >
                       Remove
                     </Button>
@@ -247,7 +247,7 @@ export function ProjectStatusTab({ project, onSaved }: { project: ProjectSummary
               variant="outline"
               disabled={!newTitle.trim() || add.isPending}
               onClick={() => add.mutate()}
-              className="h-9 text-[12px] font-bold"
+              className="h-9 text-caption font-bold"
             >
               <RiAddLine className="size-4" aria-hidden /> Add milestone
             </Button>
@@ -317,7 +317,7 @@ function EditMilestone({
   onSave: () => void
 }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-[#F7F9FB] p-3">
+    <div className="rounded-md border border-line bg-surface-subtle p-3">
       <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Field label="Milestone" htmlFor="ms-edit-title">
           <Input id="ms-edit-title" value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} />

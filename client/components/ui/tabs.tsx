@@ -1,9 +1,11 @@
 "use client"
 
+import * as React from "react"
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { edgeFades, fadeMask, type EdgeFades } from "@/components/ds/scroll-edges"
 
 function Tabs({
   className,
@@ -32,7 +34,7 @@ const tabsListVariants = cva(
   // `justify-start`, not `justify-center`: the list is `w-fit`, so when the
   // tabs fit it hugs them and justification is a no-op. When they overflow,
   // centering clips *both* ends and leaves the first tab unreachable.
-  "group/tabs-list inline-flex w-fit max-w-full items-center justify-start overflow-x-auto rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
+  "group/tabs-list inline-flex w-fit max-w-full items-center justify-start overflow-x-auto rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 pointer-coarse:group-data-horizontal/tabs:h-11 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none data-[variant=line]:pr-3",
   {
     variants: {
       variant: {
@@ -49,13 +51,54 @@ const tabsListVariants = cva(
 function TabsList({
   className,
   variant = "default",
+  style,
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+  const ref = React.useRef<HTMLDivElement>(null)
+  const [fades, setFades] = React.useState<EdgeFades>({ start: false, end: false })
+
+  // Soften the ends that are cut off, so it is clear the strip scrolls. Keep
+  // the open tab in view, so a link to a far tab does not open on the wrong side.
+  React.useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => {
+      const next = edgeFades(el.scrollLeft, el.clientWidth, el.scrollWidth)
+      setFades((prev) => (prev.start === next.start && prev.end === next.end ? prev : next))
+    }
+    const reveal = () => {
+      const active = el.querySelector<HTMLElement>("[data-active]")
+      if (!active) return
+      const box = el.getBoundingClientRect()
+      const tab = active.getBoundingClientRect()
+      if (tab.left < box.left) el.scrollBy({ left: tab.left - box.left - 24, behavior: "smooth" })
+      else if (tab.right > box.right) el.scrollBy({ left: tab.right - box.right + 24, behavior: "smooth" })
+    }
+    reveal()
+    measure()
+    el.addEventListener("scroll", measure, { passive: true })
+    const resize = new ResizeObserver(measure)
+    resize.observe(el)
+    const mutate = new MutationObserver(() => {
+      reveal()
+      measure()
+    })
+    mutate.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-active"] })
+    return () => {
+      el.removeEventListener("scroll", measure)
+      resize.disconnect()
+      mutate.disconnect()
+    }
+  }, [])
+
+  const mask = fadeMask(fades)
   return (
     <TabsPrimitive.List
+      ref={ref}
       data-slot="tabs-list"
       data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
+      className={cn(tabsListVariants({ variant }), "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden", className)}
+      style={mask ? { maskImage: mask, WebkitMaskImage: mask, ...style } : style}
       {...props}
     />
   )

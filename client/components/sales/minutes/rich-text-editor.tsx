@@ -58,13 +58,13 @@ import { HIGHLIGHT_LABEL, RICH_HIGHLIGHTS, SAFE_LINK } from "@/components/sales/
  * list markers away, so they are put back here.
  */
 const CONTENT =
-  "min-h-28 px-3 py-2.5 text-[13px] leading-relaxed text-[#1C2733] outline-none " +
-  "[&_p]:my-1 [&_h3]:mt-2 [&_h3]:mb-1 [&_h3]:text-[14px] [&_h3]:font-bold [&_h4]:mt-2 [&_h4]:mb-1 [&_h4]:text-[13px] [&_h4]:font-bold " +
+  "min-h-28 px-3 py-2.5 text-body-sm leading-relaxed text-ink-body outline-none " +
+  "[&_p]:my-1 [&_h3]:mt-2 [&_h3]:mb-1 [&_h3]:text-body [&_h3]:font-bold [&_h4]:mt-2 [&_h4]:mb-1 [&_h4]:text-body-sm [&_h4]:font-bold " +
   "[&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul_ul]:list-[circle] [&_ol_ol]:list-[lower-alpha] [&_li_p]:my-0 " +
-  "[&_a]:text-[#1F4D8F] [&_a]:underline [&_hr]:my-3 [&_hr]:border-[#C9D1DB] [&_mark]:rounded-sm [&_mark]:px-0.5 " +
-  "[&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-[#C9D1DB] [&_td]:px-2 [&_td]:py-1 [&_td]:align-top " +
-  "[&_th]:border [&_th]:border-[#C9D1DB] [&_th]:bg-[#F2F4F7] [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-top [&_td_p]:my-0 [&_th_p]:my-0 " +
-  "[&_.selectedCell]:bg-[#E8EEF7]"
+  "[&_a]:text-info-ink [&_a]:underline [&_hr]:my-3 [&_hr]:border-line-strong [&_mark]:rounded-sm [&_mark]:px-0.5 " +
+  "[&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line-strong [&_td]:px-2 [&_td]:py-1 [&_td]:align-top " +
+  "[&_th]:border [&_th]:border-line-strong [&_th]:bg-surface-hover [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-top [&_td_p]:my-0 [&_th_p]:my-0 " +
+  "[&_.selectedCell]:bg-info-tint"
 
 type Panel = "link" | "highlight" | null
 
@@ -100,8 +100,8 @@ export function RichTextEditor({
   })
 
   return (
-    <div className="rounded-md border border-[#D9DFE7] bg-white focus-within:border-[#17191C]/40 focus-within:ring-2 focus-within:ring-[#17191C]/10">
-      {editor ? <Toolbar editor={editor} /> : <div className="h-9 border-b border-[#EEF1F5] bg-[#F7F9FB]" />}
+    <div className="rounded-md border border-line-strong bg-white focus-within:border-ink/40 focus-within:ring-2 focus-within:ring-ink/10">
+      {editor ? <Toolbar editor={editor} /> : <div className="h-9 border-b border-surface-sunken bg-surface-subtle" />}
       <EditorContent editor={editor} />
     </div>
   )
@@ -157,7 +157,7 @@ function Toolbar({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div className="border-b border-[#EEF1F5] bg-[#F7F9FB]">
+    <div className="border-b border-surface-sunken bg-surface-subtle">
       <div role="toolbar" aria-label="Formatting" className="flex flex-wrap items-center gap-0.5 px-1.5 py-1">
         <Tool label="Undo" disabled={!s.canUndo} onClick={() => chain().undo().run()}>
           <RiArrowGoBackLine />
@@ -234,8 +234,8 @@ function Toolbar({ editor }: { editor: Editor }) {
 
       {/* Table tools, only while the cursor is in a table: elsewhere they could do nothing. */}
       {s.table ? (
-        <div className="flex flex-wrap items-center gap-0.5 border-t border-[#EEF1F5] px-1.5 py-1">
-          <span className="px-1.5 text-[11.5px] font-semibold text-[#5F6B7C]">Table</span>
+        <div className="flex flex-wrap items-center gap-0.5 border-t border-surface-sunken px-1.5 py-1">
+          <span className="px-1.5 text-caption font-semibold text-ink-muted">Table</span>
           <Tool label="Add a row below" onClick={() => chain().addRowAfter().run()}>
             <RiInsertRowBottom />
           </Tool>
@@ -253,7 +253,7 @@ function Toolbar({ editor }: { editor: Editor }) {
             variant="ghost"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => chain().deleteTable().run()}
-            className="h-7 rounded px-2 text-[12px] font-bold text-[#5F6B7C] hover:bg-[#FDF1F1] hover:text-[#B03A3A]"
+            className="h-7 rounded px-2 text-caption font-bold text-ink-muted hover:bg-danger-tint hover:text-danger"
           >
             Delete the table
           </Button>
@@ -261,7 +261,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       ) : null}
 
       {panel === "highlight" ? (
-        <div className="flex flex-wrap items-center gap-1.5 border-t border-[#EEF1F5] px-2 py-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-surface-sunken px-2 py-1.5">
           {(Object.keys(RICH_HIGHLIGHTS) as (keyof typeof RICH_HIGHLIGHTS)[]).map((name) => (
             <button
               key={name}
@@ -271,7 +271,7 @@ function Toolbar({ editor }: { editor: Editor }) {
                 chain().toggleHighlight({ color: RICH_HIGHLIGHTS[name] }).run()
                 setPanel(null)
               }}
-              className="inline-flex h-7 items-center gap-1.5 rounded border border-[#D9DFE7] bg-white px-2 text-[12px] font-semibold text-[#1C2733] hover:bg-[#F1F4F8]"
+              className="inline-flex h-7 items-center gap-1.5 rounded border border-line-strong bg-white px-2 text-caption font-semibold text-ink-body hover:bg-surface-hover"
             >
               <span className="size-3.5 rounded-sm border border-black/10" style={{ background: RICH_HIGHLIGHTS[name] }} aria-hidden />
               {HIGHLIGHT_LABEL[name]}
@@ -284,7 +284,7 @@ function Toolbar({ editor }: { editor: Editor }) {
               chain().unsetHighlight().run()
               setPanel(null)
             }}
-            className="inline-flex h-7 items-center rounded px-2 text-[12px] font-semibold text-[#5F6B7C] hover:bg-[#F1F4F8]"
+            className="inline-flex h-7 items-center rounded px-2 text-caption font-semibold text-ink-muted hover:bg-surface-hover"
           >
             No highlight
           </button>
@@ -292,7 +292,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       ) : null}
 
       {panel === "link" ? (
-        <div className="grid gap-1 border-t border-[#EEF1F5] px-2 py-1.5">
+        <div className="grid gap-1 border-t border-surface-sunken px-2 py-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <Input
               aria-label="Link address"
@@ -311,7 +311,7 @@ function Toolbar({ editor }: { editor: Editor }) {
               type="button"
               onClick={applyLink}
               disabled={!href.trim()}
-              className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
             >
               {s.link ? "Change the link" : "Add the link"}
             </Button>
@@ -323,14 +323,14 @@ function Toolbar({ editor }: { editor: Editor }) {
                   chain().extendMarkRange("link").unsetLink().run()
                   setPanel(null)
                 }}
-                className="h-8 rounded-md px-2 text-[12px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8]"
+                className="h-8 rounded-md px-2 text-caption font-bold text-ink-muted hover:bg-surface-hover"
               >
                 <RiLinkUnlink className="size-4" aria-hidden />
                 Remove the link
               </Button>
             ) : null}
           </div>
-          <p className="text-[11.5px] text-[#5F6B7C]">
+          <p className="text-caption text-ink-muted">
             {linkError ?? "Select the words first. The link stays clickable in the PDF."}
           </p>
         </div>
@@ -363,8 +363,8 @@ function Tool({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={cn(
-        "inline-flex size-7 items-center justify-center rounded text-[#3D4756] transition-colors hover:bg-[#E8ECF1] disabled:pointer-events-none disabled:opacity-35 [&_svg]:size-4",
-        active && "bg-[#17191C] text-white hover:bg-[#0E1012]"
+        "inline-flex size-7 items-center justify-center rounded text-ink-soft transition-colors hover:bg-line disabled:pointer-events-none disabled:opacity-35 [&_svg]:size-4",
+        active && "bg-ink text-white hover:bg-ink-strong"
       )}
     >
       {children}
@@ -373,5 +373,5 @@ function Tool({
 }
 
 function Divider() {
-  return <span className="mx-1 h-5 w-px bg-[#D9DFE7]" aria-hidden />
+  return <span className="mx-1 h-5 w-px bg-line-strong" aria-hidden />
 }

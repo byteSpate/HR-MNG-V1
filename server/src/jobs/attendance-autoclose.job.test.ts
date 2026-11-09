@@ -28,9 +28,9 @@ import { runAutoCloseOpenDays } from "./attendance-autoclose.job"
 const tx = (prisma as unknown as { __tx: Record<string, Record<string, ReturnType<typeof vi.fn>>> })
   .__tx
 
-/** 2026-08-19 in Dhaka, so "yesterday" is the 18th. */
-const NOW = new Date("2026-08-19T04:00:00.000Z")
-const YESTERDAY = parseDateOnly("2026-08-18")
+/** 22:05 on 2026-08-18 in Dhaka (UTC+6), the moment the job runs. */
+const NOW = new Date("2026-08-18T16:05:00.000Z")
+const TODAY = parseDateOnly("2026-08-18")
 
 const GENERAL = {
   id: "shift-general",
@@ -47,7 +47,7 @@ const GENERAL = {
 /** Dhaka is UTC+6, so 09:00 local is 03:00Z and 18:00 local is 12:00Z. */
 const openRow = (over: Record<string, unknown> = {}) => ({
   id: "att-1",
-  date: YESTERDAY,
+  date: TODAY,
   checkIn: new Date("2026-08-18T03:05:00.000Z"),
   checkOut: null,
   employee: { id: "emp-1", shiftId: "shift-general" },
@@ -63,7 +63,7 @@ beforeEach(() => {
 })
 
 describe("runAutoCloseOpenDays", () => {
-  it("closes yesterday's open day at the shift's end time", async () => {
+  it("closes today's open day at the shift's end time", async () => {
     vi.mocked(prisma.attendance.findMany).mockResolvedValue([openRow()] as never)
 
     const closed = await runAutoCloseOpenDays()
@@ -153,12 +153,12 @@ describe("runAutoCloseOpenDays", () => {
     expect(console.error).toHaveBeenCalledTimes(2)
   })
 
-  it("asks only for yesterday's unclosed rows", async () => {
+  it("asks only for today's unclosed rows", async () => {
     await runAutoCloseOpenDays()
 
     expect(prisma.attendance.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { date: YESTERDAY, checkIn: { not: null }, checkOut: null },
+        where: { date: TODAY, checkIn: { not: null }, checkOut: null },
       })
     )
   })

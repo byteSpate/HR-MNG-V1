@@ -19,6 +19,7 @@ import { projectLogBody } from "@/lib/project-log-payload"
 import { PanelAlert, PanelNotice, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Heading } from "@/components/ds/heading"
 
 const todayInput = () => new Date().toLocaleDateString("en-CA")
 
@@ -44,7 +45,7 @@ export function ProjectLogForm({ projectId }: { projectId: string }) {
 
   return (
     <form
-      className="grid gap-2 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4"
+      className="grid gap-2 rounded-md border border-line bg-white p-3 sm:p-4"
       onSubmit={(e) => {
         e.preventDefault()
         if (!canSave) return
@@ -52,8 +53,8 @@ export function ProjectLogForm({ projectId }: { projectId: string }) {
         save.mutate()
       }}
     >
-      <h3 className="font-heading text-[14px] font-bold tracking-tight">Write your line</h3>
-      <p className="text-[12px] text-[#5F6B7C]">
+      <Heading level="card">Write your line</Heading>
+      <p className="text-caption text-ink-muted">
         One line for one day: what you did on this Project. Only people on the Project team can write one.
       </p>
       <div className="flex flex-wrap items-center gap-2">
@@ -66,7 +67,7 @@ export function ProjectLogForm({ projectId }: { projectId: string }) {
             setDay(e.target.value)
             setSaved(false)
           }}
-          className="w-40 text-[12.5px]"
+          className="w-40 text-caption"
         />
         <Input
           value={text}
@@ -78,9 +79,9 @@ export function ProjectLogForm({ projectId }: { projectId: string }) {
             setText(e.target.value)
             setSaved(false)
           }}
-          className="min-w-0 flex-1 basis-60 text-[12.5px]"
+          className="min-w-0 flex-1 basis-60 text-caption"
         />
-        <label className="flex items-center gap-1.5 text-[12.5px]">
+        <label className="flex items-center gap-1.5 text-caption">
           <input
             type="checkbox"
             checked={noWork}
@@ -88,14 +89,14 @@ export function ProjectLogForm({ projectId }: { projectId: string }) {
               setNoWork(e.target.checked)
               setSaved(false)
             }}
-            className="size-4 rounded border-[#C9D2DC]"
+            className="size-4 rounded border-line-strong"
           />
           No work on this Project that day
         </label>
         <Button
           type="submit"
           disabled={!canSave}
-          className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+          className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
         >
           {save.isPending ? "Saving…" : "Save"}
         </Button>

@@ -217,7 +217,7 @@ function EditAccountForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {focusOwner ? (
-        <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
+        <p className={`text-caption leading-relaxed ${TONE.muted}`}>
           {account.ownerName} can no longer work this account. Choosing a new
           owner is the only thing that clears the flag — nothing else about the
           account has to change.
@@ -232,7 +232,7 @@ function EditAccountForm({
               type="button"
               variant="link"
               onClick={() => eligibleQuery.refetch()}
-              className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+              className="h-auto p-0 text-caption font-bold text-danger underline"
             >
               Try again
             </Button>

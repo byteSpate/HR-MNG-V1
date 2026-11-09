@@ -1,5 +1,6 @@
 "use client"
 
+import { Img } from "@/components/ds/img"
 import { useEffect, useId, useRef, useState } from "react"
 import { RiImageAddLine } from "@remixicon/react"
 
@@ -58,17 +59,17 @@ export function CardDropZone({
         if (!disabled) take(e.dataTransfer.files[0])
       }}
       className={cn(
-        "flex cursor-pointer items-center gap-3 rounded-md border border-dashed px-4 py-4 transition-[border-color,background-color] duration-150 ease-out focus-within:ring-2 focus-within:ring-[#17191C]/25 motion-reduce:transition-none",
-        dragging ? "border-[#17191C] bg-[#F1F4F8]" : "border-[#CBD3DE] bg-[#F7F9FB] hover:border-[#8A94A2] hover:bg-[#F1F4F8]",
+        "flex cursor-pointer items-center gap-3 rounded-md border border-dashed px-4 py-4 transition-[border-color,background-color] duration-150 ease-out focus-within:ring-2 focus-within:ring-ink/25 motion-reduce:transition-none",
+        dragging ? "border-ink bg-surface-hover" : "border-line-strong bg-surface-subtle hover:border-line-strong hover:bg-surface-hover",
         disabled && "pointer-events-none opacity-60",
       )}
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white text-[#5F6B7C] shadow-[0_1px_2px_rgba(28,39,51,0.08)]">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-white text-ink-muted shadow-[0_1px_2px_rgba(28,39,51,0.08)]">
         <RiImageAddLine className="size-5" aria-hidden />
       </span>
       <span className="min-w-0">
-        <span className="block text-[13px] font-bold">{title}</span>
-        <span className={cn("block text-[12px]", TONE.muted)}>{hint}</span>
+        <span className="block text-body-sm font-bold">{title}</span>
+        <span className={cn("block text-caption", TONE.muted)}>{hint}</span>
       </span>
       <input
         id={id}
@@ -131,18 +132,17 @@ export function VisitingCardPicker({
   return (
     <div className="space-y-2">
       {file ? (
-        <div className="rise-in flex items-center gap-3 rounded-md border border-[#E4E9EF] bg-white p-2.5 motion-reduce:animate-none">
-          <span className="flex h-[52px] w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#E4E9EF] bg-[#F7F9FB]">
+        <div className="rise-in flex items-center gap-3 rounded-md border border-line bg-white p-2.5 motion-reduce:animate-none">
+          <span className="flex h-[52px] w-21 shrink-0 items-center justify-center overflow-hidden rounded-md border border-line bg-surface-subtle">
             {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="The chosen visiting card" className="max-h-full max-w-full object-contain" />
+              <Img src={preview} alt="The chosen visiting card" width={84} height={52} className="h-full w-full object-contain" />
             ) : null}
           </span>
           {/* `w-0 flex-1`, not just `min-w-0`: a long file name would otherwise count
               toward the dialog's minimum width and push its footer out sideways. */}
           <span className="w-0 min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold">{file.name}</span>
-            <span className={cn("block text-[12px]", TONE.muted)}>{formatBytes(file.size)}</span>
+            <span className="block truncate text-body-sm font-semibold">{file.name}</span>
+            <span className={cn("block text-caption", TONE.muted)}>{formatBytes(file.size)}</span>
           </span>
           <span className="flex shrink-0 items-center gap-1">
             <Button
@@ -150,7 +150,7 @@ export function VisitingCardPicker({
               variant="outline"
               disabled={disabled}
               onClick={() => changeRef.current?.click()}
-              className="h-8 px-2.5 text-[12px] font-bold"
+              className="h-8 px-2.5 text-caption font-bold"
             >
               Change
             </Button>
@@ -162,7 +162,7 @@ export function VisitingCardPicker({
                 setProblem(null)
                 onChange(null)
               }}
-              className="h-8 px-2 text-[12px] font-bold text-[#5F6B7C] underline"
+              className="h-8 px-2 text-caption font-bold text-ink-muted underline"
             >
               Remove
             </Button>
@@ -194,7 +194,7 @@ export function VisitingCardPicker({
         />
       )}
       {problem ? (
-        <p role="alert" className="text-[12px] font-semibold text-[#B03A3A]">
+        <p role="alert" className="text-caption font-semibold text-danger">
           {problem}
         </p>
       ) : null}

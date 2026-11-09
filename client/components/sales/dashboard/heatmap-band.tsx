@@ -14,20 +14,21 @@ import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 function AccountList({ colour, accounts }: { colour: "GREEN" | "RED"; accounts: HeatmapOverviewAccount[] }) {
   const tone = COLOUR[colour]
   return (
     <div className="min-w-0">
-      <h4 className="mb-1.5 flex items-center gap-2 text-[12px] font-bold">
+      <h4 className="mb-1.5 flex items-center gap-2 text-caption font-bold">
         <span className={cn("size-2.5 rounded-full", tone.dot)} aria-hidden />
         <span className={tone.text}>{tone.lane}</span>
         <span className={`font-semibold ${TONE.muted}`}>{accounts.length}</span>
       </h4>
       {accounts.length === 0 ? (
-        <p className={`text-[12px] ${TONE.muted}`}>No accounts.</p>
+        <p className={`text-caption ${TONE.muted}`}>No accounts.</p>
       ) : (
-        <ul className="grid gap-0.5 text-[12.5px]">
+        <ul className="grid gap-0.5 text-caption">
           {accounts.map((a) => (
             <li key={a.id}>
               <Link href={`/sales/accounts/${a.id}`} className="font-semibold [overflow-wrap:anywhere] hover:underline">
@@ -51,21 +52,21 @@ function ProductLine({ product, accounts }: { product: HeatmapOverviewProduct; a
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="grid w-full min-w-0 items-center gap-x-4 gap-y-1.5 px-4 py-2.5 text-left hover:bg-[#F7F9FB] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto_auto]"
+        className="grid w-full min-w-0 items-center gap-x-4 gap-y-1.5 px-4 py-2.5 text-left hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto_auto]"
       >
         <span className="min-w-0">
-          <span className="block text-[13px] font-bold [overflow-wrap:anywhere]">{product.title}</span>
-          <span className={`block text-[11.5px] ${TONE.muted}`}>{product.groupTitle}</span>
+          <span className="block text-body-sm font-bold [overflow-wrap:anywhere]">{product.title}</span>
+          <span className={`block text-caption ${TONE.muted}`}>{product.groupTitle}</span>
         </span>
         {shares ? (
-          <span role="img" aria-label={summary} className="flex h-2.5 min-w-0 overflow-hidden rounded-full bg-[#E4E9EF]">
+          <span role="img" aria-label={summary} className="flex h-2.5 min-w-0 overflow-hidden rounded-full bg-line">
             <span className={COLOUR.GREEN.stripe} style={{ width: `${shares.green}%` }} />
             <span className={COLOUR.RED.stripe} style={{ width: `${shares.red}%` }} />
           </span>
         ) : (
-          <span className={`text-[12px] ${TONE.muted}`}>No accounts</span>
+          <span className={`text-caption ${TONE.muted}`}>No accounts</span>
         )}
-        <span className="text-[12px] whitespace-nowrap">
+        <span className="text-caption whitespace-nowrap">
           <span className={cn("font-bold", COLOUR.GREEN.text)}>{product.green}</span> Green{" "}
           <span className={cn("font-bold", COLOUR.RED.text)}>{product.red}</span> Red{" "}
           <span className={cn("font-bold", COLOUR.GREY.text)}>{product.notChecked}</span> not checked
@@ -76,7 +77,7 @@ function ProductLine({ product, accounts }: { product: HeatmapOverviewProduct; a
         />
       </button>
       {open ? (
-        <div className="grid gap-4 border-t border-[#E4E9EF] bg-white px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 fill-mode-backwards duration-300 motion-reduce:animate-none sm:grid-cols-2">
+        <div className="grid gap-4 border-t border-line bg-white px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 fill-mode-backwards duration-300 motion-reduce:animate-none sm:grid-cols-2">
           <AccountList colour="GREEN" accounts={product.greenAccounts} />
           <AccountList colour="RED" accounts={product.redAccounts} />
         </div>
@@ -103,8 +104,8 @@ export function HeatmapBand({ employeeId }: { employeeId?: string }) {
   return (
     <section className="mt-5">
       <div className="mb-2.5">
-        <h2 className="font-heading text-[15px] font-bold tracking-tight">Heatmap</h2>
-        <p className={`mt-0.5 text-[12.5px] ${TONE.muted}`}>
+        <Heading level="section">Heatmap</Heading>
+        <p className={`mt-0.5 text-caption ${TONE.muted}`}>
           {data ? checkedLine(data) : "Where we can offer each product."}
         </p>
       </div>
@@ -118,18 +119,18 @@ export function HeatmapBand({ employeeId }: { employeeId?: string }) {
             <Button
               type="button"
               onClick={() => query.refetch()}
-              className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
             >
               Try again
             </Button>
           </div>
         </div>
       ) : query.data.products.length === 0 ? (
-        <p className={`rounded-md border border-[#E4E9EF] bg-white px-4 py-4 text-[12.5px] ${TONE.muted}`}>
+        <p className={`rounded-md border border-line bg-white px-4 py-4 text-caption ${TONE.muted}`}>
           The heatmap list is empty. A Sales Admin can add products in Sales Settings.
         </p>
       ) : (
-        <ul className="divide-y divide-[#E4E9EF] overflow-hidden rounded-md border border-[#E4E9EF] bg-white">
+        <ul className="divide-y divide-line overflow-hidden rounded-md border border-line bg-white">
           {query.data.products.map((product) => (
             <ProductLine key={product.id} product={product} accounts={query.data.accounts} />
           ))}

@@ -37,14 +37,14 @@ export function LeaveBalanceCard({ employeeId }: { employeeId: string }) {
   if (balancesQuery.isError || !balancesQuery.data) return null
 
   return (
-    <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-      <div className="mb-4 text-[15px] font-bold">Leave balance</div>
+    <div className="flex flex-col rounded-md border border-line bg-white px-5.5 py-5">
+      <div className="mb-4 text-lead font-bold">Leave balance</div>
       {balancesQuery.data.length === 0 ? (
-        <p className="text-[13px] text-[#A5AFBE]">No leave balance to show.</p>
+        <p className="text-body-sm text-ink-muted">No leave balance to show.</p>
       ) : (
         <ul className="space-y-2.5">
           {balancesQuery.data.map((item) => (
-            <li key={item.leaveTypeId} className="text-[13.5px]">
+            <li key={item.leaveTypeId} className="text-body-sm">
               {item.name} · {item.balance} of {item.entitlement}
             </li>
           ))}

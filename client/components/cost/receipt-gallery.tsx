@@ -77,7 +77,7 @@ function ReceiptThumb({
           </Button>
         ) : null}
       </div>
-      {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
+      {error ? <p className="text-caption text-destructive">{error}</p> : null}
     </div>
   )
 }
@@ -138,7 +138,7 @@ export function ReceiptGallery({
             label="Add receipt"
             onSelect={handleUpload}
           />
-          {uploadError ? <p className="text-[11px] text-destructive">{uploadError}</p> : null}
+          {uploadError ? <p className="text-caption text-destructive">{uploadError}</p> : null}
         </>
       ) : null}
     </div>

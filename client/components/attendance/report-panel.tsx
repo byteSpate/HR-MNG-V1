@@ -184,7 +184,7 @@ export function AttendanceReports({ accessToken }: { accessToken: string }) {
         sub="Attendance for any range: on screen, as a PDF to print or send, or as a spreadsheet. Figures match the monthly summary above — all of them read the same records."
       />
 
-      <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4.5">
+      <div className="rounded-md border border-line bg-white px-5 py-4.5">
         <div className="flex flex-wrap items-end gap-x-5 gap-y-4">
           <div>
             <Label className="mb-1.5 block text-xs font-bold">Period</Label>
@@ -439,7 +439,7 @@ function buildTable(
       { text: formatHours(r.workedHours) },
       {
         node: (
-          <span className={cn(r.shortfallHours > 0 ? "text-[#B03A3A]" : TONE.muted)}>
+          <span className={cn(r.shortfallHours > 0 ? "text-danger" : TONE.muted)}>
             {r.shortfallHours > 0 ? formatHours(r.shortfallHours) : "—"}
           </span>
         ),

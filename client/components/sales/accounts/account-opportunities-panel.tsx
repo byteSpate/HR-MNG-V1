@@ -34,7 +34,7 @@ function MarginWon({ accountId }: { accountId: string }) {
   if (marginQuery.isPending) return <Skeleton className="mb-3 h-4 w-48" />
   if (marginQuery.isError) {
     return (
-      <p className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-[#B03A3A]">
+      <p className="mb-3 flex flex-wrap items-center gap-2 text-caption text-danger">
         Margin won could not be loaded.
         <button type="button" onClick={() => marginQuery.refetch()} className="font-bold underline">
           Try again
@@ -55,8 +55,8 @@ function MarginWon({ accountId }: { accountId: string }) {
     .join(", and ")
   const nothingWon = counted === 0 && missing === 0 && dealsWithoutProducts === 0
   return (
-    <p className="mb-3 text-[12.5px] leading-relaxed text-[#5F6B7C]">
-      <span className="font-semibold text-[#1C2733]">Margin won: </span>
+    <p className="mb-3 text-caption leading-relaxed text-ink-muted">
+      <span className="font-semibold text-ink-body">Margin won: </span>
       {nothingWon
         ? "no Opportunities won on this account yet."
         : counted === 0
@@ -92,7 +92,7 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
     return (
       <Panel>
         <PanelHeading title="Opportunities" />
-        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <p className="text-caption leading-relaxed text-ink-muted">
           Only the owner, the collaborators and Sales Admins can open the Opportunities on this account.
         </p>
       </Panel>
@@ -112,7 +112,7 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
             onClick={() => setCreateOpen(true)}
             disabled={!can("opportunity.create")}
             title={can("opportunity.create") ? undefined : "A Sales Admin has turned this off for Sales Users."}
-            className="h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-2.5 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
           >
             New opportunity
           </Button>
@@ -120,30 +120,30 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
       />
       {deals.length > 0 ? <MarginWon accountId={account.id} /> : null}
       {deals.length === 0 ? (
-        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <p className="text-caption leading-relaxed text-ink-muted">
           No Opportunities on this account yet. An Opportunity is one thing we may sell here, like a
           firewall upgrade or a switching refresh. It has its own stage, value and next step.
         </p>
       ) : (
-        <ul className="-mx-2 divide-y divide-[#EEF1F5]">
+        <ul className="-mx-2 divide-y divide-surface-sunken">
           {deals.map((deal) => (
             <li key={deal.id}>
               <Link
                 href={`/sales/opportunities/${deal.id}`}
-                className="flex items-center justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-[#F7F9FB] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                className="flex items-center justify-between gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
               >
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="shrink-0 font-mono text-[11.5px] text-[#5F6B7C]">{deal.serial}</span>
-                    <span className="truncate text-[13px] font-semibold">{deal.name}</span>
+                    <span className="shrink-0 font-mono text-caption text-ink-muted">{deal.serial}</span>
+                    <span className="truncate text-body-sm font-semibold">{deal.name}</span>
                   </div>
-                  <div className="mt-0.5 truncate text-[12px] text-[#5F6B7C]">
+                  <div className="mt-0.5 truncate text-caption text-ink-muted">
                     {stageSentence(deal.status, deal.stage)} · {deal.ownerName}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2.5">
                   {/* No price yet, never ৳0. */}
-                  <span className={deal.amount === null ? "text-[12.5px] text-[#5F6B7C]" : "text-[12.5px] font-semibold"}>
+                  <span className={deal.amount === null ? "text-caption text-ink-muted" : "text-caption font-semibold"}>
                     {taka(deal.amount)}
                   </span>
                   <Tag label={OPPORTUNITY_STATUS_LABEL[deal.status]} tone={OPPORTUNITY_STATUS_TONE[deal.status]} />
@@ -156,7 +156,7 @@ export function AccountOpportunitiesPanel({ account }: { account: SalesAccountSu
       {/* The list is one page. Said rather than implied, so a long-running
           account does not look like it has exactly fifty deals. */}
       {dealsQuery.data.nextCursor ? (
-        <p className="mt-2 text-[11.5px] text-[#5F6B7C]">Showing the 50 newest Opportunities on this account.</p>
+        <p className="mt-2 text-caption text-ink-muted">Showing the 50 newest Opportunities on this account.</p>
       ) : null}
       <OpportunityFormDialog accountId={account.id} open={createOpen} onOpenChange={setCreateOpen} />
     </Panel>

@@ -101,11 +101,11 @@ export function DocumentsCard({
   )
 
   return (
-    <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-      <div className="mb-4 text-[15px] font-bold">Documents</div>
+    <div className="flex flex-col rounded-md border border-line bg-white px-5.5 py-5">
+      <div className="mb-4 text-lead font-bold">Documents</div>
 
       {canManage ? (
-        <div className="mb-4 flex flex-wrap items-end gap-2.5 border-b border-[#EFF2F6] pb-4">
+        <div className="mb-4 flex flex-wrap items-end gap-2.5 border-b border-surface-sunken pb-4">
           <div>
             <Label htmlFor="uploadType" className="mb-1.5 text-xs font-bold">
               Type
@@ -139,21 +139,21 @@ export function DocumentsCard({
       ) : null}
 
       {documents.length === 0 && !canManage ? (
-        <p className="text-[13px] text-[#A5AFBE]">No documents on file.</p>
+        <p className="text-body-sm text-ink-muted">No documents on file.</p>
       ) : (
         <ul className="space-y-2.5">
           {documents.map((doc) => (
             <li key={doc.id} className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-[13.5px] font-semibold">{TYPE_LABEL[doc.type]}</div>
-                <div className="truncate text-[12px] text-[#A5AFBE]">
+                <div className="text-body-sm font-semibold">{TYPE_LABEL[doc.type]}</div>
+                <div className="truncate text-caption text-ink-muted">
                   {doc.fileName} · {formatBytes(doc.bytes)}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 <Button
                   type="button"
-                  variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
+                  variant="link" className="h-auto p-0 text-caption font-semibold underline disabled:opacity-50"
                   disabled={busyId === doc.id}
                   onClick={() => void download(doc.id)}
                 >
@@ -162,7 +162,7 @@ export function DocumentsCard({
                 {canManage ? (
                   <Button
                     type="button"
-                    variant="link" className="h-auto p-0 text-[12.5px] font-semibold text-[#B03A3A] underline disabled:opacity-50"
+                    variant="link" className="h-auto p-0 text-caption font-semibold text-danger underline disabled:opacity-50"
                     disabled={busyId === doc.id}
                     onClick={() => void remove(doc)}
                   >
@@ -176,7 +176,7 @@ export function DocumentsCard({
             ? missingRequired.map((type) => (
                 // An empty slot is a prompt; an absent row is invisible.
                 <li key={type} className="flex items-center justify-between gap-3">
-                  <div className="text-[13.5px] font-semibold text-[#A5AFBE]">
+                  <div className="text-body-sm font-semibold text-ink-muted">
                     {TYPE_LABEL[type]} — not on file
                   </div>
                 </li>
@@ -184,9 +184,9 @@ export function DocumentsCard({
             : null}
         </ul>
       )}
-      {error ? <p className="mt-3 text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}
+      {error ? <p className="mt-3 text-body-sm font-semibold text-danger">{error}</p> : null}
       {footnote ? (
-        <p className="mt-4 border-t border-[#EFF2F6] pt-3 text-[12px] text-[#A5AFBE]">{footnote}</p>
+        <p className="mt-4 border-t border-surface-sunken pt-3 text-caption text-ink-muted">{footnote}</p>
       ) : null}
     </div>
   )

@@ -198,7 +198,7 @@ export function ExpenseReports({
 
   return (
     <>
-      <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4.5">
+      <div className="rounded-md border border-line bg-white px-5 py-4.5">
         <div className="flex flex-wrap items-end gap-x-5 gap-y-4">
           <div>
             <Label className="mb-1.5 block text-xs font-bold">Period</Label>

@@ -18,6 +18,8 @@ import {
   type ImportRowIssue,
 } from "@/lib/api/import-export"
 import { useSession } from "@/lib/auth/session-context"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 /** `parseSheet` on the server reads only these two. */
 const IMPORT_ACCEPT = ["xlsx", "csv"]
@@ -162,7 +164,7 @@ export function ImportDialog({
         if (!open) onClose()
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className={cx(dialogWidthClass("xl"), "max-h-[90vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -187,7 +189,7 @@ export function ImportDialog({
                 />
               </div>
               {uploadError ? (
-                <p role="alert" className="mt-3 text-[13px] font-semibold text-destructive">
+                <p role="alert" className="mt-3 text-body-sm font-semibold text-destructive">
                   {uploadError}
                 </p>
               ) : null}
@@ -197,7 +199,7 @@ export function ImportDialog({
 
         {step === "preview" && preview ? (
           <div className="space-y-4">
-            <p className="text-[13px] font-semibold">
+            <p className="text-body-sm font-semibold">
               {issues.length > 0
                 ? `${countText(problemRows, "row")} ${problemRows === 1 ? "has" : "have"} a problem, so nothing can be added yet.`
                 : summaryText(preview.summary)}
@@ -205,11 +207,11 @@ export function ImportDialog({
 
             <PreviewTable rows={preview.rows} issues={issues} columns={previewColumns} noun={noun} />
 
-            <p className="text-[12.5px] font-semibold text-muted-foreground">
+            <p className="text-caption font-semibold text-muted-foreground">
               If any row has a problem, nothing at all is added. Fix the file and choose it again.
             </p>
 
-            {commitError ? <p className="text-[13px] font-semibold text-destructive">{commitError}</p> : null}
+            {commitError ? <p className="text-body-sm font-semibold text-destructive">{commitError}</p> : null}
 
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={reset} disabled={commitMutation.isPending}>
@@ -229,8 +231,8 @@ export function ImportDialog({
         {step === "result" && created !== null ? (
           <div className="space-y-4">
             <div className="rounded-md border border-emerald-200 bg-emerald-50 px-5 py-4">
-              <p className="text-[13px] font-semibold text-emerald-800">Done.</p>
-              <p className="mt-0.5 text-[12.5px] text-emerald-700">{countText(created, noun)} added.</p>
+              <p className="text-body-sm font-semibold text-emerald-800">Done.</p>
+              <p className="mt-0.5 text-caption text-emerald-700">{countText(created, noun)} added.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={reset}>

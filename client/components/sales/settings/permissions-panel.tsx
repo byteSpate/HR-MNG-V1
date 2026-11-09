@@ -17,11 +17,12 @@ import { CheckboxField, PanelAlert, PanelNotice, TONE, toMessage } from "@/compo
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { groupPermissions, lastChangeOf, pendingChanges, type PermissionDraft } from "./permission-draft"
+import { Heading } from "@/components/ds/heading"
 
-const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const PRIMARY = "h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
 
 function Panel({ children }: { children: React.ReactNode }) {
-  return <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</section>
+  return <section className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</section>
 }
 
 export function PermissionsPanel() {
@@ -73,11 +74,11 @@ export function PermissionsPanel() {
     return (
       <Panel>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+          <span className="flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
-          <div className="text-[13.5px] font-bold">The permission switches could not be loaded</div>
-          <p className={`text-[12.5px] ${TONE.muted}`}>{toMessage(query.error)}</p>
+          <div className="text-body-sm font-bold">The permission switches could not be loaded</div>
+          <p className={`text-caption ${TONE.muted}`}>{toMessage(query.error)}</p>
           <Button onClick={() => query.refetch()} className={PRIMARY}>
             <RiRefreshLine className="size-4" aria-hidden />
             Try again
@@ -100,8 +101,8 @@ export function PermissionsPanel() {
       ) : null}
       {save.isError ? <PanelAlert>{toMessage(save.error)}</PanelAlert> : null}
       <Panel>
-        <h2 className="text-[14px] font-bold">Who can do what</h2>
-        <p className={`mt-1 text-[12.5px] ${TONE.muted}`}>
+        <Heading level="section">Who can do what</Heading>
+        <p className={`mt-1 text-caption ${TONE.muted}`}>
           Tick what Sales Users can do. If you untick something, no Sales User can do it, even if it is their own
           record. Sales Admins can always do everything.{" "}
           {canChange ? "You can change these." : "Only a Sales Admin can change these."}
@@ -112,7 +113,7 @@ export function PermissionsPanel() {
             const last = lastChangeOf(groupRows)
             return (
               <div key={group}>
-                <div className="text-[12.5px] font-bold">{group}</div>
+                <div className="text-caption font-bold">{group}</div>
                 <div className="mt-1 grid">
                   {groupRows.map((row) => (
                     <CheckboxField
@@ -128,7 +129,7 @@ export function PermissionsPanel() {
                   ))}
                 </div>
                 {last ? (
-                  <p className={`mt-1 text-[11.5px] ${TONE.muted}`}>
+                  <p className={`mt-1 text-caption ${TONE.muted}`}>
                     Last changed {last.changedByName ? `by ${last.changedByName} ` : ""}on{" "}
                     {new Date(last.changedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
@@ -148,24 +149,24 @@ export function PermissionsPanel() {
               {save.isPending ? "Saving" : "Save changes"}
             </Button>
             {changes.length > 0 ? (
-              <span className={`text-[12px] ${TONE.muted}`}>
+              <span className={`text-caption ${TONE.muted}`}>
                 {changes.length} {changes.length === 1 ? "change" : "changes"} not saved yet
               </span>
             ) : null}
           </div>
         ) : null}
 
-        <h3 className="mt-6 text-[12.5px] font-bold">Recent changes</h3>
+        <Heading level="card" className="mt-6">Recent changes</Heading>
         {history.isPending ? (
           <Skeleton className="mt-2 h-5 w-full" />
         ) : history.isError ? (
-          <p className={`mt-2 text-[12px] ${TONE.muted}`}>The list of changes could not be loaded. {toMessage(history.error)}</p>
+          <p className={`mt-2 text-caption ${TONE.muted}`}>The list of changes could not be loaded. {toMessage(history.error)}</p>
         ) : history.data.items.length === 0 ? (
-          <p className={`mt-2 text-[12px] ${TONE.muted}`}>Nobody has changed these yet.</p>
+          <p className={`mt-2 text-caption ${TONE.muted}`}>Nobody has changed these yet.</p>
         ) : (
           <ul className="mt-2 grid gap-1" data-testid="permission-history">
             {history.data.items.map((item) => (
-              <li key={`${item.key}-${item.changedAt}`} className={`text-[12px] ${TONE.muted}`}>
+              <li key={`${item.key}-${item.changedAt}`} className={`text-caption ${TONE.muted}`}>
                 {new Date(item.changedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                 {": "}
                 {item.changedByName ?? "A Sales Admin"} turned &quot;{item.label}&quot; {item.enabled ? "on" : "off"}.

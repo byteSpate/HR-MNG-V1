@@ -27,10 +27,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
-const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const PRIMARY = "h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
 const QUIET =
-  "h-auto min-h-8 rounded-md px-2.5 py-1 text-[12px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733] disabled:opacity-40"
+  "h-auto min-h-8 rounded-md px-2.5 py-1 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body disabled:opacity-40"
 
 /** One line in the list, whatever its level. */
 interface Row {
@@ -45,7 +46,7 @@ type Editing = { level: HeatmapListLevel; id: string } | null
 type Removing = { level: HeatmapListLevel; row: Row } | null
 
 function Panel({ children }: { children: React.ReactNode }) {
-  return <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</section>
+  return <section className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</section>
 }
 
 /** Every action returns the whole list. Each one also tells open account tabs to read the list again. */
@@ -133,11 +134,11 @@ export function HeatmapListPanel() {
     return (
       <Panel>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+          <span className="flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
-          <div className="text-[13.5px] font-bold">The heatmap list could not be loaded</div>
-          <p className={`text-[12.5px] ${TONE.muted}`}>{toMessage(query.error)}</p>
+          <div className="text-body-sm font-bold">The heatmap list could not be loaded</div>
+          <p className={`text-caption ${TONE.muted}`}>{toMessage(query.error)}</p>
           <Button onClick={() => query.refetch()} className={PRIMARY}>
             <RiRefreshLine className="size-4" aria-hidden />
             Retry
@@ -159,8 +160,8 @@ export function HeatmapListPanel() {
 
   return (
     <Panel>
-      <h2 className="text-[13.5px] font-bold">Heatmap list</h2>
-      <p className={`mt-1 mb-3 text-[12.5px] leading-relaxed ${TONE.muted}`}>
+      <Heading level="section">Heatmap list</Heading>
+      <p className={`mt-1 mb-3 text-caption leading-relaxed ${TONE.muted}`}>
         The groups, products and parts on every account&apos;s Heatmap tab. Something an account uses can be hidden, not
         deleted. Who can change this: Sales Admins.
       </p>
@@ -169,12 +170,12 @@ export function HeatmapListPanel() {
         {actions.error ? <PanelAlert onDismiss={actions.clearError}>{actions.error}</PanelAlert> : null}
         {actions.notice ? <PanelNotice onDismiss={actions.clear}>{actions.notice}</PanelNotice> : null}
 
-        {groups.length === 0 ? <p className={`text-[12.5px] ${TONE.muted}`}>The list is empty. Add a group to start.</p> : null}
+        {groups.length === 0 ? <p className={`text-caption ${TONE.muted}`}>The list is empty. Add a group to start.</p> : null}
 
         {groups.map((group, gi) => (
-          <div key={group.id} className="rounded-md border border-[#E4E9EF] p-3">
+          <div key={group.id} className="rounded-md border border-line p-3">
             <ListLine level="groups" row={group} first={gi === 0} last={gi === groups.length - 1} strong {...lineProps} />
-            <ul className="mt-2 grid gap-2 border-l-2 border-[#EEF1F5] pl-3">
+            <ul className="mt-2 grid gap-2 border-l-2 border-surface-sunken pl-3">
               {group.products.map((product, pi) => {
                 const open = openProducts.has(product.id)
                 return (
@@ -192,7 +193,7 @@ export function HeatmapListPanel() {
                       {...lineProps}
                     />
                     {open ? (
-                      <ul className="grid gap-1.5 border-l-2 border-[#EEF1F5] pl-3">
+                      <ul className="grid gap-1.5 border-l-2 border-surface-sunken pl-3">
                         {product.parts.map((part, ri) => (
                           <li key={part.id}>
                             <ListLine level="parts" row={part} first={ri === 0} last={ri === product.parts.length - 1} {...lineProps} />
@@ -264,15 +265,15 @@ function ListLine({
     <div className={cn("flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1", row.hidden && "opacity-60")}>
       <div className="flex min-w-0 flex-col">
         <span className="flex flex-wrap items-center gap-2">
-          <span className={cn("[overflow-wrap:anywhere]", strong ? "text-[13.5px] font-bold" : "text-[12.5px] font-semibold")}>
+          <span className={cn("[overflow-wrap:anywhere]", strong ? "text-body-sm font-bold" : "text-caption font-semibold")}>
             {row.title}
           </span>
           {row.hidden ? (
-            <span className="rounded bg-[#F1F4F8] px-1.5 py-0.5 text-[11px] font-bold text-[#5F6B7C]">Hidden</span>
+            <span className="rounded bg-surface-hover px-1.5 py-0.5 text-caption font-bold text-ink-muted">Hidden</span>
           ) : null}
         </span>
-        {row.note ? <span className={`text-[11.5px] leading-snug [overflow-wrap:anywhere] ${TONE.muted}`}>{row.note}</span> : null}
-        {used ? <span className={`text-[11.5px] ${TONE.muted}`}>{used}</span> : null}
+        {row.note ? <span className={`text-caption leading-snug [overflow-wrap:anywhere] ${TONE.muted}`}>{row.note}</span> : null}
+        {used ? <span className={`text-caption ${TONE.muted}`}>{used}</span> : null}
       </div>
       <div className="flex flex-wrap gap-1">
         {extra}
@@ -310,7 +311,7 @@ function ListLine({
           <Button
             type="button"
             variant="ghost"
-            className={cn(QUIET, "text-[#B03A3A] hover:bg-[#FDF6F6] hover:text-[#8F2F2F]")}
+            className={cn(QUIET, "text-danger hover:bg-danger-tint hover:text-danger")}
             disabled={busy}
             onClick={() => onRemove(level, row)}
           >
@@ -347,7 +348,7 @@ function NameEditor({ level, row, actions, onDone }: { level: HeatmapListLevel; 
         value={title}
         maxLength={80}
         onChange={(e) => setTitle(e.target.value)}
-        className="min-w-0 flex-1 basis-48 text-[12.5px]"
+        className="min-w-0 flex-1 basis-48 text-caption"
       />
       {level === "parts" ? (
         <Input
@@ -356,7 +357,7 @@ function NameEditor({ level, row, actions, onDone }: { level: HeatmapListLevel; 
           value={note}
           maxLength={160}
           onChange={(e) => setNote(e.target.value)}
-          className="min-w-0 flex-1 basis-60 text-[12.5px]"
+          className="min-w-0 flex-1 basis-60 text-caption"
         />
       ) : null}
       <Button type="submit" disabled={actions.edit.isPending} className={PRIMARY}>
@@ -397,7 +398,7 @@ function AddForm({ level, parentId, actions }: { level: HeatmapListLevel; parent
         value={title}
         maxLength={80}
         onChange={(e) => setTitle(e.target.value)}
-        className="min-w-0 flex-1 basis-48 text-[12.5px]"
+        className="min-w-0 flex-1 basis-48 text-caption"
       />
       {level === "parts" ? (
         <Input
@@ -406,7 +407,7 @@ function AddForm({ level, parentId, actions }: { level: HeatmapListLevel; parent
           value={note}
           maxLength={160}
           onChange={(e) => setNote(e.target.value)}
-          className="min-w-0 flex-1 basis-60 text-[12.5px]"
+          className="min-w-0 flex-1 basis-60 text-caption"
         />
       ) : null}
       <Button type="submit" variant="ghost" className={QUIET} disabled={actions.add.isPending || !title.trim()}>

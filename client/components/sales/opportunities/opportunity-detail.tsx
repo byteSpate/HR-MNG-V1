@@ -42,6 +42,7 @@ import { OpportunityTimelinePanel } from "@/components/sales/opportunities/oppor
 import { OpportunityHistoryPanel } from "@/components/sales/opportunities/opportunity-history-panel"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 type DealTab = "workflow" | "status" | "products" | "money" | "project" | "documents" | "meetings" | "tasks" | "comments" | "timeline"
 
@@ -84,31 +85,31 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
       <div className="pt-7 pb-4">
         <Link
           href="/sales/opportunities"
-          className="text-[12.5px] font-semibold text-[#5F6B7C] hover:underline"
+          className="text-caption font-semibold text-ink-muted hover:underline"
         >
           ← Opportunities
         </Link>
       </div>
 
       {sessionStatus === "loading" || query.isPending ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+        <div className="rounded-md border border-line bg-white px-5.5 py-5">
           <Skeleton className="h-5 w-56" />
           <Skeleton className="mt-2.5 h-3.5 w-72" />
         </div>
       ) : query.isError ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-8 text-center">
-          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+        <div className="rounded-md border border-line bg-white px-5.5 py-8 text-center">
+          <span className="mx-auto mb-2.5 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
           {/* Verbatim: "does not exist, or is not yours" already says it. */}
-          <p className="text-[13px] font-semibold text-[#B03A3A]">{toMessage(query.error)}</p>
+          <p className="text-body-sm font-semibold text-danger">{toMessage(query.error)}</p>
         </div>
       ) : deal ? (
         <>
-          <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+          <div className="rounded-md border border-line bg-white px-5.5 py-5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className={`font-mono text-[12px] ${TONE.muted}`}>{deal.serial}</span>
-              <h1 className="font-heading text-[22px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">{deal.name}</h1>
+              <span className={`font-mono text-caption ${TONE.muted}`}>{deal.serial}</span>
+              <Heading level="page" className="[overflow-wrap:anywhere] sm:text-display">{deal.name}</Heading>
               <Tag
                 label={OPPORTUNITY_STATUS_LABEL[deal.status]}
                 tone={OPPORTUNITY_STATUS_TONE[deal.status]}
@@ -118,7 +119,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
                 <Button
                   type="button"
                   onClick={() => setEditOpen(true)}
-                  className="ml-auto h-auto rounded-md border border-[#E4E9EF] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                  className="ml-auto h-auto rounded-md border border-line bg-white px-2.5 py-1.5 text-caption font-bold text-ink hover:bg-surface-subtle"
                 >
                   Edit
                 </Button>
@@ -137,7 +138,7 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
                   <Button
                     type="button"
                     onClick={() => setHandOverOpen(true)}
-                    className="h-auto rounded-md border border-[#E4E9EF] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                    className="h-auto rounded-md border border-line bg-white px-2.5 py-1.5 text-caption font-bold text-ink hover:bg-surface-subtle"
                   >
                     Hand software to the Software team
                   </Button>
@@ -145,10 +146,10 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
               )
             })()}
 
-            <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[#5F6B7C]">
+            <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-body-sm text-ink-muted">
               <Link
                 href={`/sales/accounts/${deal.salesAccountId}`}
-                className="font-semibold hover:underline"
+                className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
               >
                 {deal.salesAccountName}
               </Link>
@@ -169,22 +170,22 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
             {/* The Hand-over link, whichever side of it this Opportunity is on
                 (spec §2.5). Exactly one is ever set. */}
             {deal.handedOverTo ? (
-              <p className={`mt-1.5 text-[12.5px] ${TONE.muted}`}>
+              <p className={`mt-1.5 text-caption ${TONE.muted}`}>
                 Software work:{" "}
                 <Link
                   href={`/sales/opportunities/${deal.handedOverTo.id}`}
-                  className="font-semibold hover:underline"
+                  className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                 >
                   {deal.handedOverTo.serial} {deal.handedOverTo.name}
                 </Link>
               </p>
             ) : null}
             {deal.handedOverFrom ? (
-              <p className={`mt-1.5 text-[12.5px] ${TONE.muted}`}>
+              <p className={`mt-1.5 text-caption ${TONE.muted}`}>
                 Handed over from{" "}
                 <Link
                   href={`/sales/opportunities/${deal.handedOverFrom.id}`}
-                  className="font-semibold hover:underline"
+                  className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                 >
                   {deal.handedOverFrom.serial} {deal.handedOverFrom.name}
                 </Link>
@@ -192,13 +193,13 @@ export function OpportunityDetail({ opportunityId, initialTab }: { opportunityId
             ) : null}
 
             {deal.oemAccountManager ? (
-              <div className={`mt-1.5 text-[12.5px] ${TONE.muted}`}>
+              <div className={`mt-1.5 text-caption ${TONE.muted}`}>
                 OEM contact: {deal.oemAccountManager}
               </div>
             ) : null}
 
             {!canManage ? (
-              <p className="mt-3 flex items-start gap-1.5 rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 py-2 text-[12px] leading-relaxed text-[#5F6B7C]">
+              <p className="mt-3 flex items-start gap-1.5 rounded-md border border-line bg-surface-subtle px-3 py-2 text-caption leading-relaxed text-ink-muted">
                 <RiEyeLine className="mt-px size-3.5 shrink-0" aria-hidden />
                 You can see this Opportunity because its account is shared in All Accounts, but only the
                 people who work that account can change it.

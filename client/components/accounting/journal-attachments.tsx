@@ -12,6 +12,7 @@ import type { JournalAttachment } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
 import { formatLedgerDate } from "@/components/accounting/accounting-shared"
 import { HelpLink } from "@/components/help/help-link"
+import { Heading } from "@/components/ds/heading"
 
 function humanBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -81,7 +82,7 @@ export function JournalAttachments({
   return (
     <section className="rounded-lg border">
       <header className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="text-sm font-medium">Supporting documents</h2>
+        <Heading level="section" className="text-sm">Supporting documents</Heading>
         <Button
           size="sm"
           variant="outline"

@@ -116,10 +116,10 @@ function FulfilForm({
       </DialogHeader>
 
       <div className="space-y-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
-          <dt className="text-[#5F6B7C]">Requested</dt>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-body-sm">
+          <dt className="text-ink-muted">Requested</dt>
           <dd className="font-semibold">{request.category?.name ?? "No category"}</dd>
-          <dt className="text-[#5F6B7C]">Reason</dt>
+          <dt className="text-ink-muted">Reason</dt>
           <dd>{request.reason}</dd>
         </dl>
 

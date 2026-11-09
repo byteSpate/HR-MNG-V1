@@ -23,6 +23,7 @@ import type {
   Department,
   Role,
 } from "@/lib/api/types"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const ROLES: Role[] = [
   "SUPER_ADMIN",
@@ -131,7 +132,7 @@ export function ComposeAnnouncementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className={dialogWidthClass("md")}>
         <DialogHeader>
           <DialogTitle>{existing ? "Edit announcement" : "New announcement"}</DialogTitle>
           <DialogDescription>
@@ -164,7 +165,7 @@ export function ComposeAnnouncementDialog({
           </div>
 
           {managerScoped ? (
-            <div className="rounded-md bg-[#F4F6F9] px-3.5 py-2.5 text-[12.5px] text-[#55657A]">
+            <div className="rounded-md bg-surface-hover px-3.5 py-2.5 text-caption text-ink-muted">
               This goes to <span className="font-semibold">your own department</span>. Managers can
               only announce to their own team.
             </div>
@@ -253,16 +254,16 @@ export function ComposeAnnouncementDialog({
                 checked={draft}
                 onCheckedChange={(v) => setDraft(v)}
               />
-              <Label htmlFor="ann-draft" className="text-[12.5px] font-normal text-[#55657A]">
+              <Label htmlFor="ann-draft" className="text-caption font-normal text-ink-muted">
                 Save as a draft — nobody sees it until you publish
               </Label>
             </div>
             {!draft && !publishAt ? (
-              <span className="text-[12px] text-[#7A8698]">Leave empty to publish immediately.</span>
+              <span className="text-caption text-ink-muted">Leave empty to publish immediately.</span>
             ) : null}
           </div>
 
-          {error ? <div className="text-[12.5px] font-semibold text-[#B03A3A]">{error}</div> : null}
+          {error ? <div className="text-caption font-semibold text-danger">{error}</div> : null}
         </div>
 
         <DialogFooter>

@@ -46,7 +46,7 @@ export function GuideRail({ items }: { items: RailItem[] }) {
 
   return (
     <nav aria-label="Sections on this page" className="sticky top-20">
-      <ol className="space-y-1 border-l border-[#E4E9EF]">
+      <ol className="space-y-1 border-l border-line">
         {items.map((item) => {
           const active = item.id === activeId
           return (
@@ -55,8 +55,8 @@ export function GuideRail({ items }: { items: RailItem[] }) {
                 href={`#${item.id}`}
                 className={
                   active
-                    ? "-ml-px block border-l-2 border-[#17191C] py-1 pl-3.5 text-[12.5px] font-bold text-[#17191C]"
-                    : "-ml-px block border-l-2 border-transparent py-1 pl-3.5 text-[12.5px] text-[#8792A3] hover:text-[#3B4757]"
+                    ? "-ml-px block border-l-2 border-ink py-1 pl-3.5 text-caption font-bold text-ink"
+                    : "-ml-px block border-l-2 border-transparent py-1 pl-3.5 text-caption text-ink-muted hover:text-ink-soft"
                 }
               >
                 {item.number} · {item.label}

@@ -29,12 +29,12 @@ function Head({
   working?: string
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#EEF1F5] py-2.5">
+    <div className="flex items-start justify-between gap-4 border-b border-surface-sunken py-2.5">
       <div>
-        <div className="text-[13px]">{label}</div>
-        {working ? <div className="mt-0.5 text-[11.5px] text-[#A5AFBE]">{working}</div> : null}
+        <div className="text-body-sm">{label}</div>
+        {working ? <div className="mt-0.5 text-caption text-ink-muted">{working}</div> : null}
       </div>
-      <div className="text-[13px] whitespace-nowrap">{formatMoney(amount, currency)}</div>
+      <div className="text-body-sm whitespace-nowrap">{formatMoney(amount, currency)}</div>
     </div>
   )
 }
@@ -89,13 +89,13 @@ export function SettlementDetail({
   })
 
   return (
-    <div className="space-y-5 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+    <div className="space-y-5 rounded-md border border-line bg-white px-5.5 py-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="font-heading text-[18px] font-bold tracking-tight">
+          <div className="font-heading text-title font-bold tracking-tight">
             {settlement.employee?.fullName ?? "Settlement"}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-[12.5px] text-[#7A8698]">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-caption text-ink-muted">
             <Tag
               label={SETTLEMENT_STATUS_LABEL[settlement.status]}
               tone={SETTLEMENT_STATUS_TONE[settlement.status]}
@@ -104,7 +104,7 @@ export function SettlementDetail({
             <span>· {breakdown.exitLabel}</span>
           </div>
         </div>
-        <Button variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline" onClick={onClose}>
+        <Button variant="link" className="h-auto p-0 text-caption font-semibold underline" onClick={onClose}>
           Close
         </Button>
       </div>
@@ -116,16 +116,16 @@ export function SettlementDetail({
           ["Completed years", String(breakdown.completedYears)],
         ].map(([label, value]) => (
           <div key={label}>
-            <div className="text-[11.5px] font-bold tracking-wide text-[#7A8698] uppercase">
+            <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">
               {label}
             </div>
-            <div className="mt-0.5 text-[15px] font-semibold">{value}</div>
+            <div className="mt-0.5 text-lead font-semibold">{value}</div>
           </div>
         ))}
       </div>
 
       <div>
-        <div className="text-[11.5px] font-bold tracking-wide text-[#7A8698] uppercase">Heads</div>
+        <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">Heads</div>
         <div className="mt-1">
           <Head
             label="Pending salary"
@@ -176,24 +176,24 @@ export function SettlementDetail({
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-md bg-[#F5F7FA] px-4 py-3.5">
-        <div className="text-[11.5px] font-bold tracking-wide text-[#7A8698] uppercase">
+      <div className="flex items-center justify-between rounded-md bg-surface-subtle px-4 py-3.5">
+        <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">
           Final amount
         </div>
-        <div className="font-heading text-[20px] font-bold">
+        <div className="font-heading text-title font-bold">
           {formatMoney(settlement.finalAmount, currency)}
         </div>
       </div>
 
       {currency !== "BDT" ? (
-        <div className="rounded-md border border-[#E4E9EF] px-4 py-3 text-[12.5px] text-[#7A8698]">
+        <div className="rounded-md border border-line px-4 py-3 text-caption text-ink-muted">
           Converted at 1 {currency} = {formatRate(settlement.fxRateToBdt)} BDT ·{" "}
           {formatMoney(settlement.finalAmountBdt, "BDT")}
         </div>
       ) : null}
 
       {settlement.rejectionNote ? (
-        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-4 py-3 text-[12.5px] text-[#B03A3A]">
+        <div className="rounded-md border border-danger-line bg-danger-tint px-4 py-3 text-caption text-danger">
           Sent back: {settlement.rejectionNote}
         </div>
       ) : null}
@@ -222,9 +222,9 @@ export function SettlementDetail({
       </div>
 
       {overriding ? (
-        <div className="space-y-3 rounded-md border border-[#E4E9EF] p-4">
-          <div className="text-[13px] font-semibold">Override</div>
-          <div className="text-[11.5px] text-[#7A8698]">
+        <div className="space-y-3 rounded-md border border-line p-4">
+          <div className="text-body-sm font-semibold">Override</div>
+          <div className="text-caption text-ink-muted">
             Whether a dismissal forfeits gratuity is a legal judgement, not arithmetic. The computed
             figure is the ordinary reading; a human may overrule it, and the change is audited.
           </div>

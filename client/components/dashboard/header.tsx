@@ -36,7 +36,7 @@ function MenuButton() {
       size="icon"
       aria-label="Open menu"
       // The permanent sidebar takes over at lg, so the trigger retires there.
-      className="size-9 shrink-0 rounded border-[#E4E9EF] text-[#17191C] transition-transform duration-150 ease-out-quint hover:bg-[#F4F6F9] active:scale-97 motion-reduce:transition-none lg:hidden"
+      className="size-9 shrink-0 rounded border-line text-ink transition-transform duration-150 ease-out-quint hover:bg-surface-hover active:scale-97 motion-reduce:transition-none lg:hidden"
       onClick={toggleSidebar}
     >
       <RiMenuLine className="size-4" />
@@ -72,7 +72,7 @@ function AccountMenu({ profileHref }: { profileHref: string }) {
         // A raw button rather than ui/button: none of that component's
         // variants describe a 34px-tall identity chip, and every one of them
         // would have to be undone.
-        className="group flex items-center gap-2.5 rounded-md py-1 pr-1.5 pl-1 transition-[transform,background-color] duration-150 ease-out-quint hover:bg-[#F4F6F9] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none active:scale-97 motion-reduce:transition-none"
+        className="group flex items-center gap-2.5 rounded-md py-1 pr-1.5 pl-1 transition-[transform,background-color] duration-150 ease-out-quint hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none active:scale-97 motion-reduce:transition-none"
         aria-label={`Account menu for ${name}`}
       >
         <UserAvatar name={name} avatarUrl={avatarUrl} className="size-8.5" />
@@ -82,12 +82,12 @@ function AccountMenu({ profileHref }: { profileHref: string }) {
             in the menu, and on a payroll system knowing you are signed in as
             Finance Officer is what actually prevents a mistake. */}
         <div className="hidden max-w-40 text-left leading-tight lg:block">
-          <div className="truncate text-[13px] font-semibold">{name}</div>
-          <div className="truncate text-[11px] text-[#5F6B7C]">{subtitle}</div>
+          <div className="truncate text-body-sm font-semibold">{name}</div>
+          <div className="truncate text-caption text-ink-muted">{subtitle}</div>
         </div>
         <RiArrowDownSLine
           aria-hidden="true"
-          className="hidden size-4 text-[#8A94A3] transition-transform duration-150 ease-out-quint group-data-popup-open:rotate-180 motion-reduce:transition-none lg:block"
+          className="hidden size-4 text-ink-muted transition-transform duration-150 ease-out-quint group-data-popup-open:rotate-180 motion-reduce:transition-none lg:block"
         />
       </DropdownMenuTrigger>
 
@@ -95,12 +95,12 @@ function AccountMenu({ profileHref }: { profileHref: string }) {
         <div className="flex items-center gap-2.5 px-1.5 py-2">
           <UserAvatar name={name} avatarUrl={avatarUrl} className="size-9" />
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-[13px] font-semibold">{name}</div>
-            <div className="truncate text-[11.5px] text-[#5F6B7C]">{email}</div>
+            <div className="truncate text-body-sm font-semibold">{name}</div>
+            <div className="truncate text-caption text-ink-muted">{email}</div>
           </div>
         </div>
         <div className="px-1.5 pb-2">
-          <span className="inline-flex items-center rounded bg-[#F1F4F8] px-2 py-0.5 text-[10.5px] font-bold tracking-wide text-[#3F4A59] uppercase">
+          <span className="inline-flex items-center rounded bg-surface-hover px-2 py-0.5 text-caption font-bold tracking-wide text-ink-soft uppercase">
             {roleLabel}
           </span>
         </div>
@@ -109,9 +109,9 @@ function AccountMenu({ profileHref }: { profileHref: string }) {
 
         <DropdownMenuItem
           render={<Link href={profileHref} />}
-          className="gap-2 px-2 py-2 text-[13px] font-medium"
+          className="gap-2 px-2 py-2 text-body-sm font-medium"
         >
-          <RiUser3Line className="size-4 text-[#5F6B7C]" />
+          <RiUser3Line className="size-4 text-ink-muted" />
           My profile
         </DropdownMenuItem>
 
@@ -122,7 +122,7 @@ function AccountMenu({ profileHref }: { profileHref: string }) {
           // spinner with it; the redirect is what closes this menu.
           closeOnClick={false}
           onClick={signOut}
-          className="gap-2 px-2 py-2 text-[13px] font-medium"
+          className="gap-2 px-2 py-2 text-body-sm font-medium"
         >
           {signingOut ? (
             <RiLoader4Line className="size-4 animate-spin" />
@@ -138,7 +138,7 @@ function AccountMenu({ profileHref }: { profileHref: string }) {
 
 export function Header({ profileHref }: { profileHref: string }) {
   return (
-    <header className="flex h-15 items-center gap-4 border-b border-[#E4E9EF] bg-white px-4 sm:px-7">
+    <header className="flex h-15 items-center gap-4 border-b border-line bg-white px-4 sm:px-7">
       <MenuButton />
       {/* Do not change the outer gap — the grouping div below is what keeps
           the avatar block from moving when the help control is absent. The

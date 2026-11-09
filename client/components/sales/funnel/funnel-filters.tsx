@@ -73,10 +73,10 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
   const accountText = accounts.find((a) => a.id === value.salesAccountId)?.name ?? EVERY_ACCOUNT
 
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-[#E4E9EF] bg-white px-4 py-3">
+    <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg border border-line bg-white px-4 py-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[#5F6B7C]">Opportunity status</span>
+          <span className="text-xs font-medium text-ink-muted">Opportunity status</span>
           <Select
             value={value.status ?? ALL}
             onValueChange={(next) =>
@@ -98,7 +98,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[#5F6B7C]">Track</span>
+          <span className="text-xs font-medium text-ink-muted">Track</span>
           <Select
             value={value.track ?? ALL}
             onValueChange={(next) => set({ track: next && next !== ALL ? (next as SalesTrack) : undefined })}
@@ -118,7 +118,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[#5F6B7C]">Account</span>
+          <span className="text-xs font-medium text-ink-muted">Account</span>
           <Select
             value={value.salesAccountId ?? ALL}
             onValueChange={(next) => set({ salesAccountId: next && next !== ALL ? next : undefined })}
@@ -142,7 +142,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             type="checkbox"
             checked={Boolean(value.hideClosed)}
             onChange={(e) => set({ hideClosed: e.target.checked })}
-            className="size-4 rounded border-[#C9D2DC]"
+            className="size-4 rounded border-line-strong pointer-coarse:size-7"
           />
           Hide lost and cancelled
         </label>
@@ -152,7 +152,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             type="checkbox"
             checked={Boolean(value.changedLastWeek)}
             onChange={(e) => set({ changedLastWeek: e.target.checked })}
-            className="size-4 rounded border-[#C9D2DC]"
+            className="size-4 rounded border-line-strong pointer-coarse:size-7"
           />
           Changed in the last week
         </label>
@@ -168,7 +168,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             <dd>
               <Figure
                 amount={totals.quoted}
-                className="text-base font-semibold tabular-nums text-[#1B2733]"
+                className="text-base font-semibold tabular-nums text-ink-body"
               />
             </dd>
             <dd className={cn("text-xs", TONE.muted)}>
@@ -180,7 +180,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
             <dd>
               <Figure
                 amount={totals.stillOpen}
-                className="text-base font-semibold tabular-nums text-[#0B7A3B]"
+                className="text-base font-semibold tabular-nums text-success"
               />
             </dd>
             <dd className={cn("text-xs", TONE.muted)}>
@@ -191,7 +191,7 @@ export function FunnelFilters({ value, onChange, accounts, totals }: FunnelFilte
           {totals.unpricedCount > 0 ? (
             <div className="text-right">
               <dt className={cn("text-xs", TONE.muted)}>No price yet</dt>
-              <dd className="text-base font-semibold tabular-nums text-[#8A5E0C]">
+              <dd className="text-base font-semibold tabular-nums text-warning">
                 {totals.unpricedCount}
               </dd>
               <dd className={cn("text-xs", TONE.muted)}>in neither figure</dd>

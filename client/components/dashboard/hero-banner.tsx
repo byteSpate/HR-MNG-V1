@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * How far the stat grid lifts into the hero.
@@ -42,28 +43,28 @@ export function HeroBanner({
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <div className="mb-2 text-[11.5px] font-bold tracking-[1.2px] text-[#C2C9D2] uppercase">
+          <div className="mb-2 text-caption font-bold tracking-[1.2px] text-line-strong uppercase">
             {kicker}
           </div>
-          <h1 className="font-heading mb-1.5 text-[22px] font-bold tracking-tight sm:text-[27px]">
+          <Heading level="display" className="mb-1.5">
             {heading}
-          </h1>
+          </Heading>
           {/* Two facts, two lines. They were joined with a middle dot, which
               made the date look like part of the sentence after it. */}
-          <div className="text-[13.5px] text-white/75">{sub}</div>
-          <div className="mt-0.5 text-[12.5px] text-white/55">{today}</div>
+          <div className="text-body-sm text-white/75">{sub}</div>
+          <div className="mt-0.5 text-caption text-white/55">{today}</div>
         </div>
 
         {/* `Button` here has no `asChild`, so the link wraps it rather than
             replacing it. */}
         {ctaHref ? (
           <Link href={ctaHref} className="shrink-0">
-            <Button className="h-auto rounded-md bg-white px-4 py-2.5 text-[13px] font-bold text-[#17191C] hover:bg-[#ECEEF1]">
+            <Button className="h-auto rounded-md bg-white px-4 py-2.5 text-body-sm font-bold text-ink hover:bg-surface-sunken">
               {cta}
             </Button>
           </Link>
         ) : (
-          <Button className="h-auto shrink-0 rounded-md bg-white px-4 py-2.5 text-[13px] font-bold text-[#17191C] hover:bg-[#ECEEF1]">
+          <Button className="h-auto shrink-0 rounded-md bg-white px-4 py-2.5 text-body-sm font-bold text-ink hover:bg-surface-sunken">
             {cta}
           </Button>
         )}

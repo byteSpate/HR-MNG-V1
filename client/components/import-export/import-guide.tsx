@@ -52,9 +52,9 @@ export function ImportGuide({ basePath }: { basePath: string }) {
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-[#E4E9EF] bg-white px-4 py-4 text-left">
+    <div className="space-y-3 rounded-md border border-line bg-white px-4 py-4 text-left">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[13.5px] font-bold">What your file needs</div>
+        <div className="text-body-sm font-bold">What your file needs</div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" disabled={busy !== null} onClick={() => download("xlsx")}>
             {busy === "xlsx" ? "Preparing…" : "Download Excel example"}
@@ -65,16 +65,16 @@ export function ImportGuide({ basePath }: { basePath: string }) {
         </div>
       </div>
       {downloadError ? (
-        <p role="alert" className="text-[12.5px] font-semibold text-[#B03A3A]">
+        <p role="alert" className="text-caption font-semibold text-danger">
           {downloadError}
         </p>
       ) : null}
 
-      {guide.isPending ? <p className="text-[12.5px] text-[#5F6B7C]">Loading the column guide…</p> : null}
+      {guide.isPending ? <p className="text-caption text-ink-muted">Loading the column guide…</p> : null}
 
       {guide.isError ? (
         <div className="flex flex-wrap items-center gap-3">
-          <p role="alert" className="text-[12.5px] font-semibold text-[#B03A3A]">
+          <p role="alert" className="text-caption font-semibold text-danger">
             We could not load the column guide. You can still download the example file.
           </p>
           <Button type="button" size="sm" variant="outline" onClick={() => guide.refetch()}>
@@ -85,15 +85,15 @@ export function ImportGuide({ basePath }: { basePath: string }) {
 
       {guide.data ? (
         <>
-          <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+          <p className="text-caption leading-relaxed text-ink-muted">
             The first row of your file must hold the column names, written as shown here. Write dates as
             YYYY-MM-DD. One file can hold up to {guide.data.maxRows.toLocaleString("en-US")} rows. The Excel example has
             the same list on its Guide sheet.
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-[12.5px]">
+            <table className="w-full min-w-160 text-left text-caption">
               <thead>
-                <tr className="border-b border-[#E4E9EF] text-[#5F6B7C]">
+                <tr className="border-b border-line text-ink-muted">
                   <th className="py-1.5 pr-3 font-semibold">Column</th>
                   <th className="py-1.5 pr-3 font-semibold">Type</th>
                   <th className="py-1.5 pr-3 font-semibold">Needed</th>
@@ -103,7 +103,7 @@ export function ImportGuide({ basePath }: { basePath: string }) {
               </thead>
               <tbody>
                 {guide.data.columns.map((column) => (
-                  <tr key={column.header} className="border-b border-[#EEF1F5] align-top">
+                  <tr key={column.header} className="border-b border-surface-sunken align-top">
                     <td className="py-1.5 pr-3 font-mono font-semibold">{column.header}</td>
                     <td className="py-1.5 pr-3">{column.typeLabel}</td>
                     <td className="py-1.5 pr-3">{column.required ? "Yes" : "No"}</td>

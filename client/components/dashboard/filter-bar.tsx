@@ -51,11 +51,11 @@ export function FilterBar({
     // controls and the table, touching neither. Here it reads as part of the
     // toolbar that produces it, and it fills space that was empty anyway.
     <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="relative min-w-0 flex-1 sm:max-w-[300px]">
+      <div className="relative min-w-0 flex-1 sm:max-w-75">
         {/* `z-10` for the same reason as the login fields: the input paints
             its own background over anything positioned earlier in the DOM. */}
         <RiSearchLine
-          className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-[#8792A3]"
+          className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-ink-muted"
           aria-hidden
         />
         <Input
@@ -64,7 +64,7 @@ export function FilterBar({
           onChange={(e) => onSearch(e.target.value)}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="h-9 w-full rounded-md border-[#E4E9EF] pl-9 text-[13px] placeholder:text-[#8792A3]"
+          className="h-9 w-full rounded-md border-line pl-9 text-body-sm placeholder:text-ink-muted"
         />
       </div>
 
@@ -72,18 +72,18 @@ export function FilterBar({
 
       {/* `ml-auto` only from sm up. Below that the toolbar is a column, and
           pushing this to the right would strand it opposite nothing. */}
-      <div className="flex items-center gap-x-2 text-[12.5px] text-[#5F6B7C] sm:ml-auto">
+      <div className="flex items-center gap-x-2 text-caption text-ink-muted sm:ml-auto">
         {/* Announced on change, so a filter that removes every row is not a
             silent event for anyone reading by ear. */}
         <span aria-live="polite">
-          <span className="font-semibold text-[#1C2733]">{active ? shown : total}</span>
+          <span className="font-semibold text-ink-body">{active ? shown : total}</span>
           {active ? ` of ${total} ${noun}` : ` ${noun}`}
         </span>
         {active ? (
           <Button
             variant="ghost"
             onClick={onClear}
-            className="h-auto rounded-md px-2 py-1 text-[12.5px] font-semibold text-[#5F6B7C] transition-colors hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+            className="h-auto rounded-md px-2 py-1 text-caption font-semibold text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink-body"
           >
             <RiCloseLine className="size-3.5" aria-hidden />
             Clear
@@ -122,8 +122,8 @@ export function FilterSelect({
       <SelectTrigger
         aria-label={label}
         className={cn(
-          "h-9 w-full rounded-md border-[#E4E9EF] text-[13px] sm:w-auto sm:min-w-[150px]",
-          value === ALL ? "text-[#5F6B7C]" : "font-semibold text-[#1C2733]"
+          "h-9 w-full rounded-md border-line text-body-sm sm:w-auto sm:min-w-37.5",
+          value === ALL ? "text-ink-muted" : "font-semibold text-ink-body"
         )}
       >
         <SelectValue>{() => text}</SelectValue>

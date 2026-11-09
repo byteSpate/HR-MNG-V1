@@ -308,7 +308,7 @@ export function ApplyLeaveDialog({
               </SelectContent>
             </Select>
             {selectedBalance && !isUnpaidType ? (
-              <p className="mt-1.5 text-xs text-[#5F6B7C]">
+              <p className="mt-1.5 text-xs text-ink-muted">
                 {selectedBalance.balance} of {selectedBalance.entitlement} days remaining
               </p>
             ) : null}
@@ -410,7 +410,7 @@ export function ApplyLeaveDialog({
                 saying: why halves are unavailable, the hours the selected
                 choice covers, or how to find those hours out.
               */}
-              <p className="mt-1.5 text-xs text-[#5F6B7C]">
+              <p className="mt-1.5 text-xs text-ink-muted">
                 {selectedType && !typeAllowsHalfDay
                   ? `${selectedType.name} leave is taken in whole days.`
                   : halfDayWindow
@@ -424,16 +424,16 @@ export function ApplyLeaveDialog({
 
           {chargedDays !== null ? (
             <div className="space-y-1">
-              <p className="text-[13px] font-semibold">
+              <p className="text-body-sm font-semibold">
                 {chargedDays} day{chargedDays === 1 ? "" : "s"}{" "}
-                <span className="font-normal text-[#5F6B7C]">
+                <span className="font-normal text-ink-muted">
                   {countsHolidays
                     ? "(holidays inside the period count as leave)"
                     : "(weekly and public holidays excluded)"}
                 </span>
               </p>
               {exceedsBalance ? (
-                <p className="text-[12.5px] font-semibold text-[#9A6B10]">
+                <p className="text-caption font-semibold text-warning">
                   That is more than your remaining {selectedBalance?.balance} day
                   {selectedBalance?.balance === 1 ? "" : "s"}. Consider Leave Without Pay instead.
                 </p>
@@ -443,7 +443,7 @@ export function ApplyLeaveDialog({
 
           <div>
             <Label htmlFor="reason" className="mb-1.5 text-xs font-bold">
-              Reason <span className="font-normal text-[#5F6B7C]">(optional)</span>
+              Reason <span className="font-normal text-ink-muted">(optional)</span>
             </Label>
             <Textarea
               id="reason"
@@ -454,14 +454,14 @@ export function ApplyLeaveDialog({
           </div>
 
           {formError ? (
-            <p className="text-[13px] font-semibold text-[#B03A3A]">{formError}</p>
+            <p className="text-body-sm font-semibold text-danger">{formError}</p>
           ) : null}
 
           <DialogFooter>
             <Button
               type="submit"
               disabled={applyMutation.isPending}
-              className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+              className="bg-ink text-white hover:bg-ink-strong"
             >
               {applyMutation.isPending ? "Submitting…" : "Submit request"}
             </Button>

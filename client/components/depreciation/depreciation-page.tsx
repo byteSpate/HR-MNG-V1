@@ -82,7 +82,7 @@ export function DepreciationPage() {
     {
       node: (
         <Button
-          variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline"
+          variant="link" className="h-auto p-0 text-caption font-semibold underline"
           onClick={() => setSelectedRunId(run.id)}
         >
           Open
@@ -100,13 +100,13 @@ export function DepreciationPage() {
       />
 
       {error ? (
-        <div className="mb-4 rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="mb-4 rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {error}
         </div>
       ) : null}
 
       {blocked ? (
-        <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/5 px-5 py-3.5 text-[12.5px]">
+        <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/5 px-5 py-3.5 text-caption">
           <p className="font-medium">{formatMonth(month, year)} cannot be posted yet.</p>
           <ul className="mt-1.5 list-inside list-disc space-y-1 text-muted-foreground">
             {preflight!.blockers.map((b) => (
@@ -118,7 +118,7 @@ export function DepreciationPage() {
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-[15px] font-bold">Depreciation runs</div>
+          <div className="text-lead font-bold">Depreciation runs</div>
           <Button onClick={() => draftMutation.mutate()} disabled={draftMutation.isPending}>
             Draft a run for {formatMonth(month, year)}
           </Button>
@@ -127,14 +127,14 @@ export function DepreciationPage() {
         {runsQuery.isPending ? (
           <Skeleton className="h-40 w-full" />
         ) : runsQuery.isError ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+          <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
             Failed to load depreciation runs.{" "}
             <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => runsQuery.refetch()}>
               Retry
             </Button>
           </div>
         ) : runs.length === 0 ? (
-          <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+          <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
             No depreciation runs yet. Draft one for last month to begin.
           </div>
         ) : (

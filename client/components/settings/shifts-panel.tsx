@@ -29,6 +29,7 @@ import {
   TONE,
   toMessage,
 } from "@/components/dashboard/record-kit"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 /**
  * The attendance grid resolves the fallback shift by this literal name for
@@ -259,7 +260,7 @@ function ShiftEditDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className={dialogWidthClass("md")}>
         <DialogHeader>
           <DialogTitle>{shift ? `Edit ${shift.name}` : "Add a shift"}</DialogTitle>
           <DialogDescription>
@@ -325,7 +326,7 @@ function ShiftEditDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label className="text-[12px] font-bold text-[#1C2733]">Weekly off days</Label>
+            <Label className="text-caption font-bold text-ink-body">Weekly off days</Label>
             {/* Seven day toggles read as one control rather than seven stray
                 checkboxes. Buttons carrying `role="checkbox"` rather than a
                 visually-hidden Checkbox: hiding the real control would take
@@ -340,10 +341,10 @@ function ShiftEditDialog({
                     role="checkbox"
                     aria-checked={active}
                     onClick={() => toggleDay(day)}
-                    className={`rounded-md border px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-[#17191C]/25 active:translate-y-px ${
+                    className={`rounded-md border px-2.5 py-1.5 text-caption font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ink/25 active:translate-y-px ${
                       active
-                        ? "border-[#17191C] bg-[#17191C] text-white hover:bg-[#0E1012]"
-                        : "border-[#E4E9EF] bg-white text-[#5F6B7C] hover:border-[#C9D2DE] hover:text-[#1C2733]"
+                        ? "border-ink bg-ink text-white hover:bg-ink-strong"
+                        : "border-line bg-white text-ink-muted hover:border-line-strong hover:text-ink-body"
                     }`}
                   >
                     {label}
@@ -352,7 +353,7 @@ function ShiftEditDialog({
               })}
             </div>
             {shift && offDays.join() !== shift.weeklyOffDays.join() ? (
-              <p className={`text-[11.5px] leading-relaxed font-semibold ${TONE.notice}`}>
+              <p className={`text-caption leading-relaxed font-semibold ${TONE.notice}`}>
                 Changing these re-derives every past attendance day for everyone on this shift.
               </p>
             ) : null}

@@ -66,18 +66,18 @@ function AccountNameCell({
   const others = account.assignees.filter((a) => a.id !== account.ownerEmployeeId)
   return (
     <div
-      className={animate ? "rise-in min-w-0 text-[13px]" : "min-w-0 text-[13px]"}
+      className={animate ? "rise-in min-w-0 text-body-sm" : "min-w-0 text-body-sm"}
       style={animate ? { animationDelay: `${delayMs}ms` } : undefined}
     >
       <div className="flex items-center gap-1.5">
-        <RiBuilding2Line className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+        <RiBuilding2Line className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
         <span className="truncate font-semibold">{account.name}</span>
       </div>
       {account.industry ? (
-        <div className="truncate text-[11.5px] text-[#6B7789]">{account.industry}</div>
+        <div className="truncate text-caption text-ink-muted">{account.industry}</div>
       ) : null}
       {others.length > 0 ? (
-        <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-[#6B7789]">
+        <div className="mt-0.5 flex items-center gap-1 text-caption text-ink-muted">
           <RiGroupLine className="size-3 shrink-0" aria-hidden />
           <span className="truncate">{others.map((a) => a.fullName).join(", ")}</span>
         </div>
@@ -99,13 +99,13 @@ function toRows(accounts: SalesAccountSummary[], animate: boolean): TableCell[][
     },
     {
       node: (
-        <div className="min-w-0 text-[13px]">
+        <div className="min-w-0 text-body-sm">
           <div className="truncate">{a.ownerName}</div>
           {/* Revoking access or recording an exit does not reassign the
               account, so an owner can end up unable to work their own
               accounts. Surfaced rather than prevented — see ownerActive. */}
           {!a.ownerActive ? (
-            <div className="mt-0.5 flex items-center gap-1 text-[11.5px] font-semibold text-[#8A5E0C]">
+            <div className="mt-0.5 flex items-center gap-1 text-caption font-semibold text-warning">
               <RiAlertLine className="size-3 shrink-0" aria-hidden />
               Needs a new owner
             </div>
@@ -392,7 +392,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                       type="button"
                       variant="link"
                       onClick={() => eligibleQuery.refetch()}
-                      className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+                      className="h-auto p-0 text-caption font-bold text-danger underline"
                     >
                       Try again
                     </Button>
@@ -430,7 +430,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                 </Select>
               </Field>
               ) : (
-                <p className={`text-[12.5px] ${TONE.muted}`}>You will be the Owner of this Sales Account.</p>
+                <p className={`text-caption ${TONE.muted}`}>You will be the Owner of this Sales Account.</p>
               )}
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -472,7 +472,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                   label="Collaborators"
                   hint="Optional." help="Extra people who can work this account besides the owner."
                 >
-                  <div className="grid max-h-40 gap-0.5 overflow-y-auto rounded-md border border-[#E4E9EF] p-2">
+                  <div className="grid max-h-40 gap-0.5 overflow-y-auto rounded-md border border-line p-2">
                     {employees
                       .filter((e) => e.id !== ownerEmployeeId)
                       .map((e) => (

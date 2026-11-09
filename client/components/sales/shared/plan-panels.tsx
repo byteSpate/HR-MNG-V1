@@ -56,19 +56,19 @@ import { Skeleton } from "@/components/ui/skeleton"
 const PANEL_ROWS = 6
 
 function Panel({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</div>
+  return <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">{children}</div>
 }
 
 function PanelHeading({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3">
-      <div className="text-[13.5px] font-bold">{title}</div>
+      <div className="text-body-sm font-bold">{title}</div>
       {action}
     </div>
   )
 }
 
-const ADD_BUTTON = "h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+const ADD_BUTTON = "h-auto rounded-md bg-ink px-2.5 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
 
 function PanelLoading({ title }: { title: string }) {
   return (
@@ -87,13 +87,13 @@ function PanelBroken({ title, onRetry }: { title: string; onRetry: () => void })
     <Panel>
       <PanelHeading title={title} />
       <div className="flex flex-col items-center gap-2.5 py-4 text-center">
-        <span className="flex size-8 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+        <span className="flex size-8 items-center justify-center rounded-md bg-danger-tint text-danger">
           <RiErrorWarningLine className="size-4" aria-hidden />
         </span>
-        <div className="text-[12.5px] font-semibold text-[#5F6B7C]">This could not be loaded</div>
+        <div className="text-caption font-semibold text-ink-muted">This could not be loaded</div>
         <Button
           onClick={onRetry}
-          className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+          className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
         >
           <RiRefreshLine className="size-3.5" aria-hidden />
           Retry
@@ -170,33 +170,33 @@ export function MeetingRow({
   const theirs = meeting.attendees.filter((a) => a.side === "THEIRS").map((a) => a.name)
   return (
     <li
-      className="rise-in border-b border-[#EEF1F5] py-3 last:border-b-0 motion-reduce:animate-none"
+      className="rise-in border-b border-surface-sunken py-3 last:border-b-0 motion-reduce:animate-none"
       style={{ animationDelay: `${delayMs}ms` }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2">
-          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#F1F4F8] text-[#33373D]">
+          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-hover text-ink-body">
             <MEETING_ICON className="size-3" aria-hidden />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold text-[#1C2733]">{meeting.title}</div>
-            <div className="mt-0.5 text-[11.5px] text-[#5F6B7C]">
+            <div className="truncate text-body-sm font-semibold text-ink-body">{meeting.title}</div>
+            <div className="mt-0.5 text-caption text-ink-muted">
               {[meetingWhen(meeting.scheduledAt), MEETING_MODE_LABEL[meeting.mode], meeting.location]
                 .filter(Boolean)
                 .join(" · ")}
             </div>
             {showAccount ? (
-              <div className="mt-0.5 text-[12px]">
+              <div className="mt-0.5 text-caption">
                 <Link
                   href={`/sales/accounts/${meeting.salesAccountId}`}
-                  className="font-semibold text-[#3D4756] hover:underline"
+                  className="font-semibold text-ink-soft hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                 >
                   {meeting.salesAccountName}
                 </Link>
                 {meeting.opportunitySerial ? (
                   <>
                     {" · "}
-                    <Link href={`/sales/opportunities/${meeting.opportunityId}`} className="text-[#5F6B7C] hover:underline">
+                    <Link href={`/sales/opportunities/${meeting.opportunityId}`} className="text-ink-muted hover:underline">
                       {meeting.opportunitySerial}
                     </Link>
                   </>
@@ -204,34 +204,34 @@ export function MeetingRow({
               </div>
             ) : null}
             {ours.length > 0 || theirs.length > 0 ? (
-              <div className="mt-1 text-[12px] text-[#3D4756]">
+              <div className="mt-1 text-caption text-ink-soft">
                 {[ours.length > 0 ? `Us: ${ours.join(", ")}` : null, theirs.length > 0 ? `Them: ${theirs.join(", ")}` : null]
                   .filter(Boolean)
                   .join(" · ")}
               </div>
             ) : null}
             {meeting.status === "CANCELLED" && meeting.cancelReason ? (
-              <div className="mt-1 text-[12px] text-[#5F6B7C]">Cancelled: {meeting.cancelReason}</div>
+              <div className="mt-1 text-caption text-ink-muted">Cancelled: {meeting.cancelReason}</div>
             ) : null}
             {meeting.outcome ? (
-              <div className="mt-1.5 rounded-md bg-[#F7F9FB] px-2.5 py-2 text-[12px] leading-relaxed whitespace-pre-wrap text-[#3D4756]">
+              <div className="mt-1.5 rounded-md bg-surface-subtle px-2.5 py-2 text-caption leading-relaxed whitespace-pre-wrap text-ink-soft">
                 {meeting.outcome}
               </div>
             ) : null}
             {meeting.minutes ? (
-              <div className="mt-1.5 flex items-center gap-1.5 text-[12px]">
-                <MINUTES_ICON className="size-3.5 shrink-0 text-[#5F6B7C]" aria-hidden />
+              <div className="mt-1.5 flex items-center gap-1.5 text-caption">
+                <MINUTES_ICON className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
                 {meeting.canManage ? (
                   <Link
                     href={`/sales/meetings/minutes/${meeting.minutes.id}`}
-                    className="font-semibold text-[#3D4756] hover:underline"
+                    className="font-semibold text-ink-soft hover:underline pointer-coarse:inline-block pointer-coarse:py-3"
                   >
                     {minutesLine(meeting.minutes)}
                   </Link>
                 ) : (
                   // Somebody who only sees the account learns that the minutes
                   // exist, not what they say (§25.27).
-                  <span className="font-semibold text-[#5F6B7C]">{minutesLine(meeting.minutes)}</span>
+                  <span className="font-semibold text-ink-muted">{minutesLine(meeting.minutes)}</span>
                 )}
               </div>
             ) : null}
@@ -312,7 +312,7 @@ export function MeetingsPanel({
         </div>
       ) : null}
       {meetings.length === 0 ? (
-        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <p className="text-caption leading-relaxed text-ink-muted">
           {opportunityId
             ? "No meetings about this Opportunity yet."
             : "No meetings on this account yet. A visit, a meeting at our office or an online call goes here, with who comes from both sides."}
@@ -338,7 +338,7 @@ export function MeetingsPanel({
       {meetings.length > shown.length ? (
         <Link
           href="/sales/meetings"
-          className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold text-[#5F6B7C] hover:underline"
+          className="mt-2 inline-flex items-center gap-1 text-caption font-bold text-ink-muted hover:underline"
         >
           {`Showing ${shown.length} of ${meetings.length}. All meetings`}
           <RiArrowRightLine className="size-3.5" aria-hidden />
@@ -402,17 +402,17 @@ export function taskActions(
 function TaskItem({ task, actions, delayMs }: { task: SalesTaskSummary; actions: RowAction[]; delayMs: number }) {
   return (
     <li
-      className="rise-in border-b border-[#EEF1F5] py-3 last:border-b-0 motion-reduce:animate-none"
+      className="rise-in border-b border-surface-sunken py-3 last:border-b-0 motion-reduce:animate-none"
       style={{ animationDelay: `${delayMs}ms` }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2">
-          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#F1F4F8] text-[#33373D]">
+          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-hover text-ink-body">
             <TASK_ICON className="size-3" aria-hidden />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold text-[#1C2733]">{task.title}</div>
-            <div className="mt-0.5 text-[11.5px] text-[#5F6B7C]">
+            <div className="truncate text-body-sm font-semibold text-ink-body">{task.title}</div>
+            <div className="mt-0.5 text-caption text-ink-muted">
               {[`Due ${onDay(task.dueOn)}`, task.canManage ? null : task.assignedToName, task.opportunitySerial]
                 .filter(Boolean)
                 .join(" · ")}
@@ -471,7 +471,7 @@ export function TasksPanel({
     return (
       <Panel>
         <PanelHeading title="Tasks" />
-        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <p className="text-caption leading-relaxed text-ink-muted">
           Tasks here are open only to the people who work this account, and to Sales Admins.
         </p>
       </Panel>
@@ -496,7 +496,7 @@ export function TasksPanel({
         }
       />
       {tasks.length === 0 ? (
-        <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+        <p className="text-caption leading-relaxed text-ink-muted">
           Nothing open. A task is one thing somebody must do by a date, like calling back or sending a quote, and it
           arrives in their morning email.
         </p>
@@ -521,7 +521,7 @@ export function TasksPanel({
           Sales Admin, whose /sales/tasks opens on the whole team. */}
       <Link
         href="/sales/tasks?mine=true"
-        className="mt-2 inline-flex items-center gap-1 text-[12px] font-bold text-[#5F6B7C] hover:underline"
+        className="mt-2 inline-flex items-center gap-1 text-caption font-bold text-ink-muted hover:underline"
       >
         {tasks.length > shown.length ? `Showing ${shown.length} of ${tasks.length}. All my tasks` : "All my tasks"}
         <RiArrowRightLine className="size-3.5" aria-hidden />

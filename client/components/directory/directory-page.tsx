@@ -13,6 +13,7 @@ import { FilterChip } from "@/components/dashboard/filter-chip"
 import { UserAvatar } from "@/components/dashboard/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 const ALL_DEPARTMENTS = "__all__"
 
@@ -88,11 +89,11 @@ export function DirectoryPage() {
   return (
     <>
       <div className="pt-7 pb-5">
-        <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">
+        <div className="mb-1.5 text-caption font-bold tracking-[1.1px] text-ink-muted uppercase">
           Workspace
         </div>
-        <h1 className="font-heading mb-1 text-[23px] font-bold tracking-tight">Directory</h1>
-        <div className="text-[13px] text-[#5F6B7C]">
+        <Heading level="page" className="mb-1">Directory</Heading>
+        <div className="text-body-sm text-ink-muted">
           Find a colleague — who they are, what they do and how to reach them.
         </div>
       </div>
@@ -101,7 +102,7 @@ export function DirectoryPage() {
         <div className="relative max-w-100">
           <RiSearchLine
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8A94A3]"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-muted"
           />
           <input
             type="search"
@@ -111,14 +112,14 @@ export function DirectoryPage() {
             aria-label="Search the directory"
             // Not ui/input: that primitive owns its own padding, and a leading
             // icon plus a trailing clear button needs both sides opened up.
-            className="h-10 w-full rounded-md border border-[#E4E9EF] bg-white pr-9 pl-9 text-[13px] transition-[border-color,box-shadow] duration-150 ease-out-quint outline-none placeholder:text-[#98A2B1] hover:border-[#CFD6E0] focus:border-[#17191C] focus:shadow-[0_0_0_3px_rgba(23,25,28,0.08)] motion-reduce:transition-none [&::-webkit-search-cancel-button]:hidden"
+            className="h-10 w-full rounded-md border border-line bg-white pr-9 pl-9 text-body-sm transition-[border-color,box-shadow] duration-150 ease-out-quint outline-none placeholder:text-ink-muted hover:border-line-strong focus:border-ink focus:shadow-[0_0_0_3px_rgba(23,25,28,0.08)] motion-reduce:transition-none [&::-webkit-search-cancel-button]:hidden"
           />
           {query ? (
             <button
               type="button"
               onClick={() => setQuery("")}
               aria-label="Clear search"
-              className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded text-[#8A94A3] transition-[transform,color,background-color] duration-150 ease-out-quint hover:bg-[#F1F4F8] hover:text-[#17191C] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none active:scale-90 motion-reduce:transition-none"
+              className="absolute top-1/2 right-2 grid size-6 -translate-y-1/2 place-items-center rounded text-ink-muted transition-[transform,color,background-color] duration-150 ease-out-quint hover:bg-surface-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none active:scale-90 motion-reduce:transition-none"
             >
               <RiCloseLine className="size-4" />
             </button>
@@ -157,7 +158,7 @@ export function DirectoryPage() {
               replaces it produces a layout jump at exactly the moment the
               page is meant to feel finished. */}
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-3.5">
+            <div key={i} className="rounded-md border border-line bg-white px-4 py-3.5">
               <div className="flex items-center gap-3">
                 <Skeleton className="size-11 shrink-0 rounded-md" />
                 <div className="grid flex-1 gap-1.5">
@@ -170,7 +171,7 @@ export function DirectoryPage() {
           ))}
         </div>
       ) : employeesQuery.isError ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+        <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
           Failed to load the directory.{" "}
           <Button
             variant="link"
@@ -181,10 +182,10 @@ export function DirectoryPage() {
           </Button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="fade-in grid place-items-center rounded-md border border-dashed border-[#D9E0E9] bg-white px-6 py-14 text-center">
-          <RiUserSearchLine aria-hidden="true" className="mb-3 size-7 text-[#B6BFCB]" />
-          <p className="text-[13.5px] font-semibold">No colleagues match that</p>
-          <p className="mt-1 max-w-80 text-[12.5px] text-[#5F6B7C]">
+        <div className="fade-in grid place-items-center rounded-md border border-dashed border-line bg-white px-6 py-14 text-center">
+          <RiUserSearchLine aria-hidden="true" className="mb-3 size-7 text-line-strong" />
+          <p className="text-body-sm font-semibold">No colleagues match that</p>
+          <p className="mt-1 max-w-80 text-caption text-ink-muted">
             Try a shorter search, or widen the department filter.
           </p>
           {filtering ? (
@@ -202,7 +203,7 @@ export function DirectoryPage() {
         <>
           <div
             aria-live="polite"
-            className="mb-2.5 text-[12px] text-[#5F6B7C]"
+            className="mb-2.5 text-caption text-ink-muted"
           >
             {filtered.length} {filtered.length === 1 ? "colleague" : "colleagues"}
             {filtering ? ` of ${all.length}` : ""}
@@ -255,13 +256,13 @@ function ColleagueCard({
       aria-label={`${fullName}, ${designation} in ${department.name}. View details`}
       style={animate ? { animationDelay: `${delayMs}ms` } : undefined}
       className={cn(
-        "group flex flex-col gap-3 rounded-md border border-[#E4E9EF] bg-white px-4 py-3.5 text-left",
+        "group flex flex-col gap-3 rounded-md border border-line bg-white px-4 py-3.5 text-left",
         // transform and opacity only, and both under 300ms. The lift is 2px:
         // enough that the card under the cursor is unambiguous, small enough
         // that a grid of them does not ripple.
         "transition-[transform,border-color,box-shadow] duration-200 ease-out-quint",
-        "hover:-translate-y-0.5 hover:border-[#C9D2DE] hover:shadow-[0_6px_18px_-8px_rgba(23,39,51,0.28)]",
-        "focus-visible:ring-2 focus-visible:ring-[#17191C]/30 focus-visible:outline-none",
+        "hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[0_6px_18px_-8px_rgba(23,39,51,0.28)]",
+        "focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:outline-none",
         // The press cancels the hover lift and dips below rest, so the card
         // reads as pushed rather than merely stopped.
         "active:translate-y-0 active:scale-99 active:duration-100",
@@ -274,21 +275,21 @@ function ColleagueCard({
           name={fullName}
           avatarUrl={avatarUrl}
           className="size-11 rounded-md"
-          textClassName="text-[14px]"
+          textClassName="text-body"
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13.5px] font-semibold">{fullName}</div>
-          <div className="truncate text-[12px] text-[#5F6B7C]">{designation}</div>
+          <div className="truncate text-body-sm font-semibold">{fullName}</div>
+          <div className="truncate text-caption text-ink-muted">{designation}</div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-[#EEF1F5] pt-2.5">
-        <span className="truncate text-[11.5px] font-medium text-[#6B7789]">
+      <div className="flex items-center justify-between gap-2 border-t border-surface-sunken pt-2.5">
+        <span className="truncate text-caption font-medium text-ink-muted">
           {department.name}
         </span>
         {/* The affordance, not a second control: it says which way the card
             goes without adding a target that competes with the card itself. */}
-        <span className="flex shrink-0 items-center gap-0.5 text-[11.5px] font-semibold text-[#8A94A3] transition-colors duration-200 ease-out-quint group-hover:text-[#17191C] motion-reduce:transition-none">
+        <span className="flex shrink-0 items-center gap-0.5 text-caption font-semibold text-ink-muted transition-colors duration-200 ease-out-quint group-hover:text-ink motion-reduce:transition-none">
           Details
           <RiArrowRightSLine
             aria-hidden="true"

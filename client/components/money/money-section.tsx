@@ -12,6 +12,7 @@ import { InvoicedPart } from "@/components/money/invoiced-part"
 import { MoneyNumbers } from "@/components/money/money-numbers"
 import { PaidPart } from "@/components/money/paid-part"
 import { PoPart } from "@/components/money/po-part"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * A draft document to open and highlight, carried from the Waiting-for-
@@ -78,9 +79,9 @@ function formatDay(day: string): string {
  */
 function MoneyNotRecorded({ data }: { data: DealMoneyNotRecorded }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-      <h2 className="font-heading text-[15px] font-bold tracking-tight">Money</h2>
-      <p className={`mt-1.5 text-[12.5px] leading-relaxed ${TONE.muted}`}>
+    <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+      <Heading level="section">Money</Heading>
+      <p className={`mt-1.5 text-caption leading-relaxed ${TONE.muted}`}>
         {data.notRecordedReason === "WON_BEFORE_GO_LIVE"
           ? `This Opportunity was won before ${formatDay(data.goLiveDate)}. Its money is not recorded here.`
           : "This Opportunity is not won. Money is recorded here only for a won Opportunity."}
@@ -94,13 +95,13 @@ function MoneySkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+          <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
             <Skeleton className="h-3 w-14" />
             <Skeleton className="mt-2.5 h-6 w-24" />
           </div>
         ))}
       </div>
-      <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+      <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="mt-3 h-16 w-full" />
       </div>

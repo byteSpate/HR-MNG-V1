@@ -11,7 +11,7 @@ export interface VatDraft {
 }
 
 const SELECT =
-  "h-9 w-full rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+  "h-9 w-full rounded-md border border-line bg-white px-2 text-body-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
 
 /**
  * A line's VAT: a VAT code from Settings (the default), or a typed %
@@ -61,7 +61,7 @@ export function VatChoice({
             onChange={(e) => onChange({ vatRatePercent: e.target.value })}
             placeholder="7.5"
           />
-          <span className={`text-[12px] ${TONE.muted}`}>%</span>
+          <span className={`text-caption ${TONE.muted}`}>%</span>
         </div>
       ) : null}
     </div>

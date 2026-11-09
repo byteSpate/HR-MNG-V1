@@ -59,13 +59,13 @@ function AttachmentThumb({
             type="button"
             aria-label={`Remove ${attachment.fileName}`}
             onClick={() => onDelete(attachment)}
-            className="rounded-md px-1.5 py-1.5 text-muted-foreground hover:bg-[#FDF1F1] hover:text-[#B03A3A]"
+            className="rounded-md px-1.5 py-1.5 text-muted-foreground hover:bg-danger-tint hover:text-danger"
           >
             <RiCloseLine className="size-3.5" aria-hidden />
           </Button>
         ) : null}
       </div>
-      {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
+      {error ? <p className="text-caption text-destructive">{error}</p> : null}
     </div>
   )
 }
@@ -151,7 +151,7 @@ export function AttachmentUploader({
           }}
         />
       </div>
-      {error ? <p className="text-[11px] font-semibold text-[#B03A3A]">{error}</p> : null}
+      {error ? <p className="text-caption font-semibold text-danger">{error}</p> : null}
     </div>
   )
 }

@@ -41,11 +41,11 @@ export function FunnelMeetingPanel({
 }: FunnelMeetingPanelProps) {
   if (!meeting) {
     return (
-      <div className="rounded-lg border border-[#E4E9EF] bg-white px-4 py-4">
+      <div className="rounded-lg border border-line bg-white px-4 py-4">
         {error ? <PanelAlert>{toMessage(error)}</PanelAlert> : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-[#1B2733]">
+            <p className="text-sm font-medium text-ink-body">
               No meeting open for the week of {team.weekStart}
             </p>
             <p className={cn("mt-0.5 text-sm", TONE.muted)}>
@@ -65,7 +65,7 @@ export function FunnelMeetingPanel({
   const attending = new Set(meeting.attendees.map((a) => a.employeeId))
 
   return (
-    <div className="rounded-lg border border-[#E4E9EF] bg-white px-4 py-4">
+    <div className="rounded-lg border border-line bg-white px-4 py-4">
       {error ? <PanelAlert>{toMessage(error)}</PanelAlert> : null}
 
       {/* A completed meeting is not an error state, so this is a notice and
@@ -78,7 +78,7 @@ export function FunnelMeetingPanel({
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-[#1B2733]">
+          <p className="text-sm font-medium text-ink-body">
             Funnel meeting · week of {meeting.weekStart}
           </p>
           <p className={cn("mt-0.5 text-sm", TONE.muted)}>
@@ -99,7 +99,7 @@ export function FunnelMeetingPanel({
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div>
-          <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
             Who is in the room
           </h4>
           <ul className="mt-2 flex flex-wrap gap-2">
@@ -114,8 +114,8 @@ export function FunnelMeetingPanel({
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm",
                       here
-                        ? "bg-[#EAF2FB] text-[#1F4E79] ring-1 ring-[#2D6CB5]"
-                        : "bg-slate-100 text-[#5F6B7C]",
+                        ? "bg-info-tint text-info-ink ring-1 ring-info"
+                        : "bg-slate-100 text-ink-muted",
                       (completed || busy) && "opacity-60"
                     )}
                   >
@@ -134,13 +134,13 @@ export function FunnelMeetingPanel({
 
           {/* One way to give work: the take-out on a person's page. The old form
               here did the same thing under another name (owner, 2026-11-02). */}
-          <p className={cn("mt-4 border-t border-[#E4E9EF] pt-4 text-xs", TONE.muted)}>
+          <p className={cn("mt-4 border-t border-line pt-4 text-xs", TONE.muted)}>
             To give someone work, open their name in the list below and press Take-out.
           </p>
         </div>
 
         <div>
-          <h4 className="text-xs font-medium uppercase tracking-wide text-[#5F6B7C]">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-ink-muted">
             Note for the week
           </h4>
           {/* Keyed to the meeting, so opening a different one starts a fresh
@@ -200,7 +200,7 @@ function WeekNote({
       }}
       rows={4}
       placeholder="What was decided across the team this week"
-      className="mt-2 w-full rounded-md border border-[#E4E9EF] px-3 py-2 text-sm outline-none focus:border-[#2D6CB5] disabled:opacity-60"
+      className="mt-2 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-info disabled:opacity-60"
     />
   )
 }

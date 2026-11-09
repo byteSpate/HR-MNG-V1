@@ -72,8 +72,8 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
   const canAdd = name.trim() !== "" && url.trim().startsWith("https://") && !add.isPending
 
   return (
-    <div className="mt-4 border-t border-[#E4E9EF] pt-4">
-      <div className="text-[13px] font-bold">{config.title}</div>
+    <div className="mt-4 border-t border-line pt-4">
+      <div className="text-body-sm font-bold">{config.title}</div>
 
       {error ? (
         <div className="mt-2">
@@ -90,24 +90,24 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
           <PanelAlert>{toMessage(query.error)}</PanelAlert>
         </div>
       ) : links.length === 0 ? (
-        <p className={`mt-1 text-[12.5px] ${TONE.muted}`}>{config.empty}</p>
+        <p className={`mt-1 text-caption ${TONE.muted}`}>{config.empty}</p>
       ) : costing ? (
         <div className="mt-1">
           <CostingLinkList links={links} quotes={deal.quotes} />
         </div>
       ) : (
-        <ul className="mt-1 divide-y divide-[#E4E9EF]">
+        <ul className="mt-1 divide-y divide-line">
           {links.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-2 py-2">
               <a
                 href={d.url ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[13px] font-semibold hover:underline"
+                className="inline-flex items-center gap-1 text-body-sm font-semibold hover:underline"
               >
                 {d.name} <RiExternalLinkLine className="size-3.5" aria-hidden />
               </a>
-              <span className={`text-[12px] ${TONE.muted}`}>
+              <span className={`text-caption ${TONE.muted}`}>
                 {d.createdByName ?? "Someone"} · {new Date(d.createdAt).toLocaleDateString()}
               </span>
             </li>
@@ -139,7 +139,7 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
                 id="stage-link-quote"
                 value={quoteId}
                 onChange={(e) => setQuoteId(e.target.value)}
-                className="h-9 w-full rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:ring-2 focus:ring-[#17191C]/20 focus:outline-none"
+                className="h-9 w-full rounded-md border border-line bg-white px-2 text-body-sm focus:ring-2 focus:ring-ink/20 focus:outline-none"
               >
                 {deal.quotes.map((q, i) => (
                   <option key={q.id} value={q.id}>
@@ -154,12 +154,12 @@ export function StageLinks({ deal, canManage }: { deal: OpportunitySummary; canM
             type="button"
             disabled={!canAdd}
             onClick={() => add.mutate()}
-            className="h-9 bg-[#17191C] text-[12px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-9 bg-ink text-caption font-bold text-white hover:bg-ink-strong"
           >
             {add.isPending ? "Saving…" : "Add link"}
           </Button>
           {badAddress ? (
-            <p role="alert" className="text-[11.5px] font-semibold text-[#B03A3A] sm:col-span-full">
+            <p role="alert" className="text-caption font-semibold text-danger sm:col-span-full">
               The web address must start with https://
             </p>
           ) : null}

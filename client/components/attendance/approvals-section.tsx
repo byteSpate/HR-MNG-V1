@@ -156,7 +156,7 @@ export function ApprovalsSection({
       </div>
 
       {isPending && items.length > 0 ? (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-[#E4E9EF] bg-white px-4 py-3">
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-line bg-white px-4 py-3">
           <Checkbox
             checked={allSelected}
             onCheckedChange={() =>
@@ -164,7 +164,7 @@ export function ApprovalsSection({
             }
             aria-label="Select all"
           />
-          <span className="text-[12.5px] font-semibold">
+          <span className="text-caption font-semibold">
             {selected.size > 0 ? `${selected.size} selected` : "Select all"}
           </span>
           <div className="ml-auto flex gap-2">
@@ -173,7 +173,7 @@ export function ApprovalsSection({
               onClick={() =>
                 decideMutation.mutate({ ids: [...selected], decision: "APPROVE" })
               }
-              className="h-auto rounded-md bg-[#17191C] px-4 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-auto rounded-md bg-ink px-4 py-2 text-caption font-bold text-white hover:bg-ink-strong"
             >
               Approve
             </Button>
@@ -184,7 +184,7 @@ export function ApprovalsSection({
                 setActionError(null)
                 setRejecting(true)
               }}
-              className="h-auto rounded-md px-4 py-2 text-[12.5px] font-bold"
+              className="h-auto rounded-md px-4 py-2 text-caption font-bold"
             >
               Reject
             </Button>

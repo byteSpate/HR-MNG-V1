@@ -47,9 +47,9 @@ const ANY = "any"
 const STAGES: OpportunityStage[] = [
   ...new Set<OpportunityStage>([...BEFORE_QUOTE_STAGES.NETWORKING, ...BEFORE_QUOTE_STAGES.SOFTWARE_DEVELOPMENT]),
 ]
-const TOGGLE_ON = "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const TOGGLE_ON = "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
 const TOGGLE_OFF =
-  "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+  "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
 
 const todayInput = () => new Date().toLocaleDateString("en-CA")
 
@@ -79,7 +79,7 @@ function QuoteDateCell({ deal }: { deal: OpportunitySummary }) {
               // A half-typed date is "" until it is whole; only a finished one is sent.
               if (e.target.value !== (deal.expectedQuoteOn ?? "")) save.mutate(e.target.value)
             }}
-            className="h-8 w-36 text-[12px]"
+            className="h-8 w-36 text-caption"
           />
         ) : (
           <span className={deal.expectedQuoteOn ? undefined : TONE.muted}>
@@ -89,12 +89,12 @@ function QuoteDateCell({ deal }: { deal: OpportunitySummary }) {
         {state === "late" ? <Tag label="Late" tone="red" /> : state === "soon" ? <Tag label="Soon" tone="yellow" /> : null}
         {/* The box is locked while the date saves, so say so. Polite, not an alert. */}
         {save.isPending ? (
-          <span role="status" className={`text-[11.5px] ${TONE.muted}`}>
+          <span role="status" className={`text-caption ${TONE.muted}`}>
             Saving…
           </span>
         ) : null}
       </span>
-      {save.isError ? <span className="mt-0.5 block text-[11.5px] text-[#B03A3A]">{toMessage(save.error)}</span> : null}
+      {save.isError ? <span className="mt-0.5 block text-caption text-danger">{toMessage(save.error)}</span> : null}
     </span>
   )
 }
@@ -178,12 +178,12 @@ export function BeforeQuotationView({
       {
         node: (
           <div className="flex min-w-0 items-center gap-1.5">
-            <RiBriefcaseLine className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+            <RiBriefcaseLine className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
             {onOpenOpportunity ? (
               <button
                 type="button"
                 onClick={() => onOpenOpportunity(deal)}
-                className="truncate text-left font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                className="truncate text-left font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
               >
                 {deal.name}
               </button>
@@ -207,7 +207,7 @@ export function BeforeQuotationView({
         node: next.text ? (
           <span className="block min-w-0">
             <span className="block truncate">{next.text}</span>
-            {next.dueOn ? <span className={`block text-[11.5px] ${TONE.muted}`}>{onDay(next.dueOn)}</span> : null}
+            {next.dueOn ? <span className={`block text-caption ${TONE.muted}`}>{onDay(next.dueOn)}</span> : null}
           </span>
         ) : (
           <span className={`block truncate ${TONE.muted}`}>No next step</span>
@@ -231,7 +231,7 @@ export function BeforeQuotationView({
       {/* Hidden while the first page loads. A filter beside a skeleton reads as an
           answer about a list nobody has counted yet. */}
       {showFilters && !isLoading && !query.isError ? (
-        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
+        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
           <Select value={stage || ANY} onValueChange={(v) => setStage(!v || v === ANY ? "" : (v as OpportunityStage))}>
             <SelectTrigger aria-label="Opportunity stage" className="h-9 w-auto min-w-[11rem]">
               <SelectValue>{(v: string | null) => (v && v !== ANY ? STAGE_LABEL[v as OpportunityStage] : "Any early stage")}</SelectValue>
@@ -269,7 +269,7 @@ export function BeforeQuotationView({
           </Button>
 
           {isFiltered ? (
-            <Button type="button" variant="link" onClick={clearFilters} className="h-9 gap-1.5 p-0 text-[12.5px] font-bold text-[#5F6B7C]">
+            <Button type="button" variant="link" onClick={clearFilters} className="h-9 gap-1.5 p-0 text-caption font-bold text-ink-muted">
               <RiFilterOffLine className="size-3.5" aria-hidden />
               Clear
             </Button>
@@ -296,7 +296,7 @@ export function BeforeQuotationView({
         emptyAction={isFiltered ? "Clear filters" : undefined}
         onEmptyAction={clearFilters}
       />
-      {partial ? <p className={`mt-2 text-[12px] ${TONE.muted}`}>Showing the first {deals.length}. Use a filter to narrow the list.</p> : null}
+      {partial ? <p className={`mt-2 text-caption ${TONE.muted}`}>Showing the first {deals.length}. Use a filter to narrow the list.</p> : null}
     </>
   )
 }

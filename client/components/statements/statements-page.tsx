@@ -26,6 +26,7 @@ import { EquityTable } from "@/components/statements/equity-table"
 import { PeriodControl } from "@/components/statements/period-control"
 import { StatementTable } from "@/components/statements/statement-table"
 import { presetRange, type Preset, type Range } from "@/components/statements/statements-shared"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * Spec Decision 8. An unbalanced trial balance blocks every statement — no
@@ -39,7 +40,7 @@ function BlockedPanel({ details, range }: { details: UnbalancedDetails; range: R
         <RiErrorWarningLine className="mt-0.5 size-5 shrink-0 text-destructive" />
         <div className="space-y-3">
           <div>
-            <h2 className="font-medium">The trial balance does not agree</h2>
+            <Heading level="section">The trial balance does not agree</Heading>
             <p className="text-sm text-muted-foreground">
               Financial statements cannot be produced until it does.
             </p>

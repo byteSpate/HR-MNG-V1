@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getPayrollSettings, updatePayrollSettings } from "@/lib/api/payroll"
 import type { PayrollSettings } from "@/lib/api/payroll-types"
+import { Heading } from "@/components/ds/heading"
 
 interface Rule {
   key: keyof PayrollSettings
@@ -72,8 +73,8 @@ export function PayrollSettingsPanel({ accessToken }: { accessToken: string }) {
   return (
     <section className="space-y-4">
       <header>
-        <h2 className="font-heading text-[16px] font-bold tracking-tight">Payroll rules</h2>
-        <p className="mt-1 text-[12.5px] text-[#5F6B7C]">Rules that change how pay is worked out.</p>
+        <Heading level="section">Payroll rules</Heading>
+        <p className="mt-1 text-caption text-ink-muted">Rules that change how pay is worked out.</p>
       </header>
 
       {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
@@ -89,7 +90,7 @@ export function PayrollSettingsPanel({ accessToken }: { accessToken: string }) {
           </button>
         </PanelAlert>
       ) : (
-        <div className="max-w-2xl divide-y divide-[#E4E9EF] rounded-md border border-[#E4E9EF] bg-white">
+        <div className="max-w-2xl divide-y divide-line rounded-md border border-line bg-white">
           {RULES.map((rule) => {
             const on = valueOf(rule.key)
             return (
@@ -104,14 +105,14 @@ export function PayrollSettingsPanel({ accessToken }: { accessToken: string }) {
                     className="mt-0.5"
                   />
                   <span className="min-w-0">
-                    <span className="block text-[13.5px] font-bold text-[#1C2733]">{rule.title}</span>
-                    <span className="mt-1 block text-[12.5px] leading-relaxed text-[#5F6B7C]">
+                    <span className="block text-body-sm font-bold text-ink-body">{rule.title}</span>
+                    <span className="mt-1 block text-caption leading-relaxed text-ink-muted">
                       {rule.body}
                     </span>
                   </span>
                 </label>
                 {!on && rule.whenOff ? (
-                  <p className="mt-3 pl-7 text-[12.5px] leading-relaxed text-[#5F6B7C]">
+                  <p className="mt-3 pl-7 text-caption leading-relaxed text-ink-muted">
                     {rule.whenOff}
                   </p>
                 ) : null}
@@ -120,7 +121,7 @@ export function PayrollSettingsPanel({ accessToken }: { accessToken: string }) {
           })}
 
           <div className="px-5 py-4.5">
-            <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+            <p className="text-caption leading-relaxed text-ink-muted">
               A change is used when you process a run. A draft run must be processed again. A run
               that is already approved does not change.
             </p>

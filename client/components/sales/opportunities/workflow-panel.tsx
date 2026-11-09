@@ -25,8 +25,8 @@ import { onDate } from "@/components/sales/opportunities/lines-panel"
 import { StageChangeDialog } from "@/components/sales/opportunities/stage-change-dialog"
 import { StageUpdateDialog } from "@/components/sales/opportunities/stage-update-dialog"
 
-const PRIMARY = "h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-const QUIET = "h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+const PRIMARY = "h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
+const QUIET = "h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
 
 /**
  * Stage and next step. The status itself moved to the Status tab: it is a
@@ -122,22 +122,22 @@ export function WorkflowPanel({
       {/* The work stage is what we do. The sales stage is where the customer is (spec 2026-11-05). */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="min-w-0">
-          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Work stage (what we do)</div>
-          <div className="mt-1 text-[13px] font-semibold">{STAGE_LABEL[deal.stage]}</div>
-          <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>
+          <div className={`text-caption font-semibold ${TONE.muted}`}>Work stage (what we do)</div>
+          <div className="mt-1 text-body-sm font-semibold">{STAGE_LABEL[deal.stage]}</div>
+          <div className={`mt-0.5 text-caption ${TONE.muted}`}>
             {isOpen ? STAGE_WAITING_ON[deal.stage] : `This Opportunity is ${OPPORTUNITY_STATUS_LABEL[deal.status].toLowerCase()}, so its stage stays where it ended.`}
           </div>
         </div>
         <div className="min-w-0">
-          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Sales stage (where the customer is)</div>
-          <div className="mt-1 text-[13px] font-semibold">{deal.salesStage ? SALES_STAGE_LABEL[deal.salesStage] : "Not set"}</div>
-          <div className={`mt-0.5 text-[11.5px] ${TONE.muted}`}>
+          <div className={`text-caption font-semibold ${TONE.muted}`}>Sales stage (where the customer is)</div>
+          <div className="mt-1 text-body-sm font-semibold">{deal.salesStage ? SALES_STAGE_LABEL[deal.salesStage] : "Not set"}</div>
+          <div className={`mt-0.5 text-caption ${TONE.muted}`}>
             {deal.salesStage ? SALES_STAGE_HELP[deal.salesStage].meaning : "Nobody has set this yet."}
           </div>
         </div>
       </div>
       {stagesDisagree ? (
-        <p className="mt-2 text-[12px] font-semibold text-[#8A4B00]">Check stages: these two do not fit together.</p>
+        <p className="mt-2 text-caption font-semibold text-warning">Check stages: these two do not fit together.</p>
       ) : null}
       {canManage && isOpen ? (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -191,14 +191,14 @@ export function WorkflowPanel({
       <StageBar status={deal.status} stage={deal.stage} track={deal.track} className="mt-2.5 max-w-[16rem]" />
 
       {isOpen ? (
-        <div className="mt-1.5 text-[11.5px] text-[#6B7789]">
+        <div className="mt-1.5 text-caption text-ink-muted">
           {daysSince(deal.stageChangedAt)} days in this stage
         </div>
       ) : null}
 
       <StageLinks deal={deal} canManage={canManage && isOpen} />
 
-      {canManage ? <div className="mt-4 border-t border-[#E4E9EF] pt-4">
+      {canManage ? <div className="mt-4 border-t border-line pt-4">
         <Field
           label="Next step"
           htmlFor="next-step"
@@ -227,15 +227,15 @@ export function WorkflowPanel({
             type="button"
             disabled={nextStepMutation.isPending}
             onClick={() => nextStepMutation.mutate()}
-            className="mt-3 h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+            className="mt-3 h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
           >
             {nextStepMutation.isPending ? "Saving…" : "Save next step"}
           </Button>
       </div> : (
-        <div className="mt-4 border-t border-[#E4E9EF] pt-4">
-          <div className={`text-[11.5px] font-semibold ${TONE.muted}`}>Next step</div>
-          <p className="mt-1 text-[13px]">{deal.nextStep ?? "None set"}</p>
-          <div className={`mt-1 text-[11.5px] ${TONE.muted}`}>Due {onDate(deal.nextStepDueOn)}</div>
+        <div className="mt-4 border-t border-line pt-4">
+          <div className={`text-caption font-semibold ${TONE.muted}`}>Next step</div>
+          <p className="mt-1 text-body-sm">{deal.nextStep ?? "None set"}</p>
+          <div className={`mt-1 text-caption ${TONE.muted}`}>Due {onDate(deal.nextStepDueOn)}</div>
         </div>
       )}
     </Panel>

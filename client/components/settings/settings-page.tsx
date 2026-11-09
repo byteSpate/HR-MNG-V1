@@ -124,12 +124,12 @@ export function SettingsPage() {
           title="Settings"
           sub="Reference data the rest of the system is built from."
         />
-        <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-12 text-center">
-          <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+        <div className="rounded-md border border-line bg-white px-5 py-12 text-center">
+          <span className="mx-auto mb-3 flex size-9 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
             <RiLockLine className="size-5" aria-hidden />
           </span>
-          <div className="text-[13.5px] font-bold">Nothing here for your role</div>
-          <p className={`mx-auto mt-1 max-w-[44ch] text-[12.5px] leading-relaxed ${TONE.muted}`}>
+          <div className="text-body-sm font-bold">Nothing here for your role</div>
+          <p className={`mx-auto mt-1 max-w-[44ch] text-caption leading-relaxed ${TONE.muted}`}>
             Settings holds the reference tables that HR and finance own. Ask an administrator if you
             need a change made to one.
           </p>
@@ -160,7 +160,7 @@ export function SettingsPage() {
           /* `h-auto!` is load-bearing: the primitive pins a horizontal list to
              `h-8` through `group-data-horizontal/tabs:h-8`, which outranks a
              plain utility on specificity. */
-          className="h-auto! w-full justify-start gap-6 rounded-none border-b border-[#E4E9EF] bg-transparent p-0"
+          className="h-auto! w-full justify-start gap-6 overflow-x-auto overflow-y-hidden rounded-none border-b border-line bg-transparent p-0"
         >
           {visible.map(({ value, label, icon: Icon }) => (
             <TabsTrigger
@@ -170,7 +170,7 @@ export function SettingsPage() {
                  bottom border so the active tab sits on the list's hairline.
                  The colour is set on `border-b` alone, because `data-active:
                  border-*` would paint all four sides of the trigger. */
-              className="h-auto flex-none gap-2 rounded-none border-b-2 border-transparent px-0 pt-0 pb-2.5 text-[13px] font-semibold text-[#5F6B7C] transition-colors after:hidden hover:text-[#1C2733] data-active:border-b-[#17191C] data-active:bg-transparent data-active:text-[#1C2733]"
+              className="h-auto flex-none gap-2 rounded-none border-b-2 border-transparent px-0 pt-0 pb-2.5 pointer-coarse:min-h-10 text-body-sm font-semibold text-ink-muted transition-colors after:hidden hover:text-ink-body data-active:border-b-ink data-active:bg-transparent data-active:text-ink-body"
             >
               <Icon className="size-4 shrink-0" aria-hidden />
               {label}

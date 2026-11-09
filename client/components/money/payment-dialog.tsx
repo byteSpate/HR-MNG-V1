@@ -12,6 +12,8 @@ import { SUPPLIER_PAYMENT_METHODS, supplierMethodLabel } from "@/lib/supplier-pa
 import { DialogActions, Field, FormError, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 const SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm"
 
@@ -149,7 +151,7 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Pay supplier</DialogTitle>
           <DialogDescription>
@@ -202,31 +204,31 @@ export function PaymentDialog({
           </div>
 
           <section className="space-y-2">
-            <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Bills this pays</h3>
+            <Heading level="label">Bills this pays</Heading>
             {onlyBill ? (
-              <div className="rounded-md border border-[#E4E9EF] p-3">
-                <div className="text-[13px] font-semibold">This payment is for bill {onlyBill.billNumber} from {onlyBill.supplier.name}.</div>
-                <div className={`text-[11.5px] ${TONE.muted}`}>Still owed {formatMoney(leftOn(onlyBill).toFixed(2), currency)}</div>
+              <div className="rounded-md border border-line p-3">
+                <div className="text-body-sm font-semibold">This payment is for bill {onlyBill.billNumber} from {onlyBill.supplier.name}.</div>
+                <div className={`text-caption ${TONE.muted}`}>Still owed {formatMoney(leftOn(onlyBill).toFixed(2), currency)}</div>
                 {one?.tooMuch ? (
-                  <p role="status" className="mt-1 text-[12.5px] font-semibold text-[#8A5E0C]">
+                  <p role="status" className="mt-1 text-caption font-semibold text-warning">
                     This is more than the bill still owes. Lower the amount paid.
                   </p>
                 ) : null}
               </div>
             ) : !supplierId ? (
-              <p className={`text-[12.5px] ${TONE.muted}`}>Choose a supplier to see what is still owed on this Opportunity.</p>
+              <p className={`text-caption ${TONE.muted}`}>Choose a supplier to see what is still owed on this Opportunity.</p>
             ) : candidates.length === 0 ? (
-              <p className={`text-[12.5px] ${TONE.muted}`}>
+              <p className={`text-caption ${TONE.muted}`}>
                 {currency === "USD"
                   ? "This supplier has no open USD bills on this Opportunity."
                   : "This supplier has no open taka bills on this Opportunity."}
               </p>
             ) : (
               candidates.map((bill) => (
-                <div key={bill.id} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
+                <div key={bill.id} className="grid grid-cols-1 gap-2 rounded-md border border-line p-3 sm:grid-cols-12">
                   <div className="sm:col-span-7">
-                    <div className="text-[13px] font-semibold">{bill.billNumber}</div>
-                    <div className={`text-[11.5px] ${TONE.muted}`}>Still owed {formatMoney(leftOn(bill).toFixed(2), currency)}</div>
+                    <div className="text-body-sm font-semibold">{bill.billNumber}</div>
+                    <div className={`text-caption ${TONE.muted}`}>Still owed {formatMoney(leftOn(bill).toFixed(2), currency)}</div>
                   </div>
                   <Input
                     aria-label={`${bill.billNumber} amount`}
@@ -242,7 +244,7 @@ export function PaymentDialog({
                 </div>
               ))
             )}
-            <p className={`text-right text-[12.5px] ${TONE.muted}`}>
+            <p className={`text-right text-caption ${TONE.muted}`}>
               Against bills {formatMoney(allocatedTotal.toFixed(2), currency)} of {formatMoney((Number(amount) || 0).toFixed(2), currency)} paid.
               {!matches ? " These must match. There is no advance: money not put against a bill cannot be saved." : ""}
             </p>

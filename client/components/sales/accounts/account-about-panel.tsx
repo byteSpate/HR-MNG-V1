@@ -43,14 +43,14 @@ export function AccountAboutPanel({ account }: { account: SalesAccountSummary })
           person the team met, so it lives on the Contacts tab. */}
       <Panel>
       <PanelHeading title="About" />
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-3.5 text-[13px] sm:grid-cols-2">
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-3.5 text-body-sm sm:grid-cols-2">
         {rows.map((row) => (
           <div key={row.label} className="flex items-start gap-2.5">
-            <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+            <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
               <row.icon className="size-3.5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <dt className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>{row.label}</dt>
+              <dt className={`text-caption font-bold tracking-wide uppercase ${TONE.muted}`}>{row.label}</dt>
               <dd className="font-semibold [overflow-wrap:anywhere]">{row.value}</dd>
             </div>
           </div>

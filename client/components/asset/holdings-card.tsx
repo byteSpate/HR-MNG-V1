@@ -52,8 +52,8 @@ export function HoldingsCard({ employeeId }: { employeeId: string }) {
   // nothing, which is exactly the wrong answer during an exit conversation.
   if (assetsQuery.isPending) {
     return (
-      <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-        <div className="mb-4 text-[15px] font-bold">Company assets</div>
+      <div className="flex flex-col rounded-md border border-line bg-white px-5.5 py-5">
+        <div className="mb-4 text-lead font-bold">Company assets</div>
         <div className="space-y-2.5">
           <Skeleton className="h-14 w-full" />
           <Skeleton className="h-14 w-full" />
@@ -64,9 +64,9 @@ export function HoldingsCard({ employeeId }: { employeeId: string }) {
 
   if (assetsQuery.isError) {
     return (
-      <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-        <div className="mb-4 text-[15px] font-bold">Company assets</div>
-        <p className="text-[13px] text-[#B03A3A]">
+      <div className="flex flex-col rounded-md border border-line bg-white px-5.5 py-5">
+        <div className="mb-4 text-lead font-bold">Company assets</div>
+        <p className="text-body-sm text-danger">
           Could not load company assets.{" "}
           <Button
             variant="link"
@@ -86,11 +86,11 @@ export function HoldingsCard({ employeeId }: { employeeId: string }) {
   const unacknowledged = holdings.filter((a) => a.heldBy!.acknowledgedAt === null).length
 
   return (
-    <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+    <div className="flex flex-col rounded-md border border-line bg-white px-5.5 py-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[15px] font-bold">Company assets</div>
+        <div className="text-lead font-bold">Company assets</div>
         {holdings.length > 0 ? (
-          <span className="text-[12px] text-[#5F6B7C]">
+          <span className="text-caption text-ink-muted">
             {holdings.length} held
             {/* Surfaced on the card, not only per row: during an exit the
                 question is "is anything outstanding", and counting badges by
@@ -101,18 +101,18 @@ export function HoldingsCard({ employeeId }: { employeeId: string }) {
       </div>
 
       {holdings.length === 0 ? (
-        <p className="text-[13px] text-[#A5AFBE]">Not holding any company assets.</p>
+        <p className="text-body-sm text-ink-muted">Not holding any company assets.</p>
       ) : (
-        <ul className="divide-y divide-[#EFF2F6]">
+        <ul className="divide-y divide-surface-sunken">
           {holdings.map((asset) => (
             <li key={asset.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 py-3 first:pt-0 last:pb-0">
               <div className="min-w-0 flex-1">
                 {/* Wraps rather than truncates. "MacBook Pro 1…" does not
                     identify a machine, and identifying it is the whole job. */}
-                <div className="text-[13.5px] leading-snug font-semibold break-words">
+                <div className="text-body-sm leading-snug font-semibold break-words">
                   {asset.name}
                 </div>
-                <div className="mt-0.5 text-[12px] text-[#5F6B7C]">
+                <div className="mt-0.5 text-caption text-ink-muted">
                   {/* Tag and category on one line: neither is worth a row of
                       its own at this width, and together they read as one
                       description of the thing. */}
@@ -120,7 +120,7 @@ export function HoldingsCard({ employeeId }: { employeeId: string }) {
                   <span aria-hidden> · </span>
                   {asset.category.name}
                 </div>
-                <div className="mt-0.5 text-[12px] text-[#7A8698]">
+                <div className="mt-0.5 text-caption text-ink-muted">
                   Held since {formatAssetDate(asset.heldBy!.assignedAt)}
                 </div>
               </div>

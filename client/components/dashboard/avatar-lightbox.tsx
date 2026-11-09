@@ -3,6 +3,10 @@
 import { RiCloseLine } from "@remixicon/react"
 
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Img } from "@/components/ds/img"
+
+const LIGHTBOX_FRAME =
+  "w-auto max-w-none gap-0 overflow-visible overflow-y-visible bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
 
 /**
  * A profile photo at the size it deserves — the thumbnail everywhere else is
@@ -47,14 +51,15 @@ export function AvatarLightbox({
           to override. */}
       <DialogContent
         showCloseButton={false}
-        className="w-auto max-w-none gap-0 overflow-visible overflow-y-visible bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
+        className={LIGHTBOX_FRAME}
       >
         <DialogTitle className="sr-only">{alt}</DialogTitle>
         <div className="relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Img
             src={src}
             alt={alt}
+            width={900}
+            height={900}
             className="block h-auto max-h-[82svh] w-auto max-w-[90vw] rounded-2xl object-contain shadow-[0_24px_60px_-12px_rgba(10,14,20,0.55)]"
           />
           {/* Inside the frame, not floating off the corner: the image can be

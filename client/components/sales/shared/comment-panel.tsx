@@ -12,6 +12,7 @@ import { FormError, PanelAlert, TONE, toMessage } from "@/components/dashboard/r
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * The running list of what people have written about a record.
@@ -69,12 +70,12 @@ function CommentRow({
   const edited = comment.updatedAt !== comment.createdAt
 
   return (
-    <li className="border-b border-[#E4E9EF] py-3 last:border-b-0">
+    <li className="border-b border-line py-3 last:border-b-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Icon className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
-        <span className="text-[12.5px] font-semibold">{comment.authorName}</span>
-        <span className={`text-[11.5px] ${TONE.muted}`}>{KIND_LABEL[comment.kind]}</span>
-        <span className={`text-[11.5px] ${TONE.muted}`}>
+        <Icon className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
+        <span className="text-caption font-semibold">{comment.authorName}</span>
+        <span className={`text-caption ${TONE.muted}`}>{KIND_LABEL[comment.kind]}</span>
+        <span className={`text-caption ${TONE.muted}`}>
           {new Date(comment.createdAt).toLocaleDateString("en-GB", {
             day: "numeric",
             month: "short",
@@ -83,7 +84,7 @@ function CommentRow({
         </span>
         {/* Said plainly rather than shown as a silent rewrite: a corrected
             note and an original one are different things to have read. */}
-        {edited ? <span className={`text-[11.5px] ${TONE.muted}`}>· edited</span> : null}
+        {edited ? <span className={`text-caption ${TONE.muted}`}>· edited</span> : null}
         {canEdit && !editing ? (
           <Button
             type="button"
@@ -92,7 +93,7 @@ function CommentRow({
               setDraft(comment.body)
               setEditing(true)
             }}
-            className="ml-auto h-auto p-0 text-[11.5px] font-bold text-[#5F6B7C]"
+            className="ml-auto h-auto p-0 text-caption font-bold text-ink-muted"
           >
             Edit
           </Button>
@@ -105,7 +106,7 @@ function CommentRow({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={3}
-            className="text-[13px]"
+            className="text-body-sm"
           />
           {error ? <FormError>{error}</FormError> : null}
           <div className="mt-2 flex gap-2">
@@ -113,7 +114,7 @@ function CommentRow({
               type="button"
               disabled={save.isPending || !draft.trim()}
               onClick={() => save.mutate(draft.trim())}
-              className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
             >
               {save.isPending ? "Saving…" : "Save"}
             </Button>
@@ -124,14 +125,14 @@ function CommentRow({
                 setEditing(false)
                 setError(null)
               }}
-              className="h-8 p-0 text-[12px] font-bold text-[#5F6B7C]"
+              className="h-8 p-0 text-caption font-bold text-ink-muted"
             >
               Cancel
             </Button>
           </div>
         </div>
       ) : (
-        <p className="mt-1.5 text-[13px] leading-relaxed whitespace-pre-wrap">{comment.body}</p>
+        <p className="mt-1.5 text-body-sm leading-relaxed whitespace-pre-wrap">{comment.body}</p>
       )}
     </li>
   )
@@ -197,8 +198,8 @@ export function CommentPanel({
   const items = query.data?.items ?? []
 
   return (
-    <section className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-      <h2 className="font-heading text-[15px] font-bold tracking-tight">{label}</h2>
+    <section className="rounded-md border border-line bg-white px-5.5 py-5">
+      <Heading level="section">{label}</Heading>
 
       {canWrite ? (
         <div className="mt-3">
@@ -212,8 +213,8 @@ export function CommentPanel({
                   aria-pressed={kind === k}
                   className={
                     kind === k
-                      ? "h-7 rounded-md bg-[#17191C] px-2.5 text-[11.5px] font-bold text-white hover:bg-[#0E1012]"
-                      : "h-7 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[11.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                      ? "h-7 rounded-md bg-ink px-2.5 text-caption font-bold text-white hover:bg-ink-strong"
+                      : "h-7 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
                   }
                 >
                   {KIND_LABEL[k]}
@@ -227,14 +228,14 @@ export function CommentPanel({
             onChange={(e) => setBody(e.target.value)}
             rows={3}
             placeholder={`Add to ${label.toLowerCase()}…`}
-            className="text-[13px]"
+            className="text-body-sm"
           />
           {error ? <FormError>{error}</FormError> : null}
           <Button
             type="button"
             disabled={add.isPending || !body.trim()}
             onClick={() => add.mutate()}
-            className="mt-2 h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+            className="mt-2 h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
           >
             {add.isPending ? "Saving…" : "Add"}
           </Button>
@@ -256,7 +257,7 @@ export function CommentPanel({
                 type="button"
                 variant="link"
                 onClick={() => query.refetch()}
-                className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+                className="h-auto p-0 text-caption font-bold text-danger underline"
               >
                 Try again
               </Button>
@@ -264,7 +265,7 @@ export function CommentPanel({
           </PanelAlert>
         </div>
       ) : items.length === 0 ? (
-        <p className={`mt-4 text-[12.5px] ${TONE.muted}`}>
+        <p className={`mt-4 text-caption ${TONE.muted}`}>
           {canWrite
             ? `Nothing written here yet. ${label} are added to rather than written over, so the whole history stays.`
             : "Nothing written here yet."}
@@ -288,7 +289,7 @@ export function CommentPanel({
           </ul>
           {/* A capped list looks exactly like a short one unless it says so. */}
           {query.data?.truncated ? (
-            <p className={`mt-3 text-[11.5px] ${TONE.muted}`}>
+            <p className={`mt-3 text-caption ${TONE.muted}`}>
               Showing the newest {query.data.limit}. Older entries are not listed here yet.
             </p>
           ) : null}

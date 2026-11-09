@@ -47,28 +47,28 @@ function ContactRow({
     : []
 
   return (
-    <li className="rise-in border-b border-[#EEF1F5] py-3 last:border-b-0" style={{ animationDelay: `${delayMs}ms` }}>
+    <li className="rise-in border-b border-surface-sunken py-3 last:border-b-0" style={{ animationDelay: `${delayMs}ms` }}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             {contact.isPrimary ? (
-              <RiStarFill className="size-3.5 shrink-0 text-[#C79A2E]" aria-hidden />
+              <RiStarFill className="size-3.5 shrink-0 text-warning" aria-hidden />
             ) : null}
-            <span className="truncate text-[13px] font-semibold">{contact.name}</span>
+            <span className="truncate text-body-sm font-semibold">{contact.name}</span>
           </div>
           {contact.designation ? (
-            <div className="truncate text-[11.5px] text-[#6B7789]">{contact.designation}</div>
+            <div className="truncate text-caption text-ink-muted">{contact.designation}</div>
           ) : null}
           <div className="mt-1 space-y-0.5">
             {contact.phone ? (
-              <div className="flex items-center gap-1.5 text-[12px] text-[#3D4756]">
-                <RiPhoneLine className="size-3 shrink-0 text-[#8A94A2]" aria-hidden />
+              <div className="flex items-center gap-1.5 text-caption text-ink-soft">
+                <RiPhoneLine className="size-3 shrink-0 text-ink-muted" aria-hidden />
                 {contact.phone}
               </div>
             ) : null}
             {contact.email ? (
-              <div className="flex items-center gap-1.5 text-[12px] text-[#3D4756]">
-                <RiMailLine className="size-3 shrink-0 text-[#8A94A2]" aria-hidden />
+              <div className="flex items-center gap-1.5 text-caption text-ink-soft">
+                <RiMailLine className="size-3 shrink-0 text-ink-muted" aria-hidden />
                 {contact.email}
               </div>
             ) : null}
@@ -231,7 +231,7 @@ export function ContactsPanel({ accountId, canManage }: { accountId: string; can
                 resetForm()
                 setAddOpen(true)
               }}
-              className="h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-auto rounded-md bg-ink px-2.5 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
             >
               Add
             </Button>
@@ -244,7 +244,7 @@ export function ContactsPanel({ accountId, canManage }: { accountId: string; can
       {rowError ? (
         <p
           role="alert"
-          className="mb-3 flex items-start gap-2 rounded-md border border-[#F0D2D2] bg-[#FDF6F6] px-3 py-2 text-[12px] leading-relaxed font-semibold text-[#B03A3A]"
+          className="mb-3 flex items-start gap-2 rounded-md border border-danger-line bg-danger-tint px-3 py-2 text-caption leading-relaxed font-semibold text-danger"
         >
           <RiErrorWarningLine className="mt-px size-3.5 shrink-0" aria-hidden />
           <span>{rowError}</span>
@@ -252,13 +252,13 @@ export function ContactsPanel({ accountId, canManage }: { accountId: string; can
       ) : null}
 
       {noneVerified ? (
-        <p className="mb-3 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2 text-[12px] leading-relaxed text-[#8A5E0C]">
+        <p className="mb-3 rounded-md border border-warning-line bg-warning-tint px-3 py-2 text-caption leading-relaxed text-warning">
           Nobody on this account has been reached yet.
         </p>
       ) : null}
 
       {contacts.length === 0 ? (
-        <p className="py-4 text-center text-[12.5px] text-[#5F6B7C]">
+        <p className="py-4 text-center text-caption text-ink-muted">
           {canManage ? "No contacts yet. Add the first person here." : "No contacts yet."}
         </p>
       ) : (
@@ -301,7 +301,7 @@ export function ContactsPanel({ accountId, canManage }: { accountId: string; can
             {/* One hint under the pair rather than "Optional." under each:
                 either will do, but one of them is required, and that is a
                 fact about the pair. */}
-            <p className="-mt-2 text-[11.5px] leading-relaxed text-[#5F6B7C]">
+            <p className="-mt-2 text-caption leading-relaxed text-ink-muted">
               Give at least one: a phone number or an email. Without one there is no way to
               reach this person.
             </p>
@@ -339,7 +339,7 @@ export function ContactsPanel({ accountId, canManage }: { accountId: string; can
                 <Input id="contact-edit-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
               </Field>
             </div>
-            <p className="-mt-2 text-[11.5px] leading-relaxed text-[#5F6B7C]">
+            <p className="-mt-2 text-caption leading-relaxed text-ink-muted">
               Give at least one: a phone number or an email. Without one there is no way to
               reach this person.
             </p>

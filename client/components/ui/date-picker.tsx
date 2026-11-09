@@ -92,7 +92,7 @@ export function DatePicker({
         onChange={(e) => handleChange(e.target.value)}
       />
       {rejected ? (
-        <p className="mt-1.5 text-[11.5px] leading-snug font-medium text-[#B03A3A]">{rejected}</p>
+        <p className="mt-1.5 text-caption leading-snug font-medium text-danger">{rejected}</p>
       ) : null}
     </div>
   )

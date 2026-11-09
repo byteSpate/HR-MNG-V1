@@ -10,13 +10,13 @@ import { useSession } from "@/lib/auth/session-context"
 import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
 import type { AssetDetail, Currency } from "@/lib/api/types"
 import { Button } from "@/components/ui/button"
+import { Dialog } from "@/components/ui/dialog"
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  AppDialogBody,
+  AppDialogFooter,
+  AppDialogFrame,
+  AppDialogHeader,
+} from "@/components/ds/app-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -60,12 +60,12 @@ function CustodyStrip({
   const action = heldBy ? onReturn : onHandOver
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md bg-[#F1F4F8] px-3.5 py-2.5 text-[12.5px] text-[#5F6B7C]">
+    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md bg-surface-hover px-3.5 py-2.5 text-caption text-ink-muted">
       <span className="min-w-0 flex-1">
         {heldBy ? (
           <>
             Held by{" "}
-            <span className="font-semibold text-[#1C2733]">
+            <span className="font-semibold text-ink-body">
               {heldBy.fullName} ({heldBy.employeeCode})
             </span>{" "}
             since {formatAssetDate(heldBy.assignedAt)}
@@ -73,7 +73,7 @@ function CustodyStrip({
           </>
         ) : (
           <>
-            <span className="font-semibold text-[#1C2733]">Not handed to anyone.</span> Recording a
+            <span className="font-semibold text-ink-body">Not handed to anyone.</span> Recording a
             handover is a separate step — it captures the condition and asks the holder to confirm.
           </>
         )}
@@ -83,7 +83,7 @@ function CustodyStrip({
           type="button"
           variant="link"
           onClick={action}
-          className="h-auto shrink-0 p-0 text-[12px] font-bold text-[#1C2733] underline"
+          className="h-auto shrink-0 p-0 text-caption font-bold text-ink-body underline"
         >
           {heldBy ? "Take it back" : "Hand it over"}
         </Button>
@@ -212,9 +212,8 @@ function AssetForm({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{asset ? "Edit asset" : "Add an asset"}</DialogTitle>
-      </DialogHeader>
+      <AppDialogHeader title={asset ? "Edit asset" : "Add an asset"} />
+      <AppDialogBody>
 
       {/* Says why the dialog opened, so a prefilled category does not look
           like a stray default. Deliberately does not promise to assign it:
@@ -394,10 +393,11 @@ function AssetForm({
           />
         </div>
 
-        {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+        {formError ? <p className="text-body-sm font-semibold text-destructive">{formError}</p> : null}
       </div>
+      </AppDialogBody>
 
-      <DialogFooter>
+      <AppDialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saveMutation.isPending}>
           Cancel
         </Button>
@@ -410,7 +410,7 @@ function AssetForm({
               ? "Save changes"
               : "Add asset"}
         </Button>
-      </DialogFooter>
+      </AppDialogFooter>
     </>
   )
 }
@@ -467,18 +467,17 @@ export function CreateAssetDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* No max-h/overflow here: DialogContent already carries
-          `max-h-[85svh] overflow-y-auto`, and re-declaring it made the whole
-          popup — header and footer included — the scroll container, so the
-          track spanned the full dialog. Widening to 2xl and laying the form
-          two-up fits every field inside 85svh, so the base overflow stays as
-          a safety net for short windows without ever appearing. */}
-      <DialogContent className="sm:max-w-2xl">
+      <AppDialogFrame size="lg">
         {!open ? null : editing && !assetQuery.data ? (
-          <div className="space-y-3 py-2">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-32 w-full" />
-          </div>
+          <>
+            <AppDialogHeader title="Edit asset" />
+            <AppDialogBody>
+              <div className="space-y-3 py-2">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            </AppDialogBody>
+          </>
         ) : (
           <AssetForm
             asset={assetQuery.data ?? null}
@@ -490,7 +489,7 @@ export function CreateAssetDialog({
             onReturn={onReturn}
           />
         )}
-      </DialogContent>
+      </AppDialogFrame>
     </Dialog>
   )
 }

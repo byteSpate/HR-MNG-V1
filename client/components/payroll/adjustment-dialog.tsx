@@ -161,7 +161,7 @@ export function AdjustmentDialog({
             />
           </div>
 
-          {error ? <div className="text-[12.5px] text-[#B03A3A]">{error}</div> : null}
+          {error ? <div className="text-caption text-danger">{error}</div> : null}
         </div>
 
         <DialogFooter>

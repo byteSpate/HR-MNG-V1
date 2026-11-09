@@ -1,10 +1,10 @@
 /**
  * The attendance report, emailed to every Super Admin.
  *
- * Daily at 00:10 for yesterday, and monthly at 08:00 on the 1st for the month
- * that just ended. The daily one runs at 00:10 and not at 00:00 on purpose: the
- * 00:05 auto check-out closes yesterday's open days, and a report that ran
- * before it would count those people as missing a check-out.
+ * Daily at 22:10 for today, and monthly at 08:00 on the 1st for the month
+ * that just ended. The daily one runs in the evening, so it describes the day that
+ * is ending. It runs at 22:10, five minutes after the 22:05 auto check-out, so
+ * a forgotten check-out is already closed when the day is counted.
  *
  * The report is built once and sent to everybody, through the same
  * `getAttendanceReport` the Reports page uses, so the email cannot disagree
@@ -12,7 +12,7 @@
  * the other jobs, so they can be run by hand or in a test.
  *
  * Safe to run twice. Anybody who already has the email for that day (or month)
- * is skipped, so a restart at 00:11 sends nothing new. A send that failed left
+ * is skipped, so a restart at 22:11 sends nothing new. A send that failed left
  * a row with `error` set, and that person is tried again.
  */
 
@@ -110,9 +110,9 @@ async function sendReport(period: Period): Promise<number> {
   return todo.length
 }
 
-/** Yesterday, in office time. */
+/** Today, in office time. */
 export async function runDailyAttendanceReportEmail(now: Date = new Date()): Promise<number> {
-  const day = formatDateOnly(addDays(officeDateOf(now), -1))
+  const day = formatDateOnly(officeDateOf(now))
   return sendReport({
     frequency: "daily",
     kind: "ATTENDANCE_REPORT_DAILY",

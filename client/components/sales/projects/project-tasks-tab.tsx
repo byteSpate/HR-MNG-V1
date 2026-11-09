@@ -97,7 +97,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
         <span className="block min-w-0">
           <span className="block truncate">{task.title}</span>
           {task.cancelReason ? (
-            <span className="block truncate text-[11.5px] text-[#6B7789]">
+            <span className="block truncate text-caption text-ink-muted">
               Cancelled: {task.cancelReason}
             </span>
           ) : null}
@@ -107,7 +107,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
     { node: <span className="block truncate">{task.assignedToName}</span> },
     {
       node: (
-        <span className={task.overdue ? "text-[#B03A3A]" : undefined}>{task.dueOn}</span>
+        <span className={task.overdue ? "text-danger" : undefined}>{task.dueOn}</span>
       ),
     },
     { tag: TASK_STATUS_LABEL[task.status], tone: STATUS_TONE[task.status] },
@@ -125,7 +125,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
                     variant="link"
                     disabled={done.isPending}
                     onClick={() => done.mutate(task)}
-                    className="h-auto p-0 text-[12px] font-bold underline"
+                    className="h-auto p-0 text-caption font-bold underline"
                   >
                     Mark done
                   </Button>
@@ -135,7 +135,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
                     type="button"
                     variant="link"
                     onClick={() => setCancelling(task)}
-                    className="h-auto p-0 text-[12px] font-bold text-[#5F6B7C] underline"
+                    className="h-auto p-0 text-caption font-bold text-ink-muted underline"
                   >
                     Cancel
                   </Button>
@@ -157,7 +157,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
             <Button
               type="button"
               onClick={() => { setAssigneeId(""); setAdding(true) }}
-              className="h-8 gap-1 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+              className="h-8 gap-1 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
             >
               <RiAddLine className="size-3.5" aria-hidden />
               Add
@@ -181,7 +181,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
       />
 
       {adding ? (
-        <div className="mt-3 grid gap-3 border-t border-[#E4E9EF] pt-3 sm:grid-cols-3">
+        <div className="mt-3 grid gap-3 border-t border-line pt-3 sm:grid-cols-3">
           <Field label="What" htmlFor="pt-title">
             <Input id="pt-title" value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
@@ -203,7 +203,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
             </Field>
           ) : (
             <Field label="Who" hint="You take your own work.">
-              <p className={`text-[13px] ${TONE.muted}`}>You</p>
+              <p className={`text-body-sm ${TONE.muted}`}>You</p>
             </Field>
           )}
           <div className="sm:col-span-3">
@@ -211,7 +211,7 @@ export function ProjectTasksTab({ project }: { project: ProjectSummary }) {
               type="button"
               disabled={add.isPending || title.trim().length < 2 || !dueOn}
               onClick={() => add.mutate()}
-              className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
             >
               {add.isPending ? "Saving…" : "Add task"}
             </Button>
@@ -258,7 +258,7 @@ function CancelTaskDialog({
             type="button"
             variant="link"
             onClick={onCancel}
-            className="h-auto p-0 text-[12.5px] font-bold underline"
+            className="h-auto p-0 text-caption font-bold underline"
           >
             Keep it
           </Button>
@@ -266,7 +266,7 @@ function CancelTaskDialog({
             type="button"
             disabled={pending || reason.trim().length < 2}
             onClick={() => onConfirm(reason.trim())}
-            className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
           >
             {pending ? "Cancelling…" : "Cancel the task"}
           </Button>

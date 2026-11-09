@@ -76,7 +76,7 @@ export function ExportMenu({
         <DropdownMenuTrigger
           disabled={disabled || busy !== null}
           aria-label="Export this list"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#D7DDE6] bg-white px-3 text-[12.5px] font-bold text-[#17191C] outline-none hover:bg-[#F4F6F9] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line-strong bg-white px-3 text-caption font-bold text-ink outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ink/25 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RiDownload2Line className="size-4" aria-hidden />
           {busy ? "Preparing…" : "Export"}
@@ -90,9 +90,9 @@ export function ExportMenu({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      {note ? <p className="max-w-64 text-right text-[11.5px] text-[#5F6B7C]">{note}</p> : null}
+      {note ? <p className="max-w-64 text-right text-caption text-ink-muted">{note}</p> : null}
       {localError ? (
-        <p role="alert" className="max-w-64 text-right text-[12px] font-semibold text-[#B03A3A]">
+        <p role="alert" className="max-w-64 text-right text-caption font-semibold text-danger">
           {localError}
         </p>
       ) : null}

@@ -27,7 +27,7 @@ export function QuarterPicker({
   const text = options.find((o) => o.value === value)?.label ?? value
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-[#5F6B7C]">Quarter</span>
+      <span className="text-xs font-medium text-ink-muted">Quarter</span>
       <Select value={value} onValueChange={(next) => next && onChange(next)}>
         <SelectTrigger className="h-8 w-56 text-sm">
           <SelectValue>{() => text}</SelectValue>
@@ -57,10 +57,10 @@ export function FunnelSummaryStrip({ summary }: { summary: FunnelSummary }) {
   const coverage = coverageText(summary)
   const heads = ["Quarter", "Target", "Won", "Gap", "Open quoted", "Coverage", "Quotes missing"]
   return (
-    <div className="overflow-hidden rounded-lg border border-[#E4E9EF] bg-white">
+    <div className="overflow-hidden rounded-lg border border-line bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-sm" aria-label={`Targets for ${summary.quarterLabel}`}>
-          <thead className="bg-[#F5F7FA] text-xs uppercase tracking-wide text-[#5F6B7C]">
+        <table className="w-full min-w-190 border-collapse text-sm" aria-label={`Targets for ${summary.quarterLabel}`}>
+          <thead className="bg-surface-subtle text-xs uppercase tracking-wide text-ink-muted">
             <tr>
               {heads.map((h, i) => (
                 <th key={h} scope="col" className={cn("px-4 py-2 font-medium", i === 0 ? "text-left" : "text-right")}>
@@ -70,12 +70,12 @@ export function FunnelSummaryStrip({ summary }: { summary: FunnelSummary }) {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-t border-[#EEF1F5]">
+            <tr className="border-t border-surface-sunken">
               <td className="px-4 py-2.5 font-medium">{summary.quarterLabel}</td>
               <td className="px-4 py-2.5 text-right tabular-nums">
                 {summary.target === null ? muted("No target set") : taka(summary.target)}
               </td>
-              <td className="px-4 py-2.5 text-right tabular-nums text-[#0B7A3B]">
+              <td className="px-4 py-2.5 text-right tabular-nums text-success">
                 {nothingWon(summary.won) ? muted("Nothing won yet") : taka(summary.won)}
               </td>
               <td className="px-4 py-2.5 text-right tabular-nums">
@@ -88,7 +88,7 @@ export function FunnelSummaryStrip({ summary }: { summary: FunnelSummary }) {
               <td
                 className={cn(
                   "px-4 py-2.5 text-right tabular-nums",
-                  summary.quoteMissingCount > 0 && "font-medium text-[#8A5E0C]"
+                  summary.quoteMissingCount > 0 && "font-medium text-warning"
                 )}
               >
                 {summary.quoteMissingCount}

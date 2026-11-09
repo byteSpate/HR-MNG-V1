@@ -76,15 +76,15 @@ export function ResendPasswordDialog({
             <DialogHeader>
               <DialogTitle>New password sent</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 text-[13.5px]">
+            <div className="space-y-3 text-body-sm">
               <p>
                 We sent a new temporary password to <strong>{result.email}</strong>. The old one no
                 longer works.
               </p>
-              <div className="rounded-md border border-[#E4E9EF] bg-[#F4F6F9] p-3 font-mono text-[13px]">
+              <div className="rounded-md border border-line bg-surface-hover p-3 font-mono text-body-sm">
                 {result.temporaryPassword}
               </div>
-              <p className="text-[#5F6B7C]">
+              <p className="text-ink-muted">
                 This is shown only once. If the email does not arrive, give them this password
                 yourself. They must choose their own password when they sign in.
               </p>
@@ -93,7 +93,7 @@ export function ResendPasswordDialog({
               </Button>
             </div>
             <DialogFooter>
-              <Button onClick={close} className="bg-[#17191C] text-white hover:bg-[#0E1012]">
+              <Button onClick={close} className="bg-ink text-white hover:bg-ink-strong">
                 Done
               </Button>
             </DialogFooter>
@@ -103,12 +103,12 @@ export function ResendPasswordDialog({
             <DialogHeader>
               <DialogTitle>Send a new password?</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 text-[13.5px]">
+            <div className="space-y-3 text-body-sm">
               <p>
                 We will make a new temporary password for <strong>{who}</strong> and email it to
                 them.
               </p>
-              <p className="text-[#5F6B7C]">
+              <p className="text-ink-muted">
                 The old password will stop working. If they are signed in now, they will be signed
                 out.
               </p>
@@ -121,7 +121,7 @@ export function ResendPasswordDialog({
               <Button
                 onClick={handleSend}
                 disabled={pending}
-                className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+                className="bg-ink text-white hover:bg-ink-strong"
               >
                 {pending ? "Sending…" : "Send new password"}
               </Button>

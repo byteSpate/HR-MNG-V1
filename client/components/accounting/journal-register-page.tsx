@@ -214,7 +214,7 @@ export function JournalRegisterPage() {
                     <TableCell className="max-w-md truncate">
                       {j.narration}
                       {j.sourceModule && (
-                        <Badge variant="outline" className="ml-2 text-[10px] font-normal">
+                        <Badge variant="outline" className="ml-2 text-caption font-normal">
                           {j.sourceModule.toLowerCase()}
                         </Badge>
                       )}

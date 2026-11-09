@@ -152,7 +152,7 @@ function OpportunityForm({
             type="button"
             variant="link"
             onClick={() => accountQuery.refetch()}
-            className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+            className="h-auto p-0 text-caption font-bold text-danger underline"
           >
             Try again
           </Button>
@@ -391,7 +391,7 @@ function OpportunityFields({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {!deal ? (
-        <p className={`text-[12.5px] leading-relaxed ${TONE.muted}`}>
+        <p className={`text-caption leading-relaxed ${TONE.muted}`}>
           An Opportunity on {account.name}. It starts at Requirement received and Ongoing. You set the
           stage, products and next step on the Opportunity itself.
           {fromMeeting ? ` It comes out of the meeting “${fromMeeting.title}”.` : ""}
@@ -415,16 +415,16 @@ function OpportunityFields({
             id="opp-track"
             value={track}
             onChange={(e) => setTrack(e.target.value as SalesTrack)}
-            className="h-9 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-2.5 text-[13px]"
+            className="h-9 w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-2.5 text-body-sm"
           >
             {TRACKS.map((t) => <option key={t} value={t}>{TRACK_LABEL[t]}</option>)}
           </select>
         </Field>
       ) : (
         <div>
-          <span className={`block text-[12px] font-medium ${TONE.muted}`}>Track</span>
-          <p className="mt-1 text-[13px]">{TRACK_LABEL[deal!.track]}</p>
-          <p className={`mt-1 text-[12px] ${TONE.muted}`}>
+          <span className={`block text-caption font-medium ${TONE.muted}`}>Track</span>
+          <p className="mt-1 text-body-sm">{TRACK_LABEL[deal!.track]}</p>
+          <p className={`mt-1 text-caption ${TONE.muted}`}>
             The track is fixed once the Opportunity has products or modules, is in the funnel, is closed, or is linked by a Hand-over.
           </p>
         </div>
@@ -466,7 +466,7 @@ function OpportunityFields({
               type="button"
               variant="link"
               onClick={onRetryEligible}
-              className="h-auto p-0 text-[12px] font-bold text-[#B03A3A] underline"
+              className="h-auto p-0 text-caption font-bold text-danger underline"
             >
               Try again
             </Button>
@@ -519,8 +519,8 @@ function OpportunityFields({
       {/* Offered, not assumed: a collaborator gets the whole account, which
           is a bigger thing than running one deal. */}
       {needsAssignment ? (
-        <div className="space-y-1.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3 py-2.5">
-          <p className="text-[12px] leading-relaxed text-[#8A5E0C]">
+        <div className="space-y-1.5 rounded-md border border-warning-line bg-warning-tint px-3 py-2.5">
+          <p className="text-caption leading-relaxed text-warning">
             {chosenName ?? "This person"} is not on {account.name} yet, so they could not open this
             Opportunity. Adding them as a collaborator gives them the account as well.
           </p>

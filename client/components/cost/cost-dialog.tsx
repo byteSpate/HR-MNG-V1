@@ -22,6 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { formatCostDate, monthName, STATUS_LABEL } from "@/components/cost/cost-shared"
 import { ReceiptGallery } from "@/components/cost/receipt-gallery"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 export interface CostPrefill {
   categoryId: string
@@ -91,7 +93,7 @@ function BillForm({
   return (
     <>
       <div className="space-y-4">
-        <p className="text-[12.5px] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           {monthName(period.month)} {period.year}
           {bill ? (
             <>
@@ -198,7 +200,7 @@ function BillForm({
         </div>
 
         {bill?.status === "PAID" ? (
-          <div className="rounded-md border px-3 py-2 text-[12.5px] text-muted-foreground">
+          <div className="rounded-md border px-3 py-2 text-caption text-muted-foreground">
             Paid {formatCostDate(bill.paidAt)}
             {bill.paymentRef ? ` · Ref: ${bill.paymentRef}` : ""}
           </div>
@@ -222,7 +224,7 @@ function BillForm({
         ) : null}
 
         {bill ? (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Recorded against {monthName(bill.periodMonth)} {bill.periodYear}. The period and the
             commitment it is linked to cannot change here.
           </p>
@@ -372,7 +374,7 @@ export function CostDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={cx(dialogWidthClass("md"), "max-h-[85vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit bill" : "Record a bill"}</DialogTitle>
         </DialogHeader>
@@ -380,7 +382,7 @@ export function CostDialog({
         {isEdit && detailQuery.isPending ? (
           <Skeleton className="h-64 w-full" />
         ) : isEdit && detailQuery.isError ? (
-          <p className="text-[13px] font-semibold text-destructive">Failed to load this bill.</p>
+          <p className="text-body-sm font-semibold text-destructive">Failed to load this bill.</p>
         ) : (
           <BillForm
             bill={bill}
@@ -405,7 +407,7 @@ export function CostDialog({
         )}
 
         {formError ? (
-          <p className="text-[13px] font-semibold text-destructive">{formError}</p>
+          <p className="text-body-sm font-semibold text-destructive">{formError}</p>
         ) : null}
       </DialogContent>
     </Dialog>

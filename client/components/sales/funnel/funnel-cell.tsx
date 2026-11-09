@@ -143,7 +143,7 @@ export function FunnelCell({
           if (e.key === "Escape") cancel()
         }}
         className={cn(
-          "w-full rounded-sm border border-[#2D6CB5] bg-white px-1.5 py-0.5 text-sm outline-none",
+          "w-full rounded-sm border border-info bg-white px-1.5 py-0.5 text-sm outline-none",
           align === "right" && "text-right",
           className
         )}
@@ -161,7 +161,7 @@ export function FunnelCell({
       title={error ?? (shown || placeholder)}
       className={cn(
         "block w-full truncate rounded-sm px-1.5 py-0.5 text-left text-sm",
-        "hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-[#2D6CB5]",
+        "hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-info",
         align === "right" && "text-right",
         saving && "opacity-60",
         error && "ring-1 ring-red-400",

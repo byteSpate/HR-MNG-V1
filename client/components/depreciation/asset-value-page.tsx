@@ -54,7 +54,7 @@ export function AssetValuePage() {
       {reportQuery.isPending ? (
         <Skeleton className="h-40 w-full" />
       ) : reportQuery.isError ? (
-        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+        <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
           Failed to load the value report.
         </div>
       ) : (

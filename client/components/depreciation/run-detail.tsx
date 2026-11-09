@@ -81,7 +81,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
   if (runQuery.isPending) return <Skeleton className="h-64 w-full" />
   if (runQuery.isError || !runQuery.data) {
     return (
-      <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+      <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-danger">
         Failed to load this run.{" "}
         <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => runQuery.refetch()}>
           Retry
@@ -95,7 +95,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" className="h-auto p-0 text-[12.5px] font-semibold" onClick={onBack}>
+        <Button variant="ghost" className="h-auto p-0 text-caption font-semibold" onClick={onBack}>
           ← Back to runs
         </Button>
         <Tag label={RUN_STATUS_LABEL[run.status]} tone={RUN_STATUS_TONE[run.status]} />
@@ -108,7 +108,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
       />
 
       {actionError ? (
-        <div className="mb-4 rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="mb-4 rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {actionError}
         </div>
       ) : null}
@@ -157,7 +157,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
             <DialogTitle>Reverse this run</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-[12.5px] text-[#5F6B7C]">
+            <p className="text-caption text-ink-muted">
               Reversing {run.runNo} reverses its journal and frees {formatMonth(run.month, run.year)} for a
               re-run. The reversal needs a reason.
             </p>

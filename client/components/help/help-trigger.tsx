@@ -39,7 +39,7 @@ export function HelpTrigger() {
       size="icon"
       aria-label={`How ${entry.title} works`}
       title={`How ${entry.title} works`}
-      className="size-8.5 rounded border-[#E4E9EF] text-[#55657A] hover:bg-[#F4F6F9]"
+      className="size-8.5 rounded border-line text-ink-muted hover:bg-surface-hover"
       render={<Link href={href} />}
     >
       <RiQuestionLine className="size-4" />

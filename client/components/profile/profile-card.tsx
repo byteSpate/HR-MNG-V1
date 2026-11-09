@@ -37,31 +37,31 @@ export function ProfileCard({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+    <div className="flex flex-col rounded-md border border-line bg-white px-5.5 py-5">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="text-[15px] font-bold">{title}</div>
+        <div className="text-lead font-bold">{title}</div>
         {action}
       </div>
       <dl className="space-y-3.5">
         {rows.map((row) => (
           <div key={row.label} className="grid grid-cols-[minmax(0,140px)_1fr] gap-3">
-            <dt className="text-[12.5px] font-semibold text-[#7A8698]">{row.label}</dt>
+            <dt className="text-caption font-semibold text-ink-muted">{row.label}</dt>
             <dd className="min-w-0">
               {/* An em dash, not an empty cell. A blank space reads as a
                   rendering bug; a dash reads as "not recorded". */}
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
-                <span className="text-[13.5px] break-words">{row.value ?? "—"}</span>
+                <span className="text-body-sm break-words">{row.value ?? "—"}</span>
                 {row.action}
               </div>
               {row.hint ? (
-                <div className="mt-0.5 text-[11.5px] text-[#A5AFBE]">{row.hint}</div>
+                <div className="mt-0.5 text-caption text-ink-muted">{row.hint}</div>
               ) : null}
             </dd>
           </div>
         ))}
       </dl>
       {lockedHint ? (
-        <p className="mt-4 border-t border-[#EFF2F6] pt-3 text-[12px] text-[#A5AFBE]">
+        <p className="mt-4 border-t border-surface-sunken pt-3 text-caption text-ink-muted">
           {lockedHint}
         </p>
       ) : null}

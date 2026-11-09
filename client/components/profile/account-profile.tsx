@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * The profile for an account with no employee record — Super Admin, HR Admin
@@ -178,7 +179,7 @@ export function AccountProfile({
       {/* The pending banner is NOT here. `my-profile-page` renders it above
           both branches, and this component is one of them — putting it in both
           shows it twice to an administrator. */}
-      <header className="mb-4 flex flex-wrap items-start gap-4 rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
+      <header className="mb-4 flex flex-wrap items-start gap-4 rounded-md border border-line bg-white px-5.5 py-5">
         <AvatarUpload
           upload={(file) => uploadOwnAvatar(accessToken!, file)}
           remove={() => clearOwnAvatar(accessToken!)}
@@ -189,9 +190,9 @@ export function AccountProfile({
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-heading text-[21px] font-bold tracking-tight break-words">
+            <Heading level="page" className="break-words">
               {displayed}
-            </h1>
+            </Heading>
             {/* One button. With no name the heading is the email, so it says what to
                 do in words; once a name is set it is the small pencil again. */}
             <button
@@ -201,8 +202,8 @@ export function AccountProfile({
               title={hasName ? "Edit your name" : undefined}
               className={
                 hasName
-                  ? "rounded p-1 text-[#7A8698] hover:bg-[#F4F6F9] hover:text-[#17191C]"
-                  : "inline-flex items-center gap-1 rounded-md border border-[#E4E9EF] px-2.5 py-1 text-[12.5px] font-semibold text-[#17191C] hover:bg-[#F4F6F9]"
+                  ? "rounded p-1 pointer-coarse:p-3 text-ink-muted hover:bg-surface-hover hover:text-ink"
+                  : "inline-flex items-center gap-1 rounded-md border border-line px-2.5 py-1 text-caption font-semibold text-ink hover:bg-surface-hover"
               }
             >
               <RiPencilLine className="size-3.5" aria-hidden />
@@ -211,8 +212,8 @@ export function AccountProfile({
           </div>
           {/* The email stays visible even once a name is set: it is what they
               sign in with, and the heading no longer says it. */}
-          <div className="mt-0.5 text-[13px] break-words text-[#5F6B7C]">{account.email}</div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12.5px] text-[#5F6B7C]">
+          <div className="mt-0.5 text-body-sm break-words text-ink-muted">{account.email}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-caption text-ink-muted">
             <Tag label={ROLE_LABEL[account.role]} tone="neutral" />
             <span>Account opened {monthYear(account.createdAt)}</span>
           </div>
@@ -239,7 +240,7 @@ export function AccountProfile({
               { label: "Account opened", value: monthYear(account.createdAt) },
             ]}
           />
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-[#EFF2F6] pt-4">
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-surface-sunken pt-4">
             <Button
               type="button"
               variant="outline"
@@ -258,7 +259,7 @@ export function AccountProfile({
               variant="outline"
               disabled={account.sessions.count === 0 || signOutAll.isPending}
               onClick={() => setConfirmSignOut(true)}
-              className="text-[#8A5E0C] hover:bg-[#FDF8EE] hover:text-[#6E4A09]"
+              className="text-warning hover:bg-warning-tint hover:text-warning"
             >
               <RiLogoutBoxRLine className="size-4" aria-hidden />
               Sign out everywhere
@@ -269,18 +270,18 @@ export function AccountProfile({
         <Panel title={`What ${ROLE_LABEL[account.role]} can do`} icon={RiComputerLine}>
           <ul className="space-y-2">
             {CAN[account.role].map((line) => (
-              <li key={line} className="flex items-start gap-2 text-[13px] leading-relaxed">
-                <RiCheckLine className="mt-0.5 size-4 shrink-0 text-[#1E7A3C]" aria-hidden />
+              <li key={line} className="flex items-start gap-2 text-body-sm leading-relaxed">
+                <RiCheckLine className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
                 <span>{line}</span>
               </li>
             ))}
             <li
               className={cn(
-                "flex items-start gap-2 border-t border-[#EFF2F6] pt-2 text-[13px] leading-relaxed",
+                "flex items-start gap-2 border-t border-surface-sunken pt-2 text-body-sm leading-relaxed",
                 TONE.muted
               )}
             >
-              <RiSubtractLine className="mt-0.5 size-4 shrink-0 text-[#A5AFBE]" aria-hidden />
+              <RiSubtractLine className="mt-0.5 size-4 shrink-0 text-ink-muted" aria-hidden />
               <span>{CANNOT}</span>
             </li>
           </ul>
@@ -292,8 +293,8 @@ export function AccountProfile({
       </div>
 
       <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <h2 className="font-heading text-[16px] font-bold tracking-tight">What you&apos;ve done</h2>
-        <span className={cn("text-[12.5px]", TONE.muted)}>Your own actions, newest first</span>
+        <Heading level="section">What you&apos;ve done</Heading>
+        <span className={cn("text-caption", TONE.muted)}>Your own actions, newest first</span>
       </div>
 
       <PanelTable
@@ -443,11 +444,11 @@ function Panel({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4.5">
-      <h2 className="mb-3.5 flex items-center gap-2 text-[13.5px] font-bold">
-        <Icon className="size-4 text-[#8A94A2]" aria-hidden />
+    <section className="rounded-md border border-line bg-white px-5 py-4.5">
+      <Heading level="section" className="mb-3.5 flex items-center gap-2">
+        <Icon className="size-4 text-ink-muted" aria-hidden />
         {title}
-      </h2>
+      </Heading>
       {children}
     </section>
   )
@@ -463,8 +464,8 @@ function Facts({
     <dl className="space-y-2.5">
       {rows.map((row) => (
         <div key={row.label} className="flex items-baseline justify-between gap-4">
-          <dt className={cn("text-[12.5px]", TONE.muted)}>{row.label}</dt>
-          <dd className="text-right text-[13px] font-semibold">
+          <dt className={cn("text-caption", TONE.muted)}>{row.label}</dt>
+          <dd className="text-right text-body-sm font-semibold">
             {row.tone ? <Tag label={row.value} tone={row.tone} /> : row.value}
           </dd>
         </div>

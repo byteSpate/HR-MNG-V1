@@ -30,7 +30,7 @@ const PAGE_SIZE = 50
 function dealCell(href: string, content: ReactNode): TableCell {
   return {
     node: (
-      <Link href={href} className="block w-full cursor-pointer truncate">
+      <Link href={href} className="block w-full cursor-pointer truncate pointer-coarse:min-h-10 pointer-coarse:min-w-10 pointer-coarse:py-3">
         {content}
       </Link>
     ),
@@ -43,8 +43,8 @@ function rowCells(pathname: string, row: DealMoneyListRow): TableCell[] {
     dealCell(
       href,
       <>
-        <div className="truncate text-[13px] font-semibold text-[#1C2733]">{row.serial}</div>
-        <div className="mt-0.5 truncate text-[11.5px] text-[#6B7789]">{row.name}</div>
+        <div className="truncate text-body-sm font-semibold text-ink-body">{row.serial}</div>
+        <div className="mt-0.5 truncate text-caption text-ink-muted">{row.name}</div>
       </>
     ),
     dealCell(href, row.customerName ?? "No customer"),
@@ -115,7 +115,7 @@ export function DealsPage() {
       />
 
       {total > 0 ? (
-        <div className="flex items-center justify-between text-[12.5px] text-[#5F6B7C]">
+        <div className="flex items-center justify-between text-caption text-ink-muted">
           <span>
             Page {page} of {lastPage}
           </span>

@@ -28,6 +28,7 @@ import {
   formatSigned,
   formatTotal,
 } from "@/components/accounting/accounting-shared"
+import { Heading } from "@/components/ds/heading"
 
 type Mode = "GENERAL" | "CASH" | "BANK"
 
@@ -135,10 +136,10 @@ function LedgerPageInner({ mode }: { mode: Mode }) {
       ) : (
         <div className="rounded-lg border">
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3">
-            <h2 className="font-medium">
+            <Heading level="section">
               <span className="text-muted-foreground tabular-nums">{ledger.data!.account.code}</span>{" "}
               {ledger.data!.account.name}
-            </h2>
+            </Heading>
             <p className="text-sm text-muted-foreground">
               Opening{" "}
               <span className="font-medium text-foreground tabular-nums">

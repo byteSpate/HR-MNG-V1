@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Heading } from "@/components/ds/heading"
 
 const STATUSES = Object.keys(MINUTES_STATUS_LABEL) as SalesMinutesStatus[]
 /** A select's "any", since an empty value reads as nothing chosen at all. */
@@ -39,9 +40,9 @@ const ANY = "any"
 /** The server's window for "waiting", said in the copy. */
 const WAITING_DAYS = 7
 
-const TOGGLE_ON = "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const TOGGLE_ON = "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
 const TOGGLE_OFF =
-  "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+  "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
 
 /** "13 Sep 2026", in the viewer's calendar. */
 const dayWithYear = (iso: string) => `${shortDay(iso)} ${new Date(iso).getFullYear()}`
@@ -78,7 +79,7 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
     {
       node: (
         // Above the whole-row link, so it still opens the account.
-        <Link href={`/sales/accounts/${item.salesAccountId}`} className="relative z-10 block truncate hover:underline">
+        <Link href={`/sales/accounts/${item.salesAccountId}`} className="relative z-10 block truncate hover:underline pointer-coarse:py-3">
           {item.salesAccountName}
         </Link>
       ),
@@ -124,12 +125,12 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
         onWrite={(meeting) => startMinutes.mutate(meeting.id)}
       />
 
-      <h2 className="mt-5 mb-2.5 font-heading text-[15px] font-bold tracking-tight">All minutes</h2>
+      <Heading level="section" className="mt-5 mb-2.5">All minutes</Heading>
 
       {/* Hidden while loading: a filter beside a skeleton reads as an answer
           about a list nobody has counted yet. */}
       {!isLoading && !list.isError ? (
-        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
+        <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
           <Button type="button" aria-pressed={mine} onClick={() => setMine(!mine)} className={mine ? TOGGLE_ON : TOGGLE_OFF}>
             Mine only
           </Button>
@@ -148,7 +149,7 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
               ))}
             </SelectContent>
           </Select>
-          <span className={`text-[12px] ${TONE.muted}`}>
+          <span className={`text-caption ${TONE.muted}`}>
             {mine ? "Minutes you started or are named on" : "Minutes on every account you can read"}
           </span>
         </section>
@@ -196,12 +197,12 @@ function WaitingForMinutes({
   onWrite: (meeting: SalesMeetingSummary) => void
 }) {
   return (
-    <section className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
-      <h2 className="text-[13.5px] font-bold">
+    <section className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+      <Heading level="section">
         Waiting for minutes
         {items && items.length > 0 ? <span className={`font-semibold ${TONE.muted}`}> · {items.length}</span> : null}
-      </h2>
-      <p className={`mt-0.5 text-[12px] ${TONE.muted}`}>
+      </Heading>
+      <p className={`mt-0.5 text-caption ${TONE.muted}`}>
         Meetings completed in the last {WAITING_DAYS} days that nobody has started minutes for
         {mine ? ", where you were there for us." : "."}
       </p>
@@ -213,20 +214,20 @@ function WaitingForMinutes({
         </div>
       ) : isError ? (
         <div className="mt-3 flex flex-wrap items-center gap-2.5">
-          <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#B03A3A]">
+          <span className="flex items-center gap-1.5 text-caption font-semibold text-danger">
             <RiErrorWarningLine className="size-4" aria-hidden />
             This list could not be loaded.
           </span>
           <Button
             onClick={onRetry}
-            className="h-auto rounded-md bg-[#17191C] px-3 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
           >
             <RiRefreshLine className="size-3.5" aria-hidden />
             Retry
           </Button>
         </div>
       ) : !items || items.length === 0 ? (
-        <p className="mt-3 text-[12.5px] leading-relaxed text-[#3D4756]">
+        <p className="mt-3 text-caption leading-relaxed text-ink-soft">
           Nothing waiting. Every meeting {mine ? "you attended" : "held"} in the last {WAITING_DAYS} days has its
           minutes started.
         </p>
@@ -235,19 +236,19 @@ function WaitingForMinutes({
           {items.map((meeting, i) => (
             <li
               key={meeting.id}
-              className="rise-in flex flex-wrap items-center justify-between gap-2 border-b border-[#EEF1F5] py-3 last:border-b-0 motion-reduce:animate-none"
+              className="rise-in flex flex-wrap items-center justify-between gap-2 border-b border-surface-sunken py-3 last:border-b-0 motion-reduce:animate-none"
               style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
             >
               <div className="flex min-w-0 items-start gap-2">
-                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#F1F4F8] text-[#33373D]">
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-surface-hover text-ink-body">
                   <MINUTES_ICON className="size-3" aria-hidden />
                 </span>
                 <div className="min-w-0">
-                  <div className="truncate text-[13px] font-semibold text-[#1C2733]">{meeting.title}</div>
-                  <div className="mt-0.5 text-[11.5px] text-[#5F6B7C]">
+                  <div className="truncate text-body-sm font-semibold text-ink-body">{meeting.title}</div>
+                  <div className="mt-0.5 text-caption text-ink-muted">
                     {[meetingWhen(meeting.scheduledAt), MEETING_MODE_LABEL[meeting.mode]].join(" · ")}
                     {" · "}
-                    <Link href={`/sales/accounts/${meeting.salesAccountId}`} className="font-semibold hover:underline">
+                    <Link href={`/sales/accounts/${meeting.salesAccountId}`} className="font-semibold hover:underline pointer-coarse:inline-block pointer-coarse:py-3">
                       {meeting.salesAccountName}
                     </Link>
                   </div>
@@ -257,12 +258,12 @@ function WaitingForMinutes({
                 <Button
                   onClick={() => onWrite(meeting)}
                   disabled={pendingId !== undefined}
-                  className="h-auto rounded-md bg-[#17191C] px-2.5 py-1.5 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+                  className="h-auto rounded-md bg-ink px-2.5 py-1.5 text-caption font-bold text-white hover:bg-ink-strong"
                 >
                   {pendingId === meeting.id ? "Opening…" : "Write the minutes"}
                 </Button>
               ) : (
-                <span className={`text-[12px] ${TONE.muted}`}>Written by the people who work this account</span>
+                <span className={`text-caption ${TONE.muted}`}>Written by the people who work this account</span>
               )}
             </li>
           ))}

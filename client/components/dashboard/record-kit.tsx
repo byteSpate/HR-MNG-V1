@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ApiError } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * The kit for any surface that is a table of records plus the dialogs that
@@ -55,13 +56,13 @@ import { cn } from "@/lib/utils"
  */
 export const TONE = {
   /** Secondary prose: panel descriptions, field hints, inactive rail items. */
-  muted: "text-[#5F6B7C]",
+  muted: "text-ink-muted",
   /** The hairline every settings surface is drawn with. */
-  line: "border-[#E4E9EF]",
+  line: "border-line",
   /** Refusals from the server, and anything destructive. */
-  danger: "text-[#B03A3A]",
+  danger: "text-danger",
   /** A write that already happened and had consequences elsewhere. */
-  notice: "text-[#8A5E0C]",
+  notice: "text-warning",
 } as const
 
 /**
@@ -106,14 +107,14 @@ export function PanelFrame({
     <section className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h2 className="font-heading text-[16px] font-bold tracking-tight">{title}</h2>
-          <p className={cn("mt-1 max-w-[64ch] text-[12.5px] leading-relaxed", TONE.muted)}>{sub}</p>
+          <Heading level="section">{title}</Heading>
+          <p className={cn("mt-1 max-w-[64ch] text-caption leading-relaxed", TONE.muted)}>{sub}</p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
           {extra}
           <Button
             onClick={onAction}
-            className="h-auto shrink-0 rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto shrink-0 rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             <RiAddLine className="size-4" aria-hidden />
             {actionLabel}
@@ -139,7 +140,7 @@ export function PanelAlert({
   return (
     <div
       role="alert"
-      className="flex items-start gap-2.5 rounded-md border border-[#F0D2D2] bg-[#FDF6F6] px-3.5 py-3 text-[12.5px] leading-relaxed font-semibold text-[#B03A3A]"
+      className="flex items-start gap-2.5 rounded-md border border-danger-line bg-danger-tint px-3.5 py-3 text-caption leading-relaxed font-semibold text-danger"
     >
       <RiErrorWarningLine className="mt-px size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1">{children}</span>
@@ -147,7 +148,7 @@ export function PanelAlert({
         <Button
           variant="link"
           onClick={onDismiss}
-          className="h-auto shrink-0 p-0 text-[12px] font-bold text-[#B03A3A] underline"
+          className="h-auto shrink-0 p-0 text-caption font-bold text-danger underline"
         >
           Dismiss
         </Button>
@@ -175,14 +176,14 @@ export function PanelNotice({
   onDismiss?: () => void
 }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#8A5E0C]">
+    <div className="flex items-start gap-2.5 rounded-md border border-warning-line bg-warning-tint px-3.5 py-3 text-caption leading-relaxed text-warning">
       <RiAlertLine className="mt-px size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1">{children}</span>
       {onDismiss ? (
         <Button
           variant="link"
           onClick={onDismiss}
-          className="h-auto shrink-0 p-0 text-[12px] font-bold text-[#8A5E0C] underline"
+          className="h-auto shrink-0 p-0 text-caption font-bold text-warning underline"
         >
           Dismiss
         </Button>
@@ -258,18 +259,18 @@ export function PanelTable({
     return (
       <PanelShell>
         <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+          <span className="flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiErrorWarningLine className="size-5" aria-hidden />
           </span>
           <div>
-            <div className="text-[13.5px] font-bold">This list could not be loaded</div>
-            <p className={cn("mt-1 text-[12.5px]", TONE.muted)}>
+            <div className="text-body-sm font-bold">This list could not be loaded</div>
+            <p className={cn("mt-1 text-caption", TONE.muted)}>
               Nothing has changed. Check the connection and try again.
             </p>
           </div>
           <Button
             onClick={onRetry}
-            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             <RiRefreshLine className="size-4" aria-hidden />
             Retry
@@ -283,19 +284,19 @@ export function PanelTable({
     return (
       <PanelShell>
         <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <span className="flex size-9 items-center justify-center rounded-md bg-[#F1F4F8] text-[#5F6B7C]">
+          <span className="flex size-9 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
             {EmptyIcon ? <EmptyIcon className="size-5" aria-hidden /> : <RiInboxLine className="size-5" aria-hidden />}
           </span>
           <div>
-            <div className="text-[13.5px] font-bold">{emptyTitle}</div>
-            <p className={cn("mt-1 max-w-[46ch] text-[12.5px] leading-relaxed", TONE.muted)}>
+            <div className="text-body-sm font-bold">{emptyTitle}</div>
+            <p className={cn("mt-1 max-w-[46ch] text-caption leading-relaxed", TONE.muted)}>
               {emptyBody}
             </p>
           </div>
           {emptyAction ? (
             <Button
               onClick={onEmptyAction}
-              className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+              className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
             >
               {emptyActionIcon ?? <RiAddLine className="size-4" aria-hidden />}
               {emptyAction}
@@ -312,7 +313,7 @@ export function PanelTable({
 /** The bordered white surface every panel state is drawn on. */
 function PanelShell({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-4 py-4 sm:px-5.5 sm:py-5">
+    <div className="rounded-md border border-line bg-white px-4 py-4 sm:px-5.5 sm:py-5">
       {children}
     </div>
   )
@@ -329,14 +330,14 @@ function TableLoading({ cols, headers }: { cols: string; headers: string[] }) {
         {headers.map((header, i) => (
           <div
             key={`${header}-${i}`}
-            className="border-b border-[#E4E9EF] py-2.5 text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase"
+            className="border-b border-line py-2.5 text-caption font-bold tracking-wide text-ink-muted uppercase"
           >
             {header}
           </div>
         ))}
         {[0, 1, 2, 3].map((row) =>
           headers.map((header, col) => (
-            <div key={`${row}-${header}-${col}`} className="border-b border-[#EEF1F5] py-3">
+            <div key={`${row}-${header}-${col}`} className="border-b border-surface-sunken py-3">
               {col === headers.length - 1 ? null : (
                 <Skeleton className={cn("h-3.5", col === 0 ? "w-2/3" : "w-1/2")} />
               )}
@@ -347,7 +348,7 @@ function TableLoading({ cols, headers }: { cols: string; headers: string[] }) {
 
       <div className="flex flex-col gap-2.5 md:hidden">
         {[0, 1, 2].map((row) => (
-          <div key={row} className="space-y-2 rounded-md border border-[#EEF1F5] p-3">
+          <div key={row} className="space-y-2 rounded-md border border-surface-sunken p-3">
             <Skeleton className="h-3.5 w-1/2" />
             <Skeleton className="h-3 w-3/4" />
           </div>
@@ -374,7 +375,7 @@ export type RowAction =
 
 /** The quiet-until-hover treatment every row action shares. */
 const ROW_ACTION =
-  "h-auto rounded-md px-2 py-1 text-[12px] font-semibold transition-colors text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+  "h-auto rounded-md px-2 py-1 pointer-coarse:min-h-10 pointer-coarse:px-3 text-caption font-semibold transition-colors text-ink-muted hover:bg-surface-hover hover:text-ink-body"
 
 /**
  * Actions were previously two underlined links per row, the second of them
@@ -420,7 +421,7 @@ export function RowActions({ actions }: { actions: RowAction[] }) {
               key={action.label}
               title={action.hint}
               className={cn(
-                "inline-flex cursor-help items-center gap-1 rounded-md px-2 py-1 text-[12px] font-semibold",
+                "inline-flex cursor-help items-center gap-1 rounded-md px-2 py-1 text-caption font-semibold",
                 TONE.muted
               )}
             >
@@ -438,7 +439,7 @@ export function RowActions({ actions }: { actions: RowAction[] }) {
             onClick={action.onClick}
             className={cn(
               ROW_ACTION,
-              isDelete && "hover:bg-[#FDF1F1] hover:text-[#B03A3A]"
+              isDelete && "hover:bg-danger-tint hover:text-danger"
             )}
           >
             {isDelete ? (
@@ -480,7 +481,7 @@ export function Field({
   children: ReactNode
 }) {
   const labelEl = (
-    <Label htmlFor={htmlFor} className="text-[12px] font-bold text-[#1C2733]">
+    <Label htmlFor={htmlFor} className="text-caption font-bold text-ink-body">
       {label}
     </Label>
   )
@@ -498,7 +499,7 @@ export function Field({
       )}
       {children}
       {hint ? (
-        <p className={cn("text-[11.5px] leading-relaxed", TONE.muted)}>{hint}</p>
+        <p className={cn("text-caption leading-relaxed", TONE.muted)}>{hint}</p>
       ) : null}
     </div>
   )
@@ -521,7 +522,7 @@ export function FieldHelp({ label, children }: { label: string; children: ReactN
                 <button
                   type="button"
                   aria-label={`About ${label}`}
-                  className="inline-flex size-4 shrink-0 cursor-help items-center justify-center rounded-full text-[#5F6B7C] transition-colors hover:text-[#1C2733] focus-visible:ring-2 focus-visible:ring-[#17191C]/25 focus-visible:outline-none"
+                  className="relative inline-flex size-4 shrink-0 cursor-help pointer-coarse:after:absolute pointer-coarse:after:-inset-3 pointer-coarse:after:content-[''] items-center justify-center rounded-full text-ink-muted transition-colors hover:text-ink-body focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:outline-none"
                 >
                   <RiQuestionLine className="size-3.5" aria-hidden />
                 </button>
@@ -530,11 +531,11 @@ export function FieldHelp({ label, children }: { label: string; children: ReactN
           }
         />
         <PopoverContent className="w-64">
-          <p className="text-[12.5px] leading-[1.6] text-[#3B4757]">{children}</p>
+          <p className="text-caption leading-[1.6] text-ink-soft">{children}</p>
         </PopoverContent>
       </Popover>
       <TooltipContent>
-        <span className="text-[11.5px]">{children}</span>
+        <span className="text-caption">{children}</span>
       </TooltipContent>
     </Tooltip>
   )
@@ -554,7 +555,7 @@ export function CheckboxField({
   return (
     <label
       className={cn(
-        "flex items-center gap-2 rounded-md py-1 text-[12.5px] transition-colors",
+        "flex items-center gap-2 rounded-md py-1 text-caption transition-colors",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
       )}
     >
@@ -573,7 +574,7 @@ export function FormError({ children }: { children: ReactNode }) {
   return (
     <p
       role="alert"
-      className="flex items-start gap-1.5 text-[12.5px] leading-relaxed font-semibold text-[#B03A3A]"
+      className="flex items-start gap-1.5 text-caption leading-relaxed font-semibold text-danger"
     >
       <RiErrorWarningLine className="mt-px size-4 shrink-0" aria-hidden />
       <span>{children}</span>
@@ -612,7 +613,7 @@ export function DialogActions({
         variant="ghost"
         onClick={onCancel}
         disabled={pending}
-        className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+        className="h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
       >
         Cancel
       </Button>
@@ -620,7 +621,7 @@ export function DialogActions({
         type="button"
         disabled={pending || disabled}
         onClick={onSubmit}
-        className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+        className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
       >
         {pending ? "Saving…" : submitLabel}
       </Button>
@@ -670,7 +671,7 @@ export function ConfirmDialog({
           <AlertDialogAction
             disabled={pending}
             onClick={onConfirm}
-            className="bg-[#17191C] text-white hover:bg-[#0E1012]"
+            className="bg-ink text-white hover:bg-ink-strong"
           >
             {pending ? "Working…" : confirmLabel}
           </AlertDialogAction>
@@ -706,7 +707,7 @@ export function ConfirmDeleteDialog({
     <AlertDialog open={open} onOpenChange={(next) => !next && onCancel()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <span className="mb-1 flex size-9 items-center justify-center rounded-md bg-[#FDF6F6] text-[#B03A3A]">
+          <span className="mb-1 flex size-9 items-center justify-center rounded-md bg-danger-tint text-danger">
             <RiDeleteBinLine className="size-5" aria-hidden />
           </span>
           <AlertDialogTitle>Delete {what}?</AlertDialogTitle>
@@ -722,7 +723,7 @@ export function ConfirmDeleteDialog({
           <AlertDialogAction
             disabled={pending}
             onClick={onConfirm}
-            className="bg-[#B03A3A] text-white hover:bg-[#8F2F2F]"
+            className="bg-danger text-white hover:bg-danger"
           >
             {pending ? "Deleting…" : "Delete"}
           </AlertDialogAction>

@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const BUCKET_TONE: Record<AgeingBucket, Tone> = {
   "Not due": "neutral",
@@ -85,7 +86,7 @@ export function CustomerAgeingPage() {
     { text: r.label },
     {
       node: r.dealId ? (
-        <Link href={`${dealsBase}/${r.dealId}`} className="cursor-pointer font-semibold text-[#1C2733] hover:underline">
+        <Link href={`${dealsBase}/${r.dealId}`} className="cursor-pointer font-semibold text-ink-body hover:underline">
           {r.dealSerial ?? "—"}
         </Link>
       ) : (
@@ -100,7 +101,7 @@ export function CustomerAgeingPage() {
         <Button
           type="button"
           variant="ghost"
-          className="h-auto rounded-md px-2 py-1 text-[12px] font-semibold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]"
+          className="h-auto rounded-md px-2 py-1 text-caption font-semibold text-ink-muted hover:bg-surface-hover hover:text-ink-body"
           onClick={() => setStatementFor({ id: r.customerId, legalName: r.customerName })}
         >
           <RiFileDownloadLine className="size-3.5" aria-hidden />
@@ -126,7 +127,7 @@ export function CustomerAgeingPage() {
         </PanelAlert>
       ) : null}
       {tieOut.data?.ties ? (
-        <p className={`text-[12.5px] ${TONE.muted}`}>
+        <p className={`text-caption ${TONE.muted}`}>
           The invoices below add up to {formatMoney(tieOut.data.subledgerTotal, "BDT")}, the same as account 1220 in the ledger.
         </p>
       ) : null}
@@ -134,9 +135,9 @@ export function CustomerAgeingPage() {
       {ageing.isSuccess && data.length > 0 ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {totals.map((t) => (
-            <div key={t.bucket} className="rounded-md border border-[#E4E9EF] bg-white px-4 py-3">
-              <div className={`text-[11px] font-bold tracking-wide uppercase ${TONE.muted}`}>{bucketLabel(t.bucket)}</div>
-              <div className="font-heading mt-1 text-[15px] font-bold tabular-nums">
+            <div key={t.bucket} className="rounded-md border border-line bg-white px-4 py-3">
+              <div className={`text-caption font-bold tracking-wide uppercase ${TONE.muted}`}>{bucketLabel(t.bucket)}</div>
+              <div className="font-heading mt-1 text-lead font-bold tabular-nums">
                 {t.amount > 0 ? formatMoney(t.amount.toFixed(2), "BDT") : "—"}
               </div>
             </div>
@@ -191,7 +192,7 @@ function StatementDialog({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Statement · {customer.legalName}</DialogTitle>
           <DialogDescription>Everything owed and paid in the period, with a running balance.</DialogDescription>
@@ -210,14 +211,14 @@ function StatementDialog({
           {error ? <PanelAlert onDismiss={() => setError(null)}>{error}</PanelAlert> : null}
 
           {statement.isPending ? (
-            <p className={`text-[12.5px] ${TONE.muted}`}>Loading…</p>
+            <p className={`text-caption ${TONE.muted}`}>Loading…</p>
           ) : statement.isError ? (
             <PanelAlert>This statement could not be loaded.</PanelAlert>
           ) : s ? (
-            <div className="max-h-[40vh] overflow-y-auto rounded-md border border-[#E4E9EF]">
-              <table className="w-full text-[12.5px]">
+            <div className="max-h-[40vh] overflow-y-auto rounded-md border border-line">
+              <table className="w-full text-caption">
                 <thead>
-                  <tr className="border-b border-[#E4E9EF] text-left text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+                  <tr className="border-b border-line text-left text-caption font-bold tracking-wide text-ink-muted uppercase">
                     <th className="px-3 py-2">Date</th>
                     <th className="px-3 py-2">What</th>
                     <th className="px-3 py-2 text-right">Owed</th>
@@ -226,19 +227,19 @@ function StatementDialog({
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-[#EEF1F5]">
+                  <tr className="border-b border-surface-sunken">
                     <td className="px-3 py-2" colSpan={4}>Opening balance</td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatMoney(s.openingBalance, "BDT")}</td>
                   </tr>
                   {s.entries.length === 0 ? (
                     <tr>
-                      <td className="px-3 py-4 text-center text-[12px]" colSpan={5} style={{ color: "#5F6B7C" }}>
+                      <td className="px-3 py-4 text-center text-caption" colSpan={5} style={{ color: "#5F6B7C" }}>
                         No invoices, receipts or credit notes in this period.
                       </td>
                     </tr>
                   ) : (
                     s.entries.map((e, i) => (
-                      <tr key={i} className="border-b border-[#EEF1F5] last:border-b-0">
+                      <tr key={i} className="border-b border-surface-sunken last:border-b-0">
                         <td className="px-3 py-2">{formatDate(e.date)}</td>
                         <td className="px-3 py-2">{e.reference}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{e.debit ? formatMoney(e.debit, "BDT") : "—"}</td>
@@ -249,7 +250,7 @@ function StatementDialog({
                   )}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-[#17191C]">
+                  <tr className="border-t-2 border-ink">
                     <td className="px-3 py-2 font-bold" colSpan={4}>Closing balance</td>
                     <td className="px-3 py-2 text-right font-bold tabular-nums">{formatMoney(s.closingBalance, "BDT")}</td>
                   </tr>
@@ -260,14 +261,14 @@ function StatementDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose} className="h-auto rounded-md px-3.5 py-2 text-[12.5px] font-bold text-[#5F6B7C] hover:bg-[#F1F4F8] hover:text-[#1C2733]">
+          <Button type="button" variant="ghost" onClick={onClose} className="h-auto rounded-md px-3.5 py-2 text-caption font-bold text-ink-muted hover:bg-surface-hover hover:text-ink-body">
             Close
           </Button>
           <Button
             type="button"
             disabled={download.isPending}
             onClick={() => download.mutate()}
-            className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+            className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
           >
             {download.isPending ? "Preparing…" : "Download PDF"}
           </Button>

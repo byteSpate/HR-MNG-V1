@@ -42,10 +42,11 @@ import {
 import { BeforeQuotationView } from "@/components/sales/opportunities/before-quotation-view"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
 import type { TableCell } from "@/components/dashboard/types"
+import { Heading } from "@/components/ds/heading"
 
-const TOGGLE_ON = "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+const TOGGLE_ON = "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
 const TOGGLE_OFF =
-  "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+  "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
 
 type OpportunityView = "ALL" | "BEFORE"
 const VIEW_KEY = "sales.opportunities.view"
@@ -171,7 +172,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
       return {
         node: (
           <span
-            className="rise-in font-mono text-[11.5px] text-[#6B7789] motion-reduce:animate-none"
+            className="rise-in font-mono text-caption text-ink-muted motion-reduce:animate-none"
             style={{ animationDelay: `${Math.min(index, STAGGER_MAX_STEPS) * STAGGER_STEP_MS}ms` }}
           >
             {deal.serial}
@@ -184,7 +185,7 @@ function cellFor(column: ColumnKey, deal: OpportunitySummary, index: number): Ta
       return {
         node: (
           <div className="flex min-w-0 items-center gap-1.5">
-            <RiBriefcaseLine className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+            <RiBriefcaseLine className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
             <span className="truncate font-semibold">{deal.name}</span>
           </div>
         ),
@@ -379,15 +380,15 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
       {/* Hidden while the first page loads. A filter row beside a skeleton
           reads as an answer about a list nobody has counted yet. */}
       {!isLoading && !query.isError ? (
-        <section className="mb-3 rounded-md border border-[#E4E9EF] bg-white p-3 sm:p-4">
+        <section className="mb-3 rounded-md border border-line bg-white p-3 sm:p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-heading text-[14px] font-bold tracking-tight">Refine the view</h2>
-              <p className={`mt-0.5 text-[12px] ${TONE.muted}`}>{viewDescription}</p>
+              <Heading level="section">Refine the view</Heading>
+              <p className={`mt-0.5 text-caption ${TONE.muted}`}>{viewDescription}</p>
             </div>
             <div className="flex items-center gap-2">
               {closing || quiet || stuck ? (
-                <span className="rounded-md bg-[#F1F4F7] px-2.5 py-1.5 text-[11.5px] font-semibold text-[#5F6B7C]">
+                <span className="rounded-md bg-surface-hover px-2.5 py-1.5 text-caption font-semibold text-ink-muted">
                   {closing ? `Closing in ${closing} days` : quiet ? `Quiet for ${quiet}+ days` : `Stuck for ${stuck}+ days`}
                 </span>
               ) : null}
@@ -395,7 +396,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
                 type="button"
                 onClick={() => setPickerOpen((prev) => !prev)}
                 aria-expanded={pickerOpen}
-                className="h-8 gap-1.5 rounded-md border border-[#E4E9EF] bg-white px-2.5 text-[12px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                className="h-8 gap-1.5 rounded-md border border-line bg-white px-2.5 text-caption font-bold text-ink hover:bg-surface-subtle"
               >
                 <RiLayoutColumnLine className="size-3.5" aria-hidden />
                 {columns.length} columns
@@ -403,7 +404,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#EEF1F5] pt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-surface-sunken pt-3">
           <Select value={status} onValueChange={(v) => setStatus((v ?? "") as OpportunityStatus | "")}>
             <SelectTrigger aria-label="Opportunity status" className="h-9 w-auto min-w-[9rem]">
               <SelectValue>
@@ -442,8 +443,8 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
             aria-pressed={mine}
             className={
               mine
-                ? "h-9 rounded-md bg-[#17191C] px-3 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
-                : "h-9 rounded-md border border-[#E4E9EF] bg-white px-3 text-[12.5px] font-bold text-[#17191C] hover:bg-[#F7F9FB]"
+                ? "h-9 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
+                : "h-9 rounded-md border border-line bg-white px-3 text-caption font-bold text-ink hover:bg-surface-subtle"
             }
           >
             Mine only
@@ -467,7 +468,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
               type="button"
               variant="link"
               onClick={clearFilters}
-              className="h-9 gap-1.5 p-0 text-[12.5px] font-bold text-[#5F6B7C]"
+              className="h-9 gap-1.5 p-0 text-caption font-bold text-ink-muted"
             >
               <RiFilterOffLine className="size-3.5" aria-hidden />
               Clear
@@ -477,10 +478,10 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
           </div>
 
           {pickerOpen ? (
-            <div className="mt-3 border-t border-[#EEF1F5] pt-3">
+            <div className="mt-3 border-t border-surface-sunken pt-3">
               <div className="mb-2 flex items-baseline justify-between gap-3">
-                <span className="text-[12.5px] font-bold">Visible columns</span>
-                <span className={`text-[11.5px] ${TONE.muted}`}>{columns.length} of {ALL_COLUMNS.length} shown</span>
+                <span className="text-caption font-bold">Visible columns</span>
+                <span className={`text-caption ${TONE.muted}`}>{columns.length} of {ALL_COLUMNS.length} shown</span>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 {ALL_COLUMNS.map((column) => {
@@ -491,7 +492,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
                   return (
                     <label
                       key={column}
-                      className={`flex items-center gap-1.5 text-[12.5px] ${
+                      className={`flex items-center gap-1.5 text-caption ${
                         isLast ? "opacity-50" : "cursor-pointer"
                       }`}
                     >
@@ -506,7 +507,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
                               : ALL_COLUMNS.filter((c) => prev.includes(c) || c === column)
                           )
                         }
-                        className="size-3.5 accent-[#17191C]"
+                        className="size-3.5 accent-ink"
                       />
                       {COLUMN_LABEL[column]}
                     </label>
@@ -517,7 +518,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
                 type="button"
                 variant="link"
                 onClick={() => setColumns(DEFAULT_COLUMNS)}
-                className="mt-2 h-auto p-0 text-[12px] font-bold text-[#5F6B7C]"
+                className="mt-2 h-auto p-0 text-caption font-bold text-ink-muted"
               >
                 Reset to default
               </Button>

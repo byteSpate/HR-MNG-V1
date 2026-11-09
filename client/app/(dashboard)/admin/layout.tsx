@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       className={cn(
         publicSans.variable,
         sora.variable,
-        "font-sans flex min-h-screen w-full bg-[#F4F6F9] text-[#1C2733]"
+        "font-sans flex min-h-screen w-full bg-surface-hover text-ink-body"
       )}
     >
       <DashboardShell navGroups={navGroups} rootHref="/admin">

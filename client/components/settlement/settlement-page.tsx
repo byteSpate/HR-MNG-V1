@@ -112,7 +112,7 @@ export function SettlementPage() {
     return (
       <>
         <PageHeader kicker="Workspace" title="Settlements" sub="Full and final" />
-        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+        <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
           You do not have access to settlements.
         </div>
       </>
@@ -134,7 +134,7 @@ export function SettlementPage() {
     { tag: SETTLEMENT_STATUS_LABEL[s.status], tone: SETTLEMENT_STATUS_TONE[s.status] },
     {
       node: (
-        <Button variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline" onClick={() => setSelected(s)}>
+        <Button variant="link" className="h-auto p-0 text-caption font-semibold underline" onClick={() => setSelected(s)}>
           Open
         </Button>
       ),
@@ -150,7 +150,7 @@ export function SettlementPage() {
       />
 
       {error ? (
-        <div className="mb-4 rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+        <div className="mb-4 rounded-md border border-danger-line bg-danger-tint px-5 py-3.5 text-caption text-danger">
           {error}
         </div>
       ) : null}
@@ -175,15 +175,15 @@ export function SettlementPage() {
       ) : (
         <div className="space-y-6">
           {awaiting.length > 0 ? (
-            <div className="rounded-md border border-[#E4E9EF] bg-white px-5.5 py-5">
-              <div className="text-[15px] font-bold">Leavers awaiting settlement</div>
+            <div className="rounded-md border border-line bg-white px-5.5 py-5">
+              <div className="text-lead font-bold">Leavers awaiting settlement</div>
               <ul className="mt-3 space-y-2">
                 {awaiting.map((employee) => (
                   <li key={employee.id} className="flex flex-col gap-2">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-[13px]">
+                      <div className="text-body-sm">
                         <span className="font-semibold">{employee.work.fullName}</span>{" "}
-                        <span className="text-[#A5AFBE]">{employee.employment?.employeeCode}</span>
+                        <span className="text-ink-muted">{employee.employment?.employeeCode}</span>
                       </div>
                       {isFinance ? (
                         <Button
@@ -205,7 +205,7 @@ export function SettlementPage() {
           {settlementsQuery.isPending ? (
             <Skeleton className="h-40 w-full" />
           ) : settlements.length === 0 ? (
-            <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+            <div className="rounded-md border border-line bg-white p-5.5 text-body-sm text-ink-muted">
               No settlements yet. One is created when Finance calculates for a leaver.
             </div>
           ) : (

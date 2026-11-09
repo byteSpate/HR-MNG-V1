@@ -25,6 +25,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { cx } from "@/components/ds/classes"
 
 const PRIORITIES = Object.keys(TASK_PRIORITY_LABEL) as SalesTaskPriority[]
 /** A select's "none", since an empty value reads as nothing chosen at all. */
@@ -69,7 +71,7 @@ export function TaskFormDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={cx(dialogWidthClass("md"), "max-h-[90vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>{task ? "Edit task" : "New task"}</DialogTitle>
         </DialogHeader>
@@ -323,7 +325,7 @@ export function TaskStatusDialog({
 
   return (
     <Dialog open={!!task && !!action} onOpenChange={(next) => (next ? undefined : close())}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={cx(dialogWidthClass("md"), "max-h-[90vh] overflow-y-auto")}>
         <DialogHeader>
           <DialogTitle>
             {followUpOn ? "Make the next follow-up?" : action === "CANCELLED" ? "Cancel this task" : "Mark this task done"}
@@ -331,7 +333,7 @@ export function TaskStatusDialog({
         </DialogHeader>
         {task && action && followUpOn ? (
           <>
-            <p className="text-[12.5px] leading-relaxed text-[#5F6B7C]">
+            <p className="text-caption leading-relaxed text-ink-muted">
               Done. Here is the next follow-up, due in 15 days. Change anything, or cancel to skip it.
             </p>
             <TaskForm
@@ -390,7 +392,7 @@ function TaskStatusForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <p className="text-[12.5px] font-semibold text-[#1C2733]">{task.title}</p>
+      <p className="text-caption font-semibold text-ink-body">{task.title}</p>
       {action === "CANCELLED" ? (
         <Field label="Why is it cancelled?" htmlFor="task-reason">
           <Input id="task-reason" value={text} onChange={(e) => setText(e.target.value)} />

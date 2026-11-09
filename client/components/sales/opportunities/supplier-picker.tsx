@@ -110,7 +110,7 @@ function AddSupplierDialog({
                   key={s.id}
                   type="button"
                   onClick={() => pickSuggestion(s)}
-                  className="block text-left text-[12.5px] font-semibold text-[#8A5E0C] underline"
+                  className="block text-left text-caption font-semibold text-warning underline"
                 >
                   Did you mean: {s.name}?
                 </button>

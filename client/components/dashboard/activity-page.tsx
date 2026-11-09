@@ -158,7 +158,7 @@ export function ActivityPage() {
             allLabel="All severities"
             options={SEVERITY_OPTIONS}
           />
-          <span className="text-[12.5px] text-[#5F6B7C] tabular-nums">
+          <span className="text-caption text-ink-muted tabular-nums">
             {items.length} {items.length === 1 ? "event" : "events"}
           </span>
           {filtersActive ? (
@@ -213,7 +213,7 @@ export function ActivityPage() {
       {/* Said plainly rather than left as an absence somebody reads as a bug.
           The mock this page replaced claimed four scheduled reports and a
           nightly sync, none of which exist. */}
-      <p className="mt-4 text-[12.5px] text-[#5F6B7C]">
+      <p className="mt-4 text-caption text-ink-muted">
         Scheduled and exported reports are not built yet. Payslips and financial
         statements render their own PDFs from their modules.
       </p>

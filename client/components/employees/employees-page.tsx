@@ -39,6 +39,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { TableCell, Tone } from "@/components/dashboard/types"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 const STATUS_TONE: Record<EmploymentStatus, Tone> = {
   ACTIVE: "green",
@@ -86,7 +88,7 @@ function toRows(
           {/* Designation, not the email: two people share a job title and it
               tells you who they are, where the address is a duplicate of the
               name you just read. The address is still searchable. */}
-          <div className="truncate text-[11.5px] text-[#6B7789]">{e.work.designation}</div>
+          <div className="truncate text-caption text-ink-muted">{e.work.designation}</div>
         </div>
       ),
     },
@@ -213,8 +215,8 @@ function todayIso(): string {
  */
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-3 border-t border-[#E4E9EF] pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase">{title}</h3>
+    <section className="grid gap-3 border-t border-line pt-4 first:border-t-0 first:pt-0">
+      <Heading level="card" className="text-ink-muted uppercase">{title}</Heading>
       <div className="grid items-start gap-x-4 gap-y-3 sm:grid-cols-2">{children}</div>
     </section>
   )
@@ -455,7 +457,7 @@ export function EmployeesPage() {
         <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(215px,1fr))] gap-4">
           {isLoading
             ? [0, 1, 2].map((i) => (
-                <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+                <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
                   <Skeleton className="h-3 w-24" />
                   <Skeleton className="mt-2.5 h-6 w-12" />
                   <Skeleton className="mt-2 h-3 w-32" />
@@ -541,7 +543,7 @@ export function EmployeesPage() {
           Tailwind v4 emits arbitrary utilities after named ones, so at equal
           specificity the calc wins and the dialog fills the viewport.
         */}
-        <DialogContent className="sm:max-w-2xl!">
+        <DialogContent className={dialogWidthClass("lg")}>
           <DialogHeader>
             <DialogTitle>Add employee</DialogTitle>
           </DialogHeader>
@@ -669,30 +671,30 @@ export function EmployeesPage() {
             <DialogTitle>{result?.fullName} was added</DialogTitle>
           </DialogHeader>
           {result ? (
-            <div className="space-y-4 text-[13px]">
+            <div className="space-y-4 text-body-sm">
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
-                <dt className="text-[#5F6B7C]">Employee code</dt>
+                <dt className="text-ink-muted">Employee code</dt>
                 <dd className="font-semibold">{result.employeeCode}</dd>
-                <dt className="text-[#5F6B7C]">Email</dt>
+                <dt className="text-ink-muted">Email</dt>
                 <dd className="truncate font-semibold">{result.email}</dd>
               </dl>
 
               <div>
-                <div className="mb-1.5 text-[11px] font-bold tracking-wide text-[#5F6B7C] uppercase">
+                <div className="mb-1.5 text-caption font-bold tracking-wide text-ink-muted uppercase">
                   Temporary password
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <code className="min-w-0 flex-1 rounded-md border border-[#E4E9EF] bg-[#F4F6F9] px-3 py-2 font-mono text-[13px] break-all">
+                  <code className="min-w-0 flex-1 rounded-md border border-line bg-surface-hover px-3 py-2 font-mono text-body-sm break-all">
                     {result.temporaryPassword}
                   </code>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => handleCopy(result.temporaryPassword)}
-                    className="h-auto shrink-0 rounded-md px-3 py-2 text-[12.5px] font-semibold"
+                    className="h-auto shrink-0 rounded-md px-3 py-2 text-caption font-semibold"
                   >
                     {copied ? (
-                      <RiCheckLine className="size-4 text-[#1E7A3C]" aria-hidden />
+                      <RiCheckLine className="size-4 text-success" aria-hidden />
                     ) : (
                       <RiFileCopyLine className="size-4" aria-hidden />
                     )}
@@ -705,7 +707,7 @@ export function EmployeesPage() {
                   password ever appears on, and closing the dialog destroys it. */}
               <p
                 role="alert"
-                className="rounded-md border border-[#F5E0BE] bg-[#FDF8EE] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#8A5E0C]"
+                className="rounded-md border border-warning-line bg-warning-tint px-3.5 py-3 text-caption leading-relaxed text-warning"
               >
                 This password is shown once and cannot be retrieved after this dialog closes. It has
                 also been emailed to {result.email}, or written to the server log in dev mode.
@@ -715,7 +717,7 @@ export function EmployeesPage() {
                 <Button
                   type="button"
                   onClick={() => setResult(null)}
-                  className="h-auto rounded-md bg-[#17191C] px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-[#0E1012]"
+                  className="h-auto rounded-md bg-ink px-3.5 py-2 text-caption font-bold text-white hover:bg-ink-strong"
                 >
                   Done
                 </Button>

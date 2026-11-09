@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import type { AnnouncementItem, CreateAnnouncementInput } from "@/lib/api/types"
 import { ComposeAnnouncementDialog } from "@/components/announcements/compose-announcement-dialog"
+import { Heading } from "@/components/ds/heading"
 
 /** Roles the server lets publish. Mirrors `PUBLISHER_ROLES`. */
 const PUBLISHER_ROLES = ["SUPER_ADMIN", "HR_ADMIN", "FINANCE_OFFICER", "REPORTING_MANAGER"]
@@ -99,31 +100,26 @@ function NoticeCard({
       className={cn(
         "group relative rounded-md border bg-white p-4 sm:p-5",
         "animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards duration-300 ease-out",
-        "transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-[#CFD7E0] hover:shadow-[0_10px_24px_-16px_rgba(28,39,51,0.35)]",
+        "transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-line-strong hover:shadow-[0_10px_24px_-16px_rgba(28,39,51,0.35)]",
         // Motion is a courtesy here, not information: the border and shadow
         // still answer the hover without it.
         "motion-reduce:animate-none motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         state === "draft"
-          ? "border-dashed border-[#D4DBE4]"
+          ? "border-dashed border-line-strong"
           : state === "scheduled"
-            ? "border-[#E4E9EF] before:absolute before:inset-y-3 before:left-0 before:w-0.75 before:rounded-full before:bg-[#C79A2E]"
-            : "border-[#E4E9EF]"
+            ? "border-line before:absolute before:inset-y-3 before:left-0 before:w-0.75 before:rounded-full before:bg-warning"
+            : "border-line"
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h3
-            className={cn(
-              "text-[14.5px] font-bold text-[#17191C]",
-              state === "draft" && "text-[#5F6B7C]"
-            )}
-          >
+          <Heading level="card" className={cn(state === "draft" && "text-ink-muted")}>
             {a.title}
-          </h3>
+          </Heading>
           {/* Two lines of the actual notice, wrapped at a word. The table cut
               it at 70 characters mid-word, which is the one thing on the row
               somebody actually wanted to read. */}
-          <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-[#4A5563]">{a.body}</p>
+          <p className="mt-1.5 line-clamp-2 text-body-sm leading-relaxed text-ink-soft">{a.body}</p>
         </div>
 
         {/* Quiet until the row is hovered or focused within, so a list of
@@ -143,15 +139,15 @@ function NoticeCard({
         ) : null}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-[#6B7789]">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-caption text-ink-muted">
         {/* A chip, not a bare word. "Everyone" floating beside a date reads as
             a status; the verb and the glyph together say it is an audience. */}
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F1F4F8] py-1 pr-2.5 pl-2 font-semibold text-[#4A5563]">
-          <AudienceIcon className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden />
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-hover py-1 pr-2.5 pl-2 font-semibold text-ink-soft">
+          <AudienceIcon className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
           {state === "published" ? "Sent to" : "Goes to"} {audience.label}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <RiTimeLine className="size-3.5 shrink-0 text-[#A5AFBE]" aria-hidden />
+          <RiTimeLine className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
           {a.publishedAt === null
             ? "Not published"
             : state === "scheduled"
@@ -172,12 +168,12 @@ function EmptyNotices({
   onCompose: () => void
 }) {
   return (
-    <div className="animate-in fade-in-0 rounded-md border border-[#E4E9EF] bg-white px-6 py-12 text-center duration-300 motion-reduce:animate-none">
-      <span className="mx-auto mb-3 grid size-11 place-items-center rounded-full bg-[#F1F4F8] text-[#8A94A2]">
+    <div className="animate-in fade-in-0 rounded-md border border-line bg-white px-6 py-12 text-center duration-300 motion-reduce:animate-none">
+      <span className="mx-auto mb-3 grid size-11 place-items-center rounded-full bg-surface-hover text-ink-muted">
         <RiMegaphoneLine className="size-5" aria-hidden />
       </span>
-      <div className="text-[13.5px] font-bold">No announcements yet</div>
-      <p className="mx-auto mt-1.5 max-w-[46ch] text-[12.5px] leading-relaxed text-[#5F6B7C]">
+      <div className="text-body-sm font-bold">No announcements yet</div>
+      <p className="mx-auto mt-1.5 max-w-[46ch] text-caption leading-relaxed text-ink-muted">
         {canPublish
           ? "Post one and it reaches everyone, a department or a single role. Schedule it and it goes live on its own."
           : "Notices from HR and your manager appear here."}
@@ -359,7 +355,7 @@ export function AnnouncementsPage() {
         {isLoading ? (
           <div className="space-y-2.5">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="rounded-md border border-[#E4E9EF] bg-white p-4 sm:p-5">
+              <div key={i} className="rounded-md border border-line bg-white p-4 sm:p-5">
                 <Skeleton className="h-4 w-1/3" />
                 <Skeleton className="mt-2.5 h-3 w-full" />
                 <Skeleton className="mt-1.5 h-3 w-2/3" />
@@ -394,13 +390,13 @@ export function AnnouncementsPage() {
                     everything an employee can see is a label for nothing. */}
                 {visibleGroups.length > 1 ? (
                   <div className="mb-2.5 flex items-center gap-2">
-                    <group.icon className="size-4 shrink-0 text-[#8A94A2]" aria-hidden />
-                    <h2 className="text-[13px] font-bold">{group.heading}</h2>
-                    <span className="rounded-full bg-[#F1F4F8] px-1.5 py-px text-[11px] font-bold text-[#5F6B7C] tabular-nums">
+                    <group.icon className="size-4 shrink-0 text-ink-muted" aria-hidden />
+                    <Heading level="section">{group.heading}</Heading>
+                    <span className="rounded-full bg-surface-hover px-1.5 py-px text-caption font-bold text-ink-muted tabular-nums">
                       {group.items.length}
                     </span>
                     {group.note ? (
-                      <span className="text-[12px] text-[#8A94A2]">{group.note}</span>
+                      <span className="text-caption text-ink-muted">{group.note}</span>
                     ) : null}
                   </div>
                 ) : null}

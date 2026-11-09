@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /**
  * Small presentational pieces shared by the page and its sections. They live
@@ -22,8 +23,8 @@ export function SectionHeading({
 }) {
   return (
     <div className={cn("pt-7 pb-3.5", className)}>
-      <h2 className="font-heading text-[16px] font-bold tracking-tight">{title}</h2>
-      {sub ? <div className="mt-0.5 max-w-xl text-[12.5px] text-[#5F6B7C]">{sub}</div> : null}
+      <Heading level="section">{title}</Heading>
+      {sub ? <div className="mt-0.5 max-w-xl text-caption text-ink-muted">{sub}</div> : null}
     </div>
   )
 }

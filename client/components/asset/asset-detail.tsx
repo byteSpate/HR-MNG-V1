@@ -16,7 +16,7 @@ import { CONDITION_LABEL, formatAssetDate, STATUS_LABEL, STATUS_TONE } from "@/c
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] font-bold text-muted-foreground uppercase">{label}</div>
+      <div className="text-caption font-bold text-muted-foreground uppercase">{label}</div>
       <div className="mt-0.5 truncate">{value}</div>
     </div>
   )

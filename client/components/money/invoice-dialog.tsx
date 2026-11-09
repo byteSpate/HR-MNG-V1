@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { vatFieldsFor } from "@/lib/vat-payload"
 import { VatChoice } from "./vat-choice"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
+import { Heading } from "@/components/ds/heading"
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -141,7 +143,7 @@ export function InvoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>{invoice ? `Edit invoice ${invoice.invoiceNumber}` : "Create invoice"}</DialogTitle>
           <DialogDescription>
@@ -152,7 +154,7 @@ export function InvoiceDialog({
         <div className="max-h-[64vh] space-y-4 overflow-y-auto pr-1">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Customer PO" htmlFor="inv-po">
-              <div className="flex h-9 items-center rounded-md border border-[#E4E9EF] bg-[#F7F9FB] px-3 text-sm">{poLabel}</div>
+              <div className="flex h-9 items-center rounded-md border border-line bg-surface-subtle px-3 text-sm">{poLabel}</div>
             </Field>
             <Field label="Invoice number" htmlFor="inv-number" hint="Required. As printed on the real invoice.">
               <Input id="inv-number" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="As printed on the invoice" />
@@ -168,10 +170,10 @@ export function InvoiceDialog({
           {lines.length > 0 ? (
             <section className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className={`text-[11.5px] font-bold tracking-wide uppercase ${TONE.muted}`}>Lines</h3>
+                <Heading level="label">Lines</Heading>
               </div>
               {lines.map((line) => (
-                <div key={line.poLineId} className="grid grid-cols-1 gap-2 rounded-md border border-[#E4E9EF] p-3 sm:grid-cols-12">
+                <div key={line.poLineId} className="grid grid-cols-1 gap-2 rounded-md border border-line p-3 sm:grid-cols-12">
                   <Input
                     aria-label={`${line.description} description`}
                     className="sm:col-span-5"
@@ -201,13 +203,13 @@ export function InvoiceDialog({
                 </div>
               ))}
 
-              <p className={`text-right text-[12.5px] ${TONE.muted}`}>
+              <p className={`text-right text-caption ${TONE.muted}`}>
                 Net {formatMoney(net.toFixed(2), "BDT")} · VAT {formatMoney(vat.toFixed(2), "BDT")} · Total{" "}
                 {formatMoney((net + vat).toFixed(2), "BDT")} (worked out again by the server on save)
               </p>
             </section>
           ) : (
-            <p className={`text-[12.5px] ${TONE.muted}`}>Nothing is left to invoice on this PO.</p>
+            <p className={`text-caption ${TONE.muted}`}>Nothing is left to invoice on this PO.</p>
           )}
 
           {error ? <FormError>{error}</FormError> : null}

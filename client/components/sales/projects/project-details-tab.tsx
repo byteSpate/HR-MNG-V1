@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { dialogWidthClass } from "@/components/ds/dialog-sizes"
 
 const PRIORITIES = ["LOW", "NORMAL", "HIGH"] as const
 
@@ -119,7 +120,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
                 id="prj-manager"
                 value={draft.managerEmployeeId}
                 onChange={(e) => setDraft({ ...draft, managerEmployeeId: e.target.value })}
-                className="h-9 w-full rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+                className="h-9 w-full rounded-md border border-line bg-white px-2 text-body-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
               >
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>{p.fullName}</option>
@@ -140,7 +141,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
                 id="prj-priority"
                 value={draft.priority}
                 onChange={(e) => setDraft({ ...draft, priority: e.target.value as Draft["priority"] })}
-                className="h-9 w-full rounded-md border border-[#E4E9EF] bg-white px-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#17191C]/20"
+                className="h-9 w-full rounded-md border border-line bg-white px-2 text-body-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
               >
                 {PRIORITIES.map((p) => (
                   <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>
@@ -155,14 +156,14 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
                 type="button"
                 disabled={!changed || save.isPending}
                 onClick={() => save.mutate()}
-                className="h-8 rounded-md bg-[#17191C] px-3 text-[12px] font-bold text-white hover:bg-[#0E1012]"
+                className="h-8 rounded-md bg-ink px-3 text-caption font-bold text-white hover:bg-ink-strong"
               >
                 {save.isPending ? "Saving…" : "Save"}
               </Button>
             </div>
           </div>
         ) : (
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-3">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-body-sm sm:grid-cols-3">
             <div><dt className={TONE.muted}>Name</dt><dd>{project.name}</dd></div>
             <div><dt className={TONE.muted}>Project Manager</dt><dd>{project.manager.fullName}</dd></div>
             <div><dt className={TONE.muted}>Start date</dt><dd>{onDate(project.startOn)}</dd></div>
@@ -172,7 +173,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
           </dl>
         )}
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-4">
+        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-body-sm sm:grid-cols-4">
           <div><dt className={TONE.muted}>Budget</dt><dd>{project.budget ? taka(project.budget) : "No budget"}</dd></div>
           <div><dt className={TONE.muted}>Value</dt><dd>{project.value ? taka(project.value) : "No value yet"}</dd></div>
           <div><dt className={TONE.muted}>Planned cost</dt><dd>{project.plannedCost ? taka(project.plannedCost) : "Not known"}</dd></div>
@@ -180,7 +181,7 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
             <div><dt className={TONE.muted}>Spent so far</dt><dd>{project.spentSoFar ? taka(project.spentSoFar) : "Not known"}</dd></div>
           ) : null}
         </dl>
-        <p className={`mt-1 text-[11.5px] ${TONE.muted}`}>
+        <p className={`mt-1 text-caption ${TONE.muted}`}>
           Planned cost is each product&apos;s total price minus its margin. It shows &quot;Not known&quot; if a product has no
           price or no margin.
         </p>
@@ -191,23 +192,23 @@ export function ProjectDetailsTab({ project, onSaved }: { project: ProjectSummar
           title="Project Team"
           action={
             mayEdit ? (
-              <Button type="button" variant="outline" onClick={() => setEditingTeam(true)} className="h-8 text-[12px] font-bold">
+              <Button type="button" variant="outline" onClick={() => setEditingTeam(true)} className="h-8 text-caption font-bold">
                 Edit team
               </Button>
             ) : null
           }
         />
         {project.team.length === 0 ? (
-          <p className={`text-[12.5px] ${TONE.muted}`}>No one is on the team yet.</p>
+          <p className={`text-caption ${TONE.muted}`}>No one is on the team yet.</p>
         ) : (
-          <ul className="divide-y divide-[#E4E9EF]">
+          <ul className="divide-y divide-line">
             {project.team.map((m) => (
               <li key={m.employeeId} className="flex flex-wrap items-center gap-2 py-2">
-                <span className="text-[13px] font-semibold">{m.fullName}</span>
+                <span className="text-body-sm font-semibold">{m.fullName}</span>
                 {!m.onAccount ? (
-                  <span className="text-[11.5px] font-semibold text-[#8A5E0C]">No longer on this account</span>
+                  <span className="text-caption font-semibold text-warning">No longer on this account</span>
                 ) : null}
-                <span className={`text-[12px] ${TONE.muted}`}>{m.responsibility ?? "No responsibility noted"}</span>
+                <span className={`text-caption ${TONE.muted}`}>{m.responsibility ?? "No responsibility noted"}</span>
               </li>
             ))}
           </ul>
@@ -260,7 +261,7 @@ function TeamDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>Edit the Project Team</DialogTitle>
           <DialogDescription>
@@ -269,7 +270,7 @@ function TeamDialog({
         </DialogHeader>
         <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
           {people.length === 0 ? (
-            <p className={`text-[12.5px] ${TONE.muted}`}>
+            <p className={`text-caption ${TONE.muted}`}>
               This account has no Owner or collaborators yet, so there is nobody to add. A Sales Admin can add them to the
               account first.
             </p>
@@ -283,7 +284,7 @@ function TeamDialog({
                   setPicked((all) => ({ ...all, [person.id]: { on: v === true, responsibility: all[person.id]?.responsibility ?? "" } }))
                 }
               />
-              <label htmlFor={`team-${person.id}`} className="text-[13px] font-semibold">
+              <label htmlFor={`team-${person.id}`} className="text-body-sm font-semibold">
                 {person.fullName}
               </label>
               <Input

@@ -92,7 +92,7 @@ export function HandOverDialog({
           ) : owners.isError ? (
             // Broken is not the same as empty: an empty list means nobody fits,
             // a failed one means we do not know yet.
-            <p role="alert" className="text-[12.5px] font-semibold text-[#B03A3A]">
+            <p role="alert" className="text-caption font-semibold text-danger">
               The list of people could not be loaded.{" "}
               <button type="button" className="underline" onClick={() => owners.refetch()}>
                 Try again
@@ -115,7 +115,7 @@ export function HandOverDialog({
         </Field>
 
         {none ? (
-          <p className="text-[12.5px]">
+          <p className="text-caption">
             Nobody on this account is in the Software Development department. A Sales Admin must
             first add a Software person to the account.
           </p>

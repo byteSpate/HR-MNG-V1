@@ -66,7 +66,7 @@ function Row({
             type="button"
             onClick={() => onToggle(node.id)}
             aria-label={isOpen ? "Collapse" : "Expand"}
-            className="rounded p-0.5 hover:bg-muted"
+            className="rounded p-0.5 pointer-coarse:p-3 hover:bg-muted"
           >
             {isOpen ? (
               <RiArrowDownSLine className="size-4" />
@@ -84,7 +84,7 @@ function Row({
         {node.cashKind === "CASH" && <RiCashLine className="size-4 text-muted-foreground" />}
         {node.cashKind === "BANK" && <RiBankLine className="size-4 text-muted-foreground" />}
         {node.systemRole && (
-          <Badge variant="outline" className="text-[10px] font-normal">
+          <Badge variant="outline" className="text-caption font-normal">
             {node.systemRole.replaceAll("_", " ").toLowerCase()}
           </Badge>
         )}

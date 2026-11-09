@@ -32,7 +32,7 @@ function formatDate(iso: string): string {
 function approvalCell(href: string, content: ReactNode): TableCell {
   return {
     node: (
-      <Link href={href} className="block w-full cursor-pointer truncate">
+      <Link href={href} className="block w-full cursor-pointer truncate pointer-coarse:min-h-10 pointer-coarse:min-w-10 pointer-coarse:py-3">
         {content}
       </Link>
     ),
@@ -60,7 +60,7 @@ function rowCells(dealsBase: string, row: WaitingForApprovalRow): TableCell[] {
           <span>{formatMoney(row.amount, "BDT")}</span>
           {/* Typed VAT is the only VAT on the document that no VAT code
               explains, so the approver has to see it (spec 2026-09-28 §1.6). */}
-          <span className="rounded bg-[#FDF8EE] px-1.5 py-0.5 text-[11.5px] font-semibold text-[#8A5E0C]">
+          <span className="rounded bg-warning-tint px-1.5 py-0.5 text-caption font-semibold text-warning">
             Typed VAT {row.typedVatRates.map((r) => `${r}%`).join(", ")}
           </span>
         </span>

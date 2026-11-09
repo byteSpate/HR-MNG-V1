@@ -35,7 +35,7 @@ function PasswordInput({
         aria-pressed={visible}
         tabIndex={props.disabled ? -1 : 0}
         disabled={props.disabled}
-        className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r text-[#8B95A3] transition-colors hover:text-[#17191C] focus-visible:ring-2 focus-visible:ring-[#17191C] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+        className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r text-ink-muted transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
       >
         <Icon className="size-4" aria-hidden="true" />
       </button>

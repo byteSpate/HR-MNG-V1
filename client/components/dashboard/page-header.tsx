@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import type { RemixiconComponentType } from "@remixicon/react"
 
 import { Button } from "@/components/ui/button"
+import { Heading } from "@/components/ds/heading"
 
 export function PageHeader({
   kicker,
@@ -42,17 +43,18 @@ export function PageHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 pt-5 pb-4 sm:items-end sm:pt-7 sm:pb-5.5">
       <div>
-        <div className="mb-1.5 text-[11.5px] font-bold tracking-[1.1px] text-[#5F6B7C] uppercase">{kicker}</div>
-        <h1 className="font-heading mb-1 text-[20px] font-bold tracking-tight sm:text-[23px]">{title}</h1>
-        <div className="text-[13px] text-[#5F6B7C]">{sub}</div>
+        <div className="mb-1.5 text-caption font-bold tracking-[1.1px] text-ink-muted uppercase">{kicker}</div>
+        {/* Sizes kept as they were until the owner approves the new type scale (Phase 3, Task 1). */}
+        <Heading level="page" className="mb-1">{title}</Heading>
+        <div className="text-body-sm text-ink-muted">{sub}</div>
       </div>
       {aside || cta ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
           {aside}
           {cta ? (
             <Button
               onClick={onCta}
-              className="h-auto shrink-0 rounded-md bg-[#17191C] px-4 py-2.5 text-[13px] font-bold text-white transition-transform hover:bg-[#0E1012] active:translate-y-px motion-reduce:transition-none"
+              className="h-auto shrink-0 rounded-md bg-ink px-4 py-2.5 text-body-sm font-bold text-white transition-transform hover:bg-ink-strong active:translate-y-px motion-reduce:transition-none"
             >
               {CtaIcon ? <CtaIcon className="size-4" aria-hidden /> : null}
               {cta}
@@ -93,19 +95,19 @@ export function MiniStat({
     <div
       className={
         moving
-          ? "rise-in rounded-md border border-[#E4E9EF] bg-white px-5 py-4 transition-[transform,box-shadow] duration-180 ease-out hover:-translate-y-px hover:shadow-[0_8px_20px_-12px_rgba(28,39,51,0.28)] motion-reduce:transition-none"
-          : "rounded-md border border-[#E4E9EF] bg-white px-5 py-4"
+          ? "rise-in rounded-md border border-line bg-white px-5 py-4 transition-[transform,box-shadow] duration-180 ease-out hover:-translate-y-px hover:shadow-[0_8px_20px_-12px_rgba(28,39,51,0.28)] motion-reduce:transition-none"
+          : "rounded-md border border-line bg-white px-5 py-4"
       }
       style={moving ? { animationDelay: `${Math.min(index, 6) * 40}ms` } : undefined}
     >
       <div className="flex items-center gap-1.5">
-        {Icon ? <Icon className="size-3.5 shrink-0 text-[#8A94A2]" aria-hidden /> : null}
-        <div className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">{label}</div>
+        {Icon ? <Icon className="size-3.5 shrink-0 text-ink-muted" aria-hidden /> : null}
+        <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">{label}</div>
       </div>
-      <div className="font-heading mt-1.5 text-[22px] font-bold tracking-tight tabular-nums">
+      <div className="font-heading mt-1.5 text-heading font-bold tracking-tight tabular-nums">
         {value}
       </div>
-      <div className="mt-0.5 text-xs text-[#5F6B7C]">{sub}</div>
+      <div className="mt-0.5 text-xs text-ink-muted">{sub}</div>
     </div>
   )
 }

@@ -13,6 +13,7 @@ import { PeriodControl } from "@/components/statements/period-control"
 import { presetRange, type Preset, type Range } from "@/components/statements/statements-shared"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { Heading } from "@/components/ds/heading"
 
 /** A bordered card with a big number, matching `money-numbers.tsx`'s `Tile` —
  *  not imported from there since that one is private to its own file. */
@@ -25,12 +26,12 @@ function less(total: string, typed: string): string {
 
 function Tile({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
-      <div className="text-[11.5px] font-bold tracking-wide text-[#5F6B7C] uppercase">{label}</div>
+    <div className="rounded-md border border-line bg-white px-5 py-4">
+      <div className="text-caption font-bold tracking-wide text-ink-muted uppercase">{label}</div>
       <div
         className={cn(
-          "font-heading mt-1.5 text-[20px] font-bold tracking-tight tabular-nums sm:text-[22px]",
-          danger ? "text-[#B03A3A]" : "text-[#17191C]"
+          "font-heading mt-1.5 text-title font-bold tracking-tight tabular-nums sm:text-heading",
+          danger ? "text-danger" : "text-ink"
         )}
       >
         {value}
@@ -43,7 +44,7 @@ function VatSummarySkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-md border border-[#E4E9EF] bg-white px-5 py-4">
+        <div key={i} className="rounded-md border border-line bg-white px-5 py-4">
           <Skeleton className="h-3 w-20" />
           <Skeleton className="mt-2.5 h-6 w-24" />
         </div>
@@ -135,18 +136,18 @@ export function VatSummaryPage() {
               the typed part, worked out here rather than asked for separately:
               two queries for one subtraction would let the two halves drift
               apart, and then neither would be the total. */}
-          <div className="mt-4 rounded-md border border-[#E4E9EF] bg-white p-4">
-            <h3 className="text-[12.5px] font-bold">Where the VAT came from</h3>
-            <table className="mt-2 w-full text-[13px]">
+          <div className="mt-4 rounded-md border border-line bg-white p-4">
+            <Heading level="card">Where the VAT came from</Heading>
+            <table className="mt-2 w-full text-body-sm">
               <thead>
-                <tr className="text-left text-[11.5px]">
+                <tr className="text-left text-caption">
                   <th scope="col" className={`py-1 font-semibold ${TONE.muted}`}>Source</th>
                   <th scope="col" className={`py-1 text-right font-semibold ${TONE.muted}`}>On invoices</th>
                   <th scope="col" className={`py-1 text-right font-semibold ${TONE.muted}`}>On supplier bills</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-t border-[#EEF1F5]">
+                <tr className="border-t border-surface-sunken">
                   <th scope="row" className="py-1.5 text-left font-semibold">From a VAT code</th>
                   <td className="py-1.5 text-right tabular-nums">
                     {formatMoney(less(summary.data.onInvoices, summary.data.typedOnInvoices), "BDT")}
@@ -155,24 +156,24 @@ export function VatSummaryPage() {
                     {formatMoney(less(summary.data.onBills, summary.data.typedOnBills), "BDT")}
                   </td>
                 </tr>
-                <tr className="border-t border-[#EEF1F5]">
-                  <th scope="row" className="py-1.5 text-left font-semibold text-[#8A5E0C]">Typed by hand</th>
+                <tr className="border-t border-surface-sunken">
+                  <th scope="row" className="py-1.5 text-left font-semibold text-warning">Typed by hand</th>
                   <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.typedOnInvoices, "BDT")}</td>
                   <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.typedOnBills, "BDT")}</td>
                 </tr>
-                <tr className="border-t border-[#E4E9EF] font-bold">
+                <tr className="border-t border-line font-bold">
                   <th scope="row" className="py-1.5 text-left">Total</th>
                   <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.onInvoices, "BDT")}</td>
                   <td className="py-1.5 text-right tabular-nums">{formatMoney(summary.data.onBills, "BDT")}</td>
                 </tr>
               </tbody>
             </table>
-            <p className={cn("mt-2 text-[12px]", TONE.muted)}>
+            <p className={cn("mt-2 text-caption", TONE.muted)}>
               These amounts are already inside the totals above, not extra. &quot;Typed by hand&quot; is the VAT % someone
               typed on a line rather than taking from a VAT code in Settings.
             </p>
           </div>
-          <p className={cn("text-[12px]", TONE.muted)}>
+          <p className={cn("text-caption", TONE.muted)}>
             This is not a VAT return. The app records VAT; it does not file it.
           </p>
         </div>

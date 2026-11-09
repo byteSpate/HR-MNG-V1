@@ -96,12 +96,12 @@ export function PayDialog({
               value={paymentRef}
               onChange={(e) => setPaymentRef(e.target.value)}
             />
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
+            <p className="mt-1.5 text-caption text-muted-foreground">
               A payment nobody can trace back to a bank statement is a payment nobody can verify.
             </p>
           </div>
 
-          {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+          {formError ? <p className="text-body-sm font-semibold text-destructive">{formError}</p> : null}
         </div>
 
         <DialogFooter>
