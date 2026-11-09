@@ -28,7 +28,7 @@ import { elapsedHours, officeInstantOf, officeToday } from "../modules/attendanc
 import { formatDateOnly } from "../utils/dates"
 
 export async function runAutoCloseOpenDays(): Promise<number> {
-  // Today: the job runs at 21:59, just before the 22:00 attendance report, so the
+  // Today: the job runs at 22:05, just before the 22:10 attendance report, so the
   // report already counts these days as closed.
   const day = officeToday()
 

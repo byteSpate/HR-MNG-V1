@@ -29,8 +29,8 @@ import {
   runMonthlyAttendanceReportEmail,
 } from "./attendance-report-email.job"
 
-/** 22:00 on Saturday 3 Oct 2026 in Dhaka is 16:00 on the 3rd in UTC. */
-const DAILY_NOW = new Date("2026-10-03T16:00:00.000Z")
+/** 22:10 on Saturday 3 Oct 2026 in Dhaka is 16:10 on the 3rd in UTC. */
+const DAILY_NOW = new Date("2026-10-03T16:10:00.000Z")
 /** 08:00 on Thursday 1 Oct 2026 in Dhaka is 02:00 UTC the same day. */
 const MONTHLY_NOW = new Date("2026-10-01T02:00:00.000Z")
 

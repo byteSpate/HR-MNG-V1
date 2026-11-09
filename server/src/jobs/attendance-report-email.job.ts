@@ -1,9 +1,9 @@
 /**
  * The attendance report, emailed to every Super Admin.
  *
- * Daily at 22:00 for today, and monthly at 08:00 on the 1st for the month
+ * Daily at 22:10 for today, and monthly at 08:00 on the 1st for the month
  * that just ended. The daily one runs in the evening, so it describes the day that
- * is ending. It runs at 22:00, one minute after the 21:59 auto check-out, so
+ * is ending. It runs at 22:10, five minutes after the 22:05 auto check-out, so
  * a forgotten check-out is already closed when the day is counted.
  *
  * The report is built once and sent to everybody, through the same
@@ -12,7 +12,7 @@
  * the other jobs, so they can be run by hand or in a test.
  *
  * Safe to run twice. Anybody who already has the email for that day (or month)
- * is skipped, so a restart at 22:01 sends nothing new. A send that failed left
+ * is skipped, so a restart at 22:11 sends nothing new. A send that failed left
  * a row with `error` set, and that person is tried again.
  */
 

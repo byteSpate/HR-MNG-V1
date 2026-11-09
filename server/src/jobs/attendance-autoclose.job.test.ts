@@ -28,8 +28,8 @@ import { runAutoCloseOpenDays } from "./attendance-autoclose.job"
 const tx = (prisma as unknown as { __tx: Record<string, Record<string, ReturnType<typeof vi.fn>>> })
   .__tx
 
-/** 21:59 on 2026-08-18 in Dhaka (UTC+6), the moment the job runs. */
-const NOW = new Date("2026-08-18T15:59:00.000Z")
+/** 22:05 on 2026-08-18 in Dhaka (UTC+6), the moment the job runs. */
+const NOW = new Date("2026-08-18T16:05:00.000Z")
 const TODAY = parseDateOnly("2026-08-18")
 
 const GENERAL = {
