@@ -115,6 +115,13 @@ describe("closeTargetFor", () => {
     ).toEqual({ entity: "ATTENDANCE", entityIds: ["a1", "a2"] })
   })
 
+  it("closes a task's due and late reminders when the task is done", () => {
+    expect(closeTargetFor(ev("sales.task.completed", { entity: "SALES_TASK", entityId: "t-1" }))).toEqual({
+      entity: "SALES_TASK",
+      entityIds: ["t-1"],
+    })
+  })
+
   it("closes the asset hand-over item when the employee accepts it", () => {
     // `asset.assigned` is filed under ASSET; `asset.acknowledged` under
     // ASSET_ASSIGNMENT with the same asset id. The close must hit the first.
