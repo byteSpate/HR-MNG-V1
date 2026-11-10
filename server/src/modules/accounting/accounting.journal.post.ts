@@ -16,7 +16,8 @@ import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { nextJournalNo } from "./accounting.journal.service"
 import { earliestOpenPeriodFrom, monthLabel } from "./accounting.period.service"
-import { assertBalanced, invertLines } from "./accounting.utils"
+import { invertedLineRows } from "./accounting.reversal"
+import { assertBalanced } from "./accounting.utils"
 import { lockYearAfterClosing } from "./accounting.yearend"
 import type { ReverseJournalInput, RejectJournalInput } from "./accounting.validators"
 
@@ -70,19 +71,23 @@ export async function postApprovedJournal(
   assertBalanced(journal.lines)
 
   const now = new Date()
-  const posted = await tx.journal.update({
-    where: { id: journalId },
-    data: {
-      status: "POSTED",
-      approvedBy: actor.sub,
-      approvedAt: now,
-      postedAt: now,
-      rejectionNote: null,
-      // Posted straight from a draft: record that the same person sent it in,
-      // so the register never shows a posted journal with no submitter.
-      ...(postingDraft ? { submittedBy: actor.sub, submittedAt: now } : {}),
-    },
-  })
+  const data = {
+    status: "POSTED" as const,
+    approvedBy: actor.sub,
+    approvedAt: now,
+    postedAt: now,
+    rejectionNote: null,
+    // Posted straight from a draft: record that the same person sent it in,
+    // so the register never shows a posted journal with no submitter.
+    ...(postingDraft ? { submittedBy: actor.sub, submittedAt: now } : {}),
+  }
+  // Only if the status is still the one read above. Two people pressing
+  // Approve at the same moment both pass the check; Postgres lets only one
+  // of these updates match, and the other is told plainly instead of
+  // posting a second time and writing a second set of audit rows.
+  await claimStatus(tx, journal, data)
+  const { lines: _lines, ...rest } = journal
+  const posted: Journal = { ...rest, ...data }
 
   // Two rows, not one. "Who approved this?" and "when did it hit the
   // ledger?" are different questions, and a single row conflates them.
@@ -110,6 +115,28 @@ export async function postApprovedJournal(
   return posted
 }
 
+/**
+ * Moves a journal on from the status it had when it was read, and refuses if
+ * someone else moved it first. `updateMany` with the old status in the filter
+ * is one UPDATE ... WHERE, so the check and the change cannot be split.
+ */
+async function claimStatus(
+  tx: Prisma.TransactionClient,
+  journal: Pick<Journal, "id" | "journalNo" | "status">,
+  data: Prisma.JournalUpdateManyMutationInput
+): Promise<void> {
+  const { count } = await tx.journal.updateMany({
+    where: { id: journal.id, status: journal.status },
+    data,
+  })
+  if (count !== 1) {
+    throw new AppError(
+      409,
+      `Someone else changed ${journal.journalNo} a moment ago. Open it again to see where it is now.`
+    )
+  }
+}
+
 export function approveJournal(id: string, actor: AccessTokenPayload): Promise<Journal> {
   return prisma.$transaction(async (tx) => {
     await postApprovedJournal(tx, id, actor)
@@ -129,17 +156,16 @@ export function rejectJournal(
       throw new AppError(409, `${journal.journalNo} is not awaiting approval`)
     }
 
-    const updated = await tx.journal.update({
-      where: { id },
-      data: {
-        status: "DRAFT",
-        rejectionNote: input.note,
-        // Cleared so the register does not show it as submitted while it
-        // sits back on the author's desk.
-        submittedBy: null,
-        submittedAt: null,
-      },
-    })
+    const data = {
+      status: "DRAFT" as const,
+      rejectionNote: input.note,
+      // Cleared so the register does not show it as submitted while it
+      // sits back on the author's desk.
+      submittedBy: null,
+      submittedAt: null,
+    }
+    await claimStatus(tx, journal, data)
+    const updated: Journal = { ...journal, ...data }
 
     await writeAudit(tx, {
       entity: "JOURNAL",
@@ -202,19 +228,17 @@ export function reverseJournal(
       date = target.startDate
     }
 
-    const invertedLines = invertLines(original.lines).map((l, i) => ({
-      accountId: l.accountId,
-      debit: l.debit,
-      credit: l.credit,
-      narration: l.narration,
-      departmentId: l.departmentId,
-      employeeId: l.employeeId,
-      sourceCurrency: l.sourceCurrency,
-      sourceAmount: l.sourceAmount,
-      fxRateToBdt: l.fxRateToBdt,
-      sortOrder: i,
-    }))
+    // The shared helper, so the Opportunity, customer and supplier go across
+    // with every line. Without them the main ledger netted to zero while the
+    // Opportunity's costs and the customer and supplier balances still
+    // counted the original.
+    const invertedLines = invertedLineRows(original.lines)
     assertBalanced(invertedLines)
+
+    // Claimed before the reversal is created. Two people reversing at once
+    // would otherwise reach the create, where the second hits the unique
+    // `reversesId` and gets a server error instead of a plain answer.
+    await claimStatus(tx, original, { status: "REVERSED" })
 
     const reversal = await tx.journal.create({
       data: {
@@ -234,8 +258,6 @@ export function reverseJournal(
         lines: { createMany: { data: invertedLines } },
       },
     })
-
-    await tx.journal.update({ where: { id }, data: { status: "REVERSED" } })
 
     await writeAudit(tx, {
       entity: "JOURNAL",

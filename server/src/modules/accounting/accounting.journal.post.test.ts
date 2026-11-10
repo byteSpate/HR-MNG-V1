@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../config/prisma", () => {
   const tx = {
     journal: {
-      create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(),
+      create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(),
     },
     journalLine: { createMany: vi.fn(), findMany: vi.fn(), groupBy: vi.fn() },
     accountingPeriod: { findUnique: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn() },
@@ -69,7 +69,7 @@ beforeEach(() => {
   tx.accountingPeriod.findUnique.mockResolvedValue({ id: "p-1", year: 2026, month: 7, status: "OPEN" })
   tx.accountingPeriod.findFirst.mockResolvedValue({ id: "p-1", year: 2026, month: 7, status: "OPEN" })
   tx.journal.findUnique.mockResolvedValue(pending)
-  tx.journal.update.mockResolvedValue({ ...pending, status: "POSTED" })
+  tx.journal.updateMany.mockResolvedValue({ count: 1 })
   tx.journal.create.mockResolvedValue({ id: "j-2", journalNo: "BS-JV-00002" })
 
   tx.financialYear.findUnique.mockResolvedValue({
@@ -87,9 +87,6 @@ beforeEach(() => {
 /** Puts a CLOSING journal in front of `approveJournal`, ready to post. */
 function pendingClosing() {
   tx.journal.findUnique.mockResolvedValue({ ...pending, type: "CLOSING", lines: closingLines })
-  tx.journal.update.mockResolvedValue({
-    ...pending, type: "CLOSING", status: "POSTED", periodId: "p-1",
-  })
   tx.accountingPeriod.findUnique.mockResolvedValue({
     id: "p-1", year: 2027, month: 6, status: "OPEN", financialYearId: "fy-1",
   })
@@ -99,7 +96,7 @@ describe("approveJournal", () => {
   it("posts in the same transaction, stamping approvedBy and postedAt together", async () => {
     await approveJournal("j-1", admin)
 
-    expect(tx.journal.update).toHaveBeenCalledWith(
+    expect(tx.journal.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: "POSTED",
@@ -116,7 +113,7 @@ describe("approveJournal", () => {
 
     await expect(approveJournal("j-1", admin)).resolves.toBeDefined()
 
-    expect(tx.journal.update).toHaveBeenCalled()
+    expect(tx.journal.updateMany).toHaveBeenCalled()
   })
 
   it("lets a Super Admin post a draft straight away, recording them as the submitter too", async () => {
@@ -124,7 +121,7 @@ describe("approveJournal", () => {
 
     await expect(approveJournal("j-1", admin)).resolves.toBeDefined()
 
-    expect(tx.journal.update).toHaveBeenCalledWith(
+    expect(tx.journal.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: "POSTED",
@@ -140,7 +137,7 @@ describe("approveJournal", () => {
     tx.journal.findUnique.mockResolvedValue({ ...pending, status: "DRAFT" })
 
     await expect(approveJournal("j-1", finance)).rejects.toMatchObject({ statusCode: 409 })
-    expect(tx.journal.update).not.toHaveBeenCalled()
+    expect(tx.journal.updateMany).not.toHaveBeenCalled()
   })
 
   it("lets a different Super Admin approve a Super Admin's journal", async () => {
@@ -153,6 +150,25 @@ describe("approveJournal", () => {
     tx.journal.findUnique.mockResolvedValue({ ...pending, status: "POSTED" })
 
     await expect(approveJournal("j-1", admin)).rejects.toMatchObject({ statusCode: 409 })
+  })
+
+  it("posts only if the journal is still awaiting approval when the update runs", async () => {
+    await approveJournal("j-1", admin)
+
+    expect(tx.journal.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "j-1", status: "PENDING_APPROVAL" } })
+    )
+  })
+
+  it("409s, with no audit rows, when another approval got there first", async () => {
+    // Both read PENDING_APPROVAL; the other one's UPDATE matched, so ours matches nothing.
+    tx.journal.updateMany.mockResolvedValue({ count: 0 })
+
+    await expect(approveJournal("j-1", admin)).rejects.toMatchObject({
+      statusCode: 409,
+      message: expect.stringContaining("Someone else changed BS-JV-00001"),
+    })
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
   })
 
   it("400s when the period closed between submission and approval", async () => {
@@ -225,11 +241,9 @@ describe("approveJournal", () => {
 
 describe("rejectJournal", () => {
   it("returns the journal to DRAFT with the note attached", async () => {
-    tx.journal.update.mockResolvedValue({ ...pending, status: "DRAFT" })
-
     await rejectJournal("j-1", { note: "Rent belongs in 5206, not 5207" }, admin)
 
-    expect(tx.journal.update).toHaveBeenCalledWith(
+    expect(tx.journal.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: "DRAFT",
@@ -247,6 +261,18 @@ describe("rejectJournal", () => {
     await expect(rejectJournal("j-1", { note: "no" }, admin)).rejects.toMatchObject({
       statusCode: 409,
     })
+  })
+
+  it("409s, with no audit row, when it was approved a moment before", async () => {
+    tx.journal.updateMany.mockResolvedValue({ count: 0 })
+
+    await expect(rejectJournal("j-1", { note: "no" }, admin)).rejects.toMatchObject({
+      statusCode: 409,
+    })
+    expect(tx.journal.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "j-1", status: "PENDING_APPROVAL" } })
+    )
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
   })
 })
 
@@ -314,9 +340,9 @@ describe("reverseJournal", () => {
   it("marks the original REVERSED", async () => {
     await reverseJournal("j-1", { reason: "Wrong account" }, finance)
 
-    expect(tx.journal.update).toHaveBeenCalledWith(
+    expect(tx.journal.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "j-1" },
+        where: { id: "j-1", status: "POSTED" },
         data: expect.objectContaining({ status: "REVERSED" }),
       })
     )
@@ -346,5 +372,34 @@ describe("reverseJournal", () => {
     const debit = createdLines.reduce((s: any, l: any) => s.plus(l.debit), new Prisma.Decimal(0))
     const credit = createdLines.reduce((s: any, l: any) => s.plus(l.credit), new Prisma.Decimal(0))
     expect(debit.toFixed(2)).toBe(credit.toFixed(2))
+  })
+
+  it("keeps the Opportunity, customer and supplier on every reversed line", async () => {
+    // An invoice journal: the receivable carries the customer, the cost line
+    // the supplier, and both the Opportunity. Dropping them left the deal's
+    // costs and the customer and supplier balances counting the original.
+    tx.journal.findUnique.mockResolvedValue({
+      ...posted,
+      lines: [
+        { ...lines[0], opportunityId: "opp-1", customerId: "cust-1", supplierId: null },
+        { ...lines[1], opportunityId: "opp-1", customerId: null, supplierId: "sup-1" },
+      ],
+    })
+
+    await reverseJournal("j-1", { reason: "Billed the wrong customer" }, finance)
+
+    const createdLines = tx.journal.create.mock.calls[0][0].data.lines.createMany.data
+    expect(createdLines[0]).toMatchObject({ opportunityId: "opp-1", customerId: "cust-1", supplierId: null })
+    expect(createdLines[1]).toMatchObject({ opportunityId: "opp-1", customerId: null, supplierId: "sup-1" })
+  })
+
+  it("409s, creating nothing, when another reversal got there first", async () => {
+    tx.journal.updateMany.mockResolvedValue({ count: 0 })
+
+    await expect(reverseJournal("j-1", { reason: "Wrong account" }, finance)).rejects.toMatchObject({
+      statusCode: 409,
+    })
+    expect(tx.journal.create).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
   })
 })
