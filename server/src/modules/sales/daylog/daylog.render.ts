@@ -18,7 +18,9 @@ export interface DayLogTask {
   type: SalesTaskType
   /** The account and the Opportunity number, when the task has them. */
   about: string | null
-  /** What came of it, as written when it was marked done. */
+  /** The Details box: who they spoke to, what was agreed. Where "I did this" puts its notes. */
+  detail: string | null
+  /** What came of it, as written when a planned task was marked done. */
   outcome: string | null
 }
 
@@ -150,7 +152,7 @@ function note(value: string | null): string {
 function taskItem(task: DayLogTask): string {
   return `<li><div class="row"><span class="title">${t(task.title)}</span><span class="tag">${t(TASK_TYPE_LABEL[task.type])}</span></div>${
     task.about ? `<p class="about">${t(task.about)}</p>` : ""
-  }${note(task.outcome)}</li>`
+  }${note(task.detail)}${note(task.outcome)}</li>`
 }
 
 function meetingItem(m: DayLogMeeting): string {

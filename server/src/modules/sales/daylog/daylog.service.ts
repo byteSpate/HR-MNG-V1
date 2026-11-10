@@ -45,6 +45,7 @@ export async function getDayLog(query: DayLogQuery, actor: AccessTokenPayload): 
           select: {
             title: true,
             type: true,
+            detail: true,
             outcome: true,
             completedAt: true,
             salesAccount: { select: { name: true } },
@@ -105,6 +106,7 @@ export async function getDayLog(query: DayLogQuery, actor: AccessTokenPayload): 
       title: task.title,
       type: task.type,
       about: [task.salesAccount?.name, task.opportunity?.serial].filter(Boolean).join(" · ") || null,
+      detail: task.detail,
       outcome: task.outcome,
     })
   }

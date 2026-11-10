@@ -7,7 +7,7 @@ const OPTIONS = { companyName: "Byte Spate", logo: null, madeOn: "2026-11-10" }
 const empty = { tasks: [], meetings: [], closed: [] }
 
 const busy: Omit<DayLogDay, "date"> = {
-  tasks: [{ title: "Sent the quote", type: "QUOTATION_SENT", about: "Bengal Group · OPP-0012", outcome: "They will reply on Sunday" }],
+  tasks: [{ title: "Sent the quote", type: "QUOTATION_SENT", about: "Bengal Group · OPP-0012", detail: "Spoke to the IT head", outcome: "They will reply on Sunday" }],
   meetings: [{ time: "11:30", title: "Firewall review", accountName: "Bengal Group", opportunitySerial: null, outcome: null }],
   closed: [{ status: "WON", serial: "OPP-0012", name: "Firewall Upgrade", accountName: "Bengal Group", amount: "5,20,000.00", reason: null }],
 }
@@ -58,6 +58,8 @@ describe("renderDayLogHtml", () => {
     expect(html).toContain("Tuesday, 10 November 2026")
     expect(html).toContain("Sent the quote")
     expect(html).toContain("Quotation sent")
+    expect(html).toContain("Spoke to the IT head")
+    expect(html).toContain("They will reply on Sunday")
     expect(html).toContain("Firewall review")
     expect(html).toContain("11:30")
     expect(html).toContain("OPP-0012 Firewall Upgrade")
@@ -73,7 +75,7 @@ describe("renderDayLogHtml", () => {
 
   it("escapes what people typed", () => {
     const html = renderDayLogHtml(
-      { ...log, days: [{ date: "2026-11-10", ...empty, tasks: [{ title: "<script>x</script>", type: "OTHER", about: null, outcome: null }] }] },
+      { ...log, days: [{ date: "2026-11-10", ...empty, tasks: [{ title: "<script>x</script>", type: "OTHER", about: null, detail: null, outcome: null }] }] },
       OPTIONS
     )
     expect(html).not.toContain("<script>x</script>")

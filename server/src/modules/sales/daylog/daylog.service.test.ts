@@ -48,7 +48,7 @@ describe("getDayLog", () => {
   it("puts each item on its office day", async () => {
     // 19:00 UTC on the 9th is 01:00 on the 10th in Dhaka.
     m.salesTask.findMany.mockResolvedValue([{
-      title: "Sent the quote", type: "QUOTATION_SENT", outcome: null,
+      title: "Sent the quote", type: "QUOTATION_SENT", detail: "Two units", outcome: null,
       completedAt: new Date("2026-11-09T19:00:00.000Z"),
       salesAccount: { name: "Bengal Group" }, opportunity: { serial: "OPP-0012" },
     }])
@@ -66,7 +66,7 @@ describe("getDayLog", () => {
     expect(log.personName).toBe("Rahim Uddin")
     expect(log.days).toEqual([{
       date: "2026-11-10",
-      tasks: [{ title: "Sent the quote", type: "QUOTATION_SENT", about: "Bengal Group · OPP-0012", outcome: null }],
+      tasks: [{ title: "Sent the quote", type: "QUOTATION_SENT", about: "Bengal Group · OPP-0012", detail: "Two units", outcome: null }],
       meetings: [{ time: "11:30", title: "Firewall review", accountName: "Bengal Group", opportunitySerial: null, outcome: "Went well" }],
       closed: [{
         status: "LOST", serial: "OPP-0012", name: "Firewall Upgrade", accountName: "Bengal Group",
