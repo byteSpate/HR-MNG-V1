@@ -34,6 +34,7 @@ model User {
   passwordResetTokens   PasswordResetToken[]
   emailChangeRequests   EmailChangeRequest[]
   salesCommentsAuthored SalesComment[]
+  notifications         Notification[]
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 }
@@ -1232,6 +1233,8 @@ model Event {
 
   createdAt DateTime @default(now())
 
+  notifications Notification[]
+
   @@index([createdAt])
   @@index([subjectEmployeeId, createdAt])
   @@index([managerEmployeeId, createdAt])
@@ -1244,6 +1247,55 @@ enum EventSeverity {
   SUCCESS
   WARNING
   ERROR
+}
+
+// ── NOTIFICATIONS ─────────────────────────────
+//
+// One row per person per thing that is about them (PRIMARY) or waiting for
+// them (IMPORTANT). `Event` is the fact, resolved by audience rules at read;
+// this is the per-person copy that can be read, counted and closed. Company
+// activity gets no rows: the All tab reads it from `Event`.
+
+enum NotificationTab {
+  IMPORTANT
+  PRIMARY
+}
+
+model Notification {
+  id     String          @id @default(uuid())
+  userId String
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tab    NotificationTab
+  // The event type ("leave.requested") or a reminder kind ("reminder.meeting_30min").
+  kind   String
+
+  // Null for a reminder, which comes from a job rather than an event.
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // What it is about. A decision closes every open IMPORTANT row with the
+  // same pair, for every approver at once.
+  entity   String
+  entityId String
+
+  title String
+  meta  String?
+  href  String?
+
+  // Reminders only. Unique, so a job that runs twice writes one row.
+  dedupeKey String? @unique
+
+  // A scheduled announcement's rows wait for its publish time.
+  visibleFrom DateTime  @default(now())
+  readAt      DateTime?
+  // Someone already decided the request. Not counted, still listed as done.
+  closedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([eventId, userId])
+  @@index([userId, closedAt, readAt])
+  @@index([userId, createdAt])
+  @@index([entity, entityId, tab])
 }
 
 // ── ASSETS ────────────────────────────────────
