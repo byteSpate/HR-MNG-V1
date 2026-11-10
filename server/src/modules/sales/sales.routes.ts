@@ -13,6 +13,7 @@ import collaboratorRouter from "./accounts/collaborator.routes"
 import commentRouter from "./comments/comment.routes"
 import contactsRouter from "./contacts/contacts.routes"
 import dashboardRouter from "./dashboard/dashboard.routes"
+import dayLogRouter from "./daylog/daylog.routes"
 import funnelRouter from "./funnel/funnel.routes"
 import heatmapRouter from "./heatmap/heatmap.routes"
 import meetingRouter from "./meetings/meeting.routes"
@@ -54,6 +55,10 @@ router.use(commentRouter)
 router.use(meetingRouter)
 
 router.use(taskRouter)
+
+// The work log picture (owner, 2026-11-10). Only `/day-log/...`, which no
+// other router uses, so nothing is shadowed in either direction.
+router.use(dayLogRouter)
 
 router.use(minutesRouter)
 

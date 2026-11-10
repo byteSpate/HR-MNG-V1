@@ -86,6 +86,28 @@ export async function renderPdf(html: string, options: PDFOptions = {}): Promise
 }
 
 /**
+ * Renders a complete HTML document to one PNG picture, as tall as the page.
+ * Used for the Sales work log, which people send on as an image. The same
+ * shared browser and the same limit as `renderPdf`.
+ *
+ * `deviceScaleFactor: 2` so the text stays sharp on a phone screen.
+ */
+export async function renderPng(html: string, width: number): Promise<Buffer> {
+  return limit(async () => {
+    const page = await (await getBrowser()).newPage()
+    try {
+      // A short viewport: `fullPage` grows it to fit the content, but never
+      // shrinks it, so a tall one leaves white space under a short log.
+      await page.setViewport({ width, height: 100, deviceScaleFactor: 2 })
+      await page.setContent(html, { waitUntil: "load" })
+      return Buffer.from(await page.screenshot({ type: "png", fullPage: true }))
+    } finally {
+      await page.close().catch(() => undefined)
+    }
+  })
+}
+
+/**
  * The logo and the seal, as `data:` URIs.
  *
  * Embedded rather than linked. `page.setContent` gives the document no base

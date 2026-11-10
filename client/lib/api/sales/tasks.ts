@@ -1,4 +1,4 @@
-import { apiFetch } from "../client"
+import { apiFetch, apiFetchBlob } from "../client"
 import type {
   ChangeTaskStatusBody,
   CreateTaskBody,
@@ -52,4 +52,13 @@ export function changeTaskStatus(
     accessToken,
     body: JSON.stringify(body),
   })
+}
+
+/**
+ * The work log as a PNG picture, always the caller's own (owner, 2026-11-10).
+ * `from` and `to` are YYYY-MM-DD, one day or up to one week.
+ */
+export async function getDayLogImage(accessToken: string, range: { from: string; to: string }): Promise<Blob> {
+  const params = new URLSearchParams(range)
+  return (await apiFetchBlob(`/api/sales/day-log/image?${params}`, { accessToken })).blob
 }
