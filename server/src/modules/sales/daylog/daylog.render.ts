@@ -182,25 +182,30 @@ function daySection(day: DayLogDay): string {
 const STYLES = `
   * { box-sizing: border-box; }
   body { margin: 0; padding: 0 0 20px; width: 820px; background: #FFFFFF; color: #17191C;
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.45; }
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.5; }
   .wrap { padding: 0 14px; }
-  .summary { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; background: #F3F5F8; font-weight: 600; }
-  section { margin-bottom: 14px; border: 1px solid #DDE2E9; border-radius: 10px; padding: 12px 16px; }
-  h2 { margin: 0 0 8px; font-size: 15px; }
-  h3 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #4A5565; }
+  .summary { margin: 0 0 16px; padding: 12px 16px; border-radius: 8px; background: #F3F5F8; font-size: 17px; font-weight: 700; }
+  section { margin-bottom: 14px; border: 1px solid #DDE2E9; border-radius: 10px; padding: 14px 18px; }
+  h2 { margin: 0 0 8px; font-size: 20px; }
+  h3 { margin: 12px 0 4px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: #4A5565; }
   ul { margin: 0; padding: 0; list-style: none; }
-  li { padding: 7px 0; border-top: 1px solid #EEF1F5; }
+  li { padding: 9px 0; border-top: 1px solid #EEF1F5; }
   li:first-child { border-top: 0; }
   .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .title { font-weight: 600; overflow-wrap: anywhere; }
-  .tag { flex-shrink: 0; padding: 1px 8px; border-radius: 999px; background: #EEF1F5; font-size: 11px; font-weight: 600; }
+  .tag { flex-shrink: 0; padding: 1px 8px; border-radius: 999px; background: #EEF1F5; font-size: 13px; font-weight: 600; }
   .tag.won { background: #DFF3E4; color: #1E6B34; }
   .tag.lost { background: #FBE3E1; color: #9B2C22; }
   .tag.cancelled { background: #EEF1F5; color: #4A5565; }
-  .about { margin: 2px 0 0; color: #4A5565; font-size: 12px; overflow-wrap: anywhere; }
-  .note { margin: 3px 0 0; font-size: 12px; white-space: pre-line; overflow-wrap: anywhere; }
+  .about { margin: 3px 0 0; color: #4A5565; font-size: 15px; overflow-wrap: anywhere; }
+  .note { margin: 4px 0 0; font-size: 15px; white-space: pre-line; overflow-wrap: anywhere; }
   .empty { margin: 0; color: #4A5565; }
   ${BRAND_DOC_CSS}
+  /* Bigger than the PDF header: this is read on a screen or a phone (owner, 2026-11-10). */
+  .bd-logo { height: 44px; }
+  .bd-title { font-size: 24px; }
+  .bd-sub { font-size: 16px; }
+  .bd-stamp { font-size: 14px; }
 `
 
 export function renderDayLogHtml(log: DayLog, options: DayLogRenderOptions): string {
