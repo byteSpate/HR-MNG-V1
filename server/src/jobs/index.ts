@@ -13,6 +13,7 @@ import {
   runMonthlyAttendanceReportEmail,
 } from "./attendance-report-email.job"
 import { runSalesDailyEmail } from "./sales-daily-email.job"
+import { runCheckOutReminders, runMeetingReminders, runMorningReminders } from "./inbox-reminders.job"
 
 /** Runs `job`, logging rather than throwing — an unhandled rejection inside
  *  a scheduled task takes the process down with it. */
@@ -58,6 +59,17 @@ export function startJobs(): void {
   // 00:01, so the email is waiting when people wake and they can prepare for
   // a meeting before coming in (revision §24.14).
   cron.schedule("1 0 * * *", () => guard("sales daily email", () => runSalesDailyEmail()), {
+    timezone: env.APP_TIMEZONE,
+  })
+
+  // Notification reminders (bell only, no email). See inbox-reminders.job.ts.
+  cron.schedule("*/5 * * * *", () => guard("meeting reminders", runMeetingReminders), {
+    timezone: env.APP_TIMEZONE,
+  })
+  cron.schedule("30 8 * * *", () => guard("morning reminders", runMorningReminders), {
+    timezone: env.APP_TIMEZONE,
+  })
+  cron.schedule("30 21 * * *", () => guard("check-out reminders", runCheckOutReminders), {
     timezone: env.APP_TIMEZONE,
   })
 

@@ -29,13 +29,19 @@ const db = prisma as unknown as Record<string, Record<string, ReturnType<typeof 
 const NOW = new Date("2026-11-10T06:00:00.000Z")
 const TODAY = new Date("2026-11-10T00:00:00.000Z")
 
+const GENERAL = {
+  id: "s-general", name: "General", weeklyOffDays: [5], effectiveFrom: null, effectiveTo: null,
+  startTime: "09:00", endTime: "18:00", graceMinutes: 15,
+}
+
 const written = () => db.notification.createMany.mock.calls.flatMap((c: any[]) => c[0].data)
 
 beforeEach(() => {
   vi.clearAllMocks()
   // Every user named is active unless a test says otherwise.
   db.user.findMany.mockImplementation(async ({ where }: any) => (where.id.in as string[]).map((id) => ({ id })))
-  db.shift.findMany.mockResolvedValue([])
+  // The seeded default shift: Friday off.
+  db.shift.findMany.mockResolvedValue([GENERAL])
   db.holiday.findMany.mockResolvedValue([])
 })
 
@@ -106,9 +112,7 @@ describe("remindTasksDueAndLate", () => {
 
   it("does not remind on the person's weekly off day", async () => {
     // Tuesday is getUTCDay() 2.
-    db.shift.findMany.mockResolvedValue([
-      { id: "s-1", weeklyOffDays: [2], isDefault: true, effectiveFrom: null, effectiveTo: null, startTime: "09:00", endTime: "18:00", graceMinutes: 0 },
-    ])
+    db.shift.findMany.mockResolvedValue([GENERAL, { ...GENERAL, id: "s-1", name: "Tuesday off", weeklyOffDays: [2] }])
     db.salesTask.findMany.mockResolvedValue([
       { id: "t-1", title: "Call Rahim", dueOn: TODAY, assignedTo: { userId: "u-1", shiftId: "s-1" } },
     ])

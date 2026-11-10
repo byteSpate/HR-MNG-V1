@@ -118,6 +118,8 @@ const CLOSES = new Set([
   "payroll.run.approved",
   "payroll.run.rejected",
   "settlement.approved",
+  // Closes the task's "due today" and "late" reminders.
+  "sales.task.completed",
 ])
 
 export function closeTargetFor(event: EventLike): CloseTarget | null {
