@@ -152,7 +152,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Add an account",
-        body: "Needs a code, a name, a type, and the group it belongs under. New expense categories, new asset classes and new income lines are all added here rather than by a developer. Pick the code by looking at its neighbours — an account in the wrong numeric range still works, but it will sort into the wrong place on every report forever.",
+        body: "Needs a code, a name, a type, and the group it belongs under. An account that takes entries must sit under a group, so the statements know which line it belongs to. Only a group can be at the top level. New expense categories, new asset classes and new income lines are all added here rather than by a developer. Pick the code by looking at its neighbours — an account in the wrong numeric range still works, but it will sort into the wrong place on every report forever.",
       },
       {
         name: "Convert an account into a group",

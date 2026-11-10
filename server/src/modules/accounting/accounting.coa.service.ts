@@ -87,11 +87,28 @@ export async function getAccount(id: string): Promise<Account> {
   return account
 }
 
+/**
+ * Only a group may sit at the top of the chart. The statements build every
+ * line from a group (5200 Administrative & Selling Expenses and so on), so an
+ * account you post to with no group above it has no line to appear on. Its
+ * money is left out, and `assertChartCoversLedger` then stops every statement.
+ * That happened with 5210 Water Bill on 2026-11-10.
+ */
+function assertSitsUnderGroup(isGroup: boolean, parentId: string | null | undefined): void {
+  if (!isGroup && !parentId) {
+    throw new AppError(
+      400,
+      "An account that takes entries must sit under a group, so the statements know which line it belongs to. Choose a group in Sits under."
+    )
+  }
+}
+
 export async function createAccount(
   input: CreateAccountInput,
   actor: AccessTokenPayload
 ): Promise<Account> {
   validateAccountCode(input.code, input.type)
+  assertSitsUnderGroup(input.isGroup, input.parentId)
 
   return prisma.$transaction(async (tx) => {
     const clash = await tx.account.findFirst({ where: { code: input.code } })
@@ -199,6 +216,14 @@ export function updateAccount(
   return prisma.$transaction(async (tx) => {
     const existing = await tx.account.findUnique({ where: { id } })
     if (!existing) throw new AppError(404, "Account not found")
+
+    // Checked on what the account will be after this save, not only on what
+    // changed. An account already saved at top level (as 5210 was) cannot be
+    // edited any other way until it is given a group, which is the fix.
+    assertSitsUnderGroup(
+      input.isGroup ?? existing.isGroup,
+      input.parentId === undefined ? existing.parentId : input.parentId
+    )
 
     if (input.parentId) {
       if (input.parentId === id) throw new AppError(400, "An account cannot be its own parent")
