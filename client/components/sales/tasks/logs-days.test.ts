@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import type { SalesTaskSummary } from "@/lib/api/types"
-import { logDaySlots, shiftWeek, weekRange, weekStartOf } from "./logs-days"
+import { dayChoices, logDaySlots, shiftWeek, weekRange, weekStartOf } from "./logs-days"
 
 const task = (id: string, overrides: Partial<SalesTaskSummary> = {}): SalesTaskSummary => ({
   id, origin: "SELF", type: "OTHER", givenByName: null, givenOn: null,
@@ -68,4 +68,11 @@ test("logDaySlots ignores a task that falls outside the week", () => {
   const slots = logDaySlots("2026-09-06", [task("late", { dueOn: "2026-09-20" })])
   assert.ok(slots.every((s) => s.tasks.length === 0))
   assert.equal(slots.length, 5)
+})
+
+test("Preview log offers the whole week first, then Sunday to Thursday", () => {
+  const choices = dayChoices("2026-11-08")
+  assert.deepEqual(choices.map((c) => c.value), ["week", "2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"])
+  assert.deepEqual(choices[0], { value: "week", label: "Whole week, 8 Nov to 12 Nov 2026", range: { from: "2026-11-07", to: "2026-11-13" } })
+  assert.deepEqual(choices[3], { value: "2026-11-10", label: "Tuesday, 10 Nov", range: { from: "2026-11-10", to: "2026-11-10" } })
 })

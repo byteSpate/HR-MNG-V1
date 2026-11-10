@@ -1,4 +1,4 @@
-import { apiFetch } from "../client"
+import { apiFetch, apiFetchBlob } from "../client"
 import type {
   ChangeTaskStatusBody,
   CreateTaskBody,
@@ -52,4 +52,18 @@ export function changeTaskStatus(
     accessToken,
     body: JSON.stringify(body),
   })
+}
+
+/**
+ * The work log, always the caller's own (owner, 2026-11-10). `from` and `to`
+ * are YYYY-MM-DD, one day or up to one week. A long log is split into several
+ * pictures; ask how many first, then for each one, counting from 1.
+ */
+export function getDayLogCount(accessToken: string, range: { from: string; to: string }): Promise<{ pictures: number }> {
+  return apiFetch(`/api/sales/day-log?${new URLSearchParams(range)}`, { accessToken })
+}
+
+export async function getDayLogImage(accessToken: string, range: { from: string; to: string }, picture: number): Promise<Blob> {
+  const params = new URLSearchParams({ ...range, picture: String(picture) })
+  return (await apiFetchBlob(`/api/sales/day-log/image?${params}`, { accessToken })).blob
 }

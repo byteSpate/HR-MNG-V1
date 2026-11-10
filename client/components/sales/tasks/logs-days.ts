@@ -76,3 +76,28 @@ export function weekLabel(weekStart: string): string {
     d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}), timeZone: "UTC" })
   return `${part(first, false)} to ${part(last, true)}`
 }
+
+/** The "whole week" choice in Preview log. Not a date, so it cannot clash with one. */
+export const WHOLE_WEEK = "week"
+
+export interface DayChoice {
+  value: string
+  label: string
+  range: { from: string; to: string }
+}
+
+/**
+ * What Preview log offers for one week: the whole week (Saturday to Friday,
+ * the same days the tab reads), then each working day, Sunday to Thursday.
+ */
+export function dayChoices(weekStart: string): DayChoice[] {
+  const days = Array.from({ length: WORKING_DAYS }, (_, i) => addDays(weekStart, i))
+  return [
+    { value: WHOLE_WEEK, label: `Whole week, ${weekLabel(weekStart)}`, range: weekRange(weekStart) },
+    ...days.map((date) => ({
+      value: date,
+      label: `${DAY_NAME[parse(date).getUTCDay()]}, ${parse(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`,
+      range: { from: date, to: date },
+    })),
+  ]
+}

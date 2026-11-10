@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { RiArrowLeftSLine, RiArrowRightSLine } from "@remixicon/react"
+import { RiArrowLeftSLine, RiArrowRightSLine, RiImageLine } from "@remixicon/react"
 
 import { listMeetingAttendeeOptions } from "@/lib/api/sales/meetings"
 import { salesKeys } from "@/lib/api/sales/keys"
@@ -20,6 +20,7 @@ import { Tag } from "@/components/dashboard/tag"
 import { PanelAlert, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { onDay, TASK_STATUS_LABEL, TASK_STATUS_TONE } from "@/components/sales/shared/sales-shared"
 import { TASK_TYPE_LABEL, TASK_TYPES } from "@/components/sales/shared/task-types"
+import { DayLogPreview } from "@/components/sales/tasks/day-log-preview"
 import { TaskFormDialog } from "@/components/sales/tasks/task-dialogs"
 import { logDaySlots, shiftWeek, weekLabel, weekRange, weekStartOf } from "@/components/sales/tasks/logs-days"
 import { Button } from "@/components/ui/button"
@@ -65,6 +66,7 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
   const [type, setType] = useState<SalesTaskType | "">("")
   const [person, setPerson] = useState(ME)
   const [editing, setEditing] = useState<SalesTaskSummary | null>(null)
+  const [previewing, setPreviewing] = useState(false)
 
   // Only a Sales Admin can read another person's log, so only they get the picker.
   const people = useQuery({
@@ -141,7 +143,17 @@ export function LogsPanel({ isSalesAdmin }: { isSalesAdmin: boolean }) {
             </SelectContent>
           </Select>
         ) : null}
+
+        {/* Your own log only (owner, 2026-11-10): each person shows their own day. */}
+        {ownLog ? (
+          <Button type="button" variant="outline" onClick={() => setPreviewing(true)} className="h-9 sm:ml-auto">
+            <RiImageLine className="size-4" aria-hidden />
+            Preview log
+          </Button>
+        ) : null}
       </div>
+
+      <DayLogPreview open={previewing} onOpenChange={setPreviewing} weekStart={weekStart} today={todayInput()} />
 
       {query.isError ? (
         <div className="grid gap-2">
