@@ -80,7 +80,7 @@ describe("createAccount", () => {
 
     await expect(
       createAccount(
-        { code: "5201", name: "Wages", type: "EXPENSE", isGroup: false, cashKind: "NONE" },
+        { code: "5201", name: "Wages", type: "EXPENSE", parentId: "grp-1", isGroup: false, cashKind: "NONE" },
         finance
       )
     ).rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining("Salary") })
@@ -110,9 +110,10 @@ describe("createAccount", () => {
 
   it("writes an ACCOUNT CREATE audit row inside the transaction", async () => {
     tx.account.create.mockResolvedValue({ id: "acc-1", code: "5201" })
+    tx.account.findUnique.mockResolvedValue({ id: "grp-1", isGroup: true, type: "EXPENSE" })
 
     await createAccount(
-      { code: "5201", name: "Salary", type: "EXPENSE", isGroup: false, cashKind: "NONE" },
+      { code: "5201", name: "Salary", type: "EXPENSE", parentId: "grp-1", isGroup: false, cashKind: "NONE" },
       finance
     )
 
@@ -120,6 +121,75 @@ describe("createAccount", () => {
       expect.objectContaining({
         data: expect.objectContaining({ entity: "ACCOUNT", action: "CREATE", changedBy: "user-finance" }),
       })
+    )
+  })
+})
+
+describe("an account you post to must sit under a group", () => {
+  // 5210 Water Bill was saved at "Top level". Its ৳500 then belonged to no
+  // statement line, and every statement refused to show (2026-11-10).
+  const topLevelLeaf = {
+    id: "acc-5210", code: "5210", name: "Water Bill", type: "EXPENSE",
+    parentId: null, isGroup: false, cashKind: "NONE", isActive: true, description: null,
+  }
+  const sitsUnder = /must sit under a group/
+
+  it("refuses to create one at top level", async () => {
+    await expect(
+      createAccount({ code: "5210", name: "Water Bill", type: "EXPENSE", isGroup: false, cashKind: "NONE" }, finance)
+    ).rejects.toMatchObject({ statusCode: 400, message: expect.stringMatching(sitsUnder) })
+    expect(tx.account.create).not.toHaveBeenCalled()
+  })
+
+  it("still lets a group be created at top level", async () => {
+    tx.account.create.mockResolvedValue({ id: "grp-9", code: "5000" })
+
+    await expect(
+      createAccount({ code: "5000", name: "Expenses", type: "EXPENSE", isGroup: true, cashKind: "NONE" }, finance)
+    ).resolves.toBeDefined()
+  })
+
+  it("refuses to move one to top level", async () => {
+    tx.account.findUnique.mockResolvedValue({ ...topLevelLeaf, parentId: "grp-5200" })
+
+    await expect(updateAccount("acc-5210", { parentId: null }, finance)).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(sitsUnder),
+    })
+    expect(tx.account.update).not.toHaveBeenCalled()
+  })
+
+  it("refuses to turn a top-level group into one", async () => {
+    tx.account.findUnique.mockResolvedValue({ ...topLevelLeaf, isGroup: true })
+
+    await expect(updateAccount("acc-5210", { isGroup: false }, finance)).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(sitsUnder),
+    })
+  })
+
+  it("refuses other changes to one already at top level until a group is chosen", async () => {
+    tx.account.findUnique.mockResolvedValue(topLevelLeaf)
+
+    await expect(updateAccount("acc-5210", { name: "Water" }, finance)).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(sitsUnder),
+    })
+  })
+
+  it("lets one at top level be moved under a group, which is the fix", async () => {
+    tx.account.findUnique.mockImplementation(({ where }: { where: { id: string } }) =>
+      Promise.resolve(
+        where.id === "grp-5200"
+          ? { id: "grp-5200", isGroup: true, type: "EXPENSE", parentId: null }
+          : topLevelLeaf
+      )
+    )
+    tx.account.update.mockResolvedValue({ ...topLevelLeaf, parentId: "grp-5200" })
+
+    await expect(updateAccount("acc-5210", { parentId: "grp-5200" }, finance)).resolves.toBeDefined()
+    expect(tx.account.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ parentId: "grp-5200" }) })
     )
   })
 })
@@ -247,7 +317,7 @@ describe("updateAccount", () => {
   it("409s converting a group that still has accounts under it", async () => {
     tx.account.findUnique.mockResolvedValue({
       id: "grp-1", code: "5200", name: "Admin", type: "EXPENSE",
-      parentId: null, isGroup: true, cashKind: "NONE", isActive: true, description: null,
+      parentId: "grp-5000", isGroup: true, cashKind: "NONE", isActive: true, description: null,
     })
     tx.account.count.mockResolvedValue(3)
 

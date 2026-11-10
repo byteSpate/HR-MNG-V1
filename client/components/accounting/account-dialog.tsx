@@ -118,11 +118,15 @@ function AccountForm({
   // what each value is called, so a parent account read as its uuid.
   const parentItems = useMemo(
     () => ({
-      none: "Top level",
+      ...(isGroup ? { none: "Top level" } : {}),
       ...Object.fromEntries(eligibleParents.map((g) => [g.id, `${g.code} ${g.name}`])),
     }),
-    [eligibleParents]
+    [eligibleParents, isGroup]
   )
+  // Only a group may sit at top level; the server refuses anything else. An
+  // account that takes entries with no group above it has no line on the
+  // statements, and stops them all (5210 Water Bill, 2026-11-10).
+  const needsGroup = !isGroup && !parentId
 
   return (
     <>
@@ -181,14 +185,14 @@ function AccountForm({
           <Label htmlFor="account-parent">Sits under</Label>
           <Select
             items={parentItems}
-            value={parentId || "none"}
+            value={parentId || (isGroup ? "none" : null)}
             onValueChange={(v) => setParentId(v === "none" ? "" : (v ?? ""))}
           >
             <SelectTrigger id="account-parent">
-              <SelectValue placeholder="Top level" />
+              <SelectValue placeholder={isGroup ? "Top level" : "Choose a group"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Top level</SelectItem>
+              {isGroup ? <SelectItem value="none">Top level</SelectItem> : null}
               {eligibleParents.map((g) => (
                 <SelectItem key={g.id} value={g.id}>
                   {g.code} {g.name}
@@ -196,6 +200,11 @@ function AccountForm({
               ))}
             </SelectContent>
           </Select>
+          {needsGroup ? (
+            <p className="text-xs text-muted-foreground">
+              An account that takes entries must sit under a group, so the statements know which line it belongs to.
+            </p>
+          ) : null}
         </div>
 
         {!isEdit && (
@@ -254,7 +263,7 @@ function AccountForm({
         </Button>
         <Button
           onClick={() => save.mutate()}
-          disabled={save.isPending || !name.trim() || (!isEdit && code.length !== 4)}
+          disabled={save.isPending || !name.trim() || (!isEdit && code.length !== 4) || needsGroup}
         >
           {save.isPending ? "Saving…" : isEdit ? "Save" : "Create account"}
         </Button>

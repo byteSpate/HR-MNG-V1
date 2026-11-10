@@ -207,13 +207,13 @@ const STEPS: Step[] = [
       <>
         <p>
           Nothing on this step is typed by anyone. It is all computed straight from the ledger.
-          July&apos;s payroll cost is now inside the Profit or Loss statement, as part of a larger
+          July&apos;s payroll cost is now inside the Income statement, as part of a larger
           figure: revenue, less cost of sales, less administrative expenses, down to a single
           profit or loss for the period.
         </p>
         <p>
-          The Statement of Financial Position shows what the company owns and owes on one date.
-          The Statement of Changes in Equity shows how the owners&apos; stake moved. Every one of the
+          The Balance sheet shows what the company owns and owes on one date.
+          Changes in equity shows how the owners&apos; share moved. Every one of the
           three carries a <T term="comparative" />
           {" "}column, because a figure on its own rarely
           means much; a figure next to last year&apos;s usually does.
