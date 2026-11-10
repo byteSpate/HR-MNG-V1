@@ -20,6 +20,30 @@ const nextConfig: NextConfig = {
   // under a different, randomly-generated hostname each run, so without this
   // every click after the first SSR page load gets torn down as unauthorized.
   allowedDevOrigins: ["*.trycloudflare.com"],
+  // The statement pages were reorganised on 2026-11-09: the three-tab
+  // "Financial statements" page became three pages, "Policy notes" merged
+  // into "Notes", and the Annexure-A page went (the schedule is still in the
+  // PDF). Old bookmarks land on the nearest page instead of a 404. The query
+  // string (?from=&to=) is passed through by Next.
+  async redirects() {
+    return [
+      {
+        source: "/:role(admin|finance)/accounting/statements",
+        destination: "/:role/statements/income-statement",
+        permanent: false,
+      },
+      {
+        source: "/:role(admin|finance)/statements/policy-notes",
+        destination: "/:role/statements/notes",
+        permanent: false,
+      },
+      {
+        source: "/:role(admin|finance)/statements/annexure-a",
+        destination: "/:role/statements/balance-sheet",
+        permanent: false,
+      },
+    ]
+  },
   async rewrites() {
     const apiOrigin = process.env.API_ORIGIN
     if (!apiOrigin) {

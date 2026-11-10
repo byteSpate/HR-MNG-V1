@@ -65,11 +65,11 @@ export const navGroups: NavGroup[] = [
     // The guide's "Report" step: what gets filed.
     label: "Statements",
     items: [
-      { label: "Financial statements", href: "/finance/accounting/statements", icon: "RiFileChartLine" },
+      { label: "Income statement", href: "/finance/statements/income-statement", icon: "RiFileChartLine" },
+      { label: "Balance sheet", href: "/finance/statements/balance-sheet", icon: "RiTableLine" },
+      { label: "Changes in equity", href: "/finance/statements/changes-in-equity", icon: "RiPieChartLine" },
       { label: "Cash flow", href: "/finance/statements/cash-flow", icon: "RiExchangeDollarLine" },
       { label: "Notes", href: "/finance/statements/notes", icon: "RiFileTextLine" },
-      { label: "Annexure-A", href: "/finance/statements/annexure-a", icon: "RiTableLine" },
-      { label: "Policy notes", href: "/finance/statements/policy-notes", icon: "RiArticleLine" },
     ],
   },
   {

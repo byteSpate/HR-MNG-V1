@@ -6,6 +6,7 @@ import { RiArrowDownSLine, RiArrowRightSLine } from "@remixicon/react"
 
 import type { StatementLine } from "@/lib/api/types"
 import { taka, takaTotal } from "@/components/statements/statements-shared"
+import { useAccountingBase } from "@/components/statements/use-statement-period"
 import { cn } from "@/lib/utils"
 
 /**
@@ -24,6 +25,7 @@ function Line({
   indent: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const accountingBase = useAccountingBase()
   const expandable = line.breakdown.length > 0
   const emphasis = line.kind === "SUBTOTAL"
 
@@ -77,7 +79,7 @@ function Line({
             className="grid grid-cols-[1fr_140px_140px] items-center gap-4 border-b bg-muted/20 px-4 py-1.5 text-sm last:border-0"
           >
             <Link
-              href={`./ledger?accountId=${row.accountId}&from=${range.from}&to=${range.to}`}
+              href={`${accountingBase}/ledger?accountId=${row.accountId}&from=${range.from}&to=${range.to}`}
               className="pl-9 hover:underline"
             >
               <span className="text-muted-foreground tabular-nums">{row.code}</span> {row.name}

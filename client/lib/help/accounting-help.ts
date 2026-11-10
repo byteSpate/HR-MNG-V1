@@ -60,8 +60,8 @@ export const FLOW: FlowStep[] = [
   {
     id: "report",
     title: "Report",
-    body: "The statements the company files, plus the notes that break them down, the schedule of fixed assets, and a PDF of the whole set. All of it is computed from the ledger — nothing here is typed twice.",
-    pages: ["Financial statements", "Cash flow", "Notes", "Annexure-A", "Policy notes"],
+    body: "The statements the company files: the income statement, the balance sheet, changes in equity and cash flow. Then the notes that explain them, and a PDF of the whole set. The app works out every number from the ledger.",
+    pages: ["Income statement", "Balance sheet", "Changes in equity", "Cash flow", "Notes"],
   },
   {
     id: "close",
@@ -191,7 +191,7 @@ export const HELP: Record<string, HelpEntry> = {
           "A cleaning cost was filed under Cost of Goods Sold and should be administrative.",
           "Edit the account and change its parent to the administrative group.",
           "Nothing in the ledger moves — the entries are unchanged and still point at the same account.",
-          "The Profit or Loss statement now shows that cost above the administrative subtotal instead of the gross profit one, for every period including past ones.",
+          "The Income statement now shows that cost above the administrative subtotal instead of the gross profit one, for every period including past ones.",
         ],
       },
     ],
@@ -275,7 +275,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "Close July through May as usual, but leave June open — the year-end entry has to post into it.",
           "Confirm the full-year trial balance agrees.",
-          "Draft the year-end entry and read the figure it moves into retained earnings. It should equal the profit or loss on the Profit or Loss statement for the year.",
+          "Draft the year-end entry and read the figure it moves into retained earnings. It should equal the profit or loss on the Income statement for the year.",
           "Post it, then close June, then lock the year.",
         ],
       },
@@ -938,76 +938,153 @@ export const HELP: Record<string, HelpEntry> = {
   },
 
   // ── Report ────────────────────────────────────────────────────────────────
-  "accounting/statements": {
-    title: "Financial statements",
-    lede: "The three core statements, computed from the ledger, with last year beside this year. Nothing on this page is typed — it is the ledger, arranged the way the accounts are filed.",
+  "statements/income-statement": {
+    title: "Income statement",
+    lede: "Money the company earned in the period, less what it spent, and the profit or loss left at the end. The app works it out from the ledger. Nobody types these numbers.",
     step: "report",
     connects: {
       fedBy: ["The trial balance, which must agree first"],
-      feeds: ["The notes, the cash flow, Annexure-A, and the PDF of the whole set"],
+      feeds: ["Changes in equity", "Cash flow", "Notes", "The PDF of all the statements"],
     },
     reading: [
       {
-        name: "Statement of Profit or Loss",
-        body: "Revenue less cost of sales gives gross profit. Less administrative and selling expenses gives operating profit. Less financial expenses and tax gives the profit or loss for the period. Each subtotal is a line the company files, not a convenience.",
+        name: "The lines, from top to bottom",
+        body: "Revenue, less the cost of sales, gives gross profit. Less office and selling costs gives operating profit. Less bank charges, interest and tax gives the profit or loss for the period.",
       },
       {
-        name: "Statement of Financial Position",
-        body: "What the company owns and owes on one date, in four blocks: non-current assets, current assets, shareholders' equity, current liabilities. Fixed assets are shown net — cost less depreciation charged to date. The two halves must agree, and if they do not the page says so rather than printing them.",
+        name: "Its formal name",
+        body: "Accountants and the PDF call it the Statement of Profit or Loss. It is the same report.",
       },
       {
-        name: "Statement of Changes in Equity",
-        body: "A grid rather than a list: share capital, share money and retained earnings across the top, and the year's movements down the side. It ends where the equity block of the balance sheet begins, and the two must match.",
+        name: "The grey column",
+        body: "The same period one year earlier. Compare the two to see if a number is high or low.",
       },
       {
-        name: "The comparative column",
-        body: "The equivalent period a year earlier, on every line. It is what makes a figure mean anything — an administrative cost of four lakh is neither good nor bad until you see last year's.",
-      },
-      {
-        name: "The period picker",
-        body: "Month, quarter, half year, year, or custom. Quarters and half years run from the financial year's start month, so the first quarter is July to September. The comparative column follows whatever you choose.",
+        name: "A line with an arrow",
+        body: "Click it to see the accounts inside it. Click an account to open the general ledger for that account and period.",
       },
       NUMBER_CONVENTIONS,
     ],
     does: [
       {
-        name: "Switch between the three statements",
-        body: "They share one period. Changing it on one changes it on all three, so the set always describes the same span.",
+        name: "Choose the period",
+        body: "Month, quarter, half-year, year or your own dates. Quarters start in July, so Q1 is July to September. The Balance sheet, Changes in equity and Notes pages use the same period until you change it.",
       },
       {
-        name: "Change the period",
-        body: "The presets cover almost every case. Custom is there for the odd request — a part-month, or a span crossing a year end.",
+        name: "Download PDF",
+        body: "All the statements, the cash flow, the notes and the fixed asset schedule in one file. Send this file to the auditor, not a screenshot.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "The board asks how the first half year went",
+        steps: [
+          "Set the period to **Half-year** and choose July to December.",
+          "Read each line against the grey column.",
+          "If a line moved a lot, click it to see which account moved.",
+          "Click that account to see the entries in the general ledger.",
+        ],
+      },
+    ],
+    watchFor: [
+      "If a number is wrong, the entry behind it is wrong. Fix the entry in the ledger. There is nothing to change on this page.",
+      "After a year is closed, its numbers here read zero. The year-end entry moved them into retained earnings. Read the year before you close it.",
+      "The page shows no numbers while the trial balance does not agree. That is a safety check, not a fault.",
+    ],
+  },
+
+  "statements/balance-sheet": {
+    title: "Balance sheet",
+    lede: "What the company owns and what it owes, on the last day of the period. The app works it out from the ledger. The two totals must be the same.",
+    step: "report",
+    connects: {
+      fedBy: ["The trial balance, which must agree first"],
+      feeds: ["Cash flow", "Notes", "The PDF of all the statements"],
+    },
+    reading: [
+      {
+        name: "The two halves",
+        body: "The top half is what the company owns: fixed assets, then cash and money owed to it. The bottom half is where that came from: the owners' share, then money the company owes. Total Assets must equal Total Shareholders' Equity & Liabilities.",
       },
       {
-        name: "Download the PDF",
-        body: "The whole set: the three statements, the cash flow, the generated notes, Annexure-A and the written policy notes, as one document, with a generation date on every page. This is what leaves the building — not a screenshot.",
+        name: "Its formal name",
+        body: "Accountants and the PDF call it the Statement of Financial Position. It is the same report.",
+      },
+      {
+        name: "Fixed assets",
+        body: "Shown as cost less the depreciation charged so far. The full table for each asset group (the fixed asset schedule, called Annexure-A) is in the PDF.",
+      },
+      {
+        name: "The grey column",
+        body: "The same date one year earlier.",
+      },
+      NUMBER_CONVENTIONS,
+    ],
+    does: [
+      {
+        name: "Choose the period",
+        body: "The balance sheet shows the last day of the period you choose. The other statement pages use the same period.",
+      },
+      {
+        name: "Download PDF",
+        body: "All the statements, the cash flow, the notes and the fixed asset schedule in one file.",
       },
     ],
     scenarios: [
       {
         title: "The auditor asks for the year",
         steps: [
-          "Confirm the trial balance agrees for the full financial year.",
-          "Set the period to that year.",
-          "Read the three statements on screen. Check the profit figure against what you expected, and check the balance sheet's two halves agree.",
-          "Open the notes and skim for anything that looks unlike last year.",
-          "Download the PDF and send that.",
-        ],
-      },
-      {
-        title: "The board wants to know how the half year went",
-        steps: [
-          "Set the period to half year and pick the first half — July to December.",
-          "Read the Profit or Loss statement against its comparative column.",
-          "Where a line has moved a lot, open the notes to see which account inside it moved.",
-          "Take that account to the general ledger for the entries themselves.",
+          "Check that the trial balance agrees for the full year.",
+          "Set the period to **Year**.",
+          "Check that the two totals on this page are the same.",
+          "Read the **Income statement** and the **Notes** for the same year.",
+          "Press **Download PDF** and send that file.",
         ],
       },
     ],
     watchFor: [
-      "Every figure here is computed. There is nothing to type and nothing to correct on this page — if a number is wrong, the entry behind it is wrong, and the ledger is where to fix it.",
-      "Once a year has been closed, its Profit or Loss reads zero, because the year-end entry swept those accounts. Read a closed year before closing it, or read it through the notes and the ledger afterwards.",
-      "The statements refuse to generate while the trial balance does not agree. That is the guard working, not the page failing.",
+      "The page shows no numbers while the trial balance does not agree. That is a safety check, not a fault.",
+    ],
+  },
+
+  "statements/changes-in-equity": {
+    title: "Changes in equity",
+    lede: "How the owners' share of the company changed during the period: new share money paid in, and the profit or loss added to retained earnings.",
+    step: "report",
+    connects: {
+      fedBy: ["The Income statement, for the profit or loss", "The equity accounts in the ledger"],
+      feeds: ["The PDF of all the statements"],
+    },
+    reading: [
+      {
+        name: "The grid",
+        body: "Share capital, share money and retained earnings go across the top. The changes in the period go down the side. The last row is the closing balance.",
+      },
+      {
+        name: "It matches the Balance sheet",
+        body: "The closing total here is the same as the equity total on the Balance sheet for the same period.",
+      },
+      NUMBER_CONVENTIONS,
+    ],
+    does: [
+      {
+        name: "Choose the period",
+        body: "The other statement pages use the same period.",
+      },
+      {
+        name: "Download PDF",
+        body: "All the statements, the cash flow, the notes and the fixed asset schedule in one file.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "Checking where the year's profit went",
+        steps: [
+          "Read the profit for the year on the **Income statement**.",
+          "Open this page for the same period.",
+          "Find the same number in the retained earnings column.",
+        ],
+      },
     ],
   },
 
@@ -1016,7 +1093,7 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "Where cash actually came from and where it went. A different question from whether the company made a profit, and frequently a different answer.",
     step: "report",
     connects: {
-      fedBy: ["The Profit or Loss statement and the movement on every balance sheet account"],
+      fedBy: ["The Income statement and the change in every Balance sheet account"],
       feeds: ["The PDF set"],
     },
     reading: [
@@ -1075,182 +1152,73 @@ export const HELP: Record<string, HelpEntry> = {
 
   "statements/notes": {
     title: "Notes",
-    lede: "The breakdowns behind the single lines on the statements, generated from the ledger. When a statement line looks wrong, this is the next page to open.",
+    lede: "The notes that come after the statements. A note can have written text, a table of accounts from the ledger, or both. You read and write them all on this page.",
     step: "report",
     connects: {
-      fedBy: ["The same ledger balances the statements use"],
-      feeds: ["The PDF set"],
+      fedBy: ["The same ledger the statements use, for the tables", "Finance and Super Admin, for the written text"],
+      feeds: ["The PDF of all the statements"],
     },
     reading: [
-      {
-        name: "One note per statement line",
-        body: "Each note takes a line — administrative expenses, say — and lists the accounts that make it up, with last year beside each.",
-      },
       {
         name: "The note number",
-        body: "Matches the reference printed against the line on the statement itself, so a reader of the PDF can follow from one to the other.",
+        body: "Each note has a number, like 2.08. The same number is printed next to the line it explains on a statement, so a reader can follow from one to the other.",
       },
       {
-        name: "The total ties",
-        body: "Every note's total equals the statement line it explains. If a note and its line disagree, one of them is being computed wrongly and it is worth reporting rather than working around.",
+        name: "Written text",
+        body: "Some notes explain how the company keeps its accounts: what it does, the reporting period, the currency, how it depreciates assets. People write this text. It changes rarely.",
+      },
+      {
+        name: "The table of accounts",
+        body: "Some notes list the accounts inside one line of a statement, with this period and the year before. The app makes this table from the ledger. Its total is the same as the statement line.",
       },
       NUMBER_CONVENTIONS,
     ],
     does: [
       {
-        name: "Read a note",
-        body: "The accounts inside a statement line, this period and last.",
+        name: "Choose the period",
+        body: "The tables follow the period. The other statement pages use the same period.",
       },
       {
-        name: "Set the period",
-        body: "The same control as the statements, so the notes always match whatever is on screen there.",
+        name: "Edit text",
+        body: "Change the number, title or text of a note. The new text is in the next PDF.",
       },
       {
-        name: "Trace a figure onwards",
-        body: "A note narrows a statement line to an account. The general ledger narrows an account to the entries. Between them any figure on any statement can be followed to the people who approved it.",
+        name: "Add text",
+        body: "Shown on a note that has only a table. Write text to go above the table.",
+      },
+      {
+        name: "Add note",
+        body: "A new note with a number, a title and text.",
+      },
+      {
+        name: "Delete text",
+        body: "Removes the written text. If the note has a table, the table stays, because it comes from the ledger.",
       },
     ],
     scenarios: [
       {
-        title: "Administrative expenses jumped and nobody knows why",
+        title: "Office costs went up and nobody knows why",
         steps: [
           "Open the note for administrative expenses.",
-          "Compare each row against its comparative column.",
-          "One row has trebled.",
-          "Take that account to the general ledger for the same period and read the entries behind it.",
-          "Open the entry that stands out to see who approved it and what was attached.",
+          "Compare each account with the year before.",
+          "Find the account that went up the most.",
+          "Open that account in the general ledger for the same period to see the entries.",
+        ],
+      },
+      {
+        title: "The depreciation rates change",
+        steps: [
+          "Find the note that explains depreciation.",
+          "Press **Edit text** and write the new rates.",
+          "Check that the rates match the rates on the asset accounts in the chart of accounts.",
+          "Press **Save**. The next PDF has the new text.",
         ],
       },
     ],
     watchFor: [
-      "A note is only as detailed as the chart of accounts. If a note is one large row called miscellaneous, the fix is to add real accounts and re-point the posting rules, not to change the note.",
-    ],
-  },
-
-  "statements/annexure-a": {
-    title: "Annexure-A",
-    lede: "The fixed asset schedule: what the company owns, what it cost, how much has been written off, and what it is worth now. One row per asset class.",
-    step: "report",
-    connects: {
-      fedBy: ["Asset capitalisations and depreciation runs, through the ledger"],
-      feeds: ["The fixed asset figure on the Statement of Financial Position", "The PDF set"],
-    },
-    reading: [
-      {
-        name: "The cost columns",
-        body: "Cost at the start of the period, anything added during it, and cost at the end. This is what was paid, and it never changes with age.",
-      },
-      {
-        name: "The depreciation columns",
-        body: "Depreciation charged before the period, charged during it, and the total charged to date.",
-      },
-      {
-        name: "Written-down value",
-        body: "Cost less depreciation to date. What the asset is carried at in the accounts — which is not what it would sell for.",
-      },
-      {
-        name: "The rate",
-        body: "Each class writes down at its own annual rate: furniture and office equipment at ten per cent, computers at twenty, software at twenty-five. The charge is on the reducing balance, so it is a percentage of what is left rather than of the original cost, and it gets smaller every year.",
-      },
-      {
-        name: "It ties to the balance sheet",
-        body: "The written-down value total equals the fixed asset figure on the Statement of Financial Position. The system refuses to produce a schedule that does not, so if you can see one, they agree.",
-      },
-      NUMBER_CONVENTIONS,
-    ],
-    does: [
-      {
-        name: "Read a class",
-        body: "One row per asset class, with the classes taken from the chart of accounts rather than from the asset register — so the schedule shows what the ledger holds.",
-      },
-      {
-        name: "Set the period",
-        body: "The schedule is usually read for a full financial year, which is the form it is filed in.",
-      },
-      {
-        name: "Check it against the register",
-        body: "The asset register lists individual items; this lists classes. A class here that looks small against the items in the register usually means assets have been added to the register and never capitalised.",
-      },
-    ],
-    scenarios: [
-      {
-        title: "Confirming the balance sheet's equipment figure",
-        steps: [
-          "Read the written-down value total at the bottom of the schedule.",
-          "Open the Statement of Financial Position for the same period.",
-          "The two figures are the same one, shown two ways — one as a single line, one broken into classes with their history.",
-        ],
-      },
-      {
-        title: "A laptop was bought and the schedule has not moved",
-        steps: [
-          "Check the asset register: the laptop is there.",
-          "Check whether it has been capitalised. Adding an asset to the register does not post anything — capitalising it does, and that is a separate finance action.",
-          "Capitalise it. The cost-added column moves in the period it was capitalised.",
-          "It begins depreciating from the month it was purchased, not the month it was capitalised, so the first run after may charge several months at once.",
-        ],
-      },
-    ],
-    watchFor: [
-      "Assets in the register that were never capitalised appear nowhere on this schedule. The register and the ledger are separate on purpose, and capitalising is the bridge between them.",
-      "Depreciation only appears once a depreciation run has been posted for the period. A month with no run shows no charge, and the next run will catch it up.",
-    ],
-  },
-
-  "statements/policy-notes": {
-    title: "Policy notes",
-    lede: "The written notes at the front of the accounts — how the company reports, rather than what it earned. The only part of the statements somebody writes instead of computes.",
-    step: "report",
-    connects: {
-      fedBy: ["Nothing — this is written"],
-      feeds: ["The PDF set, printed ahead of the generated notes"],
-    },
-    reading: [
-      {
-        name: "What belongs here",
-        body: "Basis of preparation, the reporting framework, how revenue is recognised, how fixed assets are depreciated, how foreign currency is handled, and the company's own background. Typed once and changed rarely.",
-      },
-      {
-        name: "The reference number",
-        body: "Decides where a note appears in the printed sequence, and matches the numbering the audited accounts use.",
-      },
-    ],
-    does: [
-      {
-        name: "Read and edit a note",
-        body: "Title and body text. Editing takes effect on the next PDF.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Add a note",
-        body: "A reference, a title and its text.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Reorder",
-        body: "The sort order controls the printed sequence where two notes share a reference.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-      {
-        name: "Delete a note",
-        body: "For a policy that no longer applies. There is nothing computed depending on it, so deletion is safe.",
-        roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
-      },
-    ],
-    scenarios: [
-      {
-        title: "The depreciation policy changes",
-        steps: [
-          "Open the note describing how fixed assets are depreciated.",
-          "Edit the text to describe the new method and rates.",
-          "Check the rates you have written match the rates actually set on the asset accounts in the chart — nothing checks this for you.",
-          "It appears in the next PDF, in the same position, without anybody retyping the whole set.",
-        ],
-      },
-    ],
-    watchFor: [
-      "Nothing here is checked against the ledger. If a policy note says assets depreciate at fifteen per cent and the chart says ten, the PDF will print both and neither will complain. What these notes say is your responsibility.",
-      "These survive a re-seed of the chart of accounts. An edited note is not overwritten by setup being run again.",
+      "Nothing checks the written text against the ledger. If the text says 15% and the chart of accounts says 10%, both are printed. Check them yourself.",
+      "The number joins text to a table. If you change the number of a note that has a table, the text moves away from that table.",
+      "A table is only as detailed as the chart of accounts. To split one big account, add new accounts in the chart. Do not change the note.",
     ],
   },
 
