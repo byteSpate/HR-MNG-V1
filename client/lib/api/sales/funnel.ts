@@ -29,6 +29,7 @@ import type {
 function toQuery(options: FunnelQueryOptions): string {
   const params = new URLSearchParams()
   if (options.employeeId) params.set("employeeId", options.employeeId)
+  if (options.q) params.set("q", options.q)
   if (options.status) params.set("status", options.status)
   if (options.salesAccountId) params.set("salesAccountId", options.salesAccountId)
   if (options.hideClosed) params.set("hideClosed", "true")

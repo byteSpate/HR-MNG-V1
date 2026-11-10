@@ -1,7 +1,8 @@
 import { apiFetch } from "../client"
 import type { ContactDirectoryPage, SalesContactStatus } from "../types"
 
-export type ContactSort = "name" | "designation" | "account" | "industry" | "status"
+/** "added" is the date the contact was added: the default, newest first. */
+export type ContactSort = "added" | "name" | "designation" | "account" | "industry" | "status"
 
 /** The Contacts page: every contact the viewer may see, searched, sorted and paged (owner, 2026-10-18). */
 export function listAllContacts(

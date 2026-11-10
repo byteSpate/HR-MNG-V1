@@ -42,9 +42,11 @@ export async function contactsWhere(
   return { AND: [{ salesAccount: scope }, search, byIndustry, byStatus] }
 }
 
-export function contactsOrderBy(sort: ListContactsQuery["sort"], dir: ListContactsQuery["dir"]): Prisma.SalesContactOrderByWithRelationInput[] {
+export function contactsOrderBy(sort: ListContactsQuery["sort"], requested: ListContactsQuery["dir"]): Prisma.SalesContactOrderByWithRelationInput[] {
+  // Newest first for the date added, A to Z for a column, unless asked otherwise.
+  const dir = requested ?? (sort === "added" ? "desc" : "asc")
   const first: Prisma.SalesContactOrderByWithRelationInput =
-    sort === "account" ? { salesAccount: { name: dir } } : sort === "industry" ? { salesAccount: { industry: dir } } : sort === "designation" ? { designation: dir } : sort === "status" ? { status: dir } : { name: dir }
+    sort === "added" ? { createdAt: dir } : sort === "account" ? { salesAccount: { name: dir } } : sort === "industry" ? { salesAccount: { industry: dir } } : sort === "designation" ? { designation: dir } : sort === "status" ? { status: dir } : { name: dir }
   return [first, { id: "asc" }]
 }
 

@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { dateOnly, money } from "../sales.primitives"
+import { dateOnly, money, searchText } from "../sales.primitives"
 import { quoteSchema, skipReasonSchema } from "./quote.validators"
 
 // The profit on a deal, as a percentage of its value. Negative is a deal sold
@@ -53,6 +53,8 @@ export const listOpportunitySchema = z.object({
   stuck: z.coerce.number().int().min(1).max(365).optional(),
   /** BEFORE_QUOTATION: ongoing Opportunities before the first quote stage (owner, 2026-11-02). */
   view: z.enum(["BEFORE_QUOTATION"]).optional(),
+  /** Number, name, account or owner. */
+  q: searchText,
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 })

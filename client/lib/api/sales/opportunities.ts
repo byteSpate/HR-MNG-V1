@@ -18,6 +18,8 @@ import type {
 } from "../types"
 
 export interface ListOpportunitiesQuery {
+  /** The search box (owner, 2026-11-10). Searched on the server. */
+  q?: string
   status?: OpportunityStatus
   stage?: OpportunityStage
   salesAccountId?: string

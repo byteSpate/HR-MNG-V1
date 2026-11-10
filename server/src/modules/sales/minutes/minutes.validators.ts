@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { searchText } from "../sales.primitives"
+
 import { sectionInputSchema } from "./minutes.content"
 
 // ── meeting minutes (phase 4, revision §25) ──────────────────────────────────
@@ -33,6 +35,8 @@ export const answerRequirementSchema = z.object({ found: z.boolean() })
 
 export const listMinutesSchema = z.object({
   mine: trueOnly,
+  /** The meeting's title or account. */
+  q: searchText,
   status: z.enum(["DRAFT", "SENT", "EDITED_AFTER_SENDING"]).optional(),
 })
 

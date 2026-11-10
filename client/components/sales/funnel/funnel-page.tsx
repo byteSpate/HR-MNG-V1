@@ -38,6 +38,7 @@ import { useSession } from "@/lib/auth/session-context"
 import { nextPerson } from "@/lib/funnel-nav"
 import { cn } from "@/lib/utils"
 import { BeforeQuotationView } from "@/components/sales/opportunities/before-quotation-view"
+import { SearchBox, useSearch } from "@/components/sales/shared/search-box"
 
 import { FunnelFilters } from "./funnel-filters"
 import { FunnelGridTable } from "./funnel-grid"
@@ -79,6 +80,7 @@ export function FunnelPage() {
   const [openEmployeeId, setOpenEmployeeId] = useState<string | null>(null)
   const [filters, setFilters] = useState<FunnelQueryOptions>(DEFAULT_FILTERS)
   const [seen, setSeen] = useState<SeenAccounts>({ owner: null, names: {} })
+  const search = useSearch()
   // The quarter the strip and the team figures measure (owner, 2026-10-13).
   const quarters = useMemo(() => quarterOptions(new Date()), [])
   const [teamQuarter, setTeamQuarter] = useState(quarters[0].value)
@@ -87,8 +89,8 @@ export function FunnelPage() {
   const showingTeam = canTeam && openEmployeeId === null
 
   const gridOptions = useMemo<FunnelQueryOptions>(
-    () => ({ ...filters, employeeId: openEmployeeId ?? undefined }),
-    [filters, openEmployeeId]
+    () => ({ ...filters, employeeId: openEmployeeId ?? undefined, ...(search.q ? { q: search.q } : {}) }),
+    [filters, openEmployeeId, search.q]
   )
 
   const gridQuery = useQuery({
@@ -258,7 +260,7 @@ export function FunnelPage() {
     seen.owner !== null && (openEmployeeId === null || seen.owner === openEmployeeId)
 
   const filtersActive = Boolean(
-    filters.status || filters.salesAccountId || filters.hideClosed || filters.changedLastWeek || filters.inQuarter
+    filters.status || filters.salesAccountId || filters.hideClosed || filters.changedLastWeek || filters.inQuarter || search.q
   )
 
   // Opening or leaving a person's grid starts it afresh: an account picked on
@@ -268,6 +270,7 @@ export function FunnelPage() {
     setOpenEmployeeId(employeeId)
     setPanelId(null)
     setFilters(DEFAULT_FILTERS)
+    search.clear()
     setSeen({ owner: null, names: {} })
     meetingAction.reset()
   }
@@ -485,6 +488,12 @@ export function FunnelPage() {
       ) : null}
 
       {firstPageSeen ? (
+        <div className="mb-3">
+          <SearchBox value={search.typed} onChange={search.setTyped} label="Search the funnel" placeholder="Number, name or account" />
+        </div>
+      ) : null}
+
+      {firstPageSeen ? (
         <FunnelFilters
           value={filters}
           onChange={setFilters}
@@ -513,7 +522,10 @@ export function FunnelPage() {
                 await managementNote.mutateAsync({ opportunityId, body })
               }}
               filtersActive={filtersActive}
-              onClearFilters={() => setFilters({ sort: filters.sort, direction: filters.direction, quarter: filters.quarter })}
+              onClearFilters={() => {
+                setFilters({ sort: filters.sort, direction: filters.direction, quarter: filters.quarter })
+                search.clear()
+              }}
               takeOuts={takeOutsByDeal}
               onOpenPanel={setPanelId}
             />

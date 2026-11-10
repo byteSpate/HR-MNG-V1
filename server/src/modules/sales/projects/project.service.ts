@@ -1,4 +1,5 @@
 import prisma from "../../../config/prisma"
+import { containsText } from "../sales.primitives"
 import type { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
@@ -127,6 +128,15 @@ export async function listProjects(query: ListProjectQuery, actor: AccessTokenPa
       ...(query.salesAccountId ? { salesAccountId: query.salesAccountId } : {}),
       // The track lives on the Opportunity; a Project always has exactly one.
       ...(query.track ? { opportunity: { track: query.track } } : {}),
+      ...(query.q
+        ? {
+            OR: [
+              { serial: containsText(query.q) },
+              { name: containsText(query.q) },
+              { salesAccount: { name: containsText(query.q) } },
+            ],
+          }
+        : {}),
     },
     select: {
       id: true, serial: true, name: true, status: true, dueOn: true, nextRenewalOn: true, updatedAt: true,

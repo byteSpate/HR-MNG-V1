@@ -479,7 +479,8 @@ export async function listSalesAccounts(
       ...ownedScopeFor(employeeId),
       ...(unverified ? { contacts: { none: { status: "VERIFIED" as const } } } : {}),
     },
-    orderBy: { name: "asc" },
+    // Newest first (owner, 2026-11-10). The id breaks a tie so the order is stable.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: SUMMARY_INCLUDE,
   })
   return accounts.map((a) => toSummary(a, actor, employeeId))
@@ -507,7 +508,8 @@ export async function listAllSalesAccounts(
     employeeIdFor(actor),
     prisma.salesAccount.findMany({
       ...(Object.keys(where).length > 0 ? { where } : {}),
-      orderBy: { name: "asc" }, include: SUMMARY_INCLUDE,
+      // Newest first (owner, 2026-11-10), as on My accounts.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: SUMMARY_INCLUDE,
     }),
   ])
   return accounts.map((a) => toSummary(a, actor, employeeId))

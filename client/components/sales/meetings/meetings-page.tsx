@@ -23,6 +23,7 @@ import {
   useStartMinutes,
 } from "@/components/sales/meetings/meeting-dialogs"
 import { MeetingRow, meetingActions } from "@/components/sales/shared/plan-panels"
+import { SearchBox, useSearch } from "@/components/sales/shared/search-box"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Heading } from "@/components/ds/heading"
@@ -78,12 +79,15 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
   const [ending, setEnding] = useState<{ meeting: SalesMeetingSummary; action: "COMPLETED" | "CANCELLED" } | null>(null)
   const putBack = useMeetingStatus()
   const startMinutes = useStartMinutes()
+  const search = useSearch()
 
-  const filters = { ...(mine ? { mine: true } : {}), from }
+  const filters = { ...(mine ? { mine: true } : {}), from, ...(search.q ? { q: search.q } : {}) }
   const query = useQuery({
     queryKey: salesKeys.meetings(filters),
     queryFn: () => listMeetings(accessToken!, filters),
     enabled: isAuthed,
+    // Keeps the meetings, and the search box, on screen while a new search loads.
+    placeholderData: (previous) => previous,
   })
 
   const isLoading = sessionStatus === "loading" || query.isPending
@@ -107,6 +111,7 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
           about a list nobody has counted yet. */}
       {!isLoading && !query.isError ? (
         <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
+          <SearchBox value={search.typed} onChange={search.setTyped} label="Search meetings" placeholder="Title, place or account" />
           <Button type="button" aria-pressed={mine} onClick={() => setMine(!mine)} className={mine ? TOGGLE_ON : TOGGLE_OFF}>
             Mine only
           </Button>
@@ -160,9 +165,13 @@ export function MeetingsPage({ initialMine }: { initialMine: boolean | null }) {
           <span className="flex size-9 items-center justify-center rounded-md bg-surface-hover text-ink-muted">
             <RiInboxLine className="size-5" aria-hidden />
           </span>
-          <div className="text-body-sm font-bold">{mine ? "No meetings for you" : "No meetings yet"}</div>
+          <div className="text-body-sm font-bold">
+            {search.q ? "No meetings match the search" : mine ? "No meetings for you" : "No meetings yet"}
+          </div>
           <p className={`max-w-[46ch] text-caption leading-relaxed ${TONE.muted}`}>
-            {mine
+            {search.q
+              ? `No meeting coming up, or in the past ${PAST_DAYS} days, matches "${search.q}". Change the search to see more.`
+              : mine
               ? `Nothing coming up, and nothing in the past ${PAST_DAYS} days, that you attend on our side.`
               : `Nothing coming up, and nothing in the past ${PAST_DAYS} days. Schedule one from here or from an account.`}
           </p>

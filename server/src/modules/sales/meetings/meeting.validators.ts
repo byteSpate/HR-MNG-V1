@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { searchText } from "../sales.primitives"
+
 // ── meetings (phase 3, revision §24) ─────────────────────────────────────────
 const meetingMode = z.enum(["CUSTOMER_SITE", "OUR_OFFICE", "ONLINE"])
 const instant = z.string().datetime({ offset: true })
@@ -69,6 +71,8 @@ export const changeMeetingStatusSchema = z.discriminatedUnion("status", [
 ])
 
 export const listMeetingSchema = z.object({
+  /** Title, place or account. */
+  q: searchText,
   salesAccountId: z.string().uuid().optional(),
   opportunityId: z.string().uuid().optional(),
   status: z.enum(["SCHEDULED", "COMPLETED", "CANCELLED"]).optional(),

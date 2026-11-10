@@ -108,9 +108,9 @@ test("says the tiles count the whole list only until the 200 row cap (Review Foc
 
 test("offers a way out when a filter matched nothing, and not when there is no Project at all (Review Focus 5)", () => {
   assert.deepEqual(listEmptyState(true), {
-    title: "No Projects match these filters",
-    body: "Try a different filter, or All.",
-    action: "Clear the filter",
+    title: "No Projects match",
+    body: "Change the search, or set a filter back to All.",
+    action: "Clear the search and filters",
   })
   assert.deepEqual(listEmptyState(false), {
     title: "No Projects yet",

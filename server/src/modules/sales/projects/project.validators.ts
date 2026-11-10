@@ -1,10 +1,12 @@
 import { z } from "zod"
 
-import { dateOnly, money } from "../sales.primitives"
+import { dateOnly, money, searchText } from "../sales.primitives"
 
 export const projectStatus = z.enum(["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "ON_HOLD", "COMPLETED", "CANCELLED"])
 
 export const listProjectSchema = z.object({
+  /** Number, name or account. */
+  q: searchText,
   status: projectStatus.optional(),
   managerEmployeeId: z.string().uuid().optional(),
   salesAccountId: z.string().uuid().optional(),

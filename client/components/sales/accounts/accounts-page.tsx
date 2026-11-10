@@ -44,6 +44,8 @@ import { useSalesPermissions } from "@/components/sales/shared/use-sales-permiss
 import { accountStats } from "@/components/sales/shared/sales-stats"
 import { VisitingCardPicker } from "@/components/sales/accounts/visiting-card-picker"
 import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
+import { SearchBox, useSearch } from "@/components/sales/shared/search-box"
+import { matchesAccount } from "@/lib/sales-search"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -136,6 +138,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   const [cardFile, setCardFile] = useState<File | null>(null)
   // The account's own questions. Held until the account is saved, like the card.
   const [qnaRows, setQnaRows] = useState<CustomRow[]>([])
+  const search = useSearch()
 
   const isAuthed = sessionStatus === "authenticated" && !!accessToken
   const { can } = useSalesPermissions()
@@ -280,7 +283,11 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
     })
   }
 
-  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
+  // The whole list is loaded, so the search runs here (lib/sales-search.ts).
+  const accounts = useMemo(
+    () => (accountsQuery.data ?? []).filter((account) => matchesAccount(account, search.q)),
+    [accountsQuery.data, search.q]
+  )
   const rows = useMemo(() => toRows(accounts, true), [accounts])
   // Counted from the rows on this list, so a tile always agrees with the table.
   const stats = useMemo<SalesStat[]>(() => {
@@ -301,13 +308,15 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
       ? "Every company the team sells to, with an owner answerable for each one. Open one to look, even if it is not yours to work."
       : "The companies you own or are assigned to — the ones you can actually work."
 
-  const emptyTitle = scope === "all" ? "No Sales Accounts yet" : "Nothing here yet"
+  const searching = search.q !== ""
+  const emptyTitle = searching ? "No accounts match the search" : scope === "all" ? "No Sales Accounts yet" : "Nothing here yet"
 
   // A Sales Admin can create an account but never own one, so "create one"
   // is the wrong prompt for them on this page — the account they made would
   // still belong to somebody else.
-  const emptyBody =
-    scope === "all"
+  const emptyBody = searching
+    ? `No account name, industry or owner matches "${search.q}". Change the search, or clear it to see every account.`
+    : scope === "all"
       ? canCreate
         ? "Create the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and Opportunities against it."
         : "A Sales Admin creates the first one. Once an account exists, its owner and anyone assigned to it can record calls, meetings and Opportunities against it."
@@ -323,10 +332,12 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   // create one, and "View All Accounts" would link this page to itself. The
   // copy above already tells them who can create the first account, so the
   // empty state carries no action rather than an inert one.
-  const emptyAction = canCreate ? "New Sales Account" : scope === "all" ? undefined : "View All Accounts"
+  const emptyAction = searching
+    ? "Clear the search"
+    : canCreate ? "New Sales Account" : scope === "all" ? undefined : "View All Accounts"
 
   const goToAll = () => router.push("/sales/accounts")
-  const onEmptyAction = canCreate ? handleOpenCreate : goToAll
+  const onEmptyAction = searching ? search.clear : canCreate ? handleOpenCreate : goToAll
 
   // Nothing to paint while the redirect above is in flight — rendering the
   // page first would flash an empty table on the way out.
@@ -345,6 +356,13 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
 
       <SalesStatRow stats={stats} isLoading={isLoading} isError={accountsQuery.isError} />
 
+      {/* Hidden while the list loads: a search box beside a skeleton reads as an answer. */}
+      {!isLoading && !accountsQuery.isError && (accountsQuery.data?.length ?? 0) > 0 ? (
+        <div className="mb-3">
+          <SearchBox value={search.typed} onChange={search.setTyped} label="Search accounts" placeholder="Name, industry or owner" />
+        </div>
+      ) : null}
+
       <PanelTable
         title={scope === "all" ? "All accounts" : "My accounts"}
         emptyIcon={RiBuilding2Line}
@@ -362,7 +380,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
         // The default glyph is a plus, which promises a create. This action
         // navigates, so it gets an arrow instead.
         emptyActionIcon={
-          emptyAction === "View All Accounts" ? (
+          emptyAction === "View All Accounts" || emptyAction === "Clear the search" ? (
             <RiArrowRightLine className="size-4" aria-hidden />
           ) : undefined
         }

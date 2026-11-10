@@ -14,6 +14,7 @@
 
 import { env } from "../../../config/env"
 import prisma from "../../../config/prisma"
+import { containsText } from "../sales.primitives"
 import type { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
@@ -502,7 +503,7 @@ const LIST_INCLUDE = {
  * only is the minutes they started or are named under Prepared by.
  */
 export async function listMinutes(
-  query: { mine?: boolean; status?: ListMinutesQuery["status"] },
+  query: { mine?: boolean; status?: ListMinutesQuery["status"]; q?: string },
   actor: AccessTokenPayload
 ): Promise<{ items: SalesMinutesListItem[] }> {
   const employeeId = await employeeIdFor(actor)
@@ -512,6 +513,17 @@ export async function listMinutes(
       ...(query.status ? { status: query.status } : {}),
       ...(query.mine
         ? { OR: [{ createdBy: actor.sub }, { preparers: { some: { employeeId: employeeId ?? "__none__" } } }] }
+        : {}),
+      // In AND, so it cannot replace the OR above.
+      ...(query.q
+        ? {
+            AND: [{
+              OR: [
+                { meeting: { title: containsText(query.q) } },
+                { meeting: { salesAccount: { name: containsText(query.q) } } },
+              ],
+            }],
+          }
         : {}),
     },
     include: LIST_INCLUDE,

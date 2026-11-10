@@ -50,8 +50,9 @@ export function ContactsPage() {
   const [industry, setIndustry] = useState("")
   const [status, setStatus] = useState<SalesContactStatus | "">("")
   const [page, setPage] = useState(1)
-  const [sort, setSort] = useState<ContactSort>("name")
-  const [dir, setDir] = useState<"asc" | "desc">("asc")
+  // Newest first until a column header is clicked (owner, 2026-11-10).
+  const [sort, setSort] = useState<ContactSort>("added")
+  const [dir, setDir] = useState<"asc" | "desc">("desc")
 
   // Waits for a pause in typing, so each letter is not a request.
   useEffect(() => {

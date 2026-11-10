@@ -7,6 +7,8 @@
 
 import { z } from "zod"
 
+import { searchText } from "../sales.primitives"
+
 import { parseDateOnly } from "../../../utils/dates"
 
 function isRealDate(value: string): boolean {
@@ -48,6 +50,8 @@ const money = z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, "Use an amount like 355
 
 /** The four filters and five sorts the grid offers (§27.9). */
 export const funnelQuerySchema = z.object({
+  /** Number, name or account. */
+  q: searchText,
   /** Whose funnel. Absent means the caller's own. */
   employeeId: z.string().uuid().optional(),
   status: z.enum(["ONGOING", "WON", "LOST", "CANCELLED"]).optional(),

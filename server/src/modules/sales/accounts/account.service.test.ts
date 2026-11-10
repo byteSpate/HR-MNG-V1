@@ -10,6 +10,7 @@ vi.mock("../../../config/prisma", () => ({
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       update: vi.fn(),
+      findMany: vi.fn(),
     },
     salesAccountAssignment: { createMany: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
     salesCollaboratorRemoval: { findMany: vi.fn(), updateMany: vi.fn() },
@@ -35,6 +36,8 @@ import {
   getAccountHistory,
   getAccountMargin,
   getSalesAccount,
+  listAllSalesAccounts,
+  listSalesAccounts,
   listSalesEligibleEmployees,
   updateSalesAccount,
 } from "./account.service"
@@ -1074,5 +1077,23 @@ describe("an account's visiting card in its payload", () => {
 
   it("carries null when it has none, never an empty link", async () => {
     expect((await open(null)).visitingCardUrl).toBeNull()
+  })
+})
+
+describe("the order of the account lists (owner, 2026-11-10)", () => {
+  it("puts the newest account first on All accounts", async () => {
+    vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as any)
+    await listAllSalesAccounts(ADMIN)
+    expect(vi.mocked(prisma.salesAccount.findMany).mock.calls.at(-1)![0]).toMatchObject({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    })
+  })
+
+  it("puts the newest account first on My accounts", async () => {
+    vi.mocked(prisma.salesAccount.findMany).mockResolvedValue([] as any)
+    await listSalesAccounts(USER)
+    expect(vi.mocked(prisma.salesAccount.findMany).mock.calls.at(-1)![0]).toMatchObject({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    })
   })
 })
