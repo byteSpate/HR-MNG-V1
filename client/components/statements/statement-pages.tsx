@@ -5,8 +5,10 @@ import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { RiDownloadLine, RiErrorWarningLine } from "@remixicon/react"
 
+import { formatTotal } from "@/components/accounting/accounting-shared"
 import {
   downloadStatementsPdf,
+  getAnnexureA,
   getChangesInEquity,
   getFinancialPosition,
   getProfitOrLoss,
@@ -234,6 +236,104 @@ export function BalanceSheetPage() {
           ]}
         />
       )}
+    </StatementShell>
+  )
+}
+
+const ANNEXURE_COLUMNS = [
+  "Asset group",
+  "Rate",
+  "Cost at start",
+  "Added",
+  "Cost at end",
+  "Depreciation at start",
+  "Charged",
+  "Depreciation at end",
+  "Value left (WDV)",
+]
+
+/**
+ * Annexure-A, the fixed asset schedule. Removed on 2026-11-09 as a
+ * printed-copy page, and brought back the next day because management reads
+ * it. It is still in the PDF as well. The server refuses a schedule that does
+ * not match the Balance sheet, so a table on screen always agrees with it.
+ */
+export function AnnexurePage() {
+  const { accessToken, range, ready } = useStatementPeriod()
+  const annexure = useQuery({
+    queryKey: ["statements", range.from, range.to, "annexure"],
+    queryFn: () => getAnnexureA(accessToken!, range),
+    enabled: ready,
+    retry: false,
+  })
+
+  return (
+    <StatementShell
+      title="Annexure-A"
+      sub="The fixed asset schedule. For each group of assets: what it cost, how much value it has lost (depreciation), and the value left. The total value left is the same as on the Balance sheet."
+      query={annexure}
+      comparativeLabel={null}
+    >
+      {(data) =>
+        data.rows.length === 0 ? (
+          <p className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+            There are no fixed asset groups in the chart of accounts yet. Add them under Property, Plant &amp;
+            Equipment in the chart of accounts, then come back here.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full min-w-250 text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  {ANNEXURE_COLUMNS.map((h) => (
+                    <th key={h} scope="col" className="px-3 py-2 text-right font-medium first:text-left">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.rows.map((r) => (
+                  <tr key={r.accountId} className="border-b">
+                    <th scope="row" className="px-3 py-2 text-left font-normal">
+                      {r.particulars}
+                    </th>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.rate ? `${r.rate}%` : "-"}</td>
+                    {[r.costOpening, r.costAddition, r.costClosing, r.depOpening, r.depCharged, r.depClosing, r.writtenDownValue].map(
+                      (v, i) => (
+                        <td key={i} className="px-3 py-2 text-right tabular-nums">
+                          {formatTotal(v)}
+                        </td>
+                      )
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-muted/40 font-medium">
+                  <th scope="row" className="px-3 py-2 text-left">
+                    Total
+                  </th>
+                  <td className="px-3 py-2" />
+                  {[
+                    data.total.costOpening,
+                    data.total.costAddition,
+                    data.total.costClosing,
+                    data.total.depOpening,
+                    data.total.depCharged,
+                    data.total.depClosing,
+                    data.total.writtenDownValue,
+                  ].map((v, i) => (
+                    <td key={i} className="px-3 py-2 text-right tabular-nums">
+                      {formatTotal(v)}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )
+      }
     </StatementShell>
   )
 }

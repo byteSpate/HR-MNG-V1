@@ -71,6 +71,7 @@ export const navGroups: NavGroup[] = [
       { label: "Changes in equity", href: "/admin/statements/changes-in-equity", icon: "RiPieChartLine" },
       { label: "Cash flow", href: "/admin/statements/cash-flow", icon: "RiExchangeDollarLine" },
       { label: "Notes", href: "/admin/statements/notes", icon: "RiFileTextLine" },
+      { label: "Annexure-A", href: "/admin/statements/annexure-a", icon: "RiFolderChartLine" },
     ],
   },
   {

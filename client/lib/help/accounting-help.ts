@@ -61,7 +61,7 @@ export const FLOW: FlowStep[] = [
     id: "report",
     title: "Report",
     body: "The statements the company files: the income statement, the balance sheet, changes in equity and cash flow. Then the notes that explain them, and a PDF of the whole set. The app works out every number from the ledger.",
-    pages: ["Income statement", "Balance sheet", "Changes in equity", "Cash flow", "Notes"],
+    pages: ["Income statement", "Balance sheet", "Changes in equity", "Cash flow", "Notes", "Annexure-A"],
   },
   {
     id: "close",
@@ -1012,7 +1012,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Fixed assets",
-        body: "Shown as cost less the depreciation charged so far. The full table for each asset group (the fixed asset schedule, called Annexure-A) is in the PDF.",
+        body: "Shown as cost less the depreciation charged so far. The full table for each asset group is on the **Annexure-A** page and in the PDF.",
       },
       {
         name: "The grey column",
@@ -1219,6 +1219,63 @@ export const HELP: Record<string, HelpEntry> = {
       "Nothing checks the written text against the ledger. If the text says 15% and the chart of accounts says 10%, both are printed. Check them yourself.",
       "The number joins text to a table. If you change the number of a note that has a table, the text moves away from that table.",
       "A table is only as detailed as the chart of accounts. To split one big account, add new accounts in the chart. Do not change the note.",
+    ],
+  },
+
+  "statements/annexure-a": {
+    title: "Annexure-A",
+    lede: "The fixed asset schedule. One row for each group of assets: what it cost, how much value it has lost, and the value left.",
+    step: "report",
+    connects: {
+      fedBy: ["Assets added to the books, and depreciation runs, through the ledger"],
+      feeds: ["The fixed asset line on the Balance sheet", "The PDF of all the statements"],
+    },
+    reading: [
+      {
+        name: "The cost columns",
+        body: "Cost at the start of the period, what was added during it, and cost at the end. This is what the company paid. It does not change as the asset gets older.",
+      },
+      {
+        name: "The depreciation columns",
+        body: "Depreciation is the value an asset loses as it gets older. The columns show depreciation before the period, depreciation charged in the period, and the total so far.",
+      },
+      {
+        name: "Value left (WDV)",
+        body: "Cost less the depreciation so far. WDV means written-down value. It is the value in the accounts, not the price the asset would sell for.",
+      },
+      {
+        name: "The rate",
+        body: "Each group loses value at its own rate each year. For example, furniture at 10% and computers at 20%. The rate is taken from what is left each year, so the charge gets smaller every year.",
+      },
+      {
+        name: "It matches the Balance sheet",
+        body: "The total value left is the same as the fixed asset line on the Balance sheet. The app does not show a schedule that does not match, so if you can see one, they agree.",
+      },
+      NUMBER_CONVENTIONS,
+    ],
+    does: [
+      {
+        name: "Choose the period",
+        body: "This schedule is usually read for a full year. The other statement pages use the same period.",
+      },
+      {
+        name: "Download PDF",
+        body: "All the statements, the cash flow, the notes and this schedule in one file.",
+      },
+    ],
+    scenarios: [
+      {
+        title: "A laptop was bought and the schedule did not change",
+        steps: [
+          "Check the asset register. The laptop is there.",
+          "Check if it was added to the books (capitalised). Adding it to the register does not change the ledger.",
+          "Capitalise it. The **Added** column changes in the period it was capitalised.",
+        ],
+      },
+    ],
+    watchFor: [
+      "An asset in the register that was never capitalised is not on this schedule.",
+      "Depreciation shows only after a depreciation run is posted for the period.",
     ],
   },
 
