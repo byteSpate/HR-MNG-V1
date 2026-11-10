@@ -15,6 +15,7 @@
  */
 
 import prisma from "../../../config/prisma"
+import { containsText } from "../sales.primitives"
 import type { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
@@ -572,6 +573,15 @@ export async function listMeetings(
       : {}),
     ...(query.mine
       ? { attendees: { some: { side: "OURS" as const, employeeId: employeeId ?? "__none__" } } }
+      : {}),
+    ...(query.q
+      ? {
+          OR: [
+            { title: containsText(query.q) },
+            { location: containsText(query.q) },
+            { salesAccount: { name: containsText(query.q) } },
+          ],
+        }
       : {}),
   }
   const rows = await prisma.salesMeeting.findMany({

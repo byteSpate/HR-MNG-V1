@@ -99,7 +99,7 @@ export function overviewScope(loaded: number): string {
  */
 export function listEmptyState(isFiltered: boolean): { title: string; body: string; action: string | null } {
   return isFiltered
-    ? { title: "No Projects match these filters", body: "Try a different filter, or All.", action: "Clear the filter" }
+    ? { title: "No Projects match", body: "Change the search, or set a filter back to All.", action: "Clear the search and filters" }
     : { title: "No Projects yet", body: "A Project starts from a Won Opportunity, on its Project tab.", action: null }
 }
 

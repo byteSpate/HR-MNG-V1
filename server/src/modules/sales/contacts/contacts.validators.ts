@@ -6,8 +6,10 @@ export const listContactsQuerySchema = z.object({
   industry: z.string().trim().max(120, "Keep the industry under 120 characters.").optional().transform((v) => (v ? v : undefined)),
   status: z.enum(["UNVERIFIED", "VERIFIED", "UNREACHABLE", "INVALID"], { error: "Choose a status from the list." }).optional(),
   page: z.coerce.number({ error: "Choose a page." }).int("Choose a page.").min(1, "Choose a page.").default(1),
-  sort: z.enum(["name", "designation", "account", "industry", "status"], { error: "Sort by name, job title, account, industry or status." }).default("name"),
-  dir: z.enum(["asc", "desc"], { error: "Sort up or down." }).default("asc"),
+  // "added" is the date the contact was added, newest first unless asked
+  // otherwise. It is the default (owner, 2026-11-10); the columns are A to Z.
+  sort: z.enum(["added", "name", "designation", "account", "industry", "status"], { error: "Sort by date added, name, job title, account, industry or status." }).default("added"),
+  dir: z.enum(["asc", "desc"], { error: "Sort up or down." }).optional(),
 })
 
 export type ListContactsQuery = z.infer<typeof listContactsQuerySchema>

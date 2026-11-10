@@ -26,7 +26,7 @@ export async function readQuarterSummaries(
   const [targets, wins, open, missing] = await Promise.all([
     prisma.salesTarget.findMany({
       where: { employeeId: { in: ids }, calendarYear: year },
-      select: { employeeId: true, amount: true, startQuarter: true, note: true },
+      select: { employeeId: true, amount: true, startDate: true, endDate: true, note: true },
     }),
     prisma.opportunity.findMany({
       where: { wonByEmployeeId: { in: ids }, status: "WON", closedAt: yearRange(year) },
@@ -57,7 +57,7 @@ export async function readQuarterSummaries(
     const year_ = presentYear(
       person,
       year,
-      target ? { amount: dec(target.amount), startQuarter: target.startQuarter, note: target.note } : null,
+      target ? { amount: dec(target.amount), startDate: target.startDate, endDate: target.endDate, note: target.note } : null,
       wins
         .filter((w) => w.wonByEmployeeId === person.id)
         .map((w) => ({ amount: w.amount === null ? null : dec(w.amount), closedAt: w.closedAt })),

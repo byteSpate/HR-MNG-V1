@@ -1,4 +1,5 @@
 import prisma from "../../../config/prisma"
+import { containsText } from "../sales.primitives"
 import type { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
@@ -227,6 +228,19 @@ export async function listOpportunities(query: ListOpportunityQuery, actor: Acce
       : {}),
     // Last, so it wins: Before Quotation is only ever ongoing Opportunities.
     ...(query.view === "BEFORE_QUOTATION" ? { status: "ONGOING" as const, OR: beforeQuoteStages() } : {}),
+    // In AND, so it cannot replace the OR above.
+    ...(query.q
+      ? {
+          AND: [{
+            OR: [
+              { serial: containsText(query.q) },
+              { name: containsText(query.q) },
+              { salesAccount: { name: containsText(query.q) } },
+              { owner: { fullName: containsText(query.q) } },
+            ],
+          }],
+        }
+      : {}),
   }
   const rows = await prisma.opportunity.findMany({
     where, include: INCLUDE, orderBy: [{ createdAt: "desc" }, { id: "desc" }],

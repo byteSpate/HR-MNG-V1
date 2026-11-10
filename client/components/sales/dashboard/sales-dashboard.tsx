@@ -412,14 +412,15 @@ function TargetEditor({
       <DialogContent className={dialogWidthClass("lg")}>
         <DialogHeader>
           <DialogTitle>
-            Yearly target — {employeeName}, {calendarYear}
+            Target for {employeeName}, {calendarYear}
           </DialogTitle>
         </DialogHeader>
 
         <p className={`text-caption leading-relaxed ${TONE.muted}`}>
-          A target is an amount of Opportunity value, in taka, for the year. It is split equally over the
-          quarters from the one it starts in. If a quarter falls short, the shortfall is added to the
-          next quarter. Winning more than a quarter&rsquo;s target does not lower the next one.
+          A target is an amount of Opportunity value, in taka, to win between two dates in the year. It is
+          split over the quarters those dates cover. A quarter the dates cover only in part gets a smaller
+          share. If a quarter falls short, the shortfall is added to the next quarter. Winning more than a
+          quarter&rsquo;s target does not lower the next one.
         </p>
 
         {yearQuery.isPending ? (
@@ -432,7 +433,7 @@ function TargetEditor({
             {/* Keyed by what is saved, so the fields start from the stored
                 target and refill after each save. */}
             <TargetForm
-              key={`${yearQuery.data.yearlyTarget ?? "none"}-${yearQuery.data.startQuarter ?? 1}`}
+              key={`${yearQuery.data.yearlyTarget ?? "none"}-${yearQuery.data.startDate ?? ""}-${yearQuery.data.endDate ?? ""}`}
               employeeId={employeeId}
               calendarYear={calendarYear}
               year={yearQuery.data}
@@ -457,7 +458,9 @@ function TargetForm({
   const queryClient = useQueryClient()
 
   const [amount, setAmount] = useState(year.yearlyTarget ?? "")
-  const [startQuarter, setStartQuarter] = useState(String(year.startQuarter ?? 1))
+  // The whole year unless a saved target says otherwise (owner, 2026-11-10).
+  const [startDate, setStartDate] = useState(year.startDate ?? `${calendarYear}-01-01`)
+  const [endDate, setEndDate] = useState(year.endDate ?? `${calendarYear}-12-31`)
   const [error, setError] = useState<string | null>(null)
 
   const save = useMutation({
@@ -475,44 +478,61 @@ function TargetForm({
     // Commas are how people write taka; the server wants digits.
     const clean = amount.replace(/[,\s]/g, "")
     if (!MONEY.test(clean) || Number(clean) <= 0) {
-      setError("Enter the yearly target in taka, more than 0 — for example 4000000 or 40,00,000.")
+      setError("Enter the target in taka, more than 0. For example 4000000 or 40,00,000.")
+      return
+    }
+    if (!startDate || !endDate || startDate > endDate) {
+      setError("Choose a From date that is on or before the To date.")
       return
     }
     setError(null)
-    save.mutate({ employeeId, calendarYear, amount: clean, startQuarter: Number(startQuarter) })
+    save.mutate({ employeeId, calendarYear, amount: clean, startDate, endDate })
   }
 
   return (
     <>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Field
+            label="Target (৳)"
+            htmlFor="target-amount"
+            help="The Opportunity value to win between From and To, in taka. Commas are fine."
+          >
+            <Input
+              id="target-amount"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </Field>
+        </div>
         <Field
-          label="Yearly target (৳)"
-          htmlFor="target-amount"
-          help="The Opportunity value to win in the year, in taka. Commas are fine."
+          label="From"
+          htmlFor="target-from"
+          help="The first day the target counts. Choose a later date for somebody who joined during the year."
         >
           <Input
-            id="target-amount"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            id="target-from"
+            type="date"
+            min={`${calendarYear}-01-01`}
+            max={`${calendarYear}-12-31`}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
           />
         </Field>
         <Field
-          label="Starts in"
-          help="The target is split over this quarter and the ones after it. Choose a later quarter for somebody who joined during the year."
+          label="To"
+          htmlFor="target-to"
+          help="The last day the target counts. A quarter the dates cover only in part gets a smaller share."
         >
-          <Select value={startQuarter} onValueChange={(v) => setStartQuarter(v ?? "1")}>
-            <SelectTrigger className="w-full">
-              <SelectValue>{(v: string | null) => `Q${v ?? "1"}`}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {["1", "2", "3", "4"].map((q) => (
-                <SelectItem key={q} value={q}>
-                  Q{q}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            id="target-to"
+            type="date"
+            min={`${calendarYear}-01-01`}
+            max={`${calendarYear}-12-31`}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
         </Field>
       </div>
 

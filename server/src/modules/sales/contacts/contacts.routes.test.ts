@@ -34,6 +34,6 @@ describe("the Contacts routes", () => {
 
   it("refuse a bad sort with a plain sentence", async () => {
     const res = await request(app).get("/api/sales/contacts?sort=salary").set("Authorization", token("SALES_USER")).expect(400)
-    expect(res.body.error).toBe("Sort by name, job title, account, industry or status.")
+    expect(res.body.error).toBe("Sort by date added, name, job title, account, industry or status.")
   })
 })

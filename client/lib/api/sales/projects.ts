@@ -2,6 +2,8 @@ import { apiFetch } from "../client"
 import type { ProjectDailyLogView, ProjectListRow, ProjectStatus, ProjectSummary, SalesTaskSummary, SalesTrack } from "../types"
 
 export interface ListProjectsQuery {
+  /** The search box (owner, 2026-11-10). Searched on the server. */
+  q?: string
   status?: ProjectStatus
   managerEmployeeId?: string
   salesAccountId?: string

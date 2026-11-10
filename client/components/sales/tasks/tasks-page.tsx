@@ -35,6 +35,7 @@ import { taskActions } from "@/components/sales/shared/plan-panels"
 import { LogsPanel } from "@/components/sales/tasks/logs-panel"
 import { TaskFormDialog, TaskStatusDialog, useTaskStatus } from "@/components/sales/tasks/task-dialogs"
 import { TASK_TYPE_LABEL } from "@/components/sales/shared/task-types"
+import { SearchBox, useSearch } from "@/components/sales/shared/search-box"
 import {
   TASK_ORIGIN_LABEL,
   TASK_PRIORITY_LABEL,
@@ -90,6 +91,7 @@ export function TasksPage({
   const [editing, setEditing] = useState<SalesTaskSummary | null>(null)
   const [ending, setEnding] = useState<{ task: SalesTaskSummary; action: "DONE" | "CANCELLED" } | null>(null)
   const reopen = useTaskStatus()
+  const search = useSearch()
 
   const filters: ListTasksQuery = useMemo(
     () => ({
@@ -97,17 +99,20 @@ export function TasksPage({
       ...(due ? { due } : {}),
       ...(origin ? { origin } : {}),
       ...(mine ? { mine: true } : {}),
+      ...(search.q ? { q: search.q } : {}),
     }),
-    [status, due, origin, mine]
+    [status, due, origin, mine, search.q]
   )
   const query = useQuery({
     queryKey: salesKeys.tasks(filters as Record<string, unknown>),
     queryFn: () => listTasks(accessToken!, filters),
     enabled: isAuthed,
+    // Keeps the rows, and the search box, on screen while a new search loads.
+    placeholderData: (previous) => previous,
   })
 
   const isLoading = sessionStatus === "loading" || query.isPending
-  const isFiltered = Boolean(status !== "PENDING" || due || origin)
+  const isFiltered = Boolean(status !== "PENDING" || due || origin || search.q)
 
   // Counted from the rows on this list, so a tile always agrees with the table.
   // The server sends at most 500, and says so here rather than pretend.
@@ -179,6 +184,7 @@ export function TasksPage({
     setStatus("PENDING")
     setDue("")
     setOrigin("")
+    search.clear()
     if (initialDue) router.replace("/sales/tasks")
   }
 
@@ -215,6 +221,7 @@ export function TasksPage({
           about a list nobody has counted yet. */}
       {!isLoading && !query.isError ? (
         <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
+          <SearchBox value={search.typed} onChange={search.setTyped} label="Search tasks" placeholder="Title, account or Opportunity" />
           <Select value={status || ANY} onValueChange={(v) => setStatus(!v || v === ANY ? "" : (v as SalesTaskStatus))}>
             <SelectTrigger aria-label="Task status" className="h-9 w-auto min-w-[9rem]">
               <SelectValue>
@@ -290,10 +297,10 @@ export function TasksPage({
         isLoading={isLoading}
         isError={query.isError}
         onRetry={() => query.refetch()}
-        emptyTitle={isFiltered ? "Nothing matches these filters" : "No open tasks"}
+        emptyTitle={isFiltered ? "Nothing matches" : "No open tasks"}
         emptyBody={
           isFiltered
-            ? "No task matches every filter at once. Widening one of them is usually enough."
+            ? "No task matches the search and every filter at once. Change the search or clear a filter."
             : "A task is one thing to do by a date, like calling back or sending a quote. Make one here, from an account, or from an Opportunity's next step."
         }
         emptyAction={isFiltered ? "Clear filters" : can("task.create") ? "New task" : undefined}

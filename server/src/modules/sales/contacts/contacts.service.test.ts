@@ -10,7 +10,7 @@ vi.mock("../../../config/prisma", () => ({
 
 import prisma from "../../../config/prisma"
 import { buildContactsExportSpec } from "./contacts.export"
-import { listAllContacts } from "./contacts.service"
+import { contactsOrderBy, listAllContacts } from "./contacts.service"
 import { listContactsQuerySchema } from "./contacts.validators"
 
 const USER = { sub: "user-1", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
@@ -104,5 +104,16 @@ describe("the Contacts page (owner, 2026-10-18)", () => {
     expect(findManyArgs().where.AND[1].OR).toHaveLength(6)
     expect(spec.title).toBe("Contacts")
     expect(spec.rows).toEqual([["Karim Ahmed", "IT Manager", "01700000000", "karim@alpha.com", "Alpha Ltd", "Banking", "Verified"]])
+  })
+})
+
+describe("the order of the Contacts list (owner, 2026-11-10)", () => {
+  it("puts the newest contact first when no column is chosen", () => {
+    expect(contactsOrderBy("added", undefined)).toEqual([{ createdAt: "desc" }, { id: "asc" }])
+  })
+
+  it("still sorts a chosen column A to Z unless told otherwise", () => {
+    expect(contactsOrderBy("name", undefined)).toEqual([{ name: "asc" }, { id: "asc" }])
+    expect(contactsOrderBy("name", "desc")).toEqual([{ name: "desc" }, { id: "asc" }])
   })
 })

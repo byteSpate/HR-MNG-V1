@@ -406,3 +406,20 @@ describe("the list of minutes", () => {
     }])
   })
 })
+
+describe("searching the list of minutes (owner, 2026-11-10)", () => {
+  it("searches the meeting title and account, beside Mine and the account scope", async () => {
+    await listMinutes({ mine: true, q: "review" }, USER)
+
+    const args = vi.mocked(prisma.salesMeetingMinutes.findMany).mock.calls[0][0] as any
+    expect(args.where.AND).toEqual([{
+      OR: [
+        { meeting: { title: { contains: "review", mode: "insensitive" } } },
+        { meeting: { salesAccount: { name: { contains: "review", mode: "insensitive" } } } },
+      ],
+    }])
+    // Mine's OR and the account scope are both still there.
+    expect(args.where.OR).toEqual([{ createdBy: "user-1" }, { preparers: { some: { employeeId: "emp-1" } } }])
+    expect(args.where.meeting).toBeDefined()
+  })
+})

@@ -41,6 +41,7 @@ import {
 } from "@/components/sales/shared/sales-shared"
 import { BeforeQuotationView } from "@/components/sales/opportunities/before-quotation-view"
 import { StageBar } from "@/components/sales/opportunities/stage-bar"
+import { SearchBox, useSearch } from "@/components/sales/shared/search-box"
 import type { TableCell } from "@/components/dashboard/types"
 import { Heading } from "@/components/ds/heading"
 
@@ -263,6 +264,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
   const [ownerEmployeeId, setOwnerEmployeeId] = useState(actionFilters.ownerEmployeeId ?? "")
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const search = useSearch()
   // Two views (owner, 2026-11-02): everything, as before, or the ones waiting
   // for their first quote. The choice is remembered in this browser only; the
   // page works the same without it.
@@ -280,14 +282,17 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
       ...(closing ? { closing } : {}),
       ...(quiet ? { quiet } : {}),
       ...(stuck ? { stuck } : {}),
+      ...(search.q ? { q: search.q } : {}),
     }),
-    [status, stage, mine, ownerEmployeeId, closing, quiet, stuck]
+    [status, stage, mine, ownerEmployeeId, closing, quiet, stuck, search.q]
   )
 
   const query = useQuery({
     queryKey: salesKeys.opportunities(filters as Record<string, unknown>),
     queryFn: () => listOpportunities(accessToken!, filters),
     enabled: isAuthed && view === "ALL",
+    // Keeps the rows, and the search box, on screen while a new search loads.
+    placeholderData: (previous) => previous,
   })
   const ownersQuery = useQuery({
     queryKey: ["sales", "opportunity-owners"],
@@ -298,7 +303,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
   const deals = useMemo(() => query.data?.items ?? [], [query.data])
   const owners = ownersQuery.data ?? []
   const isLoading = sessionStatus === "loading" || (view === "ALL" && query.isPending)
-  const isFiltered = Boolean(status || stage || mine || ownerEmployeeId || closing || quiet || stuck)
+  const isFiltered = Boolean(status || stage || mine || ownerEmployeeId || closing || quiet || stuck || search.q)
   const isSalesAdmin = !!user && (user.role === "SUPER_ADMIN" || user.salesRole === "SALES_ADMIN")
   const viewDescription = mine
     ? "Only opportunities you own"
@@ -339,15 +344,16 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
     setStage("")
     setMine(false)
     setOwnerEmployeeId("")
+    search.clear()
     if (closing || quiet || stuck) router.replace("/sales/opportunities")
   }
 
   // A filtered list and an unused system are empty for different reasons, and
   // the way out of each differs. Collapsing them into one sentence sends
   // somebody looking for deals that were never there.
-  const emptyTitle = isFiltered ? "Nothing matches these filters" : "No opportunities yet"
+  const emptyTitle = isFiltered ? "Nothing matches" : "No opportunities yet"
   const emptyBody = isFiltered
-    ? "No Opportunity matches every filter at once. Widening one of them is usually enough."
+    ? "No Opportunity matches the search and every filter at once. Change the search or clear a filter."
     : "An Opportunity is live work on a Sales Account — what is being sold, at what stage, and what happens next. Open an account and press New opportunity."
 
   return (
@@ -405,6 +411,12 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-surface-sunken pt-3">
+          <SearchBox
+            value={search.typed}
+            onChange={search.setTyped}
+            label="Search Opportunities"
+            placeholder="Number, name, account or owner"
+          />
           <Select value={status} onValueChange={(v) => setStatus((v ?? "") as OpportunityStatus | "")}>
             <SelectTrigger aria-label="Opportunity status" className="h-9 w-auto min-w-[9rem]">
               <SelectValue>

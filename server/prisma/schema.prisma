@@ -3479,14 +3479,20 @@ model SalesTarget {
   /// which year it means.
   calendarYear Int
 
-  /// Taka of deal value to win in the year. Split equally over the quarters
-  /// from `startQuarter` to Q4, with a quarter's shortfall carried into the
-  /// next — worked out in target.plan.ts and never stored per quarter, so a
-  /// correction to a past quarter's wins moves the later targets with it.
-  amount       Decimal @db.Decimal(14, 2)
-  /// 1-4. Somebody who joins in July starts in Q3 and is not measured
-  /// against the quarters before they arrived.
-  startQuarter Int     @default(1)
+  /// Taka of deal value to win between `startDate` and `endDate`. Split over
+  /// the quarters the range covers, in proportion to how much of each quarter
+  /// it covers, with a quarter's shortfall carried into the next. Worked out
+  /// in target.plan.ts and never stored per quarter, so a correction to a past
+  /// quarter's wins moves the later targets with it.
+  amount       Decimal  @db.Decimal(14, 2)
+  /// The dates the target covers, both inside `calendarYear` (owner,
+  /// 2026-11-10). 1 January to 31 December for a whole-year target.
+  startDate    DateTime @db.Date
+  endDate      DateTime @db.Date
+  /// 1-4, the quarter of `startDate`. Kept and written so code from before
+  /// the date range still reads a sensible value during a deploy. Nothing new
+  /// reads it; use the dates.
+  startQuarter Int      @default(1)
   note         String?
   setBy        String?
 

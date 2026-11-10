@@ -1,10 +1,11 @@
 /**
  * A yearly target, split into quarters, with shortfalls carried forward.
  *
- * An admin sets one amount of deal value for the year. It is split equally
- * over the quarters from the start quarter to Q4 — a person who joins in July
- * is not measured against January. Every quarter's target is then worked out,
- * never stored:
+ * An admin sets one amount of deal value for a date range inside one year
+ * (the whole year by default). It is split over the quarters the range
+ * covers, each in proportion to how much of the quarter is covered, so a
+ * person who joins in July is not measured against January. Every quarter's
+ * target is then worked out, never stored:
  *
  * - A quarter's **shortfall** is added to the next quarter's target, so a bad
  *   quarter cannot quietly drop out of sight.
@@ -59,31 +60,76 @@ export function phaseOf(
 }
 
 /**
- * The yearly amount in equal parts, one per quarter from `startQuarter`.
- *
- * Each part is rounded *down* to the paisa and Q4 takes what is left, so the
- * parts always add up to exactly the yearly amount and no quarter is asked for
- * a paisa more than its fair share.
+ * The dates a target covers, as "YYYY-MM-DD", inside one calendar year
+ * (owner, 2026-11-10). A whole-year target is 1 January to 31 December.
  */
-export function splitYearly(yearly: Money, startQuarter: number): (Money | null)[] {
-  const count = 5 - startQuarter
-  const share = yearly.dividedBy(count).times(100).floor().dividedBy(100)
-  const last = yearly.minus(share.times(count - 1))
-  return [1, 2, 3, 4].map((quarter) =>
-    quarter < startQuarter ? null : quarter === 4 ? last : share
+export interface TargetRange {
+  from: string
+  to: string
+}
+
+export function wholeYear(calendarYear: number): TargetRange {
+  return { from: `${calendarYear}-01-01`, to: `${calendarYear}-12-31` }
+}
+
+const DAY = 24 * 60 * 60 * 1000
+const dayNumber = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / DAY
+
+/** 1 to 4, from a "YYYY-MM-DD" date. */
+export function quarterOfDate(iso: string): number {
+  return Math.floor((Number(iso.slice(5, 7)) - 1) / 3) + 1
+}
+
+/**
+ * How much of each quarter the range covers, from 0 to 1. A whole quarter is
+ * 1, so a whole-year target still splits equally even though Q1 has 90 days
+ * and Q3 has 92. 15 to 31 March is 17/90 of Q1.
+ */
+export function quarterWeights(range: TargetRange): number[] {
+  const year = Number(range.from.slice(0, 4))
+  const from = dayNumber(range.from)
+  const to = dayNumber(range.to)
+  return [1, 2, 3, 4].map((quarter) => {
+    const qStart = Date.UTC(year, (quarter - 1) * 3, 1) / DAY
+    const qEnd = Date.UTC(year, quarter * 3, 0) / DAY
+    const covered = Math.min(to, qEnd) - Math.max(from, qStart) + 1
+    return covered <= 0 ? 0 : covered / (qEnd - qStart + 1)
+  })
+}
+
+/**
+ * The target split over the quarters the range covers, each in proportion to
+ * how much of that quarter is covered. A quarter the range does not touch has
+ * no target (null), never zero.
+ *
+ * Each part is rounded *down* to the paisa and the last covered quarter takes
+ * what is left, so the parts always add up to exactly the target.
+ */
+export function splitRange(amount: Money, range: TargetRange): (Money | null)[] {
+  const weights = quarterWeights(range)
+  const total = weights.reduce((a, b) => a + b, 0)
+  const last = weights.map((w) => w > 0).lastIndexOf(true)
+  const parts: (Money | null)[] = weights.map((w) =>
+    w === 0 ? null : amount.times(w).dividedBy(total).times(100).floor().dividedBy(100)
   )
+  const others = parts.reduce<Money>((acc, part, index) => (part !== null && index !== last ? acc.plus(part) : acc), ZERO)
+  parts[last] = amount.minus(others)
+  return parts
 }
 
 export function planQuarters(input: {
   /** The yearly target, or null when nobody has set one. */
   yearly: Money | null
-  startQuarter: number
+  /** The dates the target covers. Ignored when `yearly` is null. */
+  range: TargetRange | null
   /** Value won in Q1 to Q4, in order. */
   won: Money[]
   /** Q1 to Q4, in order. */
   phases: QuarterPhase[]
 }): PlannedQuarter[] {
-  const shares = input.yearly === null ? [null, null, null, null] : splitYearly(input.yearly, input.startQuarter)
+  const shares =
+    input.yearly === null || input.range === null ? [null, null, null, null] : splitRange(input.yearly, input.range)
+  const firstQuarter = input.range === null ? 1 : quarterOfDate(input.range.from)
   const plan: PlannedQuarter[] = []
 
   for (let index = 0; index < 4; index++) {
@@ -93,7 +139,7 @@ export function planQuarters(input: {
     // Something can be carried in only from a quarter of the same target,
     // which rules out the start quarter and everything before it.
     const fromPrevious =
-      share !== null && quarter !== input.startQuarter && previous !== undefined && previous.target !== null
+      share !== null && quarter !== firstQuarter && previous !== undefined && previous.target !== null
         ? previous
         : null
     const carried =

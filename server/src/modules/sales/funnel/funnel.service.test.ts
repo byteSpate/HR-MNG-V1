@@ -439,3 +439,16 @@ describe("listFunnelTeam", () => {
     expect(prisma.opportunity.findMany).not.toHaveBeenCalled()
   })
 })
+
+describe("searching the funnel (owner, 2026-11-10)", () => {
+  it("searches the number, name and account, inside the person's own funnel", async () => {
+    await getFunnel({ ...QUERY, q: "bank" } as never, USER, new Date("2026-10-13T06:00:00.000Z"))
+    const where = dealArgs()!.where as any
+    expect(where.OR).toEqual([
+      { serial: { contains: "bank", mode: "insensitive" } },
+      { name: { contains: "bank", mode: "insensitive" } },
+      { salesAccount: { name: { contains: "bank", mode: "insensitive" } } },
+    ])
+    expect(where.offeredOn).toEqual({ not: null })
+  })
+})

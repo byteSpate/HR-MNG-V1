@@ -12,6 +12,7 @@
  */
 
 import prisma from "../../../config/prisma"
+import { containsText } from "../sales.primitives"
 import type { Prisma, SalesTaskType } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { writeAudit } from "../../../utils/audit"
@@ -428,7 +429,20 @@ export async function listTasks(
   // filter is ignored, so their own scope is all they ever get.
   const pickedPerson = isSalesAdmin(actor) ? query.assignedToEmployeeId : undefined
   const where: Prisma.SalesTaskWhereInput = {
-    AND: [...taskScopeFor(actor, employeeId), ...dayRange(query.from, query.to)],
+    AND: [
+      ...taskScopeFor(actor, employeeId),
+      ...dayRange(query.from, query.to),
+      ...(query.q
+        ? [{
+            OR: [
+              { title: containsText(query.q) },
+              { salesAccount: { name: containsText(query.q) } },
+              { opportunity: { serial: containsText(query.q) } },
+              { opportunity: { name: containsText(query.q) } },
+            ],
+          }]
+        : []),
+    ],
     ...dueFilter(query.due, today),
     ...(query.status ? { status: query.status } : {}),
     ...(query.origin ? { origin: query.origin } : {}),

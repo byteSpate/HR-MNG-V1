@@ -46,7 +46,7 @@ export function deleteMinutes(accessToken: string, id: string): Promise<void> {
 
 export function listMinutes(
   accessToken: string,
-  query: { mine?: boolean; status?: SalesMinutesStatus } = {}
+  query: { mine?: boolean; status?: SalesMinutesStatus; q?: string } = {}
 ): Promise<{ items: SalesMinutesListItem[] }> {
   return apiFetch<{ items: SalesMinutesListItem[] }>(`/api/sales/minutes${searchOf(query)}`, { accessToken })
 }

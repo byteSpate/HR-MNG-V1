@@ -18,7 +18,7 @@ export function setSalesTarget(
   accessToken: string,
   body: SetSalesTargetBody
 ): Promise<SalesTargetYear> {
-  // The whole year comes back: changing the amount or the start quarter moves
+  // The whole year comes back: changing the amount or the dates moves
   // every quarter's target at once.
   return apiFetch<SalesTargetYear>("/api/sales/targets", {
     method: "PUT",

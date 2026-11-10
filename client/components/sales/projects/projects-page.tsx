@@ -22,6 +22,7 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelTable, TONE } from "@/components/dashboard/record-kit"
 import { Tag } from "@/components/dashboard/tag"
+import { SearchBox, useSearch } from "@/components/sales/shared/search-box"
 import { sized } from "@/components/sales/shared/sized-cell"
 import { SalesStatRow, type SalesStat } from "@/components/sales/shared/stat-row"
 import { TRACKS, TRACK_LABEL } from "@/lib/api/sales/stages"
@@ -117,18 +118,22 @@ export function ProjectsPage() {
   const [status, setStatus] = useState<string>("")
   const [track, setTrack] = useState<string>("")
   const [health, setHealth] = useState<string>("")
+  const search = useSearch()
 
   const filters = {
     ...(status ? { status: status as ProjectListRow["status"] } : {}),
     ...(track ? { track: track as SalesTrack } : {}),
+    ...(search.q ? { q: search.q } : {}),
   }
   const query = useQuery({
     queryKey: salesKeys.projects(filters),
     queryFn: () => listProjects(accessToken!, filters),
     enabled: !!accessToken,
+    // Keeps the rows, and the search box, on screen while a new search loads.
+    placeholderData: (previous) => previous,
   })
 
-  const isFiltered = status !== "" || track !== "" || health !== ""
+  const isFiltered = status !== "" || track !== "" || health !== "" || search.q !== ""
   const empty = listEmptyState(isFiltered)
 
   // Counted from the rows on the table, so a tile always agrees with it. The
@@ -161,6 +166,7 @@ export function ProjectsPage() {
           control. */}
       {!query.isPending ? (
         <div className="mb-3 flex flex-wrap items-center gap-2">
+          <SearchBox value={search.typed} onChange={search.setTyped} label="Search Projects" placeholder="Number, name or account" />
           <label htmlFor="project-status" className={`text-caption font-semibold ${TONE.muted}`}>
             Status
           </label>
@@ -217,6 +223,7 @@ export function ProjectsPage() {
           setStatus("")
           setTrack("")
           setHealth("")
+          search.clear()
         }}
       />
     </>

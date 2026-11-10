@@ -16,7 +16,7 @@ import { getTargetYear, OWN_TARGET, setSalesTarget, TARGET_NOT_ALLOWED } from ".
 
 const USER = { sub: "u-2", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
 const ADMIN = { sub: "u-1", role: "EMPLOYEE", salesRole: "SALES_ADMIN" } as any
-const body = { employeeId: "emp-9", calendarYear: 2026, amount: "4000000", startQuarter: 1 } as any
+const body = { employeeId: "emp-9", calendarYear: 2026, amount: "4000000", startDate: "2026-01-01", endDate: "2026-12-31" } as any
 
 async function failureOf(run: () => Promise<unknown>) {
   try {

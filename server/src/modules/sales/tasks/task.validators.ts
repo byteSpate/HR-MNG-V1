@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { dateOnly } from "../sales.primitives"
+import { dateOnly, searchText } from "../sales.primitives"
 
 // ── tasks (phase 3, revision §24) ────────────────────────────────────────────
 const taskPriority = z.enum(["LOW", "NORMAL", "HIGH"])
@@ -80,6 +80,8 @@ export const changeTaskStatusSchema = z.discriminatedUnion("status", [
 ])
 
 export const listTaskSchema = z.object({
+  /** Title, account, or the Opportunity's number or name. */
+  q: searchText,
   status: z.enum(["PENDING", "DONE", "CANCELLED"]).optional(),
   // "now" is due today or overdue: the overview's "Tasks due or overdue" row.
   due: z.enum(["overdue", "today", "now", "week"]).optional(),

@@ -295,3 +295,17 @@ describe("listProjects", () => {
     })
   })
 })
+
+describe("searching the Projects list (owner, 2026-11-10)", () => {
+  it("searches the number, name and account", async () => {
+    vi.mocked(prisma.project.findMany).mockResolvedValue([] as any)
+    await listProjects({ q: "PRJ-12" }, USER)
+    const where = vi.mocked(prisma.project.findMany).mock.calls[0][0]!.where as any
+    expect(where.OR).toEqual([
+      { serial: { contains: "PRJ-12", mode: "insensitive" } },
+      { name: { contains: "PRJ-12", mode: "insensitive" } },
+      { salesAccount: { name: { contains: "PRJ-12", mode: "insensitive" } } },
+    ])
+    expect(where.salesAccount).toBeDefined()
+  })
+})

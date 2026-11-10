@@ -18,7 +18,7 @@ const NOW = new Date("2026-10-13T06:00:00.000Z")
 beforeEach(() => {
   vi.clearAllMocks()
   mocked(prisma.salesTarget.findMany).mockResolvedValue([
-    { employeeId: "emp-1", amount: "4000000.00", startQuarter: 1, note: null },
+    { employeeId: "emp-1", amount: "4000000.00", startDate: new Date("2026-01-01T00:00:00Z"), endDate: new Date("2026-12-31T00:00:00Z"), note: null },
   ])
   // emp-1 won 300,000 in Q4 so far.
   mocked(prisma.opportunity.findMany).mockResolvedValue([

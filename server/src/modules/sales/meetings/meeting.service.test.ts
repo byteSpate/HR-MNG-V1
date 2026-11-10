@@ -495,3 +495,15 @@ describe("meetings waiting for minutes", () => {
     expect(calls[1][0].where).toEqual(waitingForMinutesWhere(["emp-1"], NOW))
   })
 })
+
+describe("searching the Meetings list (owner, 2026-11-10)", () => {
+  it("searches the title, place and account", async () => {
+    await listMeetings({ q: "demo" } as any, USER)
+    const args = vi.mocked(prisma.salesMeeting.findMany).mock.calls[0][0] as any
+    expect(args.where.OR).toEqual([
+      { title: { contains: "demo", mode: "insensitive" } },
+      { location: { contains: "demo", mode: "insensitive" } },
+      { salesAccount: { name: { contains: "demo", mode: "insensitive" } } },
+    ])
+  })
+})

@@ -994,3 +994,26 @@ describe("Before Quotation (owner, 2026-11-02)", () => {
     await expect(getOpportunity("opp-1", USER)).resolves.toMatchObject({ expectedQuoteOn: "2026-11-20" })
   })
 })
+
+describe("searching the Opportunities list (owner, 2026-11-10)", () => {
+  it("searches the number, name, account and owner, without losing the Before Quotation stages", async () => {
+    await listOpportunities({ q: "dhaka", view: "BEFORE_QUOTATION" }, USER)
+    const where = vi.mocked(prisma.opportunity.findMany).mock.calls[0][0]!.where as any
+    expect(where.AND).toEqual([{
+      OR: [
+        { serial: { contains: "dhaka", mode: "insensitive" } },
+        { name: { contains: "dhaka", mode: "insensitive" } },
+        { salesAccount: { name: { contains: "dhaka", mode: "insensitive" } } },
+        { owner: { fullName: { contains: "dhaka", mode: "insensitive" } } },
+      ],
+    }])
+    // The stage list is still there, so the search narrows it and does not replace it.
+    expect(where.OR).toBeDefined()
+  })
+
+  it("adds nothing when there is no search", async () => {
+    await listOpportunities({}, USER)
+    const where = vi.mocked(prisma.opportunity.findMany).mock.calls[0][0]!.where as any
+    expect(where).not.toHaveProperty("AND")
+  })
+})

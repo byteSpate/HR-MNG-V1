@@ -446,3 +446,19 @@ describe("presenting a task", () => {
     expect(presentTask(task(), true, TODAY).type).toBe("OTHER")
   })
 })
+
+describe("searching the Tasks list (owner, 2026-11-10)", () => {
+  it("searches the title, account and Opportunity, and keeps who may see what", async () => {
+    await listTasks({ q: "quote" } as any, USER, NOW)
+    expect(listWhere().AND).toContainEqual({
+      OR: [
+        { title: { contains: "quote", mode: "insensitive" } },
+        { salesAccount: { name: { contains: "quote", mode: "insensitive" } } },
+        { opportunity: { serial: { contains: "quote", mode: "insensitive" } } },
+        { opportunity: { name: { contains: "quote", mode: "insensitive" } } },
+      ],
+    })
+    // The scope is still in AND beside the search.
+    expect(listWhere().AND.length).toBeGreaterThan(1)
+  })
+})

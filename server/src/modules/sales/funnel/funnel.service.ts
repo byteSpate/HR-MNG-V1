@@ -8,6 +8,7 @@
  */
 
 import prisma from "../../../config/prisma"
+import { containsText } from "../sales.primitives"
 import { Prisma } from "../../../generated/prisma/client"
 import { AppError } from "../../../middleware/errorHandler"
 import { addDays } from "../../../utils/dates"
@@ -87,6 +88,13 @@ function whereFor(employeeId: string, query: FunnelQuery, now: Date): Prisma.Opp
   if (query.status) where.status = query.status
   if (query.track) where.track = query.track
   if (query.salesAccountId) where.salesAccountId = query.salesAccountId
+  if (query.q) {
+    where.OR = [
+      { serial: containsText(query.q) },
+      { name: containsText(query.q) },
+      { salesAccount: { name: containsText(query.q) } },
+    ]
+  }
   // Applied after `status` on purpose: asking to hide closed deals wins over
   // asking to see one, because the two together are a contradiction and the
   // narrower answer is the safer one.

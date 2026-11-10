@@ -21,6 +21,7 @@ import type { TableCell } from "@/components/dashboard/types"
 import { PageHeader } from "@/components/dashboard/page-header"
 import { PanelAlert, PanelTable, TONE, toMessage } from "@/components/dashboard/record-kit"
 import { useStartMinutes } from "@/components/sales/meetings/meeting-dialogs"
+import { SearchBox, useSearch } from "@/components/sales/shared/search-box"
 import {
   MINUTES_ICON,
   MINUTES_STATUS_LABEL,
@@ -57,21 +58,27 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
   const mine = mineChoice ?? !isSalesAdmin
   const [status, setStatus] = useState<SalesMinutesStatus | "">("")
   const startMinutes = useStartMinutes()
+  const search = useSearch()
 
   const waiting = useQuery({
     queryKey: salesKeys.minutesWaiting(mine),
     queryFn: () => listMeetingsWaitingForMinutes(accessToken!, mine),
     enabled: isAuthed,
   })
-  const filters = useMemo(() => ({ ...(mine ? { mine: true } : {}), ...(status ? { status } : {}) }), [mine, status])
+  const filters = useMemo(
+    () => ({ ...(mine ? { mine: true } : {}), ...(status ? { status } : {}), ...(search.q ? { q: search.q } : {}) }),
+    [mine, status, search.q]
+  )
   const list = useQuery({
     queryKey: salesKeys.minutesList(filters),
     queryFn: () => listMinutes(accessToken!, filters),
     enabled: isAuthed,
+    // Keeps the rows, and the search box, on screen while a new search loads.
+    placeholderData: (previous) => previous,
   })
 
   const isLoading = sessionStatus === "loading" || list.isPending
-  const isFiltered = Boolean(status)
+  const isFiltered = Boolean(status || search.q)
 
   const rows: TableCell[][] = (list.data?.items ?? []).map((item) => [
     { node: <span className="tabular-nums">{dayWithYear(item.scheduledAt)}</span> },
@@ -131,6 +138,7 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
           about a list nobody has counted yet. */}
       {!isLoading && !list.isError ? (
         <section className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-line bg-white p-3 sm:p-4">
+          <SearchBox value={search.typed} onChange={search.setTyped} label="Search minutes" placeholder="Meeting title or account" />
           <Button type="button" aria-pressed={mine} onClick={() => setMine(!mine)} className={mine ? TOGGLE_ON : TOGGLE_OFF}>
             Mine only
           </Button>
@@ -164,15 +172,18 @@ export function MinutesListPage({ initialMine }: { initialMine: boolean | null }
         isLoading={isLoading}
         isError={list.isError}
         onRetry={() => list.refetch()}
-        emptyTitle={isFiltered ? "No minutes with that status" : mine ? "No minutes of yours yet" : "No minutes yet"}
+        emptyTitle={isFiltered ? "No minutes match" : mine ? "No minutes of yours yet" : "No minutes yet"}
         emptyBody={
           isFiltered
-            ? "Nothing matches this filter. Show every status to see the rest."
+            ? "Nothing matches the search and the status. Clear them to see the rest."
             : "Minutes appear here once somebody starts them from a completed meeting."
         }
-        emptyAction={isFiltered ? "Show every status" : undefined}
+        emptyAction={isFiltered ? "Clear the search and status" : undefined}
         emptyActionIcon={<RiFilterOffLine className="size-4" aria-hidden />}
-        onEmptyAction={() => setStatus("")}
+        onEmptyAction={() => {
+          setStatus("")
+          search.clear()
+        }}
       />
     </>
   )

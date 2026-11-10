@@ -3067,7 +3067,9 @@ export interface SalesTargetYear {
   calendarYear: number
   /** Null means nobody set one. Render "Not set", never ৳0. */
   yearlyTarget: string | null
-  startQuarter: number | null
+  /** The dates the target covers, "YYYY-MM-DD", inside the year. Null when no target is set. */
+  startDate: string | null
+  endDate: string | null
   note: string | null
   valueWon: string
   dealsWon: number
@@ -3075,12 +3077,17 @@ export interface SalesTargetYear {
   quarters: SalesTargetQuarter[]
 }
 
-/** A yearly amount of deal value in taka, split from `startQuarter` (1-4, Q1 when absent). */
+/**
+ * An amount of deal value in taka for a date range inside one year. The
+ * server splits it over the quarters the range covers, by how much of each
+ * quarter is covered.
+ */
 export interface SetSalesTargetBody {
   employeeId: string
   calendarYear: number
   amount: string
-  startQuarter?: number
+  startDate: string
+  endDate: string
   note?: string
 }
 
@@ -3348,6 +3355,8 @@ export type ChangeMeetingStatusBody =
   | { status: "SCHEDULED" }
 
 export interface ListMeetingsQuery {
+  /** The search box (owner, 2026-11-10). Searched on the server. */
+  q?: string
   salesAccountId?: string
   opportunityId?: string
   status?: SalesMeetingStatus
@@ -3450,6 +3459,8 @@ export type ChangeTaskStatusBody =
   | { status: "PENDING" }
 
 export interface ListTasksQuery {
+  /** The search box (owner, 2026-11-10). Searched on the server. */
+  q?: string
   status?: SalesTaskStatus
   due?: TaskDueFilter
   origin?: SalesTaskOrigin
@@ -3663,6 +3674,8 @@ export interface FunnelTeam {
 export type FunnelSort = "offeredOn" | "status" | "amount" | "expectedCloseDate" | "account"
 
 export interface FunnelQueryOptions {
+  /** The search box (owner, 2026-11-10). Searched on the server. */
+  q?: string
   employeeId?: string
   status?: OpportunityStatus
   /** The track, so the grid can show one track's sheet rather than both. */
