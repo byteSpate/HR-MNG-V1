@@ -41,7 +41,7 @@ describe("targets and the dashboard", () => {
   it("lets only a Sales Admin set a yearly target", async () => {
     const body = {
       employeeId: "11111111-1111-4111-8111-111111111111",
-      calendarYear: 2026, amount: "4000000.00", startQuarter: 1,
+      calendarYear: 2026, amount: "4000000.00", startDate: "2026-01-01", endDate: "2026-12-31",
     }
     await request(app).put("/api/sales/targets")
       .set("Authorization", auth("SALES_USER")).send(body).expect(403)
@@ -50,34 +50,38 @@ describe("targets and the dashboard", () => {
     await request(app).put("/api/sales/targets")
       .set("Authorization", auth("SALES_ADMIN")).send(body).expect(200)
     expect(targets.setSalesTarget).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: "4000000.00", startQuarter: 1 }),
+      expect.objectContaining({ amount: "4000000.00", startDate: "2026-01-01", endDate: "2026-12-31" }),
       expect.objectContaining({ sub: "user-1" })
     )
   })
 
-  it("starts a yearly target in Q1 unless told otherwise", async () => {
-    await request(app).put("/api/sales/targets")
-      .set("Authorization", auth("SALES_ADMIN"))
-      .send({
-        employeeId: "11111111-1111-4111-8111-111111111111",
-        calendarYear: 2026, amount: "4000000.00",
-      })
-      .expect(200)
-    expect(targets.setSalesTarget).toHaveBeenCalledWith(
-      expect.objectContaining({ startQuarter: 1 }),
-      expect.anything()
-    )
+  const ADMIN_BODY = (dates: Record<string, string>) => ({
+    employeeId: "11111111-1111-4111-8111-111111111111",
+    calendarYear: 2026, amount: "4000000.00", ...dates,
   })
 
-  it("rejects a start quarter outside one to four before calling the service", async () => {
+  it.each([
+    ["no dates", {}],
+    ["a From date in another year", { startDate: "2025-12-01", endDate: "2026-06-30" }],
+    ["a From date after the To date", { startDate: "2026-09-01", endDate: "2026-03-31" }],
+    ["a date that does not exist", { startDate: "2026-02-30", endDate: "2026-12-31" }],
+  ])("refuses %s before calling the service", async (_name, dates) => {
     await request(app).put("/api/sales/targets")
       .set("Authorization", auth("SALES_ADMIN"))
-      .send({
-        employeeId: "11111111-1111-4111-8111-111111111111",
-        calendarYear: 2026, amount: "4000000.00", startQuarter: 5,
-      })
+      .send(ADMIN_BODY(dates))
       .expect(400)
     expect(targets.setSalesTarget).not.toHaveBeenCalled()
+  })
+
+  it("accepts a range inside the year", async () => {
+    await request(app).put("/api/sales/targets")
+      .set("Authorization", auth("SALES_ADMIN"))
+      .send(ADMIN_BODY({ startDate: "2026-03-15", endDate: "2026-10-31" }))
+      .expect(200)
+    expect(targets.setSalesTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: "2026-03-15", endDate: "2026-10-31" }),
+      expect.anything()
+    )
   })
 
   it("rejects a target of zero, which is not a target", async () => {
@@ -85,7 +89,7 @@ describe("targets and the dashboard", () => {
       .set("Authorization", auth("SALES_ADMIN"))
       .send({
         employeeId: "11111111-1111-4111-8111-111111111111",
-        calendarYear: 2026, amount: "0", startQuarter: 1,
+        calendarYear: 2026, amount: "0", startDate: "2026-01-01", endDate: "2026-12-31",
       })
       .expect(400)
     expect(targets.setSalesTarget).not.toHaveBeenCalled()

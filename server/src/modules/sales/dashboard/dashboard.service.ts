@@ -41,8 +41,8 @@ import { WAITING_DAYS, waitingForMinutesWhere } from "../meetings/minutes.waitin
 import { weekStartOf } from "../sales.week"
 import { QUIET_DAYS, STUCK_DAYS } from "../sales.thresholds"
 import { currentQuarter, quarterOf, quarterRange } from "../targets/sales.quarters"
-import { planQuarters, sumPlans, type PlannedQuarter } from "../targets/target.plan"
-import { phasesOf, presentQuarter, winsByQuarter, yearRange } from "../targets/target.service"
+import { planQuarters, quarterOfDate, sumPlans, type PlannedQuarter, type TargetRange } from "../targets/target.plan"
+import { phasesOf, presentQuarter, targetRange, winsByQuarter, yearRange } from "../targets/target.service"
 import type { SalesActionRow, SalesDashboardPayload, SalesTeamRow } from "../sales.types"
 
 const MS_PER_DAY = 86_400_000
@@ -398,14 +398,21 @@ interface YearFigures {
   currentDeals: number
   currentUnpriced: number
   yearlyTarget: Money | null
-  /** Null for the team, which has no single start quarter. */
-  startQuarter: number | null
+  /** The dates the target covers. Null for the team, which has no single range, and with no target. */
+  range: TargetRange | null
   yearWon: Money
   yearDeals: number
   yearUnpriced: number
   marginQuarter: MarginTotal
   marginYear: MarginTotal
 }
+
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+/** "2026-03-15" as "15 Mar". */
+function dayMonth(iso: string): string {
+  return `${Number(iso.slice(8, 10))} ${MONTH[Number(iso.slice(5, 7)) - 1]}`
+}
+const isWholeYear = (range: TargetRange) => range.from.endsWith("-01-01") && range.to.endsWith("-12-31")
 
 function yearFigures(
   plan: PlannedQuarter[],
@@ -414,7 +421,7 @@ function yearFigures(
   calendarYear: number,
   quarter: number,
   yearlyTarget: Money | null,
-  startQuarter: number | null
+  range: TargetRange | null
 ): YearFigures {
   const index = quarter - 1
   return {
@@ -424,7 +431,7 @@ function yearFigures(
     currentDeals: bucket.deals[index],
     currentUnpriced: bucket.unpriced[index],
     yearlyTarget,
-    startQuarter,
+    range,
     yearWon: sum(bucket.value),
     yearDeals: sumCounts(bucket.deals),
     yearUnpriced: sumCounts(bucket.unpriced),
@@ -498,8 +505,10 @@ function bandOne(
 ): DashboardStat[] {
   const { current, quarter, calendarYear } = year
   const carried = current.carried !== null && current.carried.greaterThan(0) ? current.carried : null
-  const startsLater =
-    current.target === null && year.yearlyTarget !== null && year.startQuarter !== null && year.startQuarter > quarter
+  // A quarter with no target while the year has one: the range starts later
+  // or ended earlier. Said with the dates, not "Not set" alone.
+  const startsLater = current.target === null && year.range !== null && quarterOfDate(year.range.from) > quarter
+  const endedEarlier = current.target === null && year.range !== null && quarterOfDate(year.range.to) < quarter
 
   // Three labelled rows, in the order the page draws them (§23 of the
   // revision). The grouping is decided here; the page only draws consecutive
@@ -515,8 +524,10 @@ function bandOne(
         // somebody deciding zero.
         value: current.target === null ? "Not set" : bdt(current.target),
         sub: startsLater
-          ? `The yearly target starts in Q${year.startQuarter}`
-          : carried
+          ? `The target starts on ${dayMonth(year.range!.from)}`
+          : endedEarlier
+            ? `The target ended on ${dayMonth(year.range!.to)}`
+            : carried
             ? `Q${quarter} ${calendarYear} · ${bdt(carried)} carried from Q${quarter - 1}`
             : `Q${quarter} ${calendarYear}`,
         tag: "Target",
@@ -549,8 +560,8 @@ function bandOne(
         label: labels.yearlyTarget,
         value: year.yearlyTarget === null ? "Not set" : bdt(year.yearlyTarget),
         sub:
-          year.startQuarter !== null && year.startQuarter > 1
-            ? `${calendarYear}, from Q${year.startQuarter}`
+          year.range !== null && !isWholeYear(year.range)
+            ? `${dayMonth(year.range.from)} to ${dayMonth(year.range.to)} ${calendarYear}`
             : String(calendarYear),
         tag: "Target",
         tone: toneFor.informational(),
@@ -658,7 +669,7 @@ export async function getSalesDashboard(
     const [targets, wins, pipeline, actions, workedPeriod, workedAllTime, ongoingByPerson] = await Promise.all([
       prisma.salesTarget.findMany({
         where: { calendarYear },
-        select: { employeeId: true, amount: true, startQuarter: true },
+        select: { employeeId: true, amount: true, startDate: true, endDate: true },
       }),
       winsInYear(ids, calendarYear),
       pipelineFor(subject, calendarYear, quarter),
@@ -679,7 +690,7 @@ export async function getSalesDashboard(
       const bucket = winsByQuarter(wins.filter((win) => win.wonByEmployeeId === person.id))
       const plan = planQuarters({
         yearly: target ? dec(target.amount) : null,
-        startQuarter: target?.startQuarter ?? 1,
+        range: target ? targetRange(target) : null,
         won: bucket.value,
         phases,
       })
@@ -758,7 +769,7 @@ export async function getSalesDashboard(
   const [targets, wins, pipeline, actions, workedPeriod, workedAllTime] = await Promise.all([
     prisma.salesTarget.findMany({
       where: { employeeId: employee.id, calendarYear },
-      select: { amount: true, startQuarter: true },
+      select: { amount: true, startDate: true, endDate: true },
     }),
     winsInYear([employee.id], calendarYear),
     pipelineFor(subject, calendarYear, quarter),
@@ -772,11 +783,11 @@ export async function getSalesDashboard(
   const bucket = winsByQuarter(wins)
   const plan = planQuarters({
     yearly,
-    startQuarter: target?.startQuarter ?? 1,
+    range: target ? targetRange(target) : null,
     won: bucket.value,
     phases,
   })
-  const year = yearFigures(plan, bucket, wins, calendarYear, quarter, yearly, target?.startQuarter ?? null)
+  const year = yearFigures(plan, bucket, wins, calendarYear, quarter, yearly, target ? targetRange(target) : null)
 
   const removalRows = await removalActionRows(actor)
 

@@ -24,7 +24,7 @@ import { ZERO, dec, sum, toMoneyString, type Money } from "../../payroll/payroll
 import { employeeIdFor } from "../sales.access"
 import { canDo } from "../sales.permissions"
 import { currentQuarter, quarterOf, quarterRange } from "./sales.quarters"
-import { phaseOf, planQuarters, type PlannedQuarter, type QuarterPhase } from "./target.plan"
+import { phaseOf, planQuarters, quarterOfDate, type PlannedQuarter, type QuarterPhase, type TargetRange } from "./target.plan"
 
 export interface SalesTargetQuarter {
   quarter: number
@@ -53,7 +53,9 @@ export interface SalesTargetYear {
   calendarYear: number
   /** Null means nobody set one. Never "0.00" — that would be a decision nobody made. */
   yearlyTarget: string | null
-  startQuarter: number | null
+  /** The dates the target covers, "YYYY-MM-DD". Null when no target is set. */
+  startDate: string | null
+  endDate: string | null
   note: string | null
   valueWon: string
   dealsWon: number
@@ -73,7 +75,8 @@ export interface SetSalesTargetBody {
   employeeId: string
   calendarYear: number
   amount: string
-  startQuarter: number
+  startDate: string
+  endDate: string
   note?: string
 }
 
@@ -141,18 +144,23 @@ export function presentQuarter(
 
 const total = (values: number[]) => values.reduce((a, b) => a + b, 0)
 
+/** A saved target's dates as the plan reads them. The columns are DATE, so midnight UTC. */
+export function targetRange(row: { startDate: Date; endDate: Date }): TargetRange {
+  return { from: row.startDate.toISOString().slice(0, 10), to: row.endDate.toISOString().slice(0, 10) }
+}
+
 /** One person's year: their target row, if there is one, measured against their wins. */
 export function presentYear(
   employee: { id: string; fullName: string },
   calendarYear: number,
-  target: { amount: Money; startQuarter: number; note: string | null } | null,
+  target: { amount: Money; startDate: Date; endDate: Date; note: string | null } | null,
   wins: WinRow[],
   now: Date
 ): SalesTargetYear {
   const bucket = winsByQuarter(wins)
   const plan = planQuarters({
     yearly: target ? dec(target.amount) : null,
-    startQuarter: target?.startQuarter ?? 1,
+    range: target ? targetRange(target) : null,
     won: bucket.value,
     phases: phasesOf(calendarYear, now),
   })
@@ -161,7 +169,8 @@ export function presentYear(
     employeeName: employee.fullName,
     calendarYear,
     yearlyTarget: target ? toMoneyString(dec(target.amount)) : null,
-    startQuarter: target?.startQuarter ?? null,
+    startDate: target ? targetRange(target).from : null,
+    endDate: target ? targetRange(target).to : null,
     note: target?.note ?? null,
     valueWon: toMoneyString(sum(bucket.value)),
     dealsWon: total(bucket.deals),
@@ -233,7 +242,7 @@ export async function getTargetYear(
   const [targets, wins] = await Promise.all([
     prisma.salesTarget.findMany({
       where: { employeeId: subjectId, calendarYear: query.calendarYear },
-      select: { amount: true, startQuarter: true, note: true },
+      select: { amount: true, startDate: true, endDate: true, note: true },
     }),
     winsFor(subjectId, query.calendarYear),
   ])
@@ -278,21 +287,27 @@ export async function setSalesTarget(
   const saved = await prisma.$transaction(async (tx) => {
     const previous = await tx.salesTarget.findUnique({
       where: key,
-      select: { amount: true, startQuarter: true },
+      select: { amount: true, startDate: true, endDate: true },
     })
+    const dates = {
+      startDate: new Date(`${body.startDate}T00:00:00Z`),
+      endDate: new Date(`${body.endDate}T00:00:00Z`),
+      // Kept for code from before the date range; see the schema.
+      startQuarter: quarterOfDate(body.startDate),
+    }
     const row = await tx.salesTarget.upsert({
       where: key,
       create: {
         employeeId: body.employeeId,
         calendarYear: body.calendarYear,
         amount,
-        startQuarter: body.startQuarter,
+        ...dates,
         note: body.note ?? null,
         setBy: actor.sub,
       },
       update: {
         amount,
-        startQuarter: body.startQuarter,
+        ...dates,
         note: body.note ?? null,
         setBy: actor.sub,
       },
@@ -307,7 +322,8 @@ export async function setSalesTarget(
         ? {
             before: {
               amount: toMoneyString(dec(previous.amount)),
-              startQuarter: previous.startQuarter,
+              startDate: targetRange(previous).from,
+              endDate: targetRange(previous).to,
             },
           }
         : {}),
@@ -315,7 +331,8 @@ export async function setSalesTarget(
         employeeId: body.employeeId,
         calendarYear: body.calendarYear,
         amount: toMoneyString(amount),
-        startQuarter: body.startQuarter,
+        startDate: body.startDate,
+        endDate: body.endDate,
       },
     })
 

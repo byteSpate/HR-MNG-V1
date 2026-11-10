@@ -49,6 +49,8 @@ const targetRow = (overrides: Record<string, unknown> = {}) => ({
   employeeId: "emp-2",
   calendarYear: 2026,
   amount: dec("4000000.00"),
+  startDate: new Date("2026-01-01T00:00:00Z"),
+  endDate: new Date("2026-12-31T00:00:00Z"),
   startQuarter: 1,
   note: null,
   ...overrides,
@@ -90,7 +92,8 @@ describe("reading a target year", () => {
     const year = await getTargetYear({ calendarYear: 2026, now: NOW }, USER)
 
     expect(year.yearlyTarget).toBe("4000000.00")
-    expect(year.startQuarter).toBe(1)
+    expect(year.startDate).toBe("2026-01-01")
+    expect(year.endDate).toBe("2026-12-31")
     expect(year.quarters.map((q) => q.phase)).toEqual(["ended", "ended", "current", "upcoming"])
     // Q1 beat its 10L by 3L. Q2 fell 3L short, so Q3 is 10L + 3L.
     expect(year.quarters[0].gap).toBe("-300000.00")
@@ -158,7 +161,7 @@ describe("reading a target year", () => {
 })
 
 describe("setting a yearly target", () => {
-  const body = { employeeId: "emp-2", calendarYear: 2026, amount: "4000000.00", startQuarter: 1 }
+  const body = { employeeId: "emp-2", calendarYear: 2026, amount: "4000000.00", startDate: "2026-01-01", endDate: "2026-12-31" }
 
   beforeEach(() => {
     vi.mocked(prisma.salesTarget.upsert).mockResolvedValue(targetRow() as never)
@@ -174,19 +177,19 @@ describe("setting a yearly target", () => {
 
     const args = vi.mocked(prisma.salesTarget.upsert).mock.calls[0][0] as {
       where: unknown
-      create: { amount: { toFixed(dp: number): string }; startQuarter: number; setBy: string }
-      update: { amount: { toFixed(dp: number): string }; startQuarter: number; setBy: string }
+      create: { amount: { toFixed(dp: number): string }; startDate: Date; startQuarter: number; setBy: string }
+      update: { amount: { toFixed(dp: number): string }; startDate: Date; startQuarter: number; setBy: string }
     }
     expect(args.where).toEqual({ employeeId_calendarYear: { employeeId: "emp-2", calendarYear: 2026 } })
     expect(args.create.amount.toFixed(2)).toBe("4000000.00")
-    expect(args.create).toMatchObject({ startQuarter: 1, setBy: "user-1" })
+    expect(args.create).toMatchObject({ startDate: new Date("2026-01-01T00:00:00Z"), startQuarter: 1, setBy: "user-1" })
     expect(args.update.amount.toFixed(2)).toBe("4000000.00")
-    expect(args.update).toMatchObject({ startQuarter: 1, setBy: "user-1" })
+    expect(args.update).toMatchObject({ startDate: new Date("2026-01-01T00:00:00Z"), startQuarter: 1, setBy: "user-1" })
   })
 
   it("audits the old target beside the new one", async () => {
     vi.mocked(prisma.salesTarget.findUnique).mockResolvedValue(
-      targetRow({ amount: dec("3000000.00"), startQuarter: 2 }) as never
+      targetRow({ amount: dec("3000000.00"), startDate: new Date("2026-04-01T00:00:00Z"), startQuarter: 2 }) as never
     )
 
     await setSalesTarget(body, ADMIN)
@@ -196,8 +199,8 @@ describe("setting a yearly target", () => {
         data: expect.objectContaining({
           entity: "SALES_TARGET",
           changedBy: "user-1",
-          before: { amount: "3000000.00", startQuarter: 2 },
-          after: expect.objectContaining({ amount: "4000000.00", startQuarter: 1 }),
+          before: { amount: "3000000.00", startDate: "2026-04-01", endDate: "2026-12-31" },
+          after: expect.objectContaining({ amount: "4000000.00", startDate: "2026-01-01", endDate: "2026-12-31" }),
         }),
       })
     )

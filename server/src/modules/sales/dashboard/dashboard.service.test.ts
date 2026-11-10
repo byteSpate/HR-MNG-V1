@@ -72,7 +72,7 @@ function deals({ won = [] as Win[], ongoing = [] as { amount: string | null }[] 
 }
 
 /** Rahim: ৳40 lakh for 2026, from Q1. */
-const RAHIM_TARGET = { employeeId: "emp-2", amount: dec("4000000.00"), startQuarter: 1, note: null }
+const RAHIM_TARGET = { employeeId: "emp-2", amount: dec("4000000.00"), startDate: new Date("2026-01-01T00:00:00Z"), endDate: new Date("2026-12-31T00:00:00Z"), note: null }
 
 /**
  * Q1 beats its 10L by 3L, Q2 falls 3L short, Q3 has 5L so far. Each deal is
@@ -528,7 +528,7 @@ describe("the team roll-up", () => {
     // and Q3 is 10L + 13L. Nasir: 20L from Q3, so Q3 is 10L and nothing carries.
     vi.mocked(prisma.salesTarget.findMany).mockResolvedValue([
       RAHIM_TARGET,
-      { employeeId: "emp-3", amount: dec("2000000.00"), startQuarter: 3, note: null },
+      { employeeId: "emp-3", amount: dec("2000000.00"), startDate: new Date("2026-07-01T00:00:00Z"), endDate: new Date("2026-12-31T00:00:00Z"), note: null },
     ] as never)
     deals({ won: [{ wonByEmployeeId: "emp-2", amount: "700000.00", closedAt: "2026-05-10T06:00:00.000Z" }] })
 
