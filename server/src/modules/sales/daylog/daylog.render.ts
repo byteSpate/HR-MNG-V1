@@ -165,18 +165,84 @@ function closeItem(c: DayLogClose): string {
   return `<li><div class="row"><span class="title">${t(c.serial)} ${t(c.name)}</span><span class="tag ${c.status.toLowerCase()}">${CLOSE_LABEL[c.status]}</span></div><p class="about">${t(about)}</p>${note(c.reason)}</li>`
 }
 
-function group(heading: string, items: string[]): string {
+function group(heading: string, items: string[], total: number): string {
   if (items.length === 0) return ""
-  return `<div class="group"><h3>${t(heading)} (${items.length})</h3><ul>${items.join("")}</ul></div>`
+  return `<div class="group"><h3>${t(heading)} (${total})</h3><ul>${items.join("")}</ul></div>`
 }
 
-function daySection(day: DayLogDay): string {
+function daySection(piece: DayPiece): string {
+  const day = piece.day
   const body = isEmpty(day)
     ? '<p class="empty">Nothing logged on this day.</p>'
-    : group("Tasks done", day.tasks.map(taskItem)) +
-      group("Meetings", day.meetings.map(meetingItem)) +
-      group("Opportunities closed", day.closed.map(closeItem))
-  return `<section><h2>${t(dayLabel(day.date))}</h2>${body}</section>`
+    : group("Tasks done", day.tasks.map(taskItem), piece.totals.tasks) +
+      group("Meetings", day.meetings.map(meetingItem), piece.totals.meetings) +
+      group("Opportunities closed", day.closed.map(closeItem), piece.totals.closed)
+  const heading = `${dayLabel(day.date)}${piece.continued ? " (continued)" : ""}`
+  return `<section><h2>${t(heading)}</h2>${body}</section>`
+}
+
+/**
+ * The most entries one picture holds (owner, 2026-11-10: "if a day's log is
+ * bigger, move it to multiple images"). Eight keeps a picture short enough to
+ * read on a phone without zooming.
+ */
+export const PER_PICTURE = 8
+
+/** One day, or the part of a day, that one picture shows. */
+export interface DayPiece {
+  day: DayLogDay
+  /** True when the same day began on an earlier picture. */
+  continued: boolean
+  /** The whole day's counts, so a group heading never shows only the part on this picture. */
+  totals: { tasks: number; meetings: number; closed: number }
+}
+
+/**
+ * Splits the log into pictures of at most `per` entries. A day with nothing on
+ * it stays on the current picture and takes no place. A long day is cut between entries and carries on, under
+ * its own heading, on the next picture. Never returns an empty list.
+ */
+export function paginate(days: DayLogDay[], per: number = PER_PICTURE): DayPiece[][] {
+  const pictures: DayPiece[][] = [[]]
+  let used = 0
+  const next = () => {
+    pictures.push([])
+    used = 0
+  }
+  const current = () => pictures[pictures.length - 1]
+
+  for (const day of days) {
+    const totals = { tasks: day.tasks.length, meetings: day.meetings.length, closed: day.closed.length }
+    // An empty day is one short line, so it takes no place: the split is by
+    // entries only, and a picture is never made just for "Nothing logged".
+    if (isEmpty(day)) {
+      current().push({ day, continued: false, totals })
+      continue
+    }
+    const entries = [
+      ...day.tasks.map((x) => ({ kind: "tasks" as const, x })),
+      ...day.meetings.map((x) => ({ kind: "meetings" as const, x })),
+      ...day.closed.map((x) => ({ kind: "closed" as const, x })),
+    ]
+    let first = true
+    while (entries.length > 0) {
+      if (used >= per) next()
+      const taken = entries.splice(0, per - used)
+      current().push({
+        day: {
+          date: day.date,
+          tasks: taken.flatMap((e) => (e.kind === "tasks" ? [e.x as DayLogTask] : [])),
+          meetings: taken.flatMap((e) => (e.kind === "meetings" ? [e.x as DayLogMeeting] : [])),
+          closed: taken.flatMap((e) => (e.kind === "closed" ? [e.x as DayLogClose] : [])),
+        },
+        continued: !first,
+        totals,
+      })
+      used += taken.length
+      first = false
+    }
+  }
+  return pictures
 }
 
 const STYLES = `
@@ -208,12 +274,22 @@ const STYLES = `
   .bd-stamp { font-size: 14px; }
 `
 
-export function renderDayLogHtml(log: DayLog, options: DayLogRenderOptions): string {
+/**
+ * One picture of the log. `picture` counts from 1. The summary on every
+ * picture is for the whole period, so any one of them can be shown alone.
+ */
+export function renderDayLogHtml(log: DayLog, options: DayLogRenderOptions, picture = 1): string {
+  const pictures = paginate(log.days)
+  const pieces = pictures[picture - 1] ?? []
   const header = brandDocHeaderHtml({
     logo: options.logo,
     company: options.companyName,
     title: "Work log",
-    lines: [log.personName, periodLabel(log.from, log.to)],
+    lines: [
+      log.personName,
+      periodLabel(log.from, log.to),
+      ...(pictures.length > 1 ? [`Picture ${picture} of ${pictures.length}`] : []),
+    ],
     stamp: `Made on ${longDate(parseDateOnly(options.madeOn))}`,
   })
   return `<!doctype html>
@@ -222,7 +298,7 @@ export function renderDayLogHtml(log: DayLog, options: DayLogRenderOptions): str
   ${header}
   <div class="wrap">
     <p class="summary">${t(summaryLine(log.days))}</p>
-    ${log.days.map(daySection).join("")}
+    ${pieces.map(daySection).join("")}
   </div>
 </body></html>`
 }

@@ -18,7 +18,8 @@ import type { AccessTokenPayload } from "../../auth/auth.types"
 import { officeDateOf, officeInstantOf, officeTimeOf } from "../../attendance/attendance.time"
 import { formatBdt } from "../../accounting/accounting.utils"
 import { employeeIdFor } from "../sales.access"
-import { buildDays, renderDayLogHtml, type DayLog, type DayLogDay } from "./daylog.render"
+import { AppError } from "../../../middleware/errorHandler"
+import { buildDays, paginate, renderDayLogHtml, type DayLog, type DayLogDay } from "./daylog.render"
 import type { DayLogQuery } from "./daylog.validators"
 
 /** The picture's width in CSS pixels. Wide enough for a laptop, readable on a phone. */
@@ -138,12 +139,30 @@ export async function getDayLog(query: DayLogQuery, actor: AccessTokenPayload): 
   }
 }
 
-export async function renderDayLogPng(query: DayLogQuery, actor: AccessTokenPayload): Promise<Buffer> {
+/** How many pictures the log needs. Cheap: three reads, no browser. */
+export async function countDayLogPictures(query: DayLogQuery, actor: AccessTokenPayload): Promise<{ pictures: number }> {
+  return { pictures: paginate((await getDayLog(query, actor)).days).length }
+}
+
+export async function renderDayLogPng(
+  query: DayLogQuery,
+  actor: AccessTokenPayload,
+  picture: number
+): Promise<Buffer> {
   const log = await getDayLog(query, actor)
-  const html = renderDayLogHtml(log, {
-    companyName: env.COMPANY_NAME,
-    logo: await brandAsset("logo"),
-    madeOn: formatDateOnly(officeDateOf(new Date())),
-  })
+  const count = paginate(log.days).length
+  if (picture > count) {
+    // The log got shorter between the count and this picture (a task deleted).
+    throw new AppError(404, `This log has ${count} picture${count === 1 ? "" : "s"} now. Press Preview log again.`)
+  }
+  const html = renderDayLogHtml(
+    log,
+    {
+      companyName: env.COMPANY_NAME,
+      logo: await brandAsset("logo"),
+      madeOn: formatDateOnly(officeDateOf(new Date())),
+    },
+    picture
+  )
   return renderPng(html, WIDTH)
 }

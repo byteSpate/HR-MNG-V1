@@ -29,3 +29,8 @@ export const dayLogQuerySchema = z
     path: ["to"],
   })
 export type DayLogQuery = z.infer<typeof dayLogQuerySchema>
+
+/** Which picture of a long log, counting from 1. */
+export const dayLogPictureSchema = z.object({
+  picture: z.coerce.number().int().min(1, "Pictures count from 1.").max(100).default(1),
+})

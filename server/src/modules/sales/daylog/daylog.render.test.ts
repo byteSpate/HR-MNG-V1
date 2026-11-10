@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { buildDays, dayLabel, periodLabel, renderDayLogHtml, summaryLine, type DayLog, type DayLogDay } from "./daylog.render"
+import { buildDays, dayLabel, paginate, periodLabel, renderDayLogHtml, summaryLine, type DayLog, type DayLogDay, type DayLogTask } from "./daylog.render"
 
 const OPTIONS = { companyName: "Byte Spate", logo: null, madeOn: "2026-11-10" }
 
@@ -81,4 +81,57 @@ describe("renderDayLogHtml", () => {
     expect(html).not.toContain("<script>x</script>")
     expect(html).toContain("&lt;script&gt;")
   })
+})
+
+const tasks = (n: number): DayLogTask[] =>
+  Array.from({ length: n }, (_, i) => ({ title: `Task ${i + 1}`, type: "OTHER", about: null, detail: null, outcome: null }))
+
+describe("paginate", () => {
+  it("keeps a short day on one picture", () => {
+    const pictures = paginate([{ date: "2026-11-10", tasks: tasks(5), meetings: [], closed: [] }], 8)
+    expect(pictures).toHaveLength(1)
+    expect(pictures[0][0].continued).toBe(false)
+  })
+
+  it("cuts a long day into pictures of 8, and marks the rest as continued", () => {
+    const pictures = paginate([{ date: "2026-11-10", tasks: tasks(19), meetings: [], closed: [] }], 8)
+    expect(pictures.map((p) => p[0].day.tasks.length)).toEqual([8, 8, 3])
+    expect(pictures.map((p) => p[0].continued)).toEqual([false, true, true])
+    expect(pictures[2][0].day.tasks[0].title).toBe("Task 17")
+    // The heading count is the whole day, on every picture.
+    expect(pictures[2][0].totals.tasks).toBe(19)
+  })
+
+  it("fills a picture across days, and an empty day takes no place", () => {
+    const pictures = paginate(
+      [
+        { date: "2026-11-08", tasks: [], meetings: [], closed: [] },
+        { date: "2026-11-09", tasks: tasks(6), meetings: [], closed: [] },
+        { date: "2026-11-10", tasks: tasks(3), meetings: [], closed: [] },
+      ],
+      8
+    )
+    expect(pictures.map((p) => p.map((piece) => `${piece.day.date}:${piece.day.tasks.length}`))).toEqual([
+      ["2026-11-08:0", "2026-11-09:6", "2026-11-10:2"],
+      ["2026-11-10:1"],
+    ])
+  })
+
+  it("prints which picture it is, only when there is more than one", () => {
+    const long: DayLog = { personName: "Rahim Uddin", from: "2026-11-10", to: "2026-11-10", days: [{ date: "2026-11-10", tasks: tasks(10), meetings: [], closed: [] }] }
+    const second = renderDayLogHtml(long, OPTIONS, 2)
+    expect(second).toContain("Picture 2 of 2")
+    expect(second).toContain("Tuesday, 10 November 2026 (continued)")
+    expect(second).toContain("Task 9")
+    expect(second).not.toContain("Task 8<")
+    expect(second).toContain("Tasks done (10)")
+    expect(renderDayLogHtml({ ...long, days: [{ date: "2026-11-10", tasks: tasks(2), meetings: [], closed: [] }] }, OPTIONS)).not.toContain("Picture 1 of")
+  })
+})
+
+it("never makes a picture only for empty days", () => {
+  const empty = (date: string) => ({ date, tasks: [], meetings: [], closed: [] })
+  const pictures = paginate([empty("2026-11-08"), { date: "2026-11-09", tasks: tasks(8), meetings: [], closed: [] }, empty("2026-11-10")], 8)
+  expect(pictures).toHaveLength(1)
+  expect(pictures[0]).toHaveLength(3)
 })
