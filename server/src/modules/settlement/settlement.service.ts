@@ -14,6 +14,7 @@ import type { Prisma } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { emitEvent } from "../event/event.emit"
+import { closeRequest } from "../inbox/inbox.fanout"
 import { sendSettlementStatementEmail } from "../notification/notification.mailer"
 import { sweepClaimsReimbursed } from "../expense/expense.sweep"
 import { sweepRecoveriesCollected } from "../asset/asset.sweep"
@@ -395,6 +396,8 @@ export async function rejectSettlement(id: string, actorUserId: string, body: Se
       changedBy: actorUserId,
       note: body.note,
     })
+    // Rejecting emits no event, so the Super Admin's "waiting" item is closed here.
+    await closeRequest(tx, { entity: "SETTLEMENT", entityIds: [id] })
     return updated
   })
 }

@@ -17,7 +17,7 @@ function fakeTx(users: FakeUser[]) {
   const byEmployee = (id: string) => users.find((u) => u.employeeId === id)
   return {
     notification: {
-      createMany: vi.fn(async ({ data }: { data: unknown[] }) => ({ count: data.length })),
+      createMany: vi.fn(async ({ data }: { data: unknown[]; skipDuplicates?: boolean }) => ({ count: data.length })),
       updateMany: vi.fn(async () => ({ count: 0 })),
     },
     user: {

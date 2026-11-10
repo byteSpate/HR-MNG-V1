@@ -18,6 +18,7 @@ import { writeAudit } from "../../utils/audit"
 import { assignAsset } from "./asset.assignments"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
+import { closeRequest } from "../inbox/inbox.fanout"
 import { sendAssetRequestDecidedEmail } from "../notification/notification.mailer"
 import { assetRequestEvent } from "./asset.events"
 import type { SubmitRequestInput } from "./asset.validators"
@@ -431,6 +432,8 @@ export async function cancelRequest(
       after: { status: "CANCELLED" },
       note: input.note?.trim() ?? null,
     })
+    // Cancelling emits no event, so the Super Admin's "waiting" item is closed here.
+    await closeRequest(tx, { entity: "ASSET_REQUEST", entityIds: [requestId] })
 
     return updated
   })

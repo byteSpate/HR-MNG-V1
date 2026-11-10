@@ -12,6 +12,7 @@
  */
 
 import type { Event } from "../../generated/prisma/client"
+import { fanOutEvent } from "../inbox/inbox.fanout"
 import type { EventInput, EventTx } from "./event.types"
 
 export async function emitEvent(tx: EventTx, input: EventInput): Promise<Event> {
@@ -38,7 +39,7 @@ export async function emitEvent(tx: EventTx, input: EventInput): Promise<Event> 
     managerEmployeeId = subject?.reportingManagerId ?? null
   }
 
-  return tx.event.create({
+  const row = await tx.event.create({
     data: {
       type: input.type,
       severity: input.severity ?? "INFO",
@@ -56,4 +57,8 @@ export async function emitEvent(tx: EventTx, input: EventInput): Promise<Event> 
       payload: input.payload,
     },
   })
+
+  // Same transaction: a notification never outlives a rolled-back change.
+  await fanOutEvent(tx, row)
+  return row
 }
