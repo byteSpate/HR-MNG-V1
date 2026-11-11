@@ -26,11 +26,11 @@ export default async function LoginPage() {
         subtitle="Sign in to your byteSpate workspace."
         footer={
           <>
-            Access is provisioned by your HR admin.{" "}
-            <a href="#" className={AUTH_LINK}>
-              Contact them
-            </a>{" "}
-            to get set up.
+            Your HR admin sets up your account. To get set up, email{" "}
+            <a href="mailto:info@bytespate.com" className={AUTH_LINK}>
+              info@bytespate.com
+            </a>
+            .
           </>
         }
       >
