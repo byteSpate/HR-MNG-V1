@@ -19,6 +19,9 @@ const HR: Role[] = ["HR_ADMIN", "SUPER_ADMIN"]
 const FINANCE: Role[] = ["FINANCE_OFFICER", "SUPER_ADMIN"]
 const SUPER: Role[] = ["SUPER_ADMIN"]
 
+/** The 21:30 reminder's kind. Check-out, by hand or by the app, closes it. */
+export const NOT_CHECKED_OUT = "reminder.not_checked_out"
+
 type Rule = (e: EventLike) => Delivery[]
 
 const toRoles = (tab: Tab, roles: Role[]): Rule => () => [{ tab, audience: { kind: "roles", roles } }]
@@ -130,6 +133,21 @@ export function closeTargetFor(event: EventLike): CloseTarget | null {
   // the same asset id (see `asset.events.ts`).
   if (event.type === "asset.acknowledged") {
     return { entity: "ASSET", entityIds: [event.entityId] }
+  }
+  // An asset can come back, or be marked lost, before anyone accepted it.
+  if (event.type === "asset.returned" || event.type === "asset.marked_lost") {
+    return { entity: "ASSET", entityIds: [event.entityId] }
+  }
+  // The automatic check-out ends the 21:30 reminder. A fix request waiting on
+  // the same attendance row is a different thing and stays open.
+  if (event.type === "attendance.auto_closed") {
+    return { entity: "ATTENDANCE", entityIds: [event.entityId], kinds: [NOT_CHECKED_OUT] }
+  }
+  // Filed under the account; the 30-minute reminder is under the meeting.
+  // A moved meeting gets a new reminder for its new time.
+  if (event.type === "sales.meeting.cancelled" || event.type === "sales.meeting.rescheduled") {
+    const meetingId = field(event.payload, "meetingId")
+    return typeof meetingId === "string" ? { entity: "SALES_MEETING", entityIds: [meetingId] } : null
   }
   return CLOSES.has(event.type) ? { entity: event.entity, entityIds: [event.entityId] } : null
 }

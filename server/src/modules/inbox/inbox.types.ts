@@ -49,6 +49,8 @@ export interface EventLike {
 export interface CloseTarget {
   entity: string
   entityIds: string[]
+  /** Close only these kinds. Left out: every open Important item for the thing. */
+  kinds?: string[]
 }
 
 export type InboxTab = "important" | "primary" | "all"

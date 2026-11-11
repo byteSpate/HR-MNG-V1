@@ -16,7 +16,7 @@ import { resolveShift } from "../attendance/attendance.grid"
 import { officeDateOf, officeTimeOf } from "../attendance/attendance.time"
 import { formatLeaveRange } from "../leave/leave.events"
 import { isWorkingDay } from "../sales/sales.reminders"
-import { REQUEST_KINDS } from "./inbox.rules"
+import { NOT_CHECKED_OUT, REQUEST_KINDS } from "./inbox.rules"
 
 const HOUR = 3_600_000
 
@@ -129,7 +129,7 @@ export async function remindNotCheckedOut(now: Date = new Date()): Promise<numbe
   return write(
     open.map((a) => ({
       userId: a.employee.userId,
-      kind: "reminder.not_checked_out",
+      kind: NOT_CHECKED_OUT,
       entity: "ATTENDANCE",
       entityId: a.id,
       title: "You have not checked out yet",
@@ -175,7 +175,13 @@ export async function remindWaitingTwoDays(now: Date = new Date()): Promise<numb
 /** Morning: an asset handed over a day ago and not yet accepted. */
 export async function remindAssetsNotAccepted(now: Date = new Date()): Promise<number> {
   const open = await prisma.assetAssignment.findMany({
-    where: { acknowledgedAt: null, returnedAt: null, assignedAt: { lte: new Date(now.getTime() - 24 * HOUR) } },
+    where: {
+      acknowledgedAt: null,
+      returnedAt: null,
+      assignedAt: { lte: new Date(now.getTime() - 24 * HOUR) },
+      // Marking an asset lost leaves its hand-over open. Nobody can accept a lost asset.
+      asset: { lifecycle: "IN_SERVICE" },
+    },
     select: {
       id: true,
       assetId: true,

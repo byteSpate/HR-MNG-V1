@@ -22,7 +22,13 @@ const HR_ROLES: Role[] = ["HR_ADMIN", "SUPER_ADMIN"]
 export async function closeRequest(tx: EventTx, target: CloseTarget): Promise<void> {
   if (target.entityIds.length === 0) return
   await tx.notification.updateMany({
-    where: { entity: target.entity, entityId: { in: target.entityIds }, tab: "IMPORTANT", closedAt: null },
+    where: {
+      entity: target.entity,
+      entityId: { in: target.entityIds },
+      tab: "IMPORTANT",
+      closedAt: null,
+      ...(target.kinds ? { kind: { in: target.kinds } } : {}),
+    },
     data: { closedAt: new Date() },
   })
 }
