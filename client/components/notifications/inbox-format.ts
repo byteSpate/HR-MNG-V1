@@ -22,8 +22,19 @@ export function emptyText(tab: InboxTab, unreadOnly: boolean): string {
 }
 
 /** `href` is stored role-agnostic ("/leave"); the reader's own group goes in front. */
+/**
+ * Sales events store their links relative to the Sales Hub (`/tasks`,
+ * `/accounts/<id>`), and the Sales Hub lives at `/sales` with no route group.
+ * No HR or money event uses these first words.
+ */
+const SALES_AREAS = new Set(["accounts", "opportunities", "meetings", "tasks", "funnel", "projects", "contacts", "settings"])
+
 export function itemHref(home: string, href: string | null): string | null {
-  return href ? `${home}${href}` : null
+  if (!href) return null
+  const first = href.split(/[/?#]/)[1] ?? ""
+  if (first === "sales") return href
+  if (SALES_AREAS.has(first)) return `/sales${href}`
+  return `${home}${href}`
 }
 
 /** "just now", "12m", "3h", "5d", then a short date. Read at a glance. */
