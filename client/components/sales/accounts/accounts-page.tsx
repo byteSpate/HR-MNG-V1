@@ -306,7 +306,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
   const sub =
     scope === "all"
       ? "Every company the team sells to, with an owner answerable for each one. Open one to look, even if it is not yours to work."
-      : "The companies you own or are assigned to — the ones you can actually work."
+      : "The companies you own or are assigned to. These are the ones you can work on."
 
   const searching = search.q !== ""
   const emptyTitle = searching ? "No accounts match the search" : scope === "all" ? "No Sales Accounts yet" : "Nothing here yet"
@@ -421,7 +421,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
               {isSalesAdminOrSuper ? (
               <Field
                 label="Owner"
-                help="Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
+                help="Answerable for this account. Sales Users only. A Sales Admin manages the hub rather than owning accounts in it."
                 hint={
                   eligibleQuery.isPending
                     ? "Loading the people who can own an account…"
@@ -441,7 +441,7 @@ export function AccountsPage({ scope, filters = {} }: { scope: "mine" | "all"; f
                   <SelectContent>
                     {employees.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
-                        {e.fullName} — {e.designation}
+                        {e.fullName} · {e.designation}
                       </SelectItem>
                     ))}
                   </SelectContent>

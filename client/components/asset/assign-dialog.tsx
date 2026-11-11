@@ -127,7 +127,7 @@ export function AssignDialog({
               <SelectContent>
                 {(employeesQuery.data ?? []).map((e) => (
                   <SelectItem key={e.id} value={e.id}>
-                    {e.work.fullName} — {e.work.designation}
+                    {e.work.fullName} · {e.work.designation}
                   </SelectItem>
                 ))}
               </SelectContent>

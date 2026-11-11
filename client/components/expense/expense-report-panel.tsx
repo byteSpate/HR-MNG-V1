@@ -336,7 +336,7 @@ export function ExpenseReports({
           emptyBody={
             status !== "ALL" || employeeId !== "ALL"
               ? "No claim matches these filters. Widen the range, or clear the person and status."
-              : "Nothing was spent — or nothing was claimed — between these dates."
+              : "Nothing was spent or claimed between these dates."
           }
           emptyAction="Refresh"
           onEmptyAction={() => reportQuery.refetch()}

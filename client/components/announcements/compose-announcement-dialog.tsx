@@ -137,7 +137,7 @@ export function ComposeAnnouncementDialog({
           <DialogTitle>{existing ? "Edit announcement" : "New announcement"}</DialogTitle>
           <DialogDescription>
             Everyone in the audience sees this on their announcements page. There are no read
-            receipts — nobody can tell you who has actually read it.
+            receipts. Nobody can tell you who has actually read it.
           </DialogDescription>
         </DialogHeader>
 
@@ -255,7 +255,7 @@ export function ComposeAnnouncementDialog({
                 onCheckedChange={(v) => setDraft(v)}
               />
               <Label htmlFor="ann-draft" className="text-caption font-normal text-ink-muted">
-                Save as a draft — nobody sees it until you publish
+                Save as a draft. Nobody sees it until you publish
               </Label>
             </div>
             {!draft && !publishAt ? (

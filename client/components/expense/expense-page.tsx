@@ -262,7 +262,7 @@ export function ExpensePage() {
         const why = err instanceof ApiError ? err.message : "the upload failed"
         return {
           claim,
-          receiptError: `Your claim was saved, but the receipt was not attached — ${why}. Open the claim to try again.`,
+          receiptError: `Your claim was saved, but the receipt was not attached (${why}). Open the claim to try again.`,
         }
       }
     },
@@ -501,7 +501,7 @@ export function ExpensePage() {
         title={isAdmin ? "Employee expenses" : "Expenses"}
         sub={
           isAdmin
-            ? "Claims submitted by staff — approvals and reimbursements"
+            ? "Claims sent by staff: approvals and paying back"
             : "Claims, approvals and reimbursements"
         }
       />

@@ -12,7 +12,7 @@ export const GLOSSARY: Record<string, string> = {
   accrual:
     "Recording a cost when it is incurred rather than when it is paid. A bill that arrives after its month is still that month's cost.",
   posting:
-    "Turning one business event — a payroll approval, a bill — into its entry in the ledger. A posting is never edited later; it is corrected by reversing it.",
+    "Turning one business event (a payroll approval, a bill) into its entry in the ledger. A posting is never edited later; it is corrected by reversing it.",
   journal:
     "One entry in the ledger, made up of lines. Every line names an account and an amount on one side, debit or credit.",
   ledger:
@@ -30,19 +30,19 @@ export const GLOSSARY: Record<string, string> = {
   "reducing balance":
     "A way of depreciating: each year a fixed percentage of what is left, rather than a fixed amount of the original cost. The charge gets smaller as the asset ages.",
   reversal:
-    "A second entry that undoes a posted one. Both stay on the record — nothing is ever deleted from the ledger.",
+    "A second entry that undoes a posted one. Both stay on the record. Nothing is ever deleted from the ledger.",
   "retained earnings":
     "The accumulated profit or loss the company has kept rather than paid out. The year-end entry sweeps each year's result into it.",
   "opening balance":
     "What an account held at the start of the period it is being read for. On the first year, these are entered by hand; after that they come from the ledger.",
   "financial year":
-    "The twelve months the accounts are reported over — for this company, 1 July to 30 June.",
+    "The twelve months the accounts are reported over. For this company, 1 July to 30 June.",
   "accounting period":
     "One of the twelve months inside a financial year. Entries land in the period their date falls in, and a closed period accepts no new ones.",
   comparative:
     "Last year's figure, shown beside this year's so a movement is visible without looking anything up.",
   reconciliation:
-    "Checking one record against another — the bank book against the bank statement, or the cash-flow total against the balance sheet — and explaining the difference.",
+    "Checking one record against another (the bank book against the bank statement, or the cash-flow total against the balance sheet) and explaining the difference.",
   "working capital":
     "What the company has available to run on: what customers owe it, plus cash, less what it owes suppliers and staff.",
 }

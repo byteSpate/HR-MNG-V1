@@ -74,7 +74,7 @@ function CustodyStrip({
         ) : (
           <>
             <span className="font-semibold text-ink-body">Not handed to anyone.</span> Recording a
-            handover is a separate step — it captures the condition and asks the holder to confirm.
+            handover is a separate step. It captures the condition and asks the holder to confirm.
           </>
         )}
       </span>

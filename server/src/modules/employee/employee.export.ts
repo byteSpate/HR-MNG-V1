@@ -7,11 +7,14 @@
 import type { NextFunction, Request, Response } from "express"
 
 import prisma from "../../config/prisma"
+import type { Prisma } from "../../generated/prisma/client"
 import { parseExportFormat, sendExport } from "../../utils/export/export.respond"
 import type { ExportSpec } from "../../utils/export/export.types"
 
-export async function buildEmployeeExportSpec(): Promise<ExportSpec> {
+/** `where` narrows the list for the Employee report. The plain export takes everybody. */
+export async function buildEmployeeExportSpec(where: Prisma.EmployeeWhereInput = {}): Promise<ExportSpec> {
   const employees = await prisma.employee.findMany({
+    where,
     orderBy: { fullName: "asc" },
     include: {
       department: { select: { name: true } },

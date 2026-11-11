@@ -69,8 +69,8 @@ export function ChangePasswordForm() {
       {forced ? (
         <AuthNotice icon={<RiShieldKeyholeLine />} title="Finish setting up your account">
           <p>
-            You signed in with a temporary password. Choose a permanent one — only you will know
-            it — and it replaces the temporary one immediately.
+            You signed in with a temporary password. Choose a permanent one that only you will
+            know. It replaces the temporary one right away.
           </p>
         </AuthNotice>
       ) : null}

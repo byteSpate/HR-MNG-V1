@@ -477,7 +477,7 @@ export function AttendancePage() {
           title={`Fix ${formatDayLabel(amending.date)}`}
           description={
             amending.approval === "REJECTED"
-              ? "Your last submission for this day was rejected. Correct the times and send it again — it goes back to your manager for review."
+              ? "Your last submission for this day was rejected. Correct the times and send it again. It goes back to your manager for review."
               : "This goes to your manager for review. It cannot approve itself, because you are supplying a time nobody else recorded."
           }
           confirmLabel="Send to my manager"
@@ -540,7 +540,7 @@ function UnresolvedDays({
               {guessed ? (
                 <>
                   You didn&apos;t check out on <strong>{formatDayLabel(day.date)}</strong>, so it was
-                  closed at {formatClock(day.checkOut)} — the end of your shift.{" "}
+                  closed at {formatClock(day.checkOut)}, the end of your shift.{" "}
                   <span className="font-semibold">Fix it if you left at a different time.</span>
                 </>
               ) : (

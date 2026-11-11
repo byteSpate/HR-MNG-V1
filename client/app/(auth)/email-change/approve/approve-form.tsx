@@ -53,7 +53,7 @@ export function ApproveEmailChangeForm({ token }: { token: string }) {
   if (done === "approved") {
     return (
       <div className="grid gap-4">
-        <AuthNotice icon={<RiCheckLine />} title="Approved — one step left">
+        <AuthNotice icon={<RiCheckLine />} title="Approved. One step left">
           <p>
             We have emailed <strong>{newEmail}</strong> to check that inbox works. Open it and
             confirm, and the change is done.
@@ -78,7 +78,7 @@ export function ApproveEmailChangeForm({ token }: { token: string }) {
             out. Your email address is unchanged.
           </p>
           <p>
-            If this was not you, change your password now — whoever asked for it was able to use
+            If this was not you, change your password now. Whoever asked for it was able to use
             your account. Tell your administrator too.
           </p>
         </AuthNotice>

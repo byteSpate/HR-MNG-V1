@@ -177,7 +177,7 @@ export function ContactsPanel({ accountId, canManage }: { accountId: string; can
   function validateFields(): string | null {
     if (!name.trim()) return "A contact needs a name."
     if (!phone.trim() && !email.trim()) {
-      return "Add a phone number or an email — a contact needs at least one way to reach them."
+      return "Add a phone number or an email. A contact needs at least one way to reach them."
     }
     return null
   }

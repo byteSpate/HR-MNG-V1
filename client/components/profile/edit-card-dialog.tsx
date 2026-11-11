@@ -103,7 +103,7 @@ export const CARD_FIELDS: Record<string, EditField[]> = {
       // machine integration in this system, so filling it in has no effect on
       // attendance today. Checked across the whole server — no importer, no
       // job, no attendance code touches it.
-      hint: "Their ID on a fingerprint or face punch machine. Stored for future use — no punch machine is connected yet, so filling this in does not affect attendance.",
+      hint: "Their ID on a fingerprint or face punch machine. Stored for future use. No punch machine is connected yet, so filling this in does not affect attendance.",
     },
   ],
   Payroll: [

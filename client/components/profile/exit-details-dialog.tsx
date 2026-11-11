@@ -93,7 +93,7 @@ function ExitForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Record exit — {employee.work.fullName}</DialogTitle>
+        <DialogTitle>Record exit: {employee.work.fullName}</DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

@@ -69,7 +69,7 @@ function ShiftForm({
 
       <div className="space-y-4">
         <div className="text-caption leading-relaxed text-ink-muted">
-          Attendance — late arrivals, hours worked, the weekly off day — is judged against
+          Attendance (late arrivals, hours worked, the weekly off day) is judged against
           whichever shift is assigned here. Leave unset to use the General shift.
         </div>
 

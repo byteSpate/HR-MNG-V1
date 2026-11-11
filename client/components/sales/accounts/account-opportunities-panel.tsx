@@ -60,7 +60,7 @@ function MarginWon({ accountId }: { accountId: string }) {
       {nothingWon
         ? "no Opportunities won on this account yet."
         : counted === 0
-          ? `no margin yet — ${gaps}.`
+          ? `no margin yet (${gaps}).`
           : `${amount} from ${count(counted, "product")} on won Opportunities${gaps ? `, not counting ${gaps}` : ""}.`}
     </p>
   )

@@ -110,7 +110,7 @@ export function PeriodsPage() {
     mutationFn: (id: string) => draftYearEnd(accessToken!, id),
     onSuccess: (journal) => {
       refresh()
-      toast.success(`${journal.journalNo} drafted — review it, then have it approved`)
+      toast.success(`${journal.journalNo} drafted. Review it, then have it approved`)
       router.push(`journals/${journal.id}`)
     },
     onError: fail("Could not draft the year-end journal"),
@@ -137,7 +137,7 @@ export function PeriodsPage() {
         </div>
       ) : (years.data ?? []).length === 0 ? (
         <p className="rounded-lg border p-10 text-center text-sm text-muted-foreground">
-          No financial year yet. Create one before posting anything — a journal cannot exist
+          No financial year yet. Create one before posting anything. A journal cannot exist
           without a period to fall into.{" "}
           <HelpLink>How does this work?</HelpLink>
         </p>
@@ -188,7 +188,7 @@ export function PeriodsPage() {
                 {fy.status === "OPEN" && !readyForYearEnd && (
                   <p className="border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
                     Year-end becomes available once every month except {last ? monthLabel(last.year, last.month) : "the last"} is
-                    closed — the closing entry is dated {formatLedgerDate(fy.endDate)} and has to
+                    closed. The closing entry is dated {formatLedgerDate(fy.endDate)} and has to
                     post into an open period like any other.
                   </p>
                 )}
@@ -226,7 +226,7 @@ export function PeriodsPage() {
                           className="ml-auto min-w-0 max-w-full truncate text-xs text-muted-foreground"
                           title={p.reopenReason}
                         >
-                          Reopened — {p.reopenReason}
+                          Reopened: {p.reopenReason}
                         </span>
                       )}
                     </li>

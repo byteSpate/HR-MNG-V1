@@ -65,7 +65,7 @@ export function DecisionDialog({
               <Label htmlFor="notify-employee" className="text-body-sm font-semibold text-ink-muted">
                 Email the employee
               </Label>
-              <p className="text-caption text-ink-muted">Coming soon — no email is sent yet.</p>
+              <p className="text-caption text-ink-muted">Coming soon. No email is sent yet.</p>
             </div>
           </div>
 

@@ -354,7 +354,7 @@ export function OpportunitiesPage({ actionFilters = {} }: { actionFilters?: { cl
   const emptyTitle = isFiltered ? "Nothing matches" : "No opportunities yet"
   const emptyBody = isFiltered
     ? "No Opportunity matches the search and every filter at once. Change the search or clear a filter."
-    : "An Opportunity is live work on a Sales Account — what is being sold, at what stage, and what happens next. Open an account and press New opportunity."
+    : "An Opportunity is live work on a Sales Account: what is being sold, at what stage, and what happens next. Open an account and press New opportunity."
 
   return (
     <>

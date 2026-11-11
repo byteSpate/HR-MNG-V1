@@ -36,6 +36,7 @@ import {
   updateStructureHandler,
 } from "./payroll.controller"
 import { exportSalaryStructuresHandler } from "./payroll.structure.export"
+import { payrollReportHandler } from "./payroll.report"
 
 const router = Router()
 
@@ -82,6 +83,8 @@ router.delete(
 // approve is Super Admin only — the plan's separation of duties, so nobody
 // can move money alone.
 router.get("/runs", requireAuth, requireRole(...READ_ROLES), listRunsHandler)
+// The Payroll report on the Reports page.
+router.get("/report", requireAuth, requireRole(...READ_ROLES), payrollReportHandler)
 router.get("/runs/:id", requireAuth, requireRole(...READ_ROLES), getRunHandler)
 router.get("/runs/:id/preflight", requireAuth, requireRole(...READ_ROLES), getRunPreflightHandler)
 router.post("/runs", requireAuth, requireRole(...FINANCE_ROLES), createRunHandler)

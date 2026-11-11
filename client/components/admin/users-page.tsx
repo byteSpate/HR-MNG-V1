@@ -344,7 +344,7 @@ export function UsersPage() {
           </div>
           <Heading level="page" className="mb-1">Users</Heading>
           <div className="text-body-sm text-ink-muted">
-            System accounts, roles and access — who can sign in, and as what.
+            System accounts, roles and access: who can sign in, and as what.
           </div>
         </div>
         <Button
@@ -483,7 +483,7 @@ export function UsersPage() {
           <div className="space-y-4">
             <div className="text-caption text-ink-muted">
               For administrative logins only. An employee or manager account needs a
-              department, designation and joining date — create those from Employees.
+              department, designation and joining date. Create those from Employees.
             </div>
             <div>
               <Label htmlFor="user-email" className="mb-1.5 text-xs font-bold">
@@ -576,7 +576,7 @@ export function UsersPage() {
       <Dialog open={!!roleTarget} onOpenChange={(open) => !open && setRoleTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change role — {roleTarget?.email}</DialogTitle>
+            <DialogTitle>Change role: {roleTarget?.email}</DialogTitle>
           </DialogHeader>
           {roleTarget ? (
             <div className="space-y-4">
@@ -694,7 +694,7 @@ function RoleChangeConsequences({
           <RiIdCardLine className="mt-px size-4 shrink-0 text-ink-muted" aria-hidden />
           <span>
             Their code stays <span className="font-semibold text-ink-body">{employeeCode}</span>.
-            It records what they were hired as, and it cannot be reissued — staff sign in with
+            It records what they were hired as, and it cannot be reissued. Staff sign in with
             it, and it appears on bank files and records already sent.
           </span>
         </li>

@@ -549,7 +549,7 @@ export function EmployeeDetailPage({
                     {
                       label: "Device enrolment ID",
                       value: employee.employment.deviceUserId,
-                      hint: "Their ID on a punch machine. Nothing reads it yet — no machine is connected.",
+                      hint: "Their ID on a punch machine. Nothing reads it yet. No machine is connected.",
                     },
                   ]
                 : []),

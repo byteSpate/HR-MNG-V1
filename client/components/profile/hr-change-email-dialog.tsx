@@ -118,7 +118,7 @@ export function HrChangeEmailDialog({
               <div>
                 <div className="font-semibold">This happens straight away</div>
                 <p className="mt-0.5">
-                  Unlike changing your own, there is no approval step — that is the point, since
+                  Unlike changing your own, there is no approval step. That is the point, since
                   they may not be able to reach the old inbox. They will be signed out everywhere,
                   both addresses will be told, and the change is recorded against your name.
                 </p>

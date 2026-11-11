@@ -103,7 +103,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
 
       <PageHeader
         kicker="Workspace"
-        title={`Depreciation — ${formatMonth(run.month, run.year)}`}
+        title={`Depreciation: ${formatMonth(run.month, run.year)}`}
         sub={`${run.runNo}${run.journal?.journalNo ? ` · journal ${run.journal.journalNo}` : ""}`}
       />
 
@@ -213,7 +213,7 @@ function RunChargesTable({ run }: { run: DepreciationRunDetail }) {
   return (
     <div className="mt-6">
       <DataTable
-        title={run.status === "DRAFT" ? "Preview — every charge this run will post" : "Charges posted"}
+        title={run.status === "DRAFT" ? "Preview: every charge this run will post" : "Charges posted"}
         cols="1fr 1.4fr 1fr 1fr 0.7fr 0.6fr 1fr"
         headers={["Asset", "Name", "Class", "Opening value", "Rate", "Months", "Charge"]}
         rows={rows}

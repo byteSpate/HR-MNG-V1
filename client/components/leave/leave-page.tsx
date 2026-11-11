@@ -286,7 +286,7 @@ export function LeavePage() {
         value: b.annualQuota === 0 ? "—" : `${b.balance}`,
         sub:
           b.annualQuota === 0
-            ? "Unpaid — no annual quota"
+            ? "Unpaid, no yearly limit"
             : b.entitlement < b.annualQuota
               ? `of ${b.entitlement} (pro-rated from your joining date)`
               : `of ${b.entitlement} days`,

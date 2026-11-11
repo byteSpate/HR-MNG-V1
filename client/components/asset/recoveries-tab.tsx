@@ -223,8 +223,8 @@ function WaiveDialog({
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-caption leading-relaxed text-ink-muted">
-            Waiving keeps the row and records who decided and why. &ldquo;We chose not to charge
-            her&rdquo; is precisely what an auditor asks about — a deleted row cannot answer. The
+            Waiving keeps the row and records who decided and why. An auditor may ask why
+            someone was not charged, and a deleted row cannot answer that. The
             amount {recovery ? formatMoney(recovery.amount, recovery.currency) : ""} will not be
             collected.
           </p>

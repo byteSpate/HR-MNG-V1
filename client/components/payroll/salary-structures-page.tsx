@@ -586,7 +586,7 @@ export function SalaryStructuresPage() {
                 onCheckedChange={(v) => patch({ isActive: v })}
               />
               <Label htmlFor="s-active" className="text-caption font-normal">
-                Active — inactive structures cannot be assigned to anyone new
+                Active. An inactive structure cannot be given to anyone new
               </Label>
             </div>
 
@@ -599,7 +599,7 @@ export function SalaryStructuresPage() {
                   </div>
                   {draft.components.length === 0 ? (
                     <div className="mt-0.5 text-caption text-ink-muted">
-                      Leave this empty for a flat monthly salary — the usual case.
+                      Leave this empty for a flat monthly salary. This is the usual case.
                     </div>
                   ) : null}
                 </div>
@@ -711,7 +711,7 @@ export function SalaryStructuresPage() {
                           Counts as wages
                           <span className="text-ink-muted">
                             {" "}
-                            — included in leave encashment and the gratuity base. Clear it for
+                            (used for leave encashment and the gratuity base). Clear it for
                             bonus and overtime.
                           </span>
                         </span>

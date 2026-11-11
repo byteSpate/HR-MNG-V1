@@ -487,7 +487,7 @@ export function RunDetail({ runId, onBack }: { runId: string; onBack: () => void
             >
               {summaryQuery.data.complete
                 ? `All ${summaryQuery.data.payslipCount} payslips are covered across ${summaryQuery.data.currencies.length} file(s).`
-                : `Only ${summaryQuery.data.totalRows} of ${summaryQuery.data.payslipCount} payslips are covered — somebody would not be paid.`}
+                : `Only ${summaryQuery.data.totalRows} of ${summaryQuery.data.payslipCount} payslips are covered. Somebody would not be paid.`}
               <ul className="mt-1.5 space-y-0.5">
                 {summaryQuery.data.currencies.map((c) => (
                   <li key={c.currency}>

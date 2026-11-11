@@ -48,7 +48,7 @@ export function AssetValuePage() {
       <PageHeader
         kicker="Workspace"
         title="Asset value"
-        sub="Book value per asset — cost minus the depreciation actually charged, per currency"
+        sub="Book value of each asset: cost minus the depreciation actually charged, per currency"
       />
 
       {reportQuery.isPending ? (
