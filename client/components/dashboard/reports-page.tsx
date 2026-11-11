@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/dashboard/page-header"
 import { TONE } from "@/components/dashboard/record-kit"
 import { AttendanceReports } from "@/components/attendance/report-panel"
 import { ExpenseReports } from "@/components/expense/expense-report-panel"
+import { EmployeeReports, LeaveReports, PayrollReports } from "@/components/reports/hr-reports"
 import { Heading } from "@/components/ds/heading"
 
 /**
@@ -20,12 +21,9 @@ import { Heading } from "@/components/ds/heading"
  * is what the label always should have pointed at.
  *
  * Five modules, in the order the user asked for them: Employee, Attendance,
- * Leave, Payroll, Expense. Attendance and Expense already have real, working
- * report panels, built in the last two rounds, and are embedded here
- * unchanged, under the exact role gate each already carries where it lives
- * today. The other three say plainly that they are not built yet — the route
- * this page replaces once showed five invented reports under a fake "Synced
- * 4 min ago", and nothing here repeats that.
+ * Leave, Payroll, Expense. Each section shows only for the roles its server
+ * route allows, and says so plainly to everyone else. Employee, Leave and
+ * Payroll share one panel (`components/reports/report-panel.tsx`).
  *
  * Accounting has no section here at all, rather than a sixth "not built"
  * row: it is seven financial statements that must balance and agree with
@@ -35,6 +33,8 @@ import { Heading } from "@/components/ds/heading"
 
 const ORG_ROLES = ["HR_ADMIN", "SUPER_ADMIN", "FINANCE_OFFICER"]
 const PAYROLL_ADMIN_ROLES = ["HR_ADMIN", "FINANCE_OFFICER", "SUPER_ADMIN"]
+/** The Employee and Leave reports hold private details: HR Admin and Super Admin. */
+const HR_ROLES = ["HR_ADMIN", "SUPER_ADMIN"]
 
 function Muted({ children }: { children: string }) {
   return <p className={`max-w-[64ch] text-caption leading-relaxed ${TONE.muted}`}>{children}</p>
@@ -66,6 +66,7 @@ export function ReportsPage() {
   const role = user?.role
   const canSeeAttendance = !!role && ORG_ROLES.includes(role)
   const canSeeExpense = !!role && PAYROLL_ADMIN_ROLES.includes(role)
+  const canSeeHr = !!role && HR_ROLES.includes(role)
 
   // Same query key the Expenses page itself uses for its admin claims list,
   // so a person who has visited both pages this session pays for one claim
@@ -95,14 +96,14 @@ export function ReportsPage() {
       <div className="space-y-8 pb-10">
         <Section
           title="Employee"
-          sub="Roster, employment status and personal details, filtered and exported."
+          sub="Everyone on the staff list, by status and department. The files also hold private details."
         >
-          <Muted>Not built yet.</Muted>
+          {canSeeHr ? <EmployeeReports accessToken={accessToken!} /> : <Muted>Not available for your role.</Muted>}
         </Section>
 
         <Section
           title="Attendance"
-          sub="Daily, weekly, monthly or a custom range — one row per employee, or one per employee per day."
+          sub="Daily, weekly, monthly or a custom range. One row for each employee, or one for each employee for each day."
         >
           {canSeeAttendance ? (
             <AttendanceReports accessToken={accessToken!} />
@@ -113,16 +114,16 @@ export function ReportsPage() {
 
         <Section
           title="Leave"
-          sub="Leave taken, current balances, and the full request history, filtered and exported."
+          sub="Every leave request that touches a date range, with the days inside that range."
         >
-          <Muted>Not built yet.</Muted>
+          {canSeeHr ? <LeaveReports accessToken={accessToken!} /> : <Muted>Not available for your role.</Muted>}
         </Section>
 
         <Section
           title="Payroll"
-          sub="Run totals, the payslip register, and salary paid by component, filtered and exported."
+          sub="One row for each payslip in a range of months. Totals stay apart by currency."
         >
-          <Muted>Not built yet.</Muted>
+          {canSeeExpense ? <PayrollReports accessToken={accessToken!} /> : <Muted>Not available for your role.</Muted>}
         </Section>
 
         <Section
