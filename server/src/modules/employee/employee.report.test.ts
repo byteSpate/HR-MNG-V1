@@ -55,6 +55,13 @@ describe("GET /api/employees/report", () => {
     ])
   })
 
+  it("shows status and type as plain words, not as codes", async () => {
+    const res = await request(app).get("/api/employees/report").set("Authorization", `Bearer ${token("HR_ADMIN")}`)
+    const at = (h: string) => res.body.columns.findIndex((c: { header: string }) => c.header === h)
+    expect(res.body.rows.map((r: unknown[]) => r[at("employmentStatus")])).toEqual(["Active", "Active", "Resigned"])
+    expect(res.body.rows[0][at("employmentType")]).toBe("Full time")
+  })
+
   it("filters by status and department, and says so in the note", async () => {
     const res = await request(app)
       .get("/api/employees/report?status=ACTIVE&departmentId=d1")
