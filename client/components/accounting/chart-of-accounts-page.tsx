@@ -267,7 +267,7 @@ export function ChartOfAccountsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {pendingDelete?.code} {pendingDelete?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This cannot be undone. If the account has been used on any journal — even a draft —
+              This cannot be undone. If the account has been used on any journal (even a draft)
               or has accounts under it, the deletion will be refused and you can deactivate it
               instead.
             </AlertDialogDescription>

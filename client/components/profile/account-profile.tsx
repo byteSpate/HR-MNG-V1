@@ -77,7 +77,7 @@ const ROLE_LABEL: Record<Role, string> = {
 const CAN: Record<Role, string[]> = {
   SUPER_ADMIN: [
     "Approve or reject payroll runs and final settlements",
-    "Approve or reject asset requests — nobody else can",
+    "Approve or reject asset requests. Nobody else can",
     "Open accounts, change roles, and revoke access",
     "Read every module in the system",
   ],
@@ -107,7 +107,7 @@ const CAN: Record<Role, string[]> = {
  * attendance record, and every one of those pages is reachable in the nav.
  * Reaching one and finding it empty reads as a broken page.
  */
-const CANNOT = "File leave, expenses or timesheets — those need an employee record"
+const CANNOT = "File leave, expenses or timesheets. Those need an employee record"
 
 function monthYear(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "long", year: "numeric" })
@@ -317,7 +317,7 @@ export function AccountProfile({
         body={
           <>
             Every device signed in to this account is signed out, <strong>including this one</strong>
-            . Nothing else changes — your account, role and password stay exactly as they are.
+            . Nothing else changes: your account, role and password stay as they are.
           </>
         }
         confirmLabel="Sign out everywhere"

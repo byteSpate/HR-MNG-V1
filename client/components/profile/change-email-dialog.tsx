@@ -74,7 +74,7 @@ export function ChangeEmailDialog({
         {sentTo ? (
           <div className="space-y-4 text-body-sm leading-relaxed">
             <p>
-              We sent an approval link to <strong>{sentTo}</strong> — the address you are moving
+              We sent an approval link to <strong>{sentTo}</strong>. This is the address you are moving
               away from, not the new one.
             </p>
             <p className="text-ink-muted">

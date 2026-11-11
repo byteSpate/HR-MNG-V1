@@ -72,7 +72,7 @@ export function FunnelMeetingPanel({
           not an alert. It also says plainly what still works (§27.11). */}
       {completed ? (
         <PanelNotice>
-          This meeting is completed. Nothing written in it has been locked — reopen it to change a note.
+          This meeting is completed. Nothing written in it has been locked. Reopen it to change a note.
         </PanelNotice>
       ) : null}
 

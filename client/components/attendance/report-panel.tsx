@@ -181,7 +181,7 @@ export function AttendanceReports({ accessToken }: { accessToken: string }) {
     <>
       <SectionHeading
         title="Reports"
-        sub="Attendance for any range: on screen, as a PDF to print or send, or as a spreadsheet. Figures match the monthly summary above — all of them read the same records."
+        sub="Attendance for any range: on screen, as a PDF to print or send, or as a spreadsheet. Figures match the monthly summary above. All of them read the same records."
       />
 
       <div className="rounded-md border border-line bg-white px-5 py-4.5">

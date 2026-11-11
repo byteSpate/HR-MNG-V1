@@ -139,7 +139,7 @@ export function ApprovalNotice({ journal, dirty }: { journal: Journal; dirty?: b
     return (
       <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
         You have unsaved edits. Approving posts the journal as it is saved, not as it is on
-        screen — save your changes first, or reload to discard them.
+        screen. Save your changes first, or reload to discard them.
       </p>
     )
   }

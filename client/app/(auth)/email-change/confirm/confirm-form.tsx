@@ -35,7 +35,7 @@ export function ConfirmEmailChangeForm({ token }: { token: string }) {
   if (email) {
     return (
       <div className="grid gap-4">
-        <AuthNotice icon={<RiCheckLine />} title="Done — sign in with the new address">
+        <AuthNotice icon={<RiCheckLine />} title="Done. Sign in with the new address">
           <p>
             Your account now signs in with <strong>{email}</strong>.
           </p>

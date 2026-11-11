@@ -161,7 +161,7 @@ export function CreateRecoveryDialog({
 
               {asset ? (
                 <div className="rounded-md border border-line bg-surface-hover p-3 text-caption text-ink-muted">
-                  <div className="mb-1 font-semibold text-ink-body">Context — read only</div>
+                  <div className="mb-1 font-semibold text-ink-body">Context (read only)</div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <div className="text-caption font-bold uppercase">Purchase cost</div>
@@ -196,7 +196,7 @@ export function CreateRecoveryDialog({
                   inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter the amount — no suggestion, this is your call"
+                  placeholder="Enter the amount. Nothing is filled in for you."
                 />
                 <p className="mt-1 text-caption text-ink-muted">
                   Book value, replacement cost and original cost are all defensible. You are the

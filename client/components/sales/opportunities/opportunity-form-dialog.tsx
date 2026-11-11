@@ -316,7 +316,7 @@ function OpportunityFields({
 
     const trimmedName = name.trim()
     if (trimmedName.length < 2) {
-      setError("An opportunity needs a name of at least two characters — what is being sold, like “Firewall upgrade”.")
+      setError("An opportunity needs a name of at least two characters. Write what is being sold, like “Firewall upgrade”.")
       return
     }
     // Commas are how people write taka; the server wants digits.
@@ -438,7 +438,7 @@ function OpportunityFields({
           help={
             deal
               ? "The Opportunity value. Clear it if there is no price yet. The products list never changes it."
-              : "Leave it empty if there is no price yet — it shows as No price yet, never ৳0."
+              : "Leave it empty if there is no price yet. It shows as No price yet, never ৳0."
           }
         >
           <Input
@@ -509,7 +509,7 @@ function OpportunityFields({
           <SelectContent>
             {employees.map((e) => (
               <SelectItem key={e.id} value={e.id}>
-                {e.fullName} — {e.designation}
+                {e.fullName} · {e.designation}
               </SelectItem>
             ))}
           </SelectContent>

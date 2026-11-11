@@ -142,8 +142,8 @@ export function JournalDocument({ journal }: { journal: Journal }) {
       {isGeneratedDraft && (
         <p className="rounded-lg border bg-muted/40 p-3 text-sm">
           {journal.type === "CLOSING"
-            ? "This closing entry was derived from the year's profit and loss. It is not editable — if it is wrong, discard it and run year-end again."
-            : "This reversal was derived from the journal it reverses. It is not editable — if it is wrong, discard it and the original returns to posted."}
+            ? "This closing entry was derived from the year's profit and loss. It is not editable. If it is wrong, discard it and run year-end again."
+            : "This reversal was derived from the journal it reverses. It is not editable. If it is wrong, discard it and the original returns to posted."}
         </p>
       )}
 

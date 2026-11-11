@@ -177,7 +177,7 @@ export function DocumentsCard({
                 // An empty slot is a prompt; an absent row is invisible.
                 <li key={type} className="flex items-center justify-between gap-3">
                   <div className="text-body-sm font-semibold text-ink-muted">
-                    {TYPE_LABEL[type]} — not on file
+                    {TYPE_LABEL[type]}: not on file
                   </div>
                 </li>
               ))

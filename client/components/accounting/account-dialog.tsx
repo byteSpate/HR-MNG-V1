@@ -134,7 +134,7 @@ function AccountForm({
         <DialogTitle>{isEdit ? `Edit ${account?.code}` : "New account"}</DialogTitle>
         <DialogDescription>
           {isEdit
-            ? "The code and type are fixed once an account exists — retyping one would move money between statements without touching a journal."
+            ? "The code and type are fixed once an account exists. Retyping one would move money between statements without touching a journal."
             : `A ${type.toLowerCase()} account's code starts with ${expectedDigit}.`}
         </DialogDescription>
       </DialogHeader>

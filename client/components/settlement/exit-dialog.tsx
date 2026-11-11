@@ -51,7 +51,7 @@ export function ExitDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Record exit details — {employeeName}</DialogTitle>
+          <DialogTitle>Record exit details: {employeeName}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -102,7 +102,7 @@ export function ExitDialog({
               id="exit-note"
               value={exitNote}
               onChange={(e) => setExitNote(e.target.value)}
-              placeholder="The sentence the reason cannot hold — e.g. notice waived by mutual agreement."
+              placeholder="Anything the reason does not say. For example: notice waived by mutual agreement."
             />
           </div>
 

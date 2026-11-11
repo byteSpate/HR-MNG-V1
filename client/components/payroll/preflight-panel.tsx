@@ -48,7 +48,7 @@ export function PreflightPanel({ report }: { report: PreflightReport }) {
                     >
                       <span className="font-semibold">{employee.fullName}</span>
                       <span className="text-ink-muted">{employee.employeeCode}</span>
-                      <span className="text-ink-muted">— {employee.detail}</span>
+                      <span className="text-ink-muted">({employee.detail})</span>
                     </li>
                   ))}
                 </ul>

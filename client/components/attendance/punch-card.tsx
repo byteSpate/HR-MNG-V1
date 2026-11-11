@@ -44,7 +44,7 @@ function dayNotice(
 
   if (today.leaveFraction === 0.5) {
     return {
-      heading: `Half day — ${today.detail ?? "approved leave"}`,
+      heading: `Half day: ${today.detail ?? "approved leave"}`,
       body: `You are expected for ${span}. Your leave covers the other half either way.`,
     }
   }

@@ -151,7 +151,7 @@ export function EmailLogPage() {
           "Delivered" would claim something nobody here can know. */}
       <p className="mb-4 text-caption text-ink-muted">
         Sent means the mail server accepted the message. It is not proof that a person
-        received it. There is no resend here — the log stores who and what, not the message
+        received it. There is no resend here. The log stores who and what, not the message
         body, so resending lives on the page that owns the thing.
       </p>
 

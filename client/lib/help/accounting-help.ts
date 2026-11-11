@@ -110,7 +110,7 @@ export interface HelpEntry {
  *  thing people ask and it is true on every one of them. */
 const NUMBER_CONVENTIONS: HelpFunction = {
   name: "How the numbers are printed",
-  body: "Amounts are grouped the South Asian way, so twelve lakh reads 12,34,567.00 rather than 1,234,567.00. A dash means the cell is genuinely nil, while a totals row prints 0.00 so a zero total is never mistaken for a missing one. A figure in brackets is negative — (2,56,935.00) is a loss of two lakh fifty-six thousand, which is the convention the company's audited statements use. Every figure is in taka; the ledger is a single-currency book, and a bill in dollars is converted once, at the moment it posts, at a rate that is then frozen.",
+  body: "Amounts are grouped the South Asian way, so twelve lakh reads 12,34,567.00 rather than 1,234,567.00. A dash means the cell is genuinely nil, while a totals row prints 0.00 so a zero total is never mistaken for a missing one. A figure in brackets is negative. (2,56,935.00) is a loss of two lakh fifty-six thousand, which is the convention the company's audited statements use. Every figure is in taka; the ledger is a single-currency book, and a bill in dollars is converted once, at the moment it posts, at a rate that is then frozen.",
 }
 
 export const HELP: Record<string, HelpEntry> = {
@@ -126,7 +126,7 @@ export const HELP: Record<string, HelpEntry> = {
     reading: [
       {
         name: "Groups and accounts",
-        body: "A row in bold with children under it is a group — a heading like Non-Current Assets or Administrative & Selling Expenses. Groups hold no money of their own; their figure is whatever their children add up to. The rows underneath are the real accounts, and those are the only things a journal line can point at.",
+        body: "A row in bold with children under it is a group: a heading like Non-Current Assets or Administrative & Selling Expenses. Groups hold no money of their own; their figure is whatever their children add up to. The rows underneath are the real accounts, and those are the only things a journal line can point at.",
       },
       {
         name: "The four-digit code",
@@ -144,7 +144,7 @@ export const HELP: Record<string, HelpEntry> = {
     does: [
       {
         name: "Browse the tree",
-        body: "Expand a group to see what sits under it. This is the fastest way to answer \"where would a cost like this go\" — find the group that matches, and read its children.",
+        body: "Expand a group to see what sits under it. This is the fastest way to answer \"where would a cost like this go\". Find the group that matches, and read its children.",
       },
       {
         name: "Search by code or name",
@@ -152,7 +152,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Add an account",
-        body: "Needs a code, a name, a type, and the group it belongs under. An account that takes entries must sit under a group, so the statements know which line it belongs to. Only a group can be at the top level. New expense categories, new asset classes and new income lines are all added here rather than by a developer. Pick the code by looking at its neighbours — an account in the wrong numeric range still works, but it will sort into the wrong place on every report forever.",
+        body: "Needs a code, a name, a type, and the group it belongs under. An account that takes entries must sit under a group, so the statements know which line it belongs to. Only a group can be at the top level. New expense categories, new asset classes and new income lines are all added here rather than by a developer. Pick the code by looking at its neighbours. An account in the wrong numeric range still works, but it will sort into the wrong place on every report forever.",
       },
       {
         name: "Convert an account into a group",
@@ -164,7 +164,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Move an account to a different group",
-        body: "Changes which subtotal it rolls into, on every report, including past ones. Reports are computed from the tree as it is now, not as it was — so moving an account rewrites history's shape, though never its figures.",
+        body: "Changes which subtotal it rolls into, on every report, including past ones. Reports are computed from the tree as it is now, not as it was, so moving an account rewrites history's shape, though never its figures.",
       },
       {
         name: "Mark an account inactive",
@@ -179,7 +179,7 @@ export const HELP: Record<string, HelpEntry> = {
       {
         title: "The company starts paying for a software subscription",
         steps: [
-          "Search the 52xx range and find nothing that fits — there is stationery, there is internet, there is nothing for software.",
+          "Search the 52xx range and find nothing that fits. There is stationery, there is internet, there is nothing for software.",
           "Add \"Software subscriptions\" as a new account under Administrative & Selling Expenses, with the next free code in that range.",
           "Go to Posting rules and point the relevant expense category at the new account.",
           "The next bill entered lands there automatically, and it appears as its own line in the notes to the statements rather than being buried in miscellaneous.",
@@ -190,14 +190,14 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "A cleaning cost was filed under Cost of Goods Sold and should be administrative.",
           "Edit the account and change its parent to the administrative group.",
-          "Nothing in the ledger moves — the entries are unchanged and still point at the same account.",
+          "Nothing in the ledger moves. The entries are unchanged and still point at the same account.",
           "The Income statement now shows that cost above the administrative subtotal instead of the gross profit one, for every period including past ones.",
         ],
       },
     ],
     watchFor: [
       "An account cannot be moved underneath one of its own children. The system refuses it, because a loop detaches that whole branch from every root and it would quietly vanish from statement totals while still appearing in the trial balance.",
-      "Groups cannot be posted to. If a journal refuses an account for being a group, pick one of the accounts underneath it — or add one if none fits.",
+      "Groups cannot be posted to. If a journal refuses an account for being a group, pick one of the accounts underneath it, or add one if none fits.",
       "Moving or renaming changes past reports' presentation. If a filed set of accounts has to keep reading exactly as filed, do not restructure the chart after it has been signed off.",
     ],
   },
@@ -207,13 +207,13 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "The calendar the whole ledger runs on. One financial year, split into twelve months, each of which can be open or shut to new entries.",
     step: "setup",
     connects: {
-      fedBy: ["Nothing — this is where the calendar is defined"],
+      fedBy: ["Nothing. This is where the calendar is defined"],
       feeds: ["Every posting anywhere in the system", "The period picker on all statements"],
     },
     reading: [
       {
         name: "Open",
-        body: "Entries can post into this month, from anywhere — a hand-typed journal, a payroll approval, a supplier bill, a depreciation run.",
+        body: "Entries can post into this month, from anywhere: a hand-typed journal, a payroll approval, a supplier bill, a depreciation run.",
       },
       {
         name: "Closed",
@@ -231,7 +231,7 @@ export const HELP: Record<string, HelpEntry> = {
     does: [
       {
         name: "Create a financial year",
-        body: "Pick a start date, which must be the first of a month. Creating the year creates its twelve months at the same time, all open. Do this before the year begins — a payroll run in a month that has no period behind it cannot post at all.",
+        body: "Pick a start date, which must be the first of a month. Creating the year creates its twelve months at the same time, all open. Do this before the year begins. A payroll run in a month that has no period behind it cannot post at all.",
         roles: ["SUPER_ADMIN"],
       },
       {
@@ -241,17 +241,17 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Reopen a month",
-        body: "Possible, and it asks why. The reason is required and recorded against the period, because an unexplained reopen of a closed month is the first thing an auditor asks about. Reopen, fix, close again — do not leave it open.",
+        body: "Possible, and it asks why. The reason is required and recorded against the period, because an unexplained reopen of a closed month is the first thing an auditor asks about. Reopen, fix, close again. Do not leave it open.",
         roles: ["SUPER_ADMIN"],
       },
       {
         name: "Draft the year-end entry",
-        body: "At the end of the year this sweeps every income and expense account to zero and moves the difference — the year's profit or loss — into retained earnings. It arrives as a draft journal you can read line by line before anything posts. It is computed from the ledger, not typed.",
+        body: "At the end of the year this sweeps every income and expense account to zero and moves the difference (the year's profit or loss) into retained earnings. It arrives as a draft journal you can read line by line before anything posts. It is computed from the ledger, not typed.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
         name: "Lock the year",
-        body: "The final step, after the year-end entry has posted. The system re-derives the closing figure before it locks and refuses if it disagrees with what was posted, because the final month has to stay open until the year-end entry lands — which is exactly the window in which somebody else can still post something.",
+        body: "The final step, after the year-end entry has posted. The system re-derives the closing figure before it locks and refuses if it disagrees with what was posted, because the final month has to stay open until the year-end entry lands, which is exactly the window in which somebody else can still post something.",
         roles: ["SUPER_ADMIN"],
       },
       {
@@ -266,14 +266,14 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "Payroll for the month has been approved and disbursed, and the last supplier bills are in.",
           "Open the trial balance for that month and confirm it agrees.",
-          "Skim it for anything obviously in the wrong place — a large balance sitting on an account that is normally empty.",
+          "Skim it for anything obviously in the wrong place: a large balance sitting on an account that is normally empty.",
           "Close the month here. Reports for it are now stable.",
         ],
       },
       {
         title: "Finishing the financial year",
         steps: [
-          "Close July through May as usual, but leave June open — the year-end entry has to post into it.",
+          "Close July through May as usual, but leave June open. The year-end entry has to post into it.",
           "Confirm the full-year trial balance agrees.",
           "Draft the year-end entry and read the figure it moves into retained earnings. It should equal the profit or loss on the Income statement for the year.",
           "Post it, then close June, then lock the year.",
@@ -292,7 +292,7 @@ export const HELP: Record<string, HelpEntry> = {
     watchFor: [
       "Closing a month while a payroll run is approved but not yet disbursed will stop the disbursement. Close after payday, not before.",
       "The last month of the year must stay open until the year-end entry is posted. That window is real, and the lock step re-checks the figure precisely because of it.",
-      "A month with no period behind it at all is not the same as a closed one — it produces a \"no financial year covers this date\" refusal. That means the year was never created, and creating it is the fix.",
+      "A month with no period behind it at all is not the same as a closed one. It produces a \"no financial year covers this date\" refusal. That means the year was never created, and creating it is the fix.",
     ],
   },
 
@@ -301,13 +301,13 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "What the company already owned and owed on the day it started using this system. Entered once, at the start of the first financial year.",
     step: "setup",
     connects: {
-      fedBy: ["Whatever was used before — a spreadsheet, or last year's audited balance sheet"],
+      fedBy: ["Whatever was used before: a spreadsheet, or last year's audited balance sheet"],
       feeds: ["Every balance in the system, forever"],
     },
     reading: [
       {
         name: "The two columns",
-        body: "Credit for things the company owns or is owed — cash, bank, equipment, money customers owe. Debit for things it owes and for what the owners put in — suppliers, loans, share capital, retained earnings brought forward.",
+        body: "Credit for things the company owns or is owed: cash, bank, equipment, money customers owe. Debit for things it owes and for what the owners put in: suppliers, loans, share capital, retained earnings brought forward.",
       },
       {
         name: "The running difference",
@@ -335,7 +335,7 @@ export const HELP: Record<string, HelpEntry> = {
         title: "Starting mid-life, not from scratch",
         steps: [
           "Take the closing balance sheet from whatever was used before.",
-          "Enter each line against the matching account here — assets on the credit side, liabilities and equity on the debit side.",
+          "Enter each line against the matching account here: assets on the credit side, liabilities and equity on the debit side.",
           "Include accumulated depreciation as a debit against its own account, not netted off the equipment cost. The fixed asset schedule needs both figures separately.",
           "The difference reads zero once the whole balance sheet is in. Post.",
           "The first trial balance now starts from reality rather than from nothing.",
@@ -344,7 +344,7 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     watchFor: [
       "This is done once. Correcting it afterwards means a reversing journal, not an edit here, because reports have already been produced from it.",
-      "If the difference will not close, the usual culprits are retained earnings brought forward and accumulated depreciation — both are easy to leave out and both are large.",
+      "If the difference will not close, the usual culprits are retained earnings brought forward and accumulated depreciation. Both are easy to leave out and both are large.",
     ],
   },
 
@@ -464,7 +464,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "How a key is resolved",
-        body: "Three steps, in order. An exact match wins. Failing that, a wildcard on the part before the colon — ADMINISTRATIVE:* catches every administrative salary head that has no rule of its own. Failing that, a bare * if the event has one. If none of those match, the posting stops with an error naming the key.",
+        body: "Three steps, in order. An exact match wins. Failing that, a wildcard on the part before the colon. ADMINISTRATIVE:* catches every administrative salary head that has no rule of its own. Failing that, a bare * if the event has one. If none of those match, the posting stops with an error naming the key.",
       },
       {
         name: "The unresolved list",
@@ -474,12 +474,12 @@ export const HELP: Record<string, HelpEntry> = {
     does: [
       {
         name: "Re-point a rule",
-        body: "Change the account a key resolves to. It takes effect on the next thing that posts. Already-posted entries do not move — they are history, and a rule change is not retroactive.",
+        body: "Change the account a key resolves to. It takes effect on the next thing that posts. Already-posted entries do not move. They are history, and a rule change is not retroactive.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
         name: "Leave a note on a rule",
-        body: "For the ones that need explaining later. Several rules are deliberately pointed at a shared account with a note saying so, waiting for a dedicated one — the note is how the next person knows that was a decision rather than an accident.",
+        body: "For the ones that need explaining later. Several rules are deliberately pointed at a shared account with a note saying so, waiting for a dedicated one. The note is how the next person knows that was a decision rather than an accident.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
@@ -492,7 +492,7 @@ export const HELP: Record<string, HelpEntry> = {
         title: "HR adds a transport allowance to the salary structure",
         steps: [
           "The new allowance appears in the unresolved list the first time a payroll run is previewed.",
-          "Decide which account it belongs to — probably alongside the other salary heads, possibly its own line if it needs to be visible in the accounts.",
+          "Decide which account it belongs to: probably alongside the other salary heads, possibly its own line if it needs to be visible in the accounts.",
           "Point the rule at it.",
           "The run processes and approves. Nobody edited any code, and nothing was deployed.",
         ],
@@ -508,7 +508,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
     ],
     watchFor: [
-      "A key that matches no rule stops the posting rather than falling back to something plausible. That is deliberate — a figure that lands on a nearly-right account is invisible until somebody reads the statements months later.",
+      "A key that matches no rule stops the posting rather than falling back to something plausible. That is deliberate. A figure that lands on a nearly-right account is invisible until somebody reads the statements months later.",
       "Some events have a bare wildcard as a safety net and some deliberately do not. Asset acquisition has none, because a chair capitalised as a laptop would be invisible until the fixed asset schedule is read by somebody who knows the company.",
       "Re-pointing a rule never moves what has already posted. If the correction has to reach the ledger, it is a journal.",
     ],
@@ -537,7 +537,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Reversed",
-        body: "A posted entry that has been superseded by a reversing entry. Both stay visible and both stay in the ledger — the two net to nothing, which is why an account that was moved and moved back reads as two rows rather than none.",
+        body: "A posted entry that has been superseded by a reversing entry. Both stay visible and both stay in the ledger. The two net to nothing, which is why an account that was moved and moved back reads as two rows rather than none.",
       },
       {
         name: "The type column",
@@ -545,7 +545,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Why system entries are already posted",
-        body: "They never enter the approval queue. A human already approved the payroll run itself, and asking a second person to approve the arithmetic that follows from it would be a rubber stamp — which weakens the control on the entries that genuinely need scrutiny.",
+        body: "They never enter the approval queue. A human already approved the payroll run itself, and asking a second person to approve the arithmetic that follows from it would be a rubber stamp, which weakens the control on the entries that genuinely need scrutiny.",
       },
       NUMBER_CONVENTIONS,
     ],
@@ -560,7 +560,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Filter by date range",
-        body: "Defaults to the current month. The range is on the entry's own date — the date it is booked to — not the date somebody typed it.",
+        body: "Defaults to the current month. The range is on the entry's own date (the date it is booked to), not the date somebody typed it.",
       },
       {
         name: "Filter by account",
@@ -593,7 +593,7 @@ export const HELP: Record<string, HelpEntry> = {
       {
         title: "A supplier invoice was booked to the wrong account",
         steps: [
-          "Find the entry in the register — search the supplier's name, or filter by the account it wrongly landed on.",
+          "Find the entry in the register: search the supplier's name, or filter by the account it wrongly landed on.",
           "Open it and confirm it is the right one by checking the amount and the date.",
           "Reverse it, with a reason naming the account it should have been.",
           "Write a fresh entry with the right account.",
@@ -606,29 +606,29 @@ export const HELP: Record<string, HelpEntry> = {
           "Note the account and the period from the report.",
           "Filter the register by that account and that date range.",
           "The entries listed are exactly what made up the figure.",
-          "Open any of them to see the other side — what the money came from, or went to.",
+          "Open any of them to see the other side: what the money came from, or went to.",
         ],
       },
       {
         title: "Clearing the approval queue",
         steps: [
           "Filter by status: awaiting approval.",
-          "Open each one and read the narration first — it should say what happened and why, not just repeat the account names.",
+          "Open each one and read the narration first. It should say what happened and why, not just repeat the account names.",
           "Check the lines balance and the date falls in the right month.",
           "Approve, or send it back with a note. A note saying \"wrong account\" is less useful than one naming the right account.",
         ],
       },
     ],
     watchFor: [
-      "You cannot approve your own entry. Two people, always — that is the entire point of the queue, and the system enforces it rather than trusting people to remember.",
+      "You cannot approve your own entry. Two people, always. That is the entire point of the queue, and the system enforces it rather than trusting people to remember.",
       "Reversal and year-end entries cannot have their lines retyped, only their narration. Retyping a reversal's lines would leave the original marked as reversed by something that no longer reverses it.",
-      "A reversal does not delete anything. If a report looks like it double-counts after a reversal, read again — the two entries net to zero and the ledger is correct.",
+      "A reversal does not delete anything. If a report looks like it double-counts after a reversal, read again. The two entries net to zero and the ledger is correct.",
     ],
   },
 
   "accounting/journals/new": {
     title: "Writing a journal",
-    lede: "A hand-typed entry, for anything the payroll, expense, cost, settlement and asset modules do not already post for you — a bank charge, an accrual, a correction.",
+    lede: "A hand-typed entry, for anything the payroll, expense, cost, settlement and asset modules do not already post for you: a bank charge, an accrual, a correction.",
     step: "post",
     connects: {
       fedBy: ["Whatever paperwork you are working from"],
@@ -641,7 +641,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "The running difference",
-        body: "Updates as you type and must reach zero before you can submit. It is computed in whole paisa rather than in decimals, so it agrees exactly with the check the server does — no entry is ever rejected for a rounding disagreement you cannot see.",
+        body: "Updates as you type and must reach zero before you can submit. It is computed in whole paisa rather than in decimals, so it agrees exactly with the check the server does. No entry is ever rejected for a rounding disagreement you cannot see.",
       },
       {
         name: "The date decides the month",
@@ -655,11 +655,11 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Write the narration",
-        body: "What a reader sees first, in the register and on every ledger row this entry produces. Write it for somebody opening this in a year's time who was not in the room: \"Bank charges — August\" beats \"charges\".",
+        body: "What a reader sees first, in the register and on every ledger row this entry produces. Write it for somebody opening this in a year's time who was not in the room: \"Bank charges for August\" beats \"charges\".",
       },
       {
         name: "Add a reference",
-        body: "Optional. The invoice number, the bank advice number, the cheque number — whatever a person would search for. The register searches this field alongside the narration.",
+        body: "Optional. The invoice number, the bank advice number, the cheque number, or whatever a person would search for. The register searches this field alongside the narration.",
       },
       {
         name: "Add lines",
@@ -687,7 +687,7 @@ export const HELP: Record<string, HelpEntry> = {
         title: "The bank charged a fee nobody billed",
         steps: [
           "Date it the day the bank took it.",
-          "Narrate it \"Bank charges — August\" and reference the statement line.",
+          "Narrate it \"Bank charges for August\" and reference the statement line.",
           "One line debiting bank charges, one crediting the bank account, the same amount on each.",
           "The difference reads zero. Attach the statement page and submit.",
           "A colleague approves it and it posts.",
@@ -717,7 +717,7 @@ export const HELP: Record<string, HelpEntry> = {
     step: "read",
     connects: {
       fedBy: ["Every posted journal, whoever or whatever produced it"],
-      feeds: ["Nothing — this is a read of the ledger, not a source"],
+      feeds: ["Nothing. This is a read of the ledger, not a source"],
     },
     reading: [
       {
@@ -726,7 +726,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "The running balance",
-        body: "The account's position after each entry, in order. This is the column that answers \"when did it go wrong\" — scan down until the balance stops matching what you expected.",
+        body: "The account's position after each entry, in order. This is the column that answers \"when did it go wrong\". Scan down until the balance stops matching what you expected.",
       },
       {
         name: "Period total",
@@ -734,7 +734,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "The journal column",
-        body: "The entry number each row came from, and a link to it. Every row on this page is one line of a larger entry — the link is how you see the other side.",
+        body: "The entry number each row came from, and a link to it. Every row on this page is one line of a larger entry. The link is how you see the other side.",
       },
       {
         name: "Reversed entries are shown, not hidden",
@@ -775,14 +775,14 @@ export const HELP: Record<string, HelpEntry> = {
         title: "An expense account looks too high for the month",
         steps: [
           "Open the ledger on it for that month.",
-          "Read down the narrations rather than the figures — the wrong entry is usually obvious from what it says.",
+          "Read down the narrations rather than the figures. The wrong entry is usually obvious from what it says.",
           "If nothing stands out, widen the range by a month either side: the usual cause is something dated into the wrong month, which makes one month high and its neighbour low.",
         ],
       },
     ],
     watchFor: [
       "The opening balance depends entirely on the start date you chose. Two people reading \"the same\" ledger with different ranges will see different opening figures and both are right.",
-      "An account with no rows is not necessarily unused — it may simply have had nothing happen inside this range.",
+      "An account with no rows is not necessarily unused. It may simply have had nothing happen inside this range.",
     ],
   },
 
@@ -792,7 +792,7 @@ export const HELP: Record<string, HelpEntry> = {
     step: "read",
     connects: {
       fedBy: ["Every posted entry touching a cash account"],
-      feeds: ["Nothing — this is a read"],
+      feeds: ["Nothing. This is a read"],
     },
     reading: [
       {
@@ -801,7 +801,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Only cash accounts appear",
-        body: "An account shows here because it is marked as a cash account in the chart. If the picker is empty, none have been marked yet — that is a chart of accounts setting, not a missing feature.",
+        body: "An account shows here because it is marked as a cash account in the chart. If the picker is empty, none have been marked yet. That is a chart of accounts setting, not a missing feature.",
       },
       NUMBER_CONVENTIONS,
     ],
@@ -812,7 +812,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Follow a row to its entry",
-        body: "As on the general ledger — every row links to the journal that produced it.",
+        body: "As on the general ledger, every row links to the journal that produced it.",
       },
     ],
     scenarios: [
@@ -821,7 +821,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "Open the cash book for the month and read the closing balance.",
           "Count the tin.",
-          "If the tin has less, there is a payment nobody recorded — usually a small purchase with the receipt still in somebody's pocket.",
+          "If the tin has less, there is a payment nobody recorded, usually a small purchase with the receipt still in somebody's pocket.",
           "If the tin has more, there is a receipt nobody recorded, or a payment recorded that never happened.",
           "Either way the fix is a journal, dated when it actually happened if that month is still open.",
         ],
@@ -834,8 +834,8 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "The same view as the cash book, for bank accounts. This is the page to hold next to a bank statement.",
     step: "read",
     connects: {
-      fedBy: ["Every posted entry touching a bank account — payroll disbursements, supplier payments, receipts"],
-      feeds: ["Nothing — this is a read"],
+      fedBy: ["Every posted entry touching a bank account: payroll disbursements, supplier payments, receipts"],
+      feeds: ["Nothing. This is a read"],
     },
     reading: [
       {
@@ -864,7 +864,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "Open the bank book for the month and read the closing balance.",
           "Work down against the bank statement, ticking what appears on both.",
-          "What is in the books and not on the statement has not cleared yet — a cheque written and not presented. That is a timing difference and needs no entry.",
+          "What is in the books and not on the statement has not cleared yet: a cheque written and not presented. That is a timing difference and needs no entry.",
           "What is on the statement and not in the books has not been recorded. Usually a charge, an interest credit, or a direct debit nobody told finance about. Those need journals.",
         ],
       },
@@ -917,7 +917,7 @@ export const HELP: Record<string, HelpEntry> = {
         steps: [
           "Open the trial balance for the month.",
           "Confirm it agrees.",
-          "Scan the closing column for anything obviously wrong — a large balance on an account that is normally empty, or an account with its balance in brackets when its neighbours are not.",
+          "Scan the closing column for anything obviously wrong: a large balance on an account that is normally empty, or an account with its balance in brackets when its neighbours are not.",
           "Then, and only then, go and read the statements. A statement built on a trial balance nobody checked is a guess.",
         ],
       },
@@ -925,7 +925,7 @@ export const HELP: Record<string, HelpEntry> = {
         title: "It does not agree",
         steps: [
           "This is rare, because every entry is checked as it posts and an unbalanced one is refused.",
-          "Narrow the range — a month at a time, then a week — until the imbalance appears. The range where it first shows up contains the cause.",
+          "Narrow the range (a month at a time, then a week) until the imbalance appears. The range where it first shows up contains the cause.",
           "Cross-check the journal register for that range.",
           "Statements stay blocked until it is resolved. That is deliberate: a balance sheet that does not balance is worse than no balance sheet.",
         ],
@@ -1103,7 +1103,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "The add-backs",
-        body: "Costs that reduced profit without any money leaving — depreciation chiefly. They are added straight back, because the profit figure is not the cash figure and this is the largest reason why.",
+        body: "Costs that reduced profit without any money leaving, mainly depreciation. They are added straight back, because the profit figure is not the cash figure and this is the largest reason why.",
       },
       {
         name: "Working capital movements",
@@ -1119,7 +1119,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "The reconciliation at the bottom",
-        body: "Opening cash, plus everything above, must equal closing cash — and closing cash must equal what the balance sheet shows for cash and bank. The page checks this itself and says so if it does not.",
+        body: "Opening cash, plus everything above, must equal closing cash, and closing cash must equal what the balance sheet shows for cash and bank. The page checks this itself and says so if it does not.",
       },
       NUMBER_CONVENTIONS,
     ],
@@ -1138,14 +1138,14 @@ export const HELP: Record<string, HelpEntry> = {
         title: "A profitable month with less money in the bank",
         steps: [
           "Read the operating section: profit is positive.",
-          "Look at the working capital lines — a large increase in what customers owe, unpaid.",
+          "Look at the working capital lines: a large increase in what customers owe, unpaid.",
           "Look at investing: equipment was bought.",
           "The profit was real. The cash went into invoices nobody has paid yet and into a purchase that will be depreciated over years.",
         ],
       },
     ],
     watchFor: [
-      "The reconciliation is an identity — it will almost always tie. What it proves is that everything was classified into one of the three sections, not that each item went into the right one.",
+      "The reconciliation is an identity. It will almost always tie. What it proves is that everything was classified into one of the three sections, not that each item went into the right one.",
       "Depreciation shows here as an add-back only once depreciation is actually being posted. Until an asset depreciation run has been posted, this line reads nil.",
     ],
   },
@@ -1295,7 +1295,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Approved",
-        body: "A named person has signed it off, and at that moment the cost hits the books — whether or not anybody has been paid. Every salary head is charged to an expense account, and deductions and net pay are recorded as owed.",
+        body: "A named person has signed it off, and at that moment the cost hits the books, whether or not anybody has been paid. Every salary head is charged to an expense account, and deductions and net pay are recorded as owed.",
       },
       {
         name: "Disbursed",
@@ -1309,7 +1309,7 @@ export const HELP: Record<string, HelpEntry> = {
     does: [
       {
         name: "Process a run",
-        body: "Builds the payslips. Read the preview — it is the last point at which everything is still freely changeable.",
+        body: "Builds the payslips. Read the preview. It is the last point at which everything is still freely changeable.",
       },
       {
         name: "Approve",
@@ -1335,7 +1335,7 @@ export const HELP: Record<string, HelpEntry> = {
       {
         title: "Somebody was paid the wrong amount and the run is approved",
         steps: [
-          "The run cannot be edited — approval is a one-way door, and the ledger has already been told.",
+          "The run cannot be edited. Approval is a one-way door, and the ledger has already been told.",
           "Add an adjustment for the difference on the next month's run, with a reason.",
           "Both months read correctly, and the correction is visible as a correction rather than disguised as a normal payment.",
         ],
@@ -1343,7 +1343,7 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     watchFor: [
       "Approval is a one-way door. After it, corrections are a fresh adjustment, not an edit.",
-      "If the accounting month is closed, disbursement is refused and the run stays approved. Nothing is left half-done — but the money will not move until the month is reopened or the disbursement is dated into an open one.",
+      "If the accounting month is closed, disbursement is refused and the run stays approved. Nothing is left half-done, but the money will not move until the month is reopened or the disbursement is dated into an open one.",
       "The cost lands in the month the run is for, not the month it was paid. July's salaries are a July cost even when they are paid on 1 August.",
     ],
   },
@@ -1410,7 +1410,7 @@ export const HELP: Record<string, HelpEntry> = {
     lede: "What someone is owed when they leave, and how each part of it reaches the books separately.",
     step: "record",
     connects: {
-      fedBy: ["The employee's salary structure and last working day", "Unpaid expense claims", "Anything being recovered — an advance, or an asset not returned"],
+      fedBy: ["The employee's salary structure and last working day", "Unpaid expense claims", "Anything being recovered: an advance, or an asset not returned"],
       feeds: ["Salary, gratuity and notice pay accounts, each its own", "Final dues payable", "The bank"],
     },
     reading: [
@@ -1424,7 +1424,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Recoveries",
-        body: "An advance being recovered and an asset not returned are two different things and post to two different accounts — one reduces a receivable, the other is income. Folding them together would debit an account that was never credited.",
+        body: "An advance being recovered and an asset not returned are two different things and post to two different accounts: one reduces a receivable, the other is income. Folding them together would debit an account that was never credited.",
       },
     ],
     does: [
@@ -1461,13 +1461,13 @@ export const HELP: Record<string, HelpEntry> = {
       },
     ],
     watchFor: [
-      "An unreturned asset never blocks a settlement. The salary figure is right and the asset is a separate debt — naming it, pricing it and deducting it is the answer, not withholding what somebody is statutorily owed.",
+      "An unreturned asset never blocks a settlement. The salary figure is right and the asset is a separate debt. Naming it, pricing it and deducting it is the answer, not withholding what somebody is statutorily owed.",
     ],
   },
 
   costs: {
     title: "Expenses (company)",
-    lede: "Rent, electricity, internet, cleaning — the running bills. Entering one records the cost and the debt; paying it moves the bank.",
+    lede: "Rent, electricity, internet, cleaning: the running bills. Entering one records the cost and the debt; paying it moves the bank.",
     step: "record",
     connects: {
       fedBy: ["Supplier bills, entered singly or imported from a spreadsheet"],
@@ -1484,7 +1484,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Commitments",
-        body: "A recurring bill — monthly rent, say — recorded once so the system can tell you when this month's has not arrived. A commitment is not a bill and posts nothing itself.",
+        body: "A recurring bill (monthly rent, for example) recorded once so the system can tell you when this month's has not arrived. A commitment is not a bill and posts nothing itself.",
       },
     ],
     does: [
@@ -1495,7 +1495,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Correct a bill",
-        body: "Possible until a journal has been posted from it, after which the figures it was built from are refused and the refusal names the entry. A misspelt payee can still be fixed at any time — it only ever reached the ledger as narration.",
+        body: "Possible until a journal has been posted from it, after which the figures it was built from are refused and the refusal names the entry. A misspelt payee can still be fixed at any time. It only ever reached the ledger as narration.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
       {
@@ -1510,7 +1510,7 @@ export const HELP: Record<string, HelpEntry> = {
       },
       {
         name: "Import in bulk",
-        body: "A spreadsheet of bills, with a per-row preview that writes nothing until you accept it. The commit is all or nothing — a file with one bad row imports no rows.",
+        body: "A spreadsheet of bills, with a per-row preview that writes nothing until you accept it. The commit is all or nothing: a file with one bad row imports no rows.",
         roles: ["FINANCE_OFFICER", "SUPER_ADMIN"],
       },
     ],
@@ -1535,7 +1535,7 @@ export const HELP: Record<string, HelpEntry> = {
     ],
     watchFor: [
       "Bills in foreign currency are refused. Company expenses do not freeze an exchange rate, so the bill and the payment would convert at different rates and leave a residue on the payables account that never clears and that no account exists to absorb. Record it in taka.",
-      "Editing a bill after it has posted is refused for the figures the entry was built from — the amount, the category and the currency. Correcting those is a reversal.",
+      "Editing a bill after it has posted is refused for the figures the entry was built from. The amount, the category and the currency. Correcting those is a reversal.",
     ],
   },
 

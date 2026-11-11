@@ -169,7 +169,7 @@ export function AccountDetail({ accountId, initialTab }: { accountId: string; in
             <p className="mt-3 flex items-start gap-1.5 rounded-md border border-warning-line bg-warning-tint px-3 py-2 text-caption leading-relaxed text-warning">
               <RiAlertLine className="mt-px size-3.5 shrink-0" aria-hidden />
               <span>
-                {accountQuery.data.ownerName} can no longer work this account — their Techno Sales
+                {accountQuery.data.ownerName} can no longer work this account. Their Techno Sales
                 Hub access has been removed or they have left. It needs a new owner.
                 {/* The flag used to state a problem the interface could not
                     solve. It now leads to the one action that clears it. */}

@@ -613,7 +613,7 @@ export function CostPage() {
       <PageHeader
         kicker="Workspace"
         title="Expenses"
-        sub="What the company itself spends — rent, utilities, salaries, office and entertainment — one bill per category each month"
+        sub="What the company itself spends (rent, utilities, salaries, office and entertainment). One bill for each category each month"
         aside={
           <div className="flex flex-wrap items-start gap-3">
             <ImportExportTools

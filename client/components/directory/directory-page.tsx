@@ -94,7 +94,7 @@ export function DirectoryPage() {
         </div>
         <Heading level="page" className="mb-1">Directory</Heading>
         <div className="text-body-sm text-ink-muted">
-          Find a colleague — who they are, what they do and how to reach them.
+          Find a colleague: who they are, what they do and how to reach them.
         </div>
       </div>
 

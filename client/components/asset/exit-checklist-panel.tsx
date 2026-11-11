@@ -41,7 +41,7 @@ export function ExitChecklistPanel({ employeeId }: { employeeId: string }) {
       </p>
       <ul className="mt-1.5 space-y-1 text-muted-foreground">
         {checklist.openAssignments.map((a) => (
-          <li key={a.assignmentId}>• {a.assetTag} · {a.assetName} — not returned</li>
+          <li key={a.assignmentId}>• {a.assetTag} · {a.assetName} (not returned)</li>
         ))}
         {checklist.pendingRecoveries.map((r) => (
           <li key={r.id}>
@@ -50,7 +50,7 @@ export function ExitChecklistPanel({ employeeId }: { employeeId: string }) {
         ))}
       </ul>
       <p className="mt-1.5 text-muted-foreground">
-        This is a warning, not a gate — the settlement can still be calculated and paid.
+        This is a warning only. The settlement can still be calculated and paid.
       </p>
     </div>
   )

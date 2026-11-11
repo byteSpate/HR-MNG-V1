@@ -221,7 +221,7 @@ function AmountGrid({
                   {a.name}
                   {!a.isActive && (
                     <span className="ml-2 text-xs text-muted-foreground">
-                      retired — carried here because this journal already uses it
+                      retired, kept here because this journal already uses it
                     </span>
                   )}
                 </TableCell>
@@ -264,8 +264,8 @@ function AmountGrid({
               "Balanced"
             ) : (
               <span className="text-destructive">
-                Out by {fromPaisa(Math.abs(difference))} — opening balances must agree before
-                they can be posted
+                Out by {fromPaisa(Math.abs(difference))}. Opening balances must agree before
+                they can be posted.
               </span>
             )}
           </span>
@@ -376,7 +376,7 @@ export function OpeningBalancesPage() {
         <Skeleton className="h-96 w-full" />
       ) : (years.data ?? []).length === 0 ? (
         <p className="rounded-lg border p-10 text-center text-sm text-muted-foreground">
-          Create a financial year first — opening balances are entered against the first one.
+          Create a financial year first. Opening balances are entered against the first one.
         </p>
       ) : (
         <div className="space-y-6">

@@ -219,7 +219,7 @@ function EditAccountForm({
       {focusOwner ? (
         <p className={`text-caption leading-relaxed ${TONE.muted}`}>
           {account.ownerName} can no longer work this account. Choosing a new
-          owner is the only thing that clears the flag — nothing else about the
+          owner is the only thing that clears the flag. Nothing else about the
           account has to change.
         </p>
       ) : null}
@@ -243,7 +243,7 @@ function EditAccountForm({
       {account.canChangeOwner ? (
       <Field
         label="Owner"
-        help="Answerable for this account. Sales Users only — a Sales Admin manages the hub rather than owning accounts in it."
+        help="Answerable for this account. Sales Users only. A Sales Admin manages the hub rather than owning accounts in it."
         hint={
           !isAdmin
             ? employees.length === 0
@@ -279,7 +279,7 @@ function EditAccountForm({
           <SelectContent>
             {employees.map((e) => (
               <SelectItem key={e.id} value={e.id}>
-                {e.fullName} — {e.designation}
+                {e.fullName} · {e.designation}
               </SelectItem>
             ))}
           </SelectContent>

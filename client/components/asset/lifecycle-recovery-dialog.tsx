@@ -83,7 +83,7 @@ export function LifecycleRecoveryDialog({
                       inputMode="decimal"
                       value={recoveryAmount}
                       onChange={(e) => setRecoveryAmount(e.target.value)}
-                      placeholder="Your call — never prefilled"
+                      placeholder="You decide. Nothing is filled in."
                     />
                   </div>
                   <div>
