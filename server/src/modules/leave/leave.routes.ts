@@ -19,6 +19,7 @@ import {
   revertLeaveRequestHandler,
   updateLeaveTypeHandler,
 } from "./leave.controller"
+import { leaveReportHandler } from "./leave.report"
 
 const router = Router()
 
@@ -45,6 +46,8 @@ router.get("/balances/me", requireAuth, requireRole(...STAFF_ROLES), getMyBalanc
 // subject, resolved through employee.access.ts.
 router.get("/balances/:employeeId", requireAuth, getBalancesForHandler)
 router.get("/requests", requireAuth, listLeaveRequestsHandler)
+// The Leave report on the Reports page.
+router.get("/report", requireAuth, requireRole(...REVIEWER_ROLES), leaveReportHandler)
 router.get("/team-status", requireAuth, requireRole(Role.REPORTING_MANAGER), getTeamStatusHandler)
 router.post("/requests", requireAuth, requireRole(...STAFF_ROLES), applyForLeaveHandler)
 

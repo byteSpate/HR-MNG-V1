@@ -29,12 +29,15 @@ import {
   changeEmployeeEmailHandler,
 } from "./employee.controller"
 import { exportEmployeesHandler } from "./employee.export"
+import { employeeReportHandler } from "./employee.report"
 
 const router = Router()
 
 // File export. HR Admin and Super Admin only: the file holds private columns.
 // The literal path sits above `/:id`.
 router.get("/export", requireAuth, requireRole(Role.HR_ADMIN, Role.SUPER_ADMIN), exportEmployeesHandler)
+// The Employee report on the Reports page. Same rows and roles as the export.
+router.get("/report", requireAuth, requireRole(Role.HR_ADMIN, Role.SUPER_ADMIN), employeeReportHandler)
 
 // requireAuth only. Each row is projected at the caller's tier, so this one
 // endpoint serves HR's directory, Finance's (fixing the /finance/employees
