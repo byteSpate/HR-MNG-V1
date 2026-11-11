@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("../../config/prisma", () => ({
   default: {
-    notification: { createMany: vi.fn(async ({ data }: { data: unknown[] }) => ({ count: data.length })), findMany: vi.fn() },
+    notification: {
+      createMany: vi.fn(async ({ data }: { data: unknown[] }) => ({ count: data.length })),
+      findMany: vi.fn(),
+      updateMany: vi.fn(async () => ({ count: 0 })),
+    },
     user: { findMany: vi.fn() },
     salesMeeting: { findMany: vi.fn() },
     salesTask: { findMany: vi.fn() },
@@ -43,6 +47,66 @@ beforeEach(() => {
   // The seeded default shift: Friday off.
   db.shift.findMany.mockResolvedValue([GENERAL])
   db.holiday.findMany.mockResolvedValue([])
+  // No open reminders unless a test says otherwise.
+  db.notification.findMany.mockResolvedValue([])
+})
+
+describe("closing reminders that are no longer true", () => {
+  it("closes a meeting reminder once the meeting has started or is no longer scheduled", async () => {
+    db.notification.findMany.mockResolvedValue([{ entityId: "m-started" }, { entityId: "m-later" }])
+    db.salesMeeting.findMany
+      .mockResolvedValueOnce([{ id: "m-started" }]) // which of those meetings are over
+      .mockResolvedValueOnce([]) // meetings starting soon
+
+    await remindMeetingsSoon(NOW)
+
+    expect(db.notification.findMany.mock.calls[0][0].where).toEqual({
+      kind: "reminder.meeting_30min",
+      closedAt: null,
+    })
+    expect(db.salesMeeting.findMany.mock.calls[0][0].where).toEqual({
+      id: { in: ["m-started", "m-later"] },
+      OR: [{ scheduledAt: { lte: NOW } }, { status: { not: "SCHEDULED" } }],
+    })
+    expect(db.notification.updateMany).toHaveBeenCalledWith({
+      where: { kind: "reminder.meeting_30min", entity: "SALES_MEETING", entityId: { in: ["m-started"] }, closedAt: null },
+      data: { closedAt: NOW },
+    })
+  })
+
+  it("does no meeting lookup when no meeting reminder is open", async () => {
+    db.salesMeeting.findMany.mockResolvedValue([])
+
+    await remindMeetingsSoon(NOW)
+
+    expect(db.salesMeeting.findMany).toHaveBeenCalledTimes(1) // only the "starting soon" query
+    expect(db.notification.updateMany).not.toHaveBeenCalled()
+  })
+
+  it("closes yesterday's 'Task due today' when the task becomes late", async () => {
+    const YESTERDAY = new Date("2026-11-09T00:00:00.000Z")
+    db.salesTask.findMany.mockResolvedValue([
+      { id: "t-late", title: "Call Acme", dueOn: YESTERDAY, assignedTo: { userId: "u-1", shiftId: null } },
+      { id: "t-today", title: "Send quote", dueOn: TODAY, assignedTo: { userId: "u-1", shiftId: null } },
+    ])
+
+    await remindTasksDueAndLate(NOW)
+
+    expect(db.notification.updateMany).toHaveBeenCalledWith({
+      where: { kind: "reminder.task_due", entity: "SALES_TASK", entityId: { in: ["t-late"] }, closedAt: null },
+      data: { closedAt: NOW },
+    })
+  })
+
+  it("closes nothing when no task is late", async () => {
+    db.salesTask.findMany.mockResolvedValue([
+      { id: "t-today", title: "Send quote", dueOn: TODAY, assignedTo: { userId: "u-1", shiftId: null } },
+    ])
+
+    await remindTasksDueAndLate(NOW)
+
+    expect(db.notification.updateMany).not.toHaveBeenCalled()
+  })
 })
 
 describe("remindMeetingsSoon", () => {
