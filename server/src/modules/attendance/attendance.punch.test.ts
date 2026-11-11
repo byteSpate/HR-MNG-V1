@@ -22,6 +22,7 @@ import prisma from "../../config/prisma"
 import type { Attendance, Shift } from "../../generated/prisma/client"
 import { parseDateOnly } from "../../utils/dates"
 import { effectiveShift } from "./attendance.grid"
+import { closeRequest } from "../inbox/inbox.fanout"
 import { checkIn, checkOut, computeIsEarlyOut, computeIsLate } from "./attendance.punch"
 
 const tx = (prisma as unknown as { __tx: Record<string, Record<string, ReturnType<typeof vi.fn>>> })
@@ -300,6 +301,19 @@ describe("checkOut", () => {
         }),
       })
     )
+  })
+
+  it("closes the 21:30 'not checked out' reminder, and only that one", async () => {
+    vi.setSystemTime(dhaka("2026-08-03", "21:45"))
+    vi.mocked(prisma.attendance.findFirst).mockResolvedValue(row())
+    tx.attendance.update.mockResolvedValue(row({ checkOut: dhaka("2026-08-03", "21:45") }))
+
+    await checkOut("user-1")
+    expect(closeRequest).toHaveBeenCalledWith(tx, {
+      entity: "ATTENDANCE",
+      entityIds: ["att-1"],
+      kinds: ["reminder.not_checked_out"],
+    })
   })
 })
 

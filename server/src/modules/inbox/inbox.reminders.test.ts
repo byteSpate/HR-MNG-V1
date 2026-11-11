@@ -187,6 +187,8 @@ describe("remindAssetsNotAccepted", () => {
       acknowledgedAt: null,
       returnedAt: null,
       assignedAt: { lte: new Date("2026-11-09T06:00:00.000Z") },
+      // Marking an asset lost leaves its hand-over open. Nobody can accept a lost asset.
+      asset: { lifecycle: "IN_SERVICE" },
     })
     expect(written()).toEqual([
       expect.objectContaining({

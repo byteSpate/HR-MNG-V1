@@ -14,6 +14,7 @@ vi.mock("../../../config/prisma", () => ({
 }))
 
 import prisma from "../../../config/prisma"
+import { closeRequest } from "../../inbox/inbox.fanout"
 import { changeTaskStatus, createTask, getTask, listTasks, logDoneTask, updateTask } from "./task.service"
 import { presentTask } from "./task.present"
 import { officeDateOf } from "../../attendance/attendance.time"
@@ -180,6 +181,12 @@ describe("ending a task", () => {
 
     expect(updateData()).toMatchObject({ status: "CANCELLED", cancelReason: "Customer went quiet" })
     expect(result.nextFollowUpOn).toBeNull()
+  })
+
+  it("closes the task's open items when it is cancelled", async () => {
+    await changeTaskStatus("task-1", { status: "CANCELLED", reason: "Customer went quiet" } as any, USER, NOW)
+
+    expect(closeRequest).toHaveBeenCalledWith(expect.anything(), { entity: "SALES_TASK", entityIds: ["task-1"] })
   })
 
   it("reopens a done task and clears what closed it", async () => {

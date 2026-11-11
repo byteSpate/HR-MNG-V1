@@ -130,6 +130,41 @@ describe("closeTargetFor", () => {
       entityIds: ["as-1"],
     })
   })
+
+  it("closes the hand-over item when the asset comes back or is lost before it was accepted", () => {
+    for (const t of ["asset.returned", "asset.marked_lost"]) {
+      expect(closeTargetFor(ev(t, { entity: "ASSET", entityId: "as-1" }))).toEqual({
+        entity: "ASSET",
+        entityIds: ["as-1"],
+      })
+    }
+  })
+
+  it("closes only the check-out reminder when the app checks the person out", () => {
+    // The same attendance row can also have a fix request waiting for the
+    // manager. The automatic check-out must not close that one.
+    expect(closeTargetFor(ev("attendance.auto_closed", { entity: "ATTENDANCE", entityId: "at-1" }))).toEqual({
+      entity: "ATTENDANCE",
+      entityIds: ["at-1"],
+      kinds: ["reminder.not_checked_out"],
+    })
+  })
+
+  it("closes the 30-minute reminder when a meeting is cancelled or moved", () => {
+    // Meeting events are filed under the account; the reminder under the meeting.
+    for (const t of ["sales.meeting.cancelled", "sales.meeting.rescheduled"]) {
+      expect(
+        closeTargetFor(ev(t, { entity: "SALES_ACCOUNT", entityId: "acc-1", payload: { meetingId: "m-1" } }))
+      ).toEqual({ entity: "SALES_MEETING", entityIds: ["m-1"] })
+    }
+    expect(closeTargetFor(ev("sales.meeting.cancelled", { entity: "SALES_ACCOUNT" }))).toBeNull()
+  })
+
+  it("does not close anything when a meeting is first scheduled", () => {
+    expect(
+      closeTargetFor(ev("sales.meeting.scheduled", { entity: "SALES_ACCOUNT", payload: { meetingId: "m-1" } }))
+    ).toBeNull()
+  })
 })
 
 describe("REQUEST_KINDS", () => {

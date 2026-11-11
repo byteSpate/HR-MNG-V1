@@ -195,4 +195,18 @@ describe("closeRequest", () => {
       data: { closedAt: NOW },
     })
   })
+
+  it("closes only the named kinds when kinds are given", async () => {
+    await closeRequest(asTx(), { entity: "ATTENDANCE", entityIds: ["at-1"], kinds: ["reminder.not_checked_out"] })
+    expect(tx.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        entity: "ATTENDANCE",
+        entityId: { in: ["at-1"] },
+        tab: "IMPORTANT",
+        closedAt: null,
+        kind: { in: ["reminder.not_checked_out"] },
+      },
+      data: { closedAt: NOW },
+    })
+  })
 })
