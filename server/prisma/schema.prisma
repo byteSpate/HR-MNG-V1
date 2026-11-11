@@ -2772,7 +2772,6 @@ model SalesAccount {
   answers              SalesAccountAnswer[]
   heatmapMarks         SalesAccountHeatmapMark[]
   heatmapNotes         SalesAccountHeatmapNote[]
-  weeklyNotes          WeeklyAccountNote[]
   /// The delivery work on this account's Won Opportunities (ADR 0005).
   projects             Project[]
 
@@ -3867,79 +3866,12 @@ model WeeklyReport {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  copies      WeeklyReportCopy[]
-  notes       WeeklyAccountNote[]
-  otherWork   WeeklyOtherWork[]
+  /// The Weekly Report page is gone (November 2026). A week row stays only
+  /// as the parent of Project Daily Log lines.
   projectLogs ProjectDailyLog[]
 
   @@unique([employeeId, weekStart])
   @@index([weekStart, status])
-}
-
-/// One press of Submit: the exact PDF management read, kept in the file store.
-/// A reopened week can be submitted again, so every copy stays (§26.17), as a
-/// minutes send does.
-model WeeklyReportCopy {
-  id             String       @id @default(uuid())
-  weeklyReportId String
-  weeklyReport   WeeklyReport @relation(fields: [weeklyReportId], references: [id], onDelete: Cascade)
-  submittedAt    DateTime     @default(now())
-  /// The user who pressed Submit.
-  submittedBy    String
-  /// The file store's id for the kept copy.
-  fileId         String
-  fileName       String
-
-  @@index([weeklyReportId, submittedAt])
-}
-
-/// What the week adds to one account on one day: the two things the Sales Hub
-/// has no home for, and a next step for an account with no deal (§26.7, §26.8).
-/// Everything else in the row is read from where it already lives.
-model WeeklyAccountNote {
-  id             String       @id @default(uuid())
-  weeklyReportId String
-  weeklyReport   WeeklyReport @relation(fields: [weeklyReportId], references: [id], onDelete: Cascade)
-  /// Date only, UTC midnight. Inside the report's week, the optional Saturday
-  /// included.
-  date           DateTime
-  salesAccountId String
-  salesAccount   SalesAccount @relation(fields: [salesAccountId], references: [id], onDelete: Cascade)
-
-  /// The salesperson's own obstacle that day.
-  challenges String?
-  /// A shortfall on our company's side.
-  gap        String?
-  /// Only while the account has no open deal; with one, the deal's own
-  /// nextStep is shown and this stays null (§26.9).
-  nextStep   String?
-  /// The task the next step became, when it was ticked. A plain id, as the
-  /// minutes' Next Steps rows keep theirs: the task has its own life, and
-  /// deleting one must not take this note with it.
-  taskId     String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([weeklyReportId, date, salesAccountId])
-  @@index([salesAccountId, date])
-}
-
-/// Work with no Sales Account behind it: an office discussion, learning, an
-/// HLD, documentation. A day and the person's own words, with no kinds to
-/// pick (§26.11).
-model WeeklyOtherWork {
-  id             String       @id @default(uuid())
-  weeklyReportId String
-  weeklyReport   WeeklyReport @relation(fields: [weeklyReportId], references: [id], onDelete: Cascade)
-  /// Date only, UTC midnight.
-  date           DateTime
-  text           String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([weeklyReportId, date])
 }
 
 /// One line of Project work on one day, written in the Weekly Report
