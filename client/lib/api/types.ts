@@ -719,6 +719,32 @@ export interface EventPage {
   nextCursor: string | null
 }
 
+// ── NOTIFICATIONS ─────────────────────────────
+// Hand-mirrored from server/src/modules/inbox/inbox.types.ts.
+
+export type InboxTab = "important" | "primary" | "all"
+
+export interface InboxItem {
+  /** The notification id, or `event:<eventId>` for company activity. */
+  id: string
+  /** MINE is about you or waiting for you. ACTIVITY is company activity, with no read state. */
+  source: "MINE" | "ACTIVITY"
+  tab: "IMPORTANT" | "PRIMARY" | null
+  title: string
+  meta: string | null
+  /** Role-agnostic ("/leave"). The client adds its own route group. */
+  href: string | null
+  unread: boolean
+  /** Someone already decided this request. */
+  closed: boolean
+  createdAt: string
+}
+
+export interface InboxPage {
+  items: InboxItem[]
+  nextCursor: string | null
+}
+
 // ── ANNOUNCEMENTS ─────────────────────────────
 
 export type AnnouncementAudience = "ALL" | "DEPARTMENT" | "ROLE"

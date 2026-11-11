@@ -20,6 +20,7 @@ import { addDays, formatDateOnly, formatShortDate, parseDateOnly } from "../../.
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { officeDateOf, officeInstantOf } from "../../attendance/attendance.time"
 import { emitEvent } from "../../event/event.emit"
+import { closeRequest } from "../../inbox/inbox.fanout"
 import { accountScopeFor, employeeIdFor, isSalesAdmin, requireAccountAccess } from "../sales.access"
 import type { SalesTaskStatusResult, SalesTaskSummary } from "../sales.types"
 import type { ChangeTaskStatusBody, CreateTaskBody, ListTaskQuery, LogDoneBody, UpdateTaskBody } from "./task.validators"
@@ -385,6 +386,11 @@ export async function changeTaskStatus(
         ...(body.status === "CANCELLED" ? { cancelReason: body.reason } : {}),
       },
     })
+    // A cancelled task emits no event, so its "new task", "due today" and
+    // "late" items are closed here.
+    if (body.status === "CANCELLED") {
+      await closeRequest(tx, { entity: "SALES_TASK", entityIds: [id] })
+    }
     if (body.status === "DONE") {
       await emitEvent(tx, {
         type: "sales.task.completed",

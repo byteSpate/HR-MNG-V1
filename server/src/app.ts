@@ -31,6 +31,7 @@ import customerCreditNoteRoutes from "./modules/receivables/customerCreditNote.r
 import receivablesReportsRoutes from "./modules/receivables/receivablesReports.routes"
 import dashboardRoutes from "./modules/dashboard/dashboard.routes"
 import notificationRoutes from "./modules/notification/notification.routes"
+import inboxRoutes from "./modules/inbox/inbox.routes"
 import salesRoutes from "./modules/sales/sales.routes"
 import departmentRoutes from "./modules/department/department.routes"
 import eventRoutes from "./modules/event/event.routes"
@@ -103,6 +104,7 @@ export const apiMounts: [string, Router][] = [
   ["/api/statements", statementRoutes],
   ["/api/posting-rules", postingRoutes],
   ["/api/events", eventRoutes],
+  ["/api/notifications", inboxRoutes],
   ["/api/dashboard", dashboardRoutes],
   ["/api/emails", notificationRoutes],
   ["/api/sales", salesRoutes],

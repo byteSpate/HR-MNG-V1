@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { closeRequest } from "../inbox/inbox.fanout"
 
 vi.mock("../../config/prisma", () => {
   const tx = {
@@ -121,6 +122,22 @@ describe("decideNationalIdChangeRequest", () => {
     expect(sendNationalIdChangeDecidedEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: "ayesha@demo.com", approved: true })
     )
+  })
+
+  it("closes HR's waiting notification for the request", async () => {
+    tx.employeeChangeRequest.findUnique.mockResolvedValue({
+      id: "req-1",
+      employeeId: "emp-1",
+      field: "NATIONAL_ID",
+      newValue: "1234567890",
+      status: "PENDING",
+      employee: { fullName: "Ayesha Rahman", user: { email: "ayesha@demo.com" } },
+    })
+    tx.employeeChangeRequest.update.mockResolvedValue({ id: "req-1", status: "REJECTED" })
+
+    await decideNationalIdChangeRequest(actor("HR_ADMIN"), "req-1", "REJECT", "Blurry photo")
+
+    expect(closeRequest).toHaveBeenCalledWith(tx, { entity: "EMPLOYEE", entityIds: ["emp-1"] })
   })
 
   it("requires a note to reject", async () => {

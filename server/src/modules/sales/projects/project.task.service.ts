@@ -6,6 +6,7 @@ import { formatDateOnly, parseDateOnly } from "../../../utils/dates"
 import type { AccessTokenPayload } from "../../auth/auth.types"
 import { officeDateOf } from "../../attendance/attendance.time"
 import { emitEvent } from "../../event/event.emit"
+import { closeRequest } from "../../inbox/inbox.fanout"
 import type { SalesTaskSummary } from "../sales.types"
 import { presentTask } from "../tasks/task.present"
 import { canManageProject, loadProjectRow } from "./project.access"
@@ -115,6 +116,8 @@ export async function cancelProjectTask(
       entity: "SALES_TASK", entityId: taskId, action: "UPDATE", changedBy: actor.sub,
       before: { status: "PENDING" }, after: { status: "CANCELLED" }, note: body.reason,
     })
+    // No event for a cancel: close the assignee's open items for this task here.
+    await closeRequest(tx, { entity: "SALES_TASK", entityIds: [taskId] })
     return presentTask(updated, true, officeDateOf(new Date()))
   })
 }

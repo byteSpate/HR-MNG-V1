@@ -10,6 +10,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import { formatDateOnly, parseDateOnly } from "../../utils/dates"
 import { emitEvent } from "../event/event.emit"
+import { closeRequest } from "../inbox/inbox.fanout"
 import {
   sendExpenseRejectedEmail,
   sendExpensesApprovedEmail,
@@ -563,5 +564,7 @@ export async function deleteClaim(actor: AccessTokenPayload, claimId: string): P
       },
     })
     await tx.expenseClaim.delete({ where: { id: claim.id } })
+    // Deleting emits no event, so Finance's "waiting" item is closed here.
+    await closeRequest(tx, { entity: "EXPENSE_CLAIM", entityIds: [claim.id] })
   })
 }

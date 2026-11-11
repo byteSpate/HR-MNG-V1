@@ -21,6 +21,7 @@ import { AppError } from "../../middleware/errorHandler"
 import { writeAudit } from "../../utils/audit"
 import type { AccessTokenPayload } from "../auth/auth.types"
 import { emitEvent } from "../event/event.emit"
+import { closeRequest } from "../inbox/inbox.fanout"
 import { sendNationalIdChangeDecidedEmail } from "../notification/notification.mailer"
 import { employeeNationalIdChangeRequestedEvent } from "./employee.events"
 import type { EmployeeChangeRequest } from "../../generated/prisma/client"
@@ -111,6 +112,8 @@ export async function cancelNationalIdChangeRequest(
       changedBy: actor.sub,
       after: { status: "CANCELLED" },
     })
+    // The request event is filed under EMPLOYEE; no decision event exists.
+    await closeRequest(tx, { entity: "EMPLOYEE", entityIds: [request.employeeId] })
 
     return updated
   })
@@ -164,6 +167,7 @@ export async function decideNationalIdChangeRequest(
       after: { status: updated.status },
       note: trimmedNote,
     })
+    await closeRequest(tx, { entity: "EMPLOYEE", entityIds: [request.employeeId] })
 
     return { updated, email: request.employee.user.email }
   })

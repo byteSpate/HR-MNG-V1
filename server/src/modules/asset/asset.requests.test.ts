@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { closeRequest } from "../inbox/inbox.fanout"
 
 vi.mock("../../config/prisma", () => {
   const tx = {
@@ -356,6 +357,15 @@ describe("cancelRequest — HR's dead end", () => {
     await expect(
       cancelRequest("req-1", { note: "Discontinued by the supplier" }, hr)
     ).resolves.toMatchObject({ status: "CANCELLED" })
+  })
+
+  it("closes the Super Admin's waiting notification, since cancelling emits no event", async () => {
+    tx.assetRequest.findUnique.mockResolvedValue({ id: "req-1", employeeId: "emp-1", status: "ORDERED" })
+    tx.assetRequest.update.mockResolvedValue({ id: "req-1", status: "CANCELLED" })
+
+    await cancelRequest("req-1", { note: "Discontinued by the supplier" }, hr)
+
+    expect(closeRequest).toHaveBeenCalledWith(tx, { entity: "ASSET_REQUEST", entityIds: ["req-1"] })
   })
 
   it("requires a note when HR cancels", async () => {

@@ -36,7 +36,7 @@ const DEFAULT_LIMIT = 20
  * `publishAt`, so without it every other event type would vanish from the
  * feed the moment this filter was applied.
  */
-function notYetPublished(now: Date): Prisma.EventWhereInput {
+export function notYetPublished(now: Date): Prisma.EventWhereInput {
   return {
     OR: [
       { type: { not: "announcement.published" } },

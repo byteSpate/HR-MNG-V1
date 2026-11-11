@@ -18,6 +18,7 @@ vi.mock("../../../config/prisma", () => ({
 vi.mock("../../dealMoney/dealMoney.cost", () => ({ dealCostLineWhere: vi.fn().mockResolvedValue({}) }))
 
 import prisma from "../../../config/prisma"
+import { closeRequest } from "../../inbox/inbox.fanout"
 import { addProjectTask, cancelProjectTask, listProjectTasks } from "./project.task.service"
 
 const USER = { sub: "user-1", role: "EMPLOYEE", salesRole: "SALES_USER" } as any
@@ -183,6 +184,11 @@ describe("Project Tasks", () => {
     expect(prisma.salesTask.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: "CANCELLED", cancelReason: "Not needed" }),
     }))
+  })
+
+  it("closes the task's open items for the assignee", async () => {
+    await cancelProjectTask("t1", { reason: "Not needed" }, USER)
+    expect(closeRequest).toHaveBeenCalledWith(expect.anything(), { entity: "SALES_TASK", entityIds: ["t1"] })
   })
 
   it("keeps the reason in the audit, so the cancel can be explained later", async () => {

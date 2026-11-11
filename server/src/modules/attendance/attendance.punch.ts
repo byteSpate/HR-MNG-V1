@@ -11,6 +11,8 @@ import prisma from "../../config/prisma"
 import type { Attendance, Prisma, Shift } from "../../generated/prisma/client"
 import { AppError } from "../../middleware/errorHandler"
 import { formatDateOnly } from "../../utils/dates"
+import { closeRequest } from "../inbox/inbox.fanout"
+import { NOT_CHECKED_OUT } from "../inbox/inbox.rules"
 import { auditAttendance } from "./attendance.audit"
 import { effectiveShift, resolveShift, shiftInfo } from "./attendance.grid"
 import { requireEmployeeForUser } from "./attendance.service"
@@ -235,6 +237,8 @@ export async function checkOut(userId: string): Promise<PunchResult> {
         isEarlyOut: updated.isEarlyOut,
       },
     })
+    // The 21:30 "not checked out" reminder is no longer true.
+    await closeRequest(tx, { entity: "ATTENDANCE", entityIds: [updated.id], kinds: [NOT_CHECKED_OUT] })
     return updated
   })
 
