@@ -51,8 +51,8 @@ beforeEach(() => {
   db.notification.findMany.mockResolvedValue([])
 })
 
-describe("closing reminders that are no longer true", () => {
-  it("closes a meeting reminder once the meeting has started or is no longer scheduled", async () => {
+describe("reminders that are no longer true stop counting", () => {
+  it("marks a meeting reminder read once the meeting has started or is no longer scheduled", async () => {
     db.notification.findMany.mockResolvedValue([{ entityId: "m-started" }, { entityId: "m-later" }])
     db.salesMeeting.findMany
       .mockResolvedValueOnce([{ id: "m-started" }]) // which of those meetings are over
@@ -62,6 +62,7 @@ describe("closing reminders that are no longer true", () => {
 
     expect(db.notification.findMany.mock.calls[0][0].where).toEqual({
       kind: "reminder.meeting_30min",
+      readAt: null,
       closedAt: null,
     })
     expect(db.salesMeeting.findMany.mock.calls[0][0].where).toEqual({
@@ -69,8 +70,8 @@ describe("closing reminders that are no longer true", () => {
       OR: [{ scheduledAt: { lte: NOW } }, { status: { not: "SCHEDULED" } }],
     })
     expect(db.notification.updateMany).toHaveBeenCalledWith({
-      where: { kind: "reminder.meeting_30min", entity: "SALES_MEETING", entityId: { in: ["m-started"] }, closedAt: null },
-      data: { closedAt: NOW },
+      where: { kind: "reminder.meeting_30min", entity: "SALES_MEETING", entityId: { in: ["m-started"] }, readAt: null, closedAt: null },
+      data: { readAt: NOW },
     })
   })
 
@@ -83,7 +84,7 @@ describe("closing reminders that are no longer true", () => {
     expect(db.notification.updateMany).not.toHaveBeenCalled()
   })
 
-  it("closes yesterday's 'Task due today' when the task becomes late", async () => {
+  it("marks yesterday's 'Task due today' read when the task becomes late, without calling it Done", async () => {
     const YESTERDAY = new Date("2026-11-09T00:00:00.000Z")
     db.salesTask.findMany.mockResolvedValue([
       { id: "t-late", title: "Call Acme", dueOn: YESTERDAY, assignedTo: { userId: "u-1", shiftId: null } },
@@ -93,12 +94,12 @@ describe("closing reminders that are no longer true", () => {
     await remindTasksDueAndLate(NOW)
 
     expect(db.notification.updateMany).toHaveBeenCalledWith({
-      where: { kind: "reminder.task_due", entity: "SALES_TASK", entityId: { in: ["t-late"] }, closedAt: null },
-      data: { closedAt: NOW },
+      where: { kind: "reminder.task_due", entity: "SALES_TASK", entityId: { in: ["t-late"] }, readAt: null, closedAt: null },
+      data: { readAt: NOW },
     })
   })
 
-  it("closes nothing when no task is late", async () => {
+  it("changes nothing when no task is late", async () => {
     db.salesTask.findMany.mockResolvedValue([
       { id: "t-today", title: "Send quote", dueOn: TODAY, assignedTo: { userId: "u-1", shiftId: null } },
     ])

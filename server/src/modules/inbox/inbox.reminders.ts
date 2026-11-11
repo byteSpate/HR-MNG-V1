@@ -48,8 +48,42 @@ async function write(reminders: Reminder[]): Promise<number> {
   return rows.length
 }
 
+const MEETING_SOON = "reminder.meeting_30min"
+const TASK_DUE = "reminder.task_due"
+
+/**
+ * Marks unread reminders of one kind as read, so they stop counting.
+ * Read, not closed: a closed item shows "Done", and a late task is not done.
+ */
+async function retireReminders(kind: string, entity: string, entityIds: string[], now: Date): Promise<void> {
+  if (entityIds.length === 0) return
+  await prisma.notification.updateMany({
+    where: { kind, entity, entityId: { in: entityIds }, readAt: null, closedAt: null },
+    data: { readAt: now },
+  })
+}
+
+/** "Starts in 30 minutes" stops being true once the meeting starts, is done, or is cancelled. */
+async function retireStartedMeetingReminders(now: Date): Promise<void> {
+  const open = await prisma.notification.findMany({
+    where: { kind: MEETING_SOON, readAt: null, closedAt: null },
+    select: { entityId: true },
+  })
+  if (open.length === 0) return
+  const over = await prisma.salesMeeting.findMany({
+    where: {
+      id: { in: [...new Set(open.map((n) => n.entityId))] },
+      OR: [{ scheduledAt: { lte: now } }, { status: { not: "SCHEDULED" } }],
+    },
+    select: { id: true },
+  })
+  await retireReminders(MEETING_SOON, "SALES_MEETING", over.map((m) => m.id), now)
+}
+
 /** Every 5 minutes: meetings that start in the next 30 minutes. */
 export async function remindMeetingsSoon(now: Date = new Date()): Promise<number> {
+  await retireStartedMeetingReminders(now)
+
   const meetings = await prisma.salesMeeting.findMany({
     where: { status: "SCHEDULED", scheduledAt: { gt: now, lte: new Date(now.getTime() + 30 * 60_000) } },
     select: {
@@ -71,7 +105,7 @@ export async function remindMeetingsSoon(now: Date = new Date()): Promise<number
           ? [
               {
                 userId: a.employee.userId,
-                kind: "reminder.meeting_30min",
+                kind: MEETING_SOON,
                 entity: "SALES_MEETING",
                 entityId: m.id,
                 title: "Your meeting starts in 30 minutes",
@@ -108,7 +142,7 @@ export async function remindTasksDueAndLate(now: Date = new Date()): Promise<num
     const due = task.dueOn.getTime() === today.getTime()
     reminders.push({
       userId: task.assignedTo.userId,
-      kind: due ? "reminder.task_due" : "reminder.task_late",
+      kind: due ? TASK_DUE : "reminder.task_late",
       entity: "SALES_TASK",
       entityId: task.id,
       title: due ? "Task due today" : "Task is late",
@@ -117,6 +151,9 @@ export async function remindTasksDueAndLate(now: Date = new Date()): Promise<num
       dedupeKey: `${due ? "task-due" : "task-late"}:${task.id}`,
     })
   }
+  // A late task is no longer "due today". "Task is late" takes its place.
+  const late = tasks.filter((t) => t.dueOn.getTime() !== today.getTime()).map((t) => t.id)
+  await retireReminders(TASK_DUE, "SALES_TASK", late, now)
   return write(reminders)
 }
 
