@@ -120,7 +120,7 @@ export async function payrollReportHandler(req: Request, res: Response, next: Ne
         { header: "grossPay", pdfHeader: "Gross pay", type: "decimal", inPdf: true },
         { header: "deductions", pdfHeader: "Deductions", type: "decimal", inPdf: true },
         { header: "netPay", pdfHeader: "Net pay", type: "decimal" },
-        { header: "reimbursements", pdfHeader: "Claims paid back", type: "decimal" },
+        { header: "reimbursements", pdfHeader: "Claims paid back", type: "decimal", inPdf: true },
         { header: "netPayable", pdfHeader: "Net payable", type: "decimal", inPdf: true },
         { header: "netPayableBdt", pdfHeader: "Net payable in BDT", type: "decimal" },
         { header: "runStatus", pdfHeader: "Run status", type: "text", inPdf: true },

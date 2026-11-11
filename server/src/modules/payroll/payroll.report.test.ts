@@ -68,6 +68,14 @@ describe("runPeriodWhere", () => {
 })
 
 describe("GET /api/payroll/report", () => {
+  it("shows claims paid back on screen and in the PDF, so net payable adds up", async () => {
+    const res = await request(app)
+      .get("/api/payroll/report?from=2026-02&to=2026-02")
+      .set("Authorization", `Bearer ${token("FINANCE_OFFICER")}`)
+    const claims = res.body.columns.find((c: { header: string }) => c.header === "reimbursements")
+    expect(claims).toMatchObject({ pdfHeader: "Claims paid back", inPdf: true })
+  })
+
   it("is for Finance, HR Admin and Super Admin", async () => {
     for (const role of ["EMPLOYEE", "REPORTING_MANAGER"]) {
       const res = await request(app)

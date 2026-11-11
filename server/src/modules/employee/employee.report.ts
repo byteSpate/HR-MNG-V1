@@ -25,6 +25,13 @@ const STATUS_LABEL = {
 
 type Status = keyof typeof STATUS_LABEL
 
+const TYPE_LABEL: Record<string, string> = {
+  FULL_TIME: "Full time",
+  PART_TIME: "Part time",
+  CONTRACT: "Contract",
+  INTERN: "Intern",
+}
+
 const query = z.object({
   status: z.enum(Object.keys(STATUS_LABEL) as [Status, ...Status[]], { message: "Pick a status from the list." }).optional(),
   departmentId: z.string().min(1).optional(),
@@ -63,6 +70,14 @@ export async function employeeReportHandler(req: Request, res: Response, next: N
         .filter((s) => counts.has(s))
         .map((s) => ({ label: STATUS_LABEL[s], value: String(counts.get(s)) })),
     ]
+
+    // Only the report changes these. The plain employee export keeps the codes.
+    // A report is read by people, so it shows plain words.
+    const typeAt = spec.columns.findIndex((c) => c.header === "employmentType")
+    for (const row of spec.rows) {
+      row[statusAt] = STATUS_LABEL[row[statusAt] as Status] ?? row[statusAt]
+      row[typeAt] = TYPE_LABEL[row[typeAt] as string] ?? row[typeAt]
+    }
 
     await sendReport({
       res, spec, format, summary, baseName: "employee-report", actor: req.user!,
