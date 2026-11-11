@@ -34,6 +34,21 @@ test("a link gets the reader's own route group in front", () => {
   assert.equal(itemHref("/employee", null), null)
 })
 
+test("a sales link opens the Sales Hub, which has no route group", () => {
+  // Sales events store paths relative to /sales (sales.mailer.ts, task.service.ts).
+  assert.equal(itemHref("/employee", "/tasks"), "/sales/tasks")
+  assert.equal(itemHref("/manager", "/accounts/acc-1"), "/sales/accounts/acc-1")
+  assert.equal(itemHref("/admin", "/opportunities/op-1"), "/sales/opportunities/op-1")
+  assert.equal(itemHref("/employee", "/meetings/minutes"), "/sales/meetings/minutes")
+  assert.equal(itemHref("/employee", "/tasks?due=now"), "/sales/tasks?due=now")
+  assert.equal(itemHref("/admin", "/sales/funnel"), "/sales/funnel")
+})
+
+test("a word that only starts like a sales area is not a sales link", () => {
+  assert.equal(itemHref("/hr", "/tasksheet"), "/hr/tasksheet")
+  assert.equal(itemHref("/hr", "/assets"), "/hr/assets")
+})
+
 test("time is short: just now, minutes, hours, days, then a date", () => {
   const now = new Date("2026-11-10T06:00:00.000Z").getTime()
   assert.equal(timeAgo("2026-11-10T05:59:30.000Z", now), "just now")
